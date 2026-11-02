@@ -1,12 +1,13 @@
 import { abilityDelegatorRegistry, TestRunner } from '@kit.TestKit';
 import { Hypium } from '@ohos/hypium';
-import testsuite from '../test/List.test';
 
 export default class OpenHarmonyTestRunner implements TestRunner {
   onPrepare(): void {}
 
-  onRun(): void {
+  async onRun(): Promise<void> {
+    // Load UiTest after the framework has registered the ability delegator.
+    const suite = await import('../test/List.test');
     Hypium.hypiumTest(abilityDelegatorRegistry.getAbilityDelegator(),
-      abilityDelegatorRegistry.getArguments(), testsuite);
+      abilityDelegatorRegistry.getArguments(), suite.default);
   }
 }

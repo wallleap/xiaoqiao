@@ -4,6 +4,8 @@
 
 参考：[华为《色彩》系统基础与语义Token全量表](https://developer.huawei.com/consumer/cn/doc/doccenter-ux-design/color-0000001776857164#section17672143841113)。以2026-10-30浏览器读取的官方表为依据，未使用下方智能穿戴表。
 
+2026-11-02：账目首页已将两套 `harmony.*.color.json` 的 77 项 Token 合入应用 base/dark 颜色资源；原生接入与验证范围见 [首页实现说明](../../development/ledger-home.md)。其余设计文件仍按各自交付状态使用。
+
 ## 文件与接入
 
 |文件|用途|
@@ -18,7 +20,7 @@
 |interaction-review.html|透明度与hover/pressed/focus/select示例，使用同一colors.css|
 |verification.json|数值转换、SVG画笔及浅深模式结构检查结果|
 
-原生接入时先审阅资源名，再将草案合入对应base/element与dark/element资源。组件使用语义资源，例如`$r('app.color.xq_font_primary')`，不要在业务页复制硬编码。此轮没有修改权限、依赖、构建配置、数据库或业务逻辑。
+其他页面原生接入时复用已合入的base/element与dark/element资源。组件使用语义资源，例如`$r('app.color.xq_font_primary')`，不要在业务页复制硬编码。此轮没有修改权限、依赖、构建配置、数据库或业务逻辑。
 
 ## 透明度约定
 

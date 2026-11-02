@@ -2,6 +2,12 @@
 
 日期：2026-11-02。依据用户最新要求，后续UI优先使用HDS沉浸光感控件，并参考[华为控件设计规范](https://developer.huawei.com/consumer/cn/doc/doccenter-ux-design/general_overview-0000001929599380)中的控件。本文是现有页面的选型约束与对应表，不代表Figma已替换为官方控件实例，也不代表开发组件已接入。
 
+## 首页实际接入状态
+
+2026-11-02：首页已接入 UIDesignKit 的 HdsNavigation（标题插槽、原生搜索菜单、沉浸材质）、HdsListItemCard（原生主副文字与业务图标/金额插槽）、HdsTabs（悬浮沉浸材质）及 HdsSnackBar（即时反馈）。实现和验证边界见 [首页开发说明](../development/ledger-home.md)。这不表示其他页面或全部基础控件都已完成 HDS 接入。
+
+首页收支筛选采用现有 `@kit.ArkUI` 的 ChipGroup 单选胶囊和 IconGroupSuffix 筛选入口，遵循[子页签规范](https://developer.huawei.com/consumer/cn/doc/doccenter-ux-design/chipsgroup-0000001929788350)，移除“最近账目”标题及手绘下划线选项。
+
 ## 使用顺序
 
 **HDS沉浸光感控件 → 其他HDS控件 → ArkUI基础控件 → 必要的业务定制。** 此优先级覆盖此前泛指“官方控件优先”的表述。

@@ -67,4 +67,20 @@ await test('queue propagates rejection and continues in FIFO order', async () =>
   const next = q.run(async () => { events.push('good'); return 'saved'; });
   await assertion; assert.equal(await next, 'saved'); assert.deepEqual(events, ['bad','good']);
 });
-console.log(`${count} host checks passed. Native ArkTS/RDB/Decimal require the separate device suite.`);
+const { LedgerKind, displayAmount, filterEntries } = load(base + '/presentation/ledger/LedgerOverview.ets');
+await test('ledger amount grouping preserves large integer precision', () => {
+  assert.equal(displayAmount('9007199254740991'), '90,071,992,547,409.91');
+  assert.equal(displayAmount('1'), '0.01');
+});
+await test('ledger filters intersect kind, search and account without changing source', () => {
+  const rows = [
+    {id:'a', title:'午餐', category:'餐饮', account:'微信', income:false},
+    {id:'b', title:'工资', category:'工资', account:'银行卡', income:true},
+    {id:'c', title:'地铁', category:'交通', account:'微信', income:false}
+  ];
+  assert.deepEqual(filterEntries(rows,LedgerKind.Income,'','').map(r=>r.id), ['b']);
+  assert.deepEqual(filterEntries(rows,LedgerKind.All,' 地铁 ','微信').map(r=>r.id), ['c']);
+  assert.equal(filterEntries(rows,LedgerKind.Income,'午餐','微信').length, 0);
+  assert.equal(rows.length,3);
+});
+console.log(`${count} host checks passed. Native ArkTS/RDB/Decimal and UI require the separate device suite.`);
