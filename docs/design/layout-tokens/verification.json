@@ -1,0 +1,33 @@
+{
+  "checks": [
+    {
+      "name": "238屏文案、字号、字重、fp标注不变",
+      "pass": true
+    },
+    {
+      "name": "238屏颜色和透明度不变，素材内部不变",
+      "pass": true
+    },
+    {
+      "name": "圆角值与语义Token一致，圆形胶囊按实际尺寸计算",
+      "pass": true
+    },
+    {
+      "name": "16个圆角Token、33个Padding Token与官方表逐项一致",
+      "pass": true
+    }
+  ],
+  "screens": 238,
+  "nativeCodeChanged": false,
+  "runtimeBuildPerformed": false,
+  "scope": "SVG design output + developer reference files; not an ArkUI runtime implementation",
+  "figmaBoardsSavedAndReopened": 6,
+  "figmaHighlightsVisuallyChecked": [
+    "R01",
+    "R03"
+  ],
+  "browserRepresentativeScreens": 8,
+  "latestRevision": "account-header-refinement",
+  "baselineChecksApplyBeforeLatestCopyRevision": true,
+  "latestVerification": "account-header-verification.json"
+}

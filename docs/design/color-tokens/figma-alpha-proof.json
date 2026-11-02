@@ -1,0 +1,47 @@
+{
+  "proof": [
+    {
+      "url": "https://www.figma.com/design/dJYnqnP48fRqzhv6VFurSH/%E5%B0%8F%E5%B7%A7%E8%AE%B0%E8%B4%A6%EF%BD%9CUI-%E8%A1%A5%E5%85%A8-%C2%B7-%E9%B8%BF%E8%92%99?node-id=89-39347&t=G9gHPQe2zfi88ge2-0",
+      "rgb": "000000",
+      "paintInputs": [
+        {
+          "label": "Color",
+          "value": "000000"
+        },
+        {
+          "label": null,
+          "value": "60"
+        }
+      ]
+    },
+    {
+      "url": "https://www.figma.com/design/dJYnqnP48fRqzhv6VFurSH/%E5%B0%8F%E5%B7%A7%E8%AE%B0%E8%B4%A6%EF%BD%9CUI-%E8%A1%A5%E5%85%A8-%C2%B7-%E9%B8%BF%E8%92%99?node-id=89-41055&t=G9gHPQe2zfi88ge2-0",
+      "rgb": "000000",
+      "paintInputs": [
+        {
+          "label": "Color",
+          "value": "000000"
+        },
+        {
+          "label": null,
+          "value": "60"
+        }
+      ]
+    },
+    {
+      "url": "https://www.figma.com/design/dJYnqnP48fRqzhv6VFurSH/%E5%B0%8F%E5%B7%A7%E8%AE%B0%E8%B4%A6%EF%BD%9CUI-%E8%A1%A5%E5%85%A8-%C2%B7-%E9%B8%BF%E8%92%99?node-id=89-41153&t=G9gHPQe2zfi88ge2-0",
+      "rgb": "FFFFFF",
+      "paintInputs": [
+        {
+          "label": "Color",
+          "value": "FFFFFF"
+        },
+        {
+          "label": null,
+          "value": "60"
+        }
+      ]
+    }
+  ],
+  "pass": true
+}

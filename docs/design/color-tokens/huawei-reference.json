@@ -1,0 +1,257 @@
+{
+  "source": "https://developer.huawei.com/consumer/cn/doc/doccenter-ux-design/color-0000001776857164#section17672143841113",
+  "accessed": "2026-10-30",
+  "format": "ARGB",
+  "tokens": {
+    "brand": {
+      "scene": "品牌色",
+      "light": "#FF0A59F7",
+      "dark": "#FF317AF7"
+    },
+    "warning": {
+      "scene": "一级警示色",
+      "light": "#FFE84026",
+      "dark": "#FFD94838"
+    },
+    "alert": {
+      "scene": "二级警示色",
+      "light": "#FFED6F21",
+      "dark": "#FFDB6B42"
+    },
+    "confirm": {
+      "scene": "确认色",
+      "light": "#FF64BB5C",
+      "dark": "#FF5BA854"
+    },
+    "font_primary": {
+      "scene": "一级文本",
+      "light": "#E5000000",
+      "dark": "#E5FFFFFF"
+    },
+    "font_secondary": {
+      "scene": "二级文本",
+      "light": "#99000000",
+      "dark": "#99FFFFFF"
+    },
+    "font_tertiary": {
+      "scene": "三级文本",
+      "light": "#66000000",
+      "dark": "#66FFFFFF"
+    },
+    "font_fourth": {
+      "scene": "四级文本",
+      "light": "#33000000",
+      "dark": "#33FFFFFF"
+    },
+    "font_emphasize": {
+      "scene": "高亮文本",
+      "light": "#FF0A59F7",
+      "dark": "#FF317AF7"
+    },
+    "font_on_primary": {
+      "scene": "一级文本反色",
+      "light": "#FFFFFFFF",
+      "dark": "#FFFFFFFF"
+    },
+    "font_on_secondary": {
+      "scene": "二级文本反色",
+      "light": "#99FFFFFF",
+      "dark": "#99FFFFFF"
+    },
+    "font_on_tertiary": {
+      "scene": "三级文本反色",
+      "light": "#66FFFFFF",
+      "dark": "#66FFFFFF"
+    },
+    "font_on_fourth": {
+      "scene": "四级文本反色",
+      "light": "#33FFFFFF",
+      "dark": "#33FFFFFF"
+    },
+    "icon_primary": {
+      "scene": "一级图标",
+      "light": "#E5000000",
+      "dark": "#E5FFFFFF"
+    },
+    "icon_secondary": {
+      "scene": "二级图标",
+      "light": "#99000000",
+      "dark": "#99FFFFFF"
+    },
+    "icon_tertiary": {
+      "scene": "三级图标",
+      "light": "#66000000",
+      "dark": "#66FFFFFF"
+    },
+    "icon_fourth": {
+      "scene": "四级图标",
+      "light": "#33000000",
+      "dark": "#33FFFFFF"
+    },
+    "icon_emphasize": {
+      "scene": "高亮图标",
+      "light": "#FF0A59F7",
+      "dark": "#FF317AF7"
+    },
+    "icon_sub_emphasize": {
+      "scene": "高亮辅助图标",
+      "light": "#660A59F7",
+      "dark": "#66317AF7"
+    },
+    "icon_on_primary": {
+      "scene": "一级图标反色",
+      "light": "#FFFFFFFF",
+      "dark": "#FFFFFFFF"
+    },
+    "icon_on_secondary": {
+      "scene": "二级图标反色",
+      "light": "#99FFFFFF",
+      "dark": "#99FFFFFF"
+    },
+    "icon_on_tertiary": {
+      "scene": "三级图标反色",
+      "light": "#66FFFFFF",
+      "dark": "#66FFFFFF"
+    },
+    "icon_on_fourth": {
+      "scene": "四级图标反色",
+      "light": "#33FFFFFF",
+      "dark": "#33FFFFFF"
+    },
+    "background_primary": {
+      "scene": "一级背景（实色/不透明色）",
+      "light": "#FFFFFFFF",
+      "dark": "#FFE5E5E5"
+    },
+    "background_secondary": {
+      "scene": "二级背景（实色/不透明色）",
+      "light": "#FFF1F3F5",
+      "dark": "#FF191A1C"
+    },
+    "background_tertiary": {
+      "scene": "三级背景（实色/不透明色）",
+      "light": "#FFE5E5EA",
+      "dark": "#FF202224"
+    },
+    "background_fourth": {
+      "scene": "四级背景（实色/不透明色）",
+      "light": "#FFD1D1D6",
+      "dark": "#FF2E3033"
+    },
+    "background_emphasize": {
+      "scene": "高亮背景（实色/不透明色）",
+      "light": "#FF0A59F7",
+      "dark": "#FF317AF7"
+    },
+    "comp_foreground_primary": {
+      "scene": "前背景",
+      "light": "#FF000000",
+      "dark": "#FFE5E5E5"
+    },
+    "comp_background_primary": {
+      "scene": "白色背景",
+      "light": "#FFFFFFFF",
+      "dark": "#FF202224"
+    },
+    "comp_background_primary_contrary": {
+      "scene": "常亮背景",
+      "light": "#FFFFFFFF",
+      "dark": "#FFE5E5E5"
+    },
+    "comp_background_gray": {
+      "scene": "灰色背景",
+      "light": "#FFF1F3F5",
+      "dark": "#FFE5E5EA"
+    },
+    "comp_background_secondary": {
+      "scene": "二级背景",
+      "light": "#19000000",
+      "dark": "#19FFFFFF"
+    },
+    "comp_background_tertiary": {
+      "scene": "三级背景",
+      "light": "#0C000000",
+      "dark": "#0CFFFFFF"
+    },
+    "comp_background_emphasize": {
+      "scene": "高亮背景",
+      "light": "#FF0A59F7",
+      "dark": "#FF317AF7"
+    },
+    "comp_background_neutral": {
+      "scene": "黑色中性高亮背景",
+      "light": "#FF000000",
+      "dark": "#FFFFFFFF"
+    },
+    "comp_emphasize_secondary": {
+      "scene": "20%高亮背景",
+      "light": "#330A59F7",
+      "dark": "#33317AF7"
+    },
+    "comp_emphasize_tertiary": {
+      "scene": "10%高亮背景",
+      "light": "#190A59F7",
+      "dark": "#19317AF7"
+    },
+    "comp_divider": {
+      "scene": "分割线颜色",
+      "light": "#33000000",
+      "dark": "#33FFFFFF"
+    },
+    "comp_common_contrary": {
+      "scene": "通用反色",
+      "light": "#FFFFFFFF",
+      "dark": "#FF000000"
+    },
+    "comp_background_focus": {
+      "scene": "获焦态背景色",
+      "light": "#FFF1F3F5",
+      "dark": "#FF000000"
+    },
+    "comp_focused_primary": {
+      "scene": "获焦态一级反色",
+      "light": "#E5000000",
+      "dark": "#E5FFFFFF"
+    },
+    "comp_focused_secondary": {
+      "scene": "获焦态二级反色",
+      "light": "#99000000",
+      "dark": "#99FFFFFF"
+    },
+    "comp_focused_tertiary": {
+      "scene": "获焦态三级反色",
+      "light": "#66000000",
+      "dark": "#66FFFFFF"
+    },
+    "interactive_hover": {
+      "scene": "通用悬停交互式颜色",
+      "light": "#0C000000",
+      "dark": "#0CFFFFFF"
+    },
+    "interactive_pressed": {
+      "scene": "通用按压交互式颜色",
+      "light": "#19000000",
+      "dark": "#19FFFFFF"
+    },
+    "interactive_focus": {
+      "scene": "通用获焦交互式颜色",
+      "light": "#FF0A59F7",
+      "dark": "#FF317AF7"
+    },
+    "interactive_active": {
+      "scene": "通用激活交互式颜色",
+      "light": "#FF0A59F7",
+      "dark": "#FF317AF7"
+    },
+    "interactive_select": {
+      "scene": "通用选择交互式颜色",
+      "light": "#330A59F7",
+      "dark": "#33317AF7"
+    },
+    "interactive_click": {
+      "scene": "通用点击交互式颜色",
+      "light": "#19000000",
+      "dark": "#19FFFFFF"
+    }
+  }
+}

@@ -1,0 +1,1468 @@
+{
+  "$description": "小巧记账颜色 dark；官方参考见huawei-reference.json",
+  "color": {
+    "brand": {
+      "$type": "color",
+      "$description": "品牌色",
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [
+          1.0,
+          0.5843137254901961,
+          0.42745098039215684
+        ],
+        "alpha": 1.0
+      },
+      "$extensions": {
+        "xiaoqiao": {
+          "argb": "#FFFF956D",
+          "cssRgba": "#FF956DFF"
+        }
+      }
+    },
+    "warning": {
+      "$type": "color",
+      "$description": "一级警示色",
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [
+          0.8509803921568627,
+          0.2823529411764706,
+          0.2196078431372549
+        ],
+        "alpha": 1.0
+      },
+      "$extensions": {
+        "xiaoqiao": {
+          "argb": "#FFD94838",
+          "cssRgba": "#D94838FF"
+        }
+      }
+    },
+    "alert": {
+      "$type": "color",
+      "$description": "二级警示色",
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [
+          0.8588235294117647,
+          0.4196078431372549,
+          0.25882352941176473
+        ],
+        "alpha": 1.0
+      },
+      "$extensions": {
+        "xiaoqiao": {
+          "argb": "#FFDB6B42",
+          "cssRgba": "#DB6B42FF"
+        }
+      }
+    },
+    "confirm": {
+      "$type": "color",
+      "$description": "确认色",
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [
+          0.3568627450980392,
+          0.6588235294117647,
+          0.32941176470588235
+        ],
+        "alpha": 1.0
+      },
+      "$extensions": {
+        "xiaoqiao": {
+          "argb": "#FF5BA854",
+          "cssRgba": "#5BA854FF"
+        }
+      }
+    },
+    "font_primary": {
+      "$type": "color",
+      "$description": "一级文本",
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [
+          1.0,
+          1.0,
+          1.0
+        ],
+        "alpha": 0.8980392156862745
+      },
+      "$extensions": {
+        "xiaoqiao": {
+          "argb": "#E5FFFFFF",
+          "cssRgba": "#FFFFFFE5"
+        }
+      }
+    },
+    "font_secondary": {
+      "$type": "color",
+      "$description": "二级文本",
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [
+          1.0,
+          1.0,
+          1.0
+        ],
+        "alpha": 0.6
+      },
+      "$extensions": {
+        "xiaoqiao": {
+          "argb": "#99FFFFFF",
+          "cssRgba": "#FFFFFF99"
+        }
+      }
+    },
+    "font_tertiary": {
+      "$type": "color",
+      "$description": "三级文本",
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [
+          1.0,
+          1.0,
+          1.0
+        ],
+        "alpha": 0.4
+      },
+      "$extensions": {
+        "xiaoqiao": {
+          "argb": "#66FFFFFF",
+          "cssRgba": "#FFFFFF66"
+        }
+      }
+    },
+    "font_fourth": {
+      "$type": "color",
+      "$description": "四级文本",
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [
+          1.0,
+          1.0,
+          1.0
+        ],
+        "alpha": 0.2
+      },
+      "$extensions": {
+        "xiaoqiao": {
+          "argb": "#33FFFFFF",
+          "cssRgba": "#FFFFFF33"
+        }
+      }
+    },
+    "font_emphasize": {
+      "$type": "color",
+      "$description": "高亮文本",
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [
+          1.0,
+          0.5843137254901961,
+          0.42745098039215684
+        ],
+        "alpha": 1.0
+      },
+      "$extensions": {
+        "xiaoqiao": {
+          "argb": "#FFFF956D",
+          "cssRgba": "#FF956DFF"
+        }
+      }
+    },
+    "font_on_primary": {
+      "$type": "color",
+      "$description": "一级文本反色",
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [
+          1.0,
+          1.0,
+          1.0
+        ],
+        "alpha": 1.0
+      },
+      "$extensions": {
+        "xiaoqiao": {
+          "argb": "#FFFFFFFF",
+          "cssRgba": "#FFFFFFFF"
+        }
+      }
+    },
+    "font_on_secondary": {
+      "$type": "color",
+      "$description": "二级文本反色",
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [
+          1.0,
+          1.0,
+          1.0
+        ],
+        "alpha": 0.6
+      },
+      "$extensions": {
+        "xiaoqiao": {
+          "argb": "#99FFFFFF",
+          "cssRgba": "#FFFFFF99"
+        }
+      }
+    },
+    "font_on_tertiary": {
+      "$type": "color",
+      "$description": "三级文本反色",
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [
+          1.0,
+          1.0,
+          1.0
+        ],
+        "alpha": 0.4
+      },
+      "$extensions": {
+        "xiaoqiao": {
+          "argb": "#66FFFFFF",
+          "cssRgba": "#FFFFFF66"
+        }
+      }
+    },
+    "font_on_fourth": {
+      "$type": "color",
+      "$description": "四级文本反色",
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [
+          1.0,
+          1.0,
+          1.0
+        ],
+        "alpha": 0.2
+      },
+      "$extensions": {
+        "xiaoqiao": {
+          "argb": "#33FFFFFF",
+          "cssRgba": "#FFFFFF33"
+        }
+      }
+    },
+    "icon_primary": {
+      "$type": "color",
+      "$description": "一级图标",
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [
+          1.0,
+          1.0,
+          1.0
+        ],
+        "alpha": 0.8980392156862745
+      },
+      "$extensions": {
+        "xiaoqiao": {
+          "argb": "#E5FFFFFF",
+          "cssRgba": "#FFFFFFE5"
+        }
+      }
+    },
+    "icon_secondary": {
+      "$type": "color",
+      "$description": "二级图标",
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [
+          1.0,
+          1.0,
+          1.0
+        ],
+        "alpha": 0.6
+      },
+      "$extensions": {
+        "xiaoqiao": {
+          "argb": "#99FFFFFF",
+          "cssRgba": "#FFFFFF99"
+        }
+      }
+    },
+    "icon_tertiary": {
+      "$type": "color",
+      "$description": "三级图标",
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [
+          1.0,
+          1.0,
+          1.0
+        ],
+        "alpha": 0.4
+      },
+      "$extensions": {
+        "xiaoqiao": {
+          "argb": "#66FFFFFF",
+          "cssRgba": "#FFFFFF66"
+        }
+      }
+    },
+    "icon_fourth": {
+      "$type": "color",
+      "$description": "四级图标",
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [
+          1.0,
+          1.0,
+          1.0
+        ],
+        "alpha": 0.2
+      },
+      "$extensions": {
+        "xiaoqiao": {
+          "argb": "#33FFFFFF",
+          "cssRgba": "#FFFFFF33"
+        }
+      }
+    },
+    "icon_emphasize": {
+      "$type": "color",
+      "$description": "高亮图标",
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [
+          1.0,
+          0.5843137254901961,
+          0.42745098039215684
+        ],
+        "alpha": 1.0
+      },
+      "$extensions": {
+        "xiaoqiao": {
+          "argb": "#FFFF956D",
+          "cssRgba": "#FF956DFF"
+        }
+      }
+    },
+    "icon_sub_emphasize": {
+      "$type": "color",
+      "$description": "高亮辅助图标",
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [
+          1.0,
+          0.5843137254901961,
+          0.42745098039215684
+        ],
+        "alpha": 0.4
+      },
+      "$extensions": {
+        "xiaoqiao": {
+          "argb": "#66FF956D",
+          "cssRgba": "#FF956D66"
+        }
+      }
+    },
+    "icon_on_primary": {
+      "$type": "color",
+      "$description": "一级图标反色",
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [
+          1.0,
+          1.0,
+          1.0
+        ],
+        "alpha": 1.0
+      },
+      "$extensions": {
+        "xiaoqiao": {
+          "argb": "#FFFFFFFF",
+          "cssRgba": "#FFFFFFFF"
+        }
+      }
+    },
+    "icon_on_secondary": {
+      "$type": "color",
+      "$description": "二级图标反色",
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [
+          1.0,
+          1.0,
+          1.0
+        ],
+        "alpha": 0.6
+      },
+      "$extensions": {
+        "xiaoqiao": {
+          "argb": "#99FFFFFF",
+          "cssRgba": "#FFFFFF99"
+        }
+      }
+    },
+    "icon_on_tertiary": {
+      "$type": "color",
+      "$description": "三级图标反色",
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [
+          1.0,
+          1.0,
+          1.0
+        ],
+        "alpha": 0.4
+      },
+      "$extensions": {
+        "xiaoqiao": {
+          "argb": "#66FFFFFF",
+          "cssRgba": "#FFFFFF66"
+        }
+      }
+    },
+    "icon_on_fourth": {
+      "$type": "color",
+      "$description": "四级图标反色",
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [
+          1.0,
+          1.0,
+          1.0
+        ],
+        "alpha": 0.2
+      },
+      "$extensions": {
+        "xiaoqiao": {
+          "argb": "#33FFFFFF",
+          "cssRgba": "#FFFFFF33"
+        }
+      }
+    },
+    "background_primary": {
+      "$type": "color",
+      "$description": "一级背景（实色/不透明色）",
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [
+          0.8980392156862745,
+          0.8980392156862745,
+          0.8980392156862745
+        ],
+        "alpha": 1.0
+      },
+      "$extensions": {
+        "xiaoqiao": {
+          "argb": "#FFE5E5E5",
+          "cssRgba": "#E5E5E5FF"
+        }
+      }
+    },
+    "background_secondary": {
+      "$type": "color",
+      "$description": "二级背景（实色/不透明色）",
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [
+          0.09803921568627451,
+          0.10196078431372549,
+          0.10980392156862745
+        ],
+        "alpha": 1.0
+      },
+      "$extensions": {
+        "xiaoqiao": {
+          "argb": "#FF191A1C",
+          "cssRgba": "#191A1CFF"
+        }
+      }
+    },
+    "background_tertiary": {
+      "$type": "color",
+      "$description": "三级背景（实色/不透明色）",
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [
+          0.12549019607843137,
+          0.13333333333333333,
+          0.1411764705882353
+        ],
+        "alpha": 1.0
+      },
+      "$extensions": {
+        "xiaoqiao": {
+          "argb": "#FF202224",
+          "cssRgba": "#202224FF"
+        }
+      }
+    },
+    "background_fourth": {
+      "$type": "color",
+      "$description": "四级背景（实色/不透明色）",
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [
+          0.1803921568627451,
+          0.18823529411764706,
+          0.2
+        ],
+        "alpha": 1.0
+      },
+      "$extensions": {
+        "xiaoqiao": {
+          "argb": "#FF2E3033",
+          "cssRgba": "#2E3033FF"
+        }
+      }
+    },
+    "background_emphasize": {
+      "$type": "color",
+      "$description": "高亮背景（实色/不透明色）",
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [
+          1.0,
+          0.32941176470588235,
+          0.1450980392156863
+        ],
+        "alpha": 1.0
+      },
+      "$extensions": {
+        "xiaoqiao": {
+          "argb": "#FFFF5425",
+          "cssRgba": "#FF5425FF"
+        }
+      }
+    },
+    "comp_foreground_primary": {
+      "$type": "color",
+      "$description": "前背景",
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [
+          0.8980392156862745,
+          0.8980392156862745,
+          0.8980392156862745
+        ],
+        "alpha": 1.0
+      },
+      "$extensions": {
+        "xiaoqiao": {
+          "argb": "#FFE5E5E5",
+          "cssRgba": "#E5E5E5FF"
+        }
+      }
+    },
+    "comp_background_primary": {
+      "$type": "color",
+      "$description": "白色背景",
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [
+          0.12549019607843137,
+          0.13333333333333333,
+          0.1411764705882353
+        ],
+        "alpha": 1.0
+      },
+      "$extensions": {
+        "xiaoqiao": {
+          "argb": "#FF202224",
+          "cssRgba": "#202224FF"
+        }
+      }
+    },
+    "comp_background_primary_contrary": {
+      "$type": "color",
+      "$description": "常亮背景",
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [
+          0.8980392156862745,
+          0.8980392156862745,
+          0.8980392156862745
+        ],
+        "alpha": 1.0
+      },
+      "$extensions": {
+        "xiaoqiao": {
+          "argb": "#FFE5E5E5",
+          "cssRgba": "#E5E5E5FF"
+        }
+      }
+    },
+    "comp_background_gray": {
+      "$type": "color",
+      "$description": "灰色背景",
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [
+          0.8980392156862745,
+          0.8980392156862745,
+          0.9176470588235294
+        ],
+        "alpha": 1.0
+      },
+      "$extensions": {
+        "xiaoqiao": {
+          "argb": "#FFE5E5EA",
+          "cssRgba": "#E5E5EAFF"
+        }
+      }
+    },
+    "comp_background_secondary": {
+      "$type": "color",
+      "$description": "二级背景",
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [
+          1.0,
+          1.0,
+          1.0
+        ],
+        "alpha": 0.09803921568627451
+      },
+      "$extensions": {
+        "xiaoqiao": {
+          "argb": "#19FFFFFF",
+          "cssRgba": "#FFFFFF19"
+        }
+      }
+    },
+    "comp_background_tertiary": {
+      "$type": "color",
+      "$description": "三级背景",
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [
+          1.0,
+          1.0,
+          1.0
+        ],
+        "alpha": 0.047058823529411764
+      },
+      "$extensions": {
+        "xiaoqiao": {
+          "argb": "#0CFFFFFF",
+          "cssRgba": "#FFFFFF0C"
+        }
+      }
+    },
+    "comp_background_emphasize": {
+      "$type": "color",
+      "$description": "高亮背景",
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [
+          1.0,
+          0.32941176470588235,
+          0.1450980392156863
+        ],
+        "alpha": 1.0
+      },
+      "$extensions": {
+        "xiaoqiao": {
+          "argb": "#FFFF5425",
+          "cssRgba": "#FF5425FF"
+        }
+      }
+    },
+    "comp_background_neutral": {
+      "$type": "color",
+      "$description": "黑色中性高亮背景",
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [
+          1.0,
+          1.0,
+          1.0
+        ],
+        "alpha": 1.0
+      },
+      "$extensions": {
+        "xiaoqiao": {
+          "argb": "#FFFFFFFF",
+          "cssRgba": "#FFFFFFFF"
+        }
+      }
+    },
+    "comp_emphasize_secondary": {
+      "$type": "color",
+      "$description": "20%高亮背景",
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [
+          1.0,
+          0.5843137254901961,
+          0.42745098039215684
+        ],
+        "alpha": 0.2
+      },
+      "$extensions": {
+        "xiaoqiao": {
+          "argb": "#33FF956D",
+          "cssRgba": "#FF956D33"
+        }
+      }
+    },
+    "comp_emphasize_tertiary": {
+      "$type": "color",
+      "$description": "10%高亮背景",
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [
+          1.0,
+          0.5843137254901961,
+          0.42745098039215684
+        ],
+        "alpha": 0.09803921568627451
+      },
+      "$extensions": {
+        "xiaoqiao": {
+          "argb": "#19FF956D",
+          "cssRgba": "#FF956D19"
+        }
+      }
+    },
+    "comp_divider": {
+      "$type": "color",
+      "$description": "分割线颜色",
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [
+          1.0,
+          1.0,
+          1.0
+        ],
+        "alpha": 0.2
+      },
+      "$extensions": {
+        "xiaoqiao": {
+          "argb": "#33FFFFFF",
+          "cssRgba": "#FFFFFF33"
+        }
+      }
+    },
+    "comp_common_contrary": {
+      "$type": "color",
+      "$description": "通用反色",
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "alpha": 1.0
+      },
+      "$extensions": {
+        "xiaoqiao": {
+          "argb": "#FF000000",
+          "cssRgba": "#000000FF"
+        }
+      }
+    },
+    "comp_background_focus": {
+      "$type": "color",
+      "$description": "获焦态背景色",
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "alpha": 1.0
+      },
+      "$extensions": {
+        "xiaoqiao": {
+          "argb": "#FF000000",
+          "cssRgba": "#000000FF"
+        }
+      }
+    },
+    "comp_focused_primary": {
+      "$type": "color",
+      "$description": "获焦态一级反色",
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [
+          1.0,
+          1.0,
+          1.0
+        ],
+        "alpha": 0.8980392156862745
+      },
+      "$extensions": {
+        "xiaoqiao": {
+          "argb": "#E5FFFFFF",
+          "cssRgba": "#FFFFFFE5"
+        }
+      }
+    },
+    "comp_focused_secondary": {
+      "$type": "color",
+      "$description": "获焦态二级反色",
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [
+          1.0,
+          1.0,
+          1.0
+        ],
+        "alpha": 0.6
+      },
+      "$extensions": {
+        "xiaoqiao": {
+          "argb": "#99FFFFFF",
+          "cssRgba": "#FFFFFF99"
+        }
+      }
+    },
+    "comp_focused_tertiary": {
+      "$type": "color",
+      "$description": "获焦态三级反色",
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [
+          1.0,
+          1.0,
+          1.0
+        ],
+        "alpha": 0.4
+      },
+      "$extensions": {
+        "xiaoqiao": {
+          "argb": "#66FFFFFF",
+          "cssRgba": "#FFFFFF66"
+        }
+      }
+    },
+    "interactive_hover": {
+      "$type": "color",
+      "$description": "通用悬停交互式颜色",
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [
+          1.0,
+          1.0,
+          1.0
+        ],
+        "alpha": 0.047058823529411764
+      },
+      "$extensions": {
+        "xiaoqiao": {
+          "argb": "#0CFFFFFF",
+          "cssRgba": "#FFFFFF0C"
+        }
+      }
+    },
+    "interactive_pressed": {
+      "$type": "color",
+      "$description": "通用按压交互式颜色",
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [
+          1.0,
+          1.0,
+          1.0
+        ],
+        "alpha": 0.09803921568627451
+      },
+      "$extensions": {
+        "xiaoqiao": {
+          "argb": "#19FFFFFF",
+          "cssRgba": "#FFFFFF19"
+        }
+      }
+    },
+    "interactive_focus": {
+      "$type": "color",
+      "$description": "通用获焦交互式颜色",
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [
+          1.0,
+          0.5843137254901961,
+          0.42745098039215684
+        ],
+        "alpha": 1.0
+      },
+      "$extensions": {
+        "xiaoqiao": {
+          "argb": "#FFFF956D",
+          "cssRgba": "#FF956DFF"
+        }
+      }
+    },
+    "interactive_active": {
+      "$type": "color",
+      "$description": "通用激活交互式颜色",
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [
+          1.0,
+          0.5843137254901961,
+          0.42745098039215684
+        ],
+        "alpha": 1.0
+      },
+      "$extensions": {
+        "xiaoqiao": {
+          "argb": "#FFFF956D",
+          "cssRgba": "#FF956DFF"
+        }
+      }
+    },
+    "interactive_select": {
+      "$type": "color",
+      "$description": "通用选择交互式颜色",
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [
+          1.0,
+          0.5843137254901961,
+          0.42745098039215684
+        ],
+        "alpha": 0.2
+      },
+      "$extensions": {
+        "xiaoqiao": {
+          "argb": "#33FF956D",
+          "cssRgba": "#FF956D33"
+        }
+      }
+    },
+    "interactive_click": {
+      "$type": "color",
+      "$description": "通用点击交互式颜色",
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [
+          1.0,
+          1.0,
+          1.0
+        ],
+        "alpha": 0.09803921568627451
+      },
+      "$extensions": {
+        "xiaoqiao": {
+          "argb": "#19FFFFFF",
+          "cssRgba": "#FFFFFF19"
+        }
+      }
+    },
+    "app_surface_page": {
+      "$type": "color",
+      "$description": "应用页面浅灰背景",
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "alpha": 1.0
+      },
+      "$extensions": {
+        "xiaoqiao": {
+          "argb": "#FF000000",
+          "cssRgba": "#000000FF"
+        }
+      }
+    },
+    "app_surface_card": {
+      "$type": "color",
+      "$description": "卡片／Sheet／悬浮TabBar表面",
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [
+          0.12549019607843137,
+          0.13333333333333333,
+          0.1411764705882353
+        ],
+        "alpha": 1.0
+      },
+      "$extensions": {
+        "xiaoqiao": {
+          "argb": "#FF202224",
+          "cssRgba": "#202224FF"
+        }
+      }
+    },
+    "app_surface_keyboard": {
+      "$type": "color",
+      "$description": "键盘按键、图片占位表面",
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [
+          0.1803921568627451,
+          0.18823529411764706,
+          0.2
+        ],
+        "alpha": 1.0
+      },
+      "$extensions": {
+        "xiaoqiao": {
+          "argb": "#FF2E3033",
+          "cssRgba": "#2E3033FF"
+        }
+      }
+    },
+    "app_surface_summary": {
+      "$type": "color",
+      "$description": "预算／资产深色摘要卡表面",
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [
+          0.12549019607843137,
+          0.13333333333333333,
+          0.1411764705882353
+        ],
+        "alpha": 1.0
+      },
+      "$extensions": {
+        "xiaoqiao": {
+          "argb": "#FF202224",
+          "cssRgba": "#202224FF"
+        }
+      }
+    },
+    "app_border_subtle": {
+      "$type": "color",
+      "$description": "卡片白色轮廓（预留光效）",
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [
+          1.0,
+          1.0,
+          1.0
+        ],
+        "alpha": 0.09803921568627451
+      },
+      "$extensions": {
+        "xiaoqiao": {
+          "argb": "#19FFFFFF",
+          "cssRgba": "#FFFFFF19"
+        }
+      }
+    },
+    "app_divider_subtle": {
+      "$type": "color",
+      "$description": "列表弱分割线",
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [
+          1.0,
+          1.0,
+          1.0
+        ],
+        "alpha": 0.09803921568627451
+      },
+      "$extensions": {
+        "xiaoqiao": {
+          "argb": "#19FFFFFF",
+          "cssRgba": "#FFFFFF19"
+        }
+      }
+    },
+    "app_scrim": {
+      "$type": "color",
+      "$description": "模态遮罩",
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "alpha": 0.6
+      },
+      "$extensions": {
+        "xiaoqiao": {
+          "argb": "#99000000",
+          "cssRgba": "#00000099"
+        }
+      }
+    },
+    "app_income": {
+      "$type": "color",
+      "$description": "收入金额、收入方向箭头",
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [
+          0.3333333333333333,
+          0.788235294117647,
+          0.6470588235294118
+        ],
+        "alpha": 1.0
+      },
+      "$extensions": {
+        "xiaoqiao": {
+          "argb": "#FF55C9A5",
+          "cssRgba": "#55C9A5FF"
+        }
+      }
+    },
+    "app_expense": {
+      "$type": "color",
+      "$description": "普通支出金额，不等同错误",
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [
+          1.0,
+          1.0,
+          1.0
+        ],
+        "alpha": 0.8980392156862745
+      },
+      "$extensions": {
+        "xiaoqiao": {
+          "argb": "#E5FFFFFF",
+          "cssRgba": "#FFFFFFE5"
+        }
+      }
+    },
+    "app_discount": {
+      "$type": "color",
+      "$description": "优惠金额",
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [
+          0.3333333333333333,
+          0.788235294117647,
+          0.6470588235294118
+        ],
+        "alpha": 1.0
+      },
+      "$extensions": {
+        "xiaoqiao": {
+          "argb": "#FF55C9A5",
+          "cssRgba": "#55C9A5FF"
+        }
+      }
+    },
+    "app_warning_background": {
+      "$type": "color",
+      "$description": "一级警示弱背景",
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [
+          0.8509803921568627,
+          0.2823529411764706,
+          0.2196078431372549
+        ],
+        "alpha": 0.09803921568627451
+      },
+      "$extensions": {
+        "xiaoqiao": {
+          "argb": "#19D94838",
+          "cssRgba": "#D9483819"
+        }
+      }
+    },
+    "app_alert_background": {
+      "$type": "color",
+      "$description": "二级警示弱背景",
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [
+          0.8588235294117647,
+          0.4196078431372549,
+          0.25882352941176473
+        ],
+        "alpha": 0.09803921568627451
+      },
+      "$extensions": {
+        "xiaoqiao": {
+          "argb": "#19DB6B42",
+          "cssRgba": "#DB6B4219"
+        }
+      }
+    },
+    "app_confirm_background": {
+      "$type": "color",
+      "$description": "确认弱背景",
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [
+          0.3568627450980392,
+          0.6588235294117647,
+          0.32941176470588235
+        ],
+        "alpha": 0.09803921568627451
+      },
+      "$extensions": {
+        "xiaoqiao": {
+          "argb": "#195BA854",
+          "cssRgba": "#5BA85419"
+        }
+      }
+    },
+    "app_gradient_start": {
+      "$type": "color",
+      "$description": "原版渐变起点",
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [
+          0.9921568627450981,
+          0.43137254901960786,
+          0.24313725490196078
+        ],
+        "alpha": 1.0
+      },
+      "$extensions": {
+        "xiaoqiao": {
+          "argb": "#FFFD6E3E",
+          "cssRgba": "#FD6E3EFF"
+        }
+      }
+    },
+    "app_gradient_end": {
+      "$type": "color",
+      "$description": "原版渐变终点",
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [
+          1.0,
+          0.0392156862745098,
+          0.0392156862745098
+        ],
+        "alpha": 1.0
+      },
+      "$extensions": {
+        "xiaoqiao": {
+          "argb": "#FFFF0A0A",
+          "cssRgba": "#FF0A0AFF"
+        }
+      }
+    },
+    "app_button_on_gradient": {
+      "$type": "color",
+      "$description": "渐变按钮图文",
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [
+          1.0,
+          1.0,
+          1.0
+        ],
+        "alpha": 1.0
+      },
+      "$extensions": {
+        "xiaoqiao": {
+          "argb": "#FFFFFFFF",
+          "cssRgba": "#FFFFFFFF"
+        }
+      }
+    },
+    "app_switch_thumb": {
+      "$type": "color",
+      "$description": "开关滑块固定白色",
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [
+          1.0,
+          1.0,
+          1.0
+        ],
+        "alpha": 1.0
+      },
+      "$extensions": {
+        "xiaoqiao": {
+          "argb": "#FFFFFFFF",
+          "cssRgba": "#FFFFFFFF"
+        }
+      }
+    },
+    "app_switch_track_off": {
+      "$type": "color",
+      "$description": "未开启开关轨道",
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [
+          1.0,
+          1.0,
+          1.0
+        ],
+        "alpha": 0.2
+      },
+      "$extensions": {
+        "xiaoqiao": {
+          "argb": "#33FFFFFF",
+          "cssRgba": "#FFFFFF33"
+        }
+      }
+    },
+    "app_focus_ring": {
+      "$type": "color",
+      "$description": "键盘焦点描边",
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [
+          1.0,
+          0.5843137254901961,
+          0.42745098039215684
+        ],
+        "alpha": 1.0
+      },
+      "$extensions": {
+        "xiaoqiao": {
+          "argb": "#FFFF956D",
+          "cssRgba": "#FF956DFF"
+        }
+      }
+    },
+    "app_receipt_line": {
+      "$type": "color",
+      "$description": "账单虚线／齿边",
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [
+          1.0,
+          1.0,
+          1.0
+        ],
+        "alpha": 0.2
+      },
+      "$extensions": {
+        "xiaoqiao": {
+          "argb": "#33FFFFFF",
+          "cssRgba": "#FFFFFF33"
+        }
+      }
+    },
+    "app_chart_fill": {
+      "$type": "color",
+      "$description": "支出图表填充",
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [
+          1.0,
+          0.5843137254901961,
+          0.42745098039215684
+        ],
+        "alpha": 0.09803921568627451
+      },
+      "$extensions": {
+        "xiaoqiao": {
+          "argb": "#19FF956D",
+          "cssRgba": "#FF956D19"
+        }
+      }
+    },
+    "app_summary_secondary": {
+      "$type": "color",
+      "$description": "深色摘要次级文字",
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [
+          1.0,
+          1.0,
+          1.0
+        ],
+        "alpha": 0.6
+      },
+      "$extensions": {
+        "xiaoqiao": {
+          "argb": "#99FFFFFF",
+          "cssRgba": "#FFFFFF99"
+        }
+      }
+    },
+    "app_summary_accent": {
+      "$type": "color",
+      "$description": "摘要预算进度",
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [
+          1.0,
+          0.6705882352941176,
+          0.4823529411764706
+        ],
+        "alpha": 1.0
+      },
+      "$extensions": {
+        "xiaoqiao": {
+          "argb": "#FFFFAB7B",
+          "cssRgba": "#FFAB7BFF"
+        }
+      }
+    },
+    "app_warning_text": {
+      "$type": "color",
+      "$description": "一级警示正文",
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [
+          1.0,
+          0.5647058823529412,
+          0.5176470588235295
+        ],
+        "alpha": 1.0
+      },
+      "$extensions": {
+        "xiaoqiao": {
+          "argb": "#FFFF9084",
+          "cssRgba": "#FF9084FF"
+        }
+      }
+    },
+    "app_alert_text": {
+      "$type": "color",
+      "$description": "二级警示正文",
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [
+          1.0,
+          0.7019607843137254,
+          0.5411764705882353
+        ],
+        "alpha": 1.0
+      },
+      "$extensions": {
+        "xiaoqiao": {
+          "argb": "#FFFFB38A",
+          "cssRgba": "#FFB38AFF"
+        }
+      }
+    },
+    "app_confirm_text": {
+      "$type": "color",
+      "$description": "确认状态正文",
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [
+          0.5607843137254902,
+          0.8196078431372549,
+          0.5215686274509804
+        ],
+        "alpha": 1.0
+      },
+      "$extensions": {
+        "xiaoqiao": {
+          "argb": "#FF8FD185",
+          "cssRgba": "#8FD185FF"
+        }
+      }
+    },
+    "app_disabled_content": {
+      "$type": "color",
+      "$description": "禁用内容",
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [
+          1.0,
+          1.0,
+          1.0
+        ],
+        "alpha": 0.2
+      },
+      "$extensions": {
+        "xiaoqiao": {
+          "argb": "#33FFFFFF",
+          "cssRgba": "#FFFFFF33"
+        }
+      }
+    }
+  }
+}

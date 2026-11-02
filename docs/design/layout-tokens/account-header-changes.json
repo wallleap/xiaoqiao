@@ -1,0 +1,114 @@
+[
+  {
+    "theme": "light",
+    "screen": "H01",
+    "removed": [
+      "一键登录  ›"
+    ]
+  },
+  {
+    "theme": "light",
+    "screen": "H02",
+    "removed": [
+      "账号信息  ›"
+    ]
+  },
+  {
+    "theme": "light",
+    "screen": "H03",
+    "removed": [
+      "账号信息  ›"
+    ]
+  },
+  {
+    "theme": "light",
+    "screen": "H04",
+    "removed": [
+      "账号信息  ›"
+    ]
+  },
+  {
+    "theme": "light",
+    "screen": "H07",
+    "removed": [
+      "一键登录  ›"
+    ]
+  },
+  {
+    "theme": "light",
+    "screen": "D01",
+    "removed": [
+      "华为账号一键登录（重复按钮）"
+    ]
+  },
+  {
+    "theme": "light",
+    "screen": "D02",
+    "removed": [
+      "账号信息  ›"
+    ]
+  },
+  {
+    "theme": "light",
+    "screen": "D10",
+    "removed": [
+      "账号信息  ›"
+    ]
+  },
+  {
+    "theme": "dark",
+    "screen": "H01",
+    "removed": [
+      "一键登录  ›"
+    ]
+  },
+  {
+    "theme": "dark",
+    "screen": "H02",
+    "removed": [
+      "账号信息  ›"
+    ]
+  },
+  {
+    "theme": "dark",
+    "screen": "H03",
+    "removed": [
+      "账号信息  ›"
+    ]
+  },
+  {
+    "theme": "dark",
+    "screen": "H04",
+    "removed": [
+      "账号信息  ›"
+    ]
+  },
+  {
+    "theme": "dark",
+    "screen": "H07",
+    "removed": [
+      "一键登录  ›"
+    ]
+  },
+  {
+    "theme": "dark",
+    "screen": "D01",
+    "removed": [
+      "华为账号一键登录（重复按钮）"
+    ]
+  },
+  {
+    "theme": "dark",
+    "screen": "D02",
+    "removed": [
+      "账号信息  ›"
+    ]
+  },
+  {
+    "theme": "dark",
+    "screen": "D10",
+    "removed": [
+      "账号信息  ›"
+    ]
+  }
+]

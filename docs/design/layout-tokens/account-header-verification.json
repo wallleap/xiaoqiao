@@ -1,0 +1,90 @@
+{
+  "screens": [
+    {
+      "screen": "H01",
+      "theme": "light",
+      "duplicateAvatarCopyRemoved": true
+    },
+    {
+      "screen": "H02",
+      "theme": "light",
+      "duplicateAvatarCopyRemoved": true
+    },
+    {
+      "screen": "H03",
+      "theme": "light",
+      "duplicateAvatarCopyRemoved": true
+    },
+    {
+      "screen": "H04",
+      "theme": "light",
+      "duplicateAvatarCopyRemoved": true
+    },
+    {
+      "screen": "H07",
+      "theme": "light",
+      "duplicateAvatarCopyRemoved": true
+    },
+    {
+      "screen": "D01",
+      "theme": "light",
+      "duplicateAvatarCopyRemoved": true
+    },
+    {
+      "screen": "D02",
+      "theme": "light",
+      "duplicateAvatarCopyRemoved": true
+    },
+    {
+      "screen": "D10",
+      "theme": "light",
+      "duplicateAvatarCopyRemoved": true
+    },
+    {
+      "screen": "H01",
+      "theme": "dark",
+      "duplicateAvatarCopyRemoved": true
+    },
+    {
+      "screen": "H02",
+      "theme": "dark",
+      "duplicateAvatarCopyRemoved": true
+    },
+    {
+      "screen": "H03",
+      "theme": "dark",
+      "duplicateAvatarCopyRemoved": true
+    },
+    {
+      "screen": "H04",
+      "theme": "dark",
+      "duplicateAvatarCopyRemoved": true
+    },
+    {
+      "screen": "H07",
+      "theme": "dark",
+      "duplicateAvatarCopyRemoved": true
+    },
+    {
+      "screen": "D01",
+      "theme": "dark",
+      "duplicateAvatarCopyRemoved": true
+    },
+    {
+      "screen": "D02",
+      "theme": "dark",
+      "duplicateAvatarCopyRemoved": true
+    },
+    {
+      "screen": "D10",
+      "theme": "dark",
+      "duplicateAvatarCopyRemoved": true
+    }
+  ],
+  "webdavErrorExplanationPreserved": true,
+  "H07StandaloneRetryActionPreserved": true,
+  "nativeBusinessLogicChanged": false,
+  "browserPreviewChecked": true,
+  "figmaMobileReopenedVerified": true,
+  "figmaWideBoardReopenedVerified": true
+}

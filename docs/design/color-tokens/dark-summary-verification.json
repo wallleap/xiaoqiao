@@ -1,0 +1,71 @@
+{
+  "checks": [
+    {
+      "name": "238页文案、字号、字重、fp标注与布局几何均未改变",
+      "pass": true
+    },
+    {
+      "name": "仅浅色模式中12个相关页面的摘要配色改变",
+      "pass": true
+    },
+    {
+      "name": "预算和资产摘要恢复#272D31与白色主金额",
+      "pass": true
+    },
+    {
+      "name": "浅灰页面、普通白卡和黑色弹窗遮罩保留",
+      "pass": true
+    }
+  ],
+  "changedScreens": [
+    [
+      "light",
+      "R01"
+    ],
+    [
+      "light",
+      "R12"
+    ],
+    [
+      "light",
+      "R13"
+    ],
+    [
+      "light",
+      "R11"
+    ],
+    [
+      "light",
+      "R04"
+    ],
+    [
+      "light",
+      "R10"
+    ],
+    [
+      "light",
+      "R09"
+    ],
+    [
+      "light",
+      "R24"
+    ],
+    [
+      "light",
+      "D18"
+    ],
+    [
+      "light",
+      "D13"
+    ],
+    [
+      "light",
+      "D11"
+    ],
+    [
+      "light",
+      "D15"
+    ]
+  ],
+  "nativeCodeChanged": false
+}

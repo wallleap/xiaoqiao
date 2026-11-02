@@ -1,0 +1,247 @@
+{
+  "corner_radius_none": {
+    "value": 0,
+    "unit": "vp",
+    "type": "radius"
+  },
+  "corner_radius_level1": {
+    "value": 2,
+    "unit": "vp",
+    "type": "radius"
+  },
+  "corner_radius_level2": {
+    "value": 4,
+    "unit": "vp",
+    "type": "radius"
+  },
+  "corner_radius_level3": {
+    "value": 6,
+    "unit": "vp",
+    "type": "radius"
+  },
+  "corner_radius_level4": {
+    "value": 8,
+    "unit": "vp",
+    "type": "radius"
+  },
+  "corner_radius_level5": {
+    "value": 10,
+    "unit": "vp",
+    "type": "radius"
+  },
+  "corner_radius_level6": {
+    "value": 12,
+    "unit": "vp",
+    "type": "radius"
+  },
+  "corner_radius_level7": {
+    "value": 14,
+    "unit": "vp",
+    "type": "radius"
+  },
+  "corner_radius_level8": {
+    "value": 16,
+    "unit": "vp",
+    "type": "radius"
+  },
+  "corner_radius_level9": {
+    "value": 18,
+    "unit": "vp",
+    "type": "radius"
+  },
+  "corner_radius_level10": {
+    "value": 20,
+    "unit": "vp",
+    "type": "radius"
+  },
+  "corner_radius_level11": {
+    "value": 22,
+    "unit": "vp",
+    "type": "radius"
+  },
+  "corner_radius_level12": {
+    "value": 24,
+    "unit": "vp",
+    "type": "radius"
+  },
+  "corner_radius_level13": {
+    "value": 26,
+    "unit": "vp",
+    "type": "radius"
+  },
+  "corner_radius_level16": {
+    "value": 32,
+    "unit": "vp",
+    "type": "radius"
+  },
+  "corner_radius_level18": {
+    "value": 36,
+    "unit": "vp",
+    "type": "radius"
+  },
+  "Padding_level0": {
+    "value": 0,
+    "unit": "vp",
+    "type": "spacing"
+  },
+  "Padding_level1": {
+    "value": 2,
+    "unit": "vp",
+    "type": "spacing"
+  },
+  "Padding_level2": {
+    "value": 4,
+    "unit": "vp",
+    "type": "spacing"
+  },
+  "Padding_level3": {
+    "value": 6,
+    "unit": "vp",
+    "type": "spacing"
+  },
+  "Padding_level4": {
+    "value": 8,
+    "unit": "vp",
+    "type": "spacing"
+  },
+  "Padding_level5": {
+    "value": 10,
+    "unit": "vp",
+    "type": "spacing"
+  },
+  "Padding_level6": {
+    "value": 12,
+    "unit": "vp",
+    "type": "spacing"
+  },
+  "Padding_level7": {
+    "value": 14,
+    "unit": "vp",
+    "type": "spacing"
+  },
+  "Padding_level8": {
+    "value": 16,
+    "unit": "vp",
+    "type": "spacing"
+  },
+  "Padding_level9": {
+    "value": 18,
+    "unit": "vp",
+    "type": "spacing"
+  },
+  "Padding_level10": {
+    "value": 20,
+    "unit": "vp",
+    "type": "spacing"
+  },
+  "Padding_level11": {
+    "value": 22,
+    "unit": "vp",
+    "type": "spacing"
+  },
+  "Padding_level12": {
+    "value": 24,
+    "unit": "vp",
+    "type": "spacing"
+  },
+  "Padding_level13": {
+    "value": 26,
+    "unit": "vp",
+    "type": "spacing"
+  },
+  "Padding_level16": {
+    "value": 32,
+    "unit": "vp",
+    "type": "spacing"
+  },
+  "Padding_level17": {
+    "value": 34,
+    "unit": "vp",
+    "type": "spacing"
+  },
+  "Padding_level18": {
+    "value": 36,
+    "unit": "vp",
+    "type": "spacing"
+  },
+  "Padding_level19": {
+    "value": 38,
+    "unit": "vp",
+    "type": "spacing"
+  },
+  "Padding_level20": {
+    "value": 40,
+    "unit": "vp",
+    "type": "spacing"
+  },
+  "Padding_level21": {
+    "value": 42,
+    "unit": "vp",
+    "type": "spacing"
+  },
+  "Padding_level22": {
+    "value": 44,
+    "unit": "vp",
+    "type": "spacing"
+  },
+  "Padding_level23": {
+    "value": 46,
+    "unit": "vp",
+    "type": "spacing"
+  },
+  "Padding_level25": {
+    "value": 50,
+    "unit": "vp",
+    "type": "spacing"
+  },
+  "Padding_level26": {
+    "value": 52,
+    "unit": "vp",
+    "type": "spacing"
+  },
+  "Padding_level27": {
+    "value": 54,
+    "unit": "vp",
+    "type": "spacing"
+  },
+  "Padding_level28": {
+    "value": 56,
+    "unit": "vp",
+    "type": "spacing"
+  },
+  "Padding_level29": {
+    "value": 58,
+    "unit": "vp",
+    "type": "spacing"
+  },
+  "Padding_level30": {
+    "value": 60,
+    "unit": "vp",
+    "type": "spacing"
+  },
+  "Padding_level32": {
+    "value": 64,
+    "unit": "vp",
+    "type": "spacing"
+  },
+  "Padding_level33": {
+    "value": 66,
+    "unit": "vp",
+    "type": "spacing"
+  },
+  "Padding_level34": {
+    "value": 68,
+    "unit": "vp",
+    "type": "spacing"
+  },
+  "Padding_level35": {
+    "value": 70,
+    "unit": "vp",
+    "type": "spacing"
+  },
+  "Padding_level36": {
+    "value": 72,
+    "unit": "vp",
+    "type": "spacing"
+  }
+}

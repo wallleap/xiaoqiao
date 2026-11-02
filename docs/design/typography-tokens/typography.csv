@@ -1,0 +1,16 @@
+Token,场景类别,Weight,Phone(fp),PC(fp),Watch(fp),字体
+Display_L,展示性文本  Display,Light,56,54,56,system-default
+Display_M,展示性文本  Display,Light,48,46,48,system-default
+Display_S,展示性文本  Display,Light,38,36,38,system-default
+Title_L,标题文本  Title,Bold,30,28,30,system-default
+Title_M,标题文本  Title,Bold,24,22,24,system-default
+Title_S,标题文本  Title,Bold,20,18,20,system-default
+Subtitle_L,副标题文本  Subtitle,Medium,18,16,18,system-default
+Subtitle_M,副标题文本  Subtitle,Medium,16,14,16,system-default
+Subtitle_S,副标题文本  Subtitle,Medium,14,12,14,system-default
+Body_L,正文文本  Body,Medium,16,14,16,system-default
+Body_M,正文文本  Body,Regular,14,14,14,system-default
+Body_S,正文文本  Body,Regular,12,14,12,system-default
+Caption_L,说明文本  Caption,Medium,12,12,12,system-default
+Caption_M,说明文本  Caption,Medium,10,9,10,system-default
+Caption_S,说明文本  Caption,Medium,-,-,8,system-default

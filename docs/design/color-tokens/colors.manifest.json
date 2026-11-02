@@ -1,0 +1,2423 @@
+{
+  "version": "2026-10-30",
+  "source": "https://developer.huawei.com/consumer/cn/doc/doccenter-ux-design/color-0000001776857164#section17672143841113",
+  "referenceFormat": "#AARRGGBB",
+  "cssFormat": "#RRGGBBAA",
+  "figmaFormat": "RGB channels + opacity (0–1)",
+  "official": {
+    "brand": {
+      "scene": "品牌色",
+      "light": "#FF0A59F7",
+      "dark": "#FF317AF7"
+    },
+    "warning": {
+      "scene": "一级警示色",
+      "light": "#FFE84026",
+      "dark": "#FFD94838"
+    },
+    "alert": {
+      "scene": "二级警示色",
+      "light": "#FFED6F21",
+      "dark": "#FFDB6B42"
+    },
+    "confirm": {
+      "scene": "确认色",
+      "light": "#FF64BB5C",
+      "dark": "#FF5BA854"
+    },
+    "font_primary": {
+      "scene": "一级文本",
+      "light": "#E5000000",
+      "dark": "#E5FFFFFF"
+    },
+    "font_secondary": {
+      "scene": "二级文本",
+      "light": "#99000000",
+      "dark": "#99FFFFFF"
+    },
+    "font_tertiary": {
+      "scene": "三级文本",
+      "light": "#66000000",
+      "dark": "#66FFFFFF"
+    },
+    "font_fourth": {
+      "scene": "四级文本",
+      "light": "#33000000",
+      "dark": "#33FFFFFF"
+    },
+    "font_emphasize": {
+      "scene": "高亮文本",
+      "light": "#FF0A59F7",
+      "dark": "#FF317AF7"
+    },
+    "font_on_primary": {
+      "scene": "一级文本反色",
+      "light": "#FFFFFFFF",
+      "dark": "#FFFFFFFF"
+    },
+    "font_on_secondary": {
+      "scene": "二级文本反色",
+      "light": "#99FFFFFF",
+      "dark": "#99FFFFFF"
+    },
+    "font_on_tertiary": {
+      "scene": "三级文本反色",
+      "light": "#66FFFFFF",
+      "dark": "#66FFFFFF"
+    },
+    "font_on_fourth": {
+      "scene": "四级文本反色",
+      "light": "#33FFFFFF",
+      "dark": "#33FFFFFF"
+    },
+    "icon_primary": {
+      "scene": "一级图标",
+      "light": "#E5000000",
+      "dark": "#E5FFFFFF"
+    },
+    "icon_secondary": {
+      "scene": "二级图标",
+      "light": "#99000000",
+      "dark": "#99FFFFFF"
+    },
+    "icon_tertiary": {
+      "scene": "三级图标",
+      "light": "#66000000",
+      "dark": "#66FFFFFF"
+    },
+    "icon_fourth": {
+      "scene": "四级图标",
+      "light": "#33000000",
+      "dark": "#33FFFFFF"
+    },
+    "icon_emphasize": {
+      "scene": "高亮图标",
+      "light": "#FF0A59F7",
+      "dark": "#FF317AF7"
+    },
+    "icon_sub_emphasize": {
+      "scene": "高亮辅助图标",
+      "light": "#660A59F7",
+      "dark": "#66317AF7"
+    },
+    "icon_on_primary": {
+      "scene": "一级图标反色",
+      "light": "#FFFFFFFF",
+      "dark": "#FFFFFFFF"
+    },
+    "icon_on_secondary": {
+      "scene": "二级图标反色",
+      "light": "#99FFFFFF",
+      "dark": "#99FFFFFF"
+    },
+    "icon_on_tertiary": {
+      "scene": "三级图标反色",
+      "light": "#66FFFFFF",
+      "dark": "#66FFFFFF"
+    },
+    "icon_on_fourth": {
+      "scene": "四级图标反色",
+      "light": "#33FFFFFF",
+      "dark": "#33FFFFFF"
+    },
+    "background_primary": {
+      "scene": "一级背景（实色/不透明色）",
+      "light": "#FFFFFFFF",
+      "dark": "#FFE5E5E5"
+    },
+    "background_secondary": {
+      "scene": "二级背景（实色/不透明色）",
+      "light": "#FFF1F3F5",
+      "dark": "#FF191A1C"
+    },
+    "background_tertiary": {
+      "scene": "三级背景（实色/不透明色）",
+      "light": "#FFE5E5EA",
+      "dark": "#FF202224"
+    },
+    "background_fourth": {
+      "scene": "四级背景（实色/不透明色）",
+      "light": "#FFD1D1D6",
+      "dark": "#FF2E3033"
+    },
+    "background_emphasize": {
+      "scene": "高亮背景（实色/不透明色）",
+      "light": "#FF0A59F7",
+      "dark": "#FF317AF7"
+    },
+    "comp_foreground_primary": {
+      "scene": "前背景",
+      "light": "#FF000000",
+      "dark": "#FFE5E5E5"
+    },
+    "comp_background_primary": {
+      "scene": "白色背景",
+      "light": "#FFFFFFFF",
+      "dark": "#FF202224"
+    },
+    "comp_background_primary_contrary": {
+      "scene": "常亮背景",
+      "light": "#FFFFFFFF",
+      "dark": "#FFE5E5E5"
+    },
+    "comp_background_gray": {
+      "scene": "灰色背景",
+      "light": "#FFF1F3F5",
+      "dark": "#FFE5E5EA"
+    },
+    "comp_background_secondary": {
+      "scene": "二级背景",
+      "light": "#19000000",
+      "dark": "#19FFFFFF"
+    },
+    "comp_background_tertiary": {
+      "scene": "三级背景",
+      "light": "#0C000000",
+      "dark": "#0CFFFFFF"
+    },
+    "comp_background_emphasize": {
+      "scene": "高亮背景",
+      "light": "#FF0A59F7",
+      "dark": "#FF317AF7"
+    },
+    "comp_background_neutral": {
+      "scene": "黑色中性高亮背景",
+      "light": "#FF000000",
+      "dark": "#FFFFFFFF"
+    },
+    "comp_emphasize_secondary": {
+      "scene": "20%高亮背景",
+      "light": "#330A59F7",
+      "dark": "#33317AF7"
+    },
+    "comp_emphasize_tertiary": {
+      "scene": "10%高亮背景",
+      "light": "#190A59F7",
+      "dark": "#19317AF7"
+    },
+    "comp_divider": {
+      "scene": "分割线颜色",
+      "light": "#33000000",
+      "dark": "#33FFFFFF"
+    },
+    "comp_common_contrary": {
+      "scene": "通用反色",
+      "light": "#FFFFFFFF",
+      "dark": "#FF000000"
+    },
+    "comp_background_focus": {
+      "scene": "获焦态背景色",
+      "light": "#FFF1F3F5",
+      "dark": "#FF000000"
+    },
+    "comp_focused_primary": {
+      "scene": "获焦态一级反色",
+      "light": "#E5000000",
+      "dark": "#E5FFFFFF"
+    },
+    "comp_focused_secondary": {
+      "scene": "获焦态二级反色",
+      "light": "#99000000",
+      "dark": "#99FFFFFF"
+    },
+    "comp_focused_tertiary": {
+      "scene": "获焦态三级反色",
+      "light": "#66000000",
+      "dark": "#66FFFFFF"
+    },
+    "interactive_hover": {
+      "scene": "通用悬停交互式颜色",
+      "light": "#0C000000",
+      "dark": "#0CFFFFFF"
+    },
+    "interactive_pressed": {
+      "scene": "通用按压交互式颜色",
+      "light": "#19000000",
+      "dark": "#19FFFFFF"
+    },
+    "interactive_focus": {
+      "scene": "通用获焦交互式颜色",
+      "light": "#FF0A59F7",
+      "dark": "#FF317AF7"
+    },
+    "interactive_active": {
+      "scene": "通用激活交互式颜色",
+      "light": "#FF0A59F7",
+      "dark": "#FF317AF7"
+    },
+    "interactive_select": {
+      "scene": "通用选择交互式颜色",
+      "light": "#330A59F7",
+      "dark": "#33317AF7"
+    },
+    "interactive_click": {
+      "scene": "通用点击交互式颜色",
+      "light": "#19000000",
+      "dark": "#19FFFFFF"
+    }
+  },
+  "tokens": {
+    "brand": {
+      "scene": "品牌色",
+      "light": "#FFFF5425",
+      "dark": "#FFFF956D",
+      "alias": "app override",
+      "modes": {
+        "light": {
+          "argb": "#FFFF5425",
+          "rgba": "#FF5425FF",
+          "figma": {
+            "r": 1.0,
+            "g": 0.32941176470588235,
+            "b": 0.1450980392156863,
+            "a": 1.0
+          }
+        },
+        "dark": {
+          "argb": "#FFFF956D",
+          "rgba": "#FF956DFF",
+          "figma": {
+            "r": 1.0,
+            "g": 0.5843137254901961,
+            "b": 0.42745098039215684,
+            "a": 1.0
+          }
+        }
+      }
+    },
+    "warning": {
+      "scene": "一级警示色",
+      "light": "#FFE84026",
+      "dark": "#FFD94838",
+      "alias": "Huawei reference",
+      "modes": {
+        "light": {
+          "argb": "#FFE84026",
+          "rgba": "#E84026FF",
+          "figma": {
+            "r": 0.9098039215686274,
+            "g": 0.25098039215686274,
+            "b": 0.14901960784313725,
+            "a": 1.0
+          }
+        },
+        "dark": {
+          "argb": "#FFD94838",
+          "rgba": "#D94838FF",
+          "figma": {
+            "r": 0.8509803921568627,
+            "g": 0.2823529411764706,
+            "b": 0.2196078431372549,
+            "a": 1.0
+          }
+        }
+      }
+    },
+    "alert": {
+      "scene": "二级警示色",
+      "light": "#FFED6F21",
+      "dark": "#FFDB6B42",
+      "alias": "Huawei reference",
+      "modes": {
+        "light": {
+          "argb": "#FFED6F21",
+          "rgba": "#ED6F21FF",
+          "figma": {
+            "r": 0.9294117647058824,
+            "g": 0.43529411764705883,
+            "b": 0.12941176470588237,
+            "a": 1.0
+          }
+        },
+        "dark": {
+          "argb": "#FFDB6B42",
+          "rgba": "#DB6B42FF",
+          "figma": {
+            "r": 0.8588235294117647,
+            "g": 0.4196078431372549,
+            "b": 0.25882352941176473,
+            "a": 1.0
+          }
+        }
+      }
+    },
+    "confirm": {
+      "scene": "确认色",
+      "light": "#FF64BB5C",
+      "dark": "#FF5BA854",
+      "alias": "Huawei reference",
+      "modes": {
+        "light": {
+          "argb": "#FF64BB5C",
+          "rgba": "#64BB5CFF",
+          "figma": {
+            "r": 0.39215686274509803,
+            "g": 0.7333333333333333,
+            "b": 0.3607843137254902,
+            "a": 1.0
+          }
+        },
+        "dark": {
+          "argb": "#FF5BA854",
+          "rgba": "#5BA854FF",
+          "figma": {
+            "r": 0.3568627450980392,
+            "g": 0.6588235294117647,
+            "b": 0.32941176470588235,
+            "a": 1.0
+          }
+        }
+      }
+    },
+    "font_primary": {
+      "scene": "一级文本",
+      "light": "#E5000000",
+      "dark": "#E5FFFFFF",
+      "alias": "Huawei reference",
+      "modes": {
+        "light": {
+          "argb": "#E5000000",
+          "rgba": "#000000E5",
+          "figma": {
+            "r": 0.0,
+            "g": 0.0,
+            "b": 0.0,
+            "a": 0.8980392156862745
+          }
+        },
+        "dark": {
+          "argb": "#E5FFFFFF",
+          "rgba": "#FFFFFFE5",
+          "figma": {
+            "r": 1.0,
+            "g": 1.0,
+            "b": 1.0,
+            "a": 0.8980392156862745
+          }
+        }
+      }
+    },
+    "font_secondary": {
+      "scene": "二级文本",
+      "light": "#99000000",
+      "dark": "#99FFFFFF",
+      "alias": "Huawei reference",
+      "modes": {
+        "light": {
+          "argb": "#99000000",
+          "rgba": "#00000099",
+          "figma": {
+            "r": 0.0,
+            "g": 0.0,
+            "b": 0.0,
+            "a": 0.6
+          }
+        },
+        "dark": {
+          "argb": "#99FFFFFF",
+          "rgba": "#FFFFFF99",
+          "figma": {
+            "r": 1.0,
+            "g": 1.0,
+            "b": 1.0,
+            "a": 0.6
+          }
+        }
+      }
+    },
+    "font_tertiary": {
+      "scene": "三级文本",
+      "light": "#66000000",
+      "dark": "#66FFFFFF",
+      "alias": "Huawei reference",
+      "modes": {
+        "light": {
+          "argb": "#66000000",
+          "rgba": "#00000066",
+          "figma": {
+            "r": 0.0,
+            "g": 0.0,
+            "b": 0.0,
+            "a": 0.4
+          }
+        },
+        "dark": {
+          "argb": "#66FFFFFF",
+          "rgba": "#FFFFFF66",
+          "figma": {
+            "r": 1.0,
+            "g": 1.0,
+            "b": 1.0,
+            "a": 0.4
+          }
+        }
+      }
+    },
+    "font_fourth": {
+      "scene": "四级文本",
+      "light": "#33000000",
+      "dark": "#33FFFFFF",
+      "alias": "Huawei reference",
+      "modes": {
+        "light": {
+          "argb": "#33000000",
+          "rgba": "#00000033",
+          "figma": {
+            "r": 0.0,
+            "g": 0.0,
+            "b": 0.0,
+            "a": 0.2
+          }
+        },
+        "dark": {
+          "argb": "#33FFFFFF",
+          "rgba": "#FFFFFF33",
+          "figma": {
+            "r": 1.0,
+            "g": 1.0,
+            "b": 1.0,
+            "a": 0.2
+          }
+        }
+      }
+    },
+    "font_emphasize": {
+      "scene": "高亮文本",
+      "light": "#FFC83B14",
+      "dark": "#FFFF956D",
+      "alias": "app override",
+      "modes": {
+        "light": {
+          "argb": "#FFC83B14",
+          "rgba": "#C83B14FF",
+          "figma": {
+            "r": 0.7843137254901961,
+            "g": 0.23137254901960785,
+            "b": 0.0784313725490196,
+            "a": 1.0
+          }
+        },
+        "dark": {
+          "argb": "#FFFF956D",
+          "rgba": "#FF956DFF",
+          "figma": {
+            "r": 1.0,
+            "g": 0.5843137254901961,
+            "b": 0.42745098039215684,
+            "a": 1.0
+          }
+        }
+      }
+    },
+    "font_on_primary": {
+      "scene": "一级文本反色",
+      "light": "#FFFFFFFF",
+      "dark": "#FFFFFFFF",
+      "alias": "Huawei reference",
+      "modes": {
+        "light": {
+          "argb": "#FFFFFFFF",
+          "rgba": "#FFFFFFFF",
+          "figma": {
+            "r": 1.0,
+            "g": 1.0,
+            "b": 1.0,
+            "a": 1.0
+          }
+        },
+        "dark": {
+          "argb": "#FFFFFFFF",
+          "rgba": "#FFFFFFFF",
+          "figma": {
+            "r": 1.0,
+            "g": 1.0,
+            "b": 1.0,
+            "a": 1.0
+          }
+        }
+      }
+    },
+    "font_on_secondary": {
+      "scene": "二级文本反色",
+      "light": "#99FFFFFF",
+      "dark": "#99FFFFFF",
+      "alias": "Huawei reference",
+      "modes": {
+        "light": {
+          "argb": "#99FFFFFF",
+          "rgba": "#FFFFFF99",
+          "figma": {
+            "r": 1.0,
+            "g": 1.0,
+            "b": 1.0,
+            "a": 0.6
+          }
+        },
+        "dark": {
+          "argb": "#99FFFFFF",
+          "rgba": "#FFFFFF99",
+          "figma": {
+            "r": 1.0,
+            "g": 1.0,
+            "b": 1.0,
+            "a": 0.6
+          }
+        }
+      }
+    },
+    "font_on_tertiary": {
+      "scene": "三级文本反色",
+      "light": "#66FFFFFF",
+      "dark": "#66FFFFFF",
+      "alias": "Huawei reference",
+      "modes": {
+        "light": {
+          "argb": "#66FFFFFF",
+          "rgba": "#FFFFFF66",
+          "figma": {
+            "r": 1.0,
+            "g": 1.0,
+            "b": 1.0,
+            "a": 0.4
+          }
+        },
+        "dark": {
+          "argb": "#66FFFFFF",
+          "rgba": "#FFFFFF66",
+          "figma": {
+            "r": 1.0,
+            "g": 1.0,
+            "b": 1.0,
+            "a": 0.4
+          }
+        }
+      }
+    },
+    "font_on_fourth": {
+      "scene": "四级文本反色",
+      "light": "#33FFFFFF",
+      "dark": "#33FFFFFF",
+      "alias": "Huawei reference",
+      "modes": {
+        "light": {
+          "argb": "#33FFFFFF",
+          "rgba": "#FFFFFF33",
+          "figma": {
+            "r": 1.0,
+            "g": 1.0,
+            "b": 1.0,
+            "a": 0.2
+          }
+        },
+        "dark": {
+          "argb": "#33FFFFFF",
+          "rgba": "#FFFFFF33",
+          "figma": {
+            "r": 1.0,
+            "g": 1.0,
+            "b": 1.0,
+            "a": 0.2
+          }
+        }
+      }
+    },
+    "icon_primary": {
+      "scene": "一级图标",
+      "light": "#E5000000",
+      "dark": "#E5FFFFFF",
+      "alias": "Huawei reference",
+      "modes": {
+        "light": {
+          "argb": "#E5000000",
+          "rgba": "#000000E5",
+          "figma": {
+            "r": 0.0,
+            "g": 0.0,
+            "b": 0.0,
+            "a": 0.8980392156862745
+          }
+        },
+        "dark": {
+          "argb": "#E5FFFFFF",
+          "rgba": "#FFFFFFE5",
+          "figma": {
+            "r": 1.0,
+            "g": 1.0,
+            "b": 1.0,
+            "a": 0.8980392156862745
+          }
+        }
+      }
+    },
+    "icon_secondary": {
+      "scene": "二级图标",
+      "light": "#99000000",
+      "dark": "#99FFFFFF",
+      "alias": "Huawei reference",
+      "modes": {
+        "light": {
+          "argb": "#99000000",
+          "rgba": "#00000099",
+          "figma": {
+            "r": 0.0,
+            "g": 0.0,
+            "b": 0.0,
+            "a": 0.6
+          }
+        },
+        "dark": {
+          "argb": "#99FFFFFF",
+          "rgba": "#FFFFFF99",
+          "figma": {
+            "r": 1.0,
+            "g": 1.0,
+            "b": 1.0,
+            "a": 0.6
+          }
+        }
+      }
+    },
+    "icon_tertiary": {
+      "scene": "三级图标",
+      "light": "#66000000",
+      "dark": "#66FFFFFF",
+      "alias": "Huawei reference",
+      "modes": {
+        "light": {
+          "argb": "#66000000",
+          "rgba": "#00000066",
+          "figma": {
+            "r": 0.0,
+            "g": 0.0,
+            "b": 0.0,
+            "a": 0.4
+          }
+        },
+        "dark": {
+          "argb": "#66FFFFFF",
+          "rgba": "#FFFFFF66",
+          "figma": {
+            "r": 1.0,
+            "g": 1.0,
+            "b": 1.0,
+            "a": 0.4
+          }
+        }
+      }
+    },
+    "icon_fourth": {
+      "scene": "四级图标",
+      "light": "#33000000",
+      "dark": "#33FFFFFF",
+      "alias": "Huawei reference",
+      "modes": {
+        "light": {
+          "argb": "#33000000",
+          "rgba": "#00000033",
+          "figma": {
+            "r": 0.0,
+            "g": 0.0,
+            "b": 0.0,
+            "a": 0.2
+          }
+        },
+        "dark": {
+          "argb": "#33FFFFFF",
+          "rgba": "#FFFFFF33",
+          "figma": {
+            "r": 1.0,
+            "g": 1.0,
+            "b": 1.0,
+            "a": 0.2
+          }
+        }
+      }
+    },
+    "icon_emphasize": {
+      "scene": "高亮图标",
+      "light": "#FFFF5425",
+      "dark": "#FFFF956D",
+      "alias": "app override",
+      "modes": {
+        "light": {
+          "argb": "#FFFF5425",
+          "rgba": "#FF5425FF",
+          "figma": {
+            "r": 1.0,
+            "g": 0.32941176470588235,
+            "b": 0.1450980392156863,
+            "a": 1.0
+          }
+        },
+        "dark": {
+          "argb": "#FFFF956D",
+          "rgba": "#FF956DFF",
+          "figma": {
+            "r": 1.0,
+            "g": 0.5843137254901961,
+            "b": 0.42745098039215684,
+            "a": 1.0
+          }
+        }
+      }
+    },
+    "icon_sub_emphasize": {
+      "scene": "高亮辅助图标",
+      "light": "#66FF5425",
+      "dark": "#66FF956D",
+      "alias": "app override",
+      "modes": {
+        "light": {
+          "argb": "#66FF5425",
+          "rgba": "#FF542566",
+          "figma": {
+            "r": 1.0,
+            "g": 0.32941176470588235,
+            "b": 0.1450980392156863,
+            "a": 0.4
+          }
+        },
+        "dark": {
+          "argb": "#66FF956D",
+          "rgba": "#FF956D66",
+          "figma": {
+            "r": 1.0,
+            "g": 0.5843137254901961,
+            "b": 0.42745098039215684,
+            "a": 0.4
+          }
+        }
+      }
+    },
+    "icon_on_primary": {
+      "scene": "一级图标反色",
+      "light": "#FFFFFFFF",
+      "dark": "#FFFFFFFF",
+      "alias": "Huawei reference",
+      "modes": {
+        "light": {
+          "argb": "#FFFFFFFF",
+          "rgba": "#FFFFFFFF",
+          "figma": {
+            "r": 1.0,
+            "g": 1.0,
+            "b": 1.0,
+            "a": 1.0
+          }
+        },
+        "dark": {
+          "argb": "#FFFFFFFF",
+          "rgba": "#FFFFFFFF",
+          "figma": {
+            "r": 1.0,
+            "g": 1.0,
+            "b": 1.0,
+            "a": 1.0
+          }
+        }
+      }
+    },
+    "icon_on_secondary": {
+      "scene": "二级图标反色",
+      "light": "#99FFFFFF",
+      "dark": "#99FFFFFF",
+      "alias": "Huawei reference",
+      "modes": {
+        "light": {
+          "argb": "#99FFFFFF",
+          "rgba": "#FFFFFF99",
+          "figma": {
+            "r": 1.0,
+            "g": 1.0,
+            "b": 1.0,
+            "a": 0.6
+          }
+        },
+        "dark": {
+          "argb": "#99FFFFFF",
+          "rgba": "#FFFFFF99",
+          "figma": {
+            "r": 1.0,
+            "g": 1.0,
+            "b": 1.0,
+            "a": 0.6
+          }
+        }
+      }
+    },
+    "icon_on_tertiary": {
+      "scene": "三级图标反色",
+      "light": "#66FFFFFF",
+      "dark": "#66FFFFFF",
+      "alias": "Huawei reference",
+      "modes": {
+        "light": {
+          "argb": "#66FFFFFF",
+          "rgba": "#FFFFFF66",
+          "figma": {
+            "r": 1.0,
+            "g": 1.0,
+            "b": 1.0,
+            "a": 0.4
+          }
+        },
+        "dark": {
+          "argb": "#66FFFFFF",
+          "rgba": "#FFFFFF66",
+          "figma": {
+            "r": 1.0,
+            "g": 1.0,
+            "b": 1.0,
+            "a": 0.4
+          }
+        }
+      }
+    },
+    "icon_on_fourth": {
+      "scene": "四级图标反色",
+      "light": "#33FFFFFF",
+      "dark": "#33FFFFFF",
+      "alias": "Huawei reference",
+      "modes": {
+        "light": {
+          "argb": "#33FFFFFF",
+          "rgba": "#FFFFFF33",
+          "figma": {
+            "r": 1.0,
+            "g": 1.0,
+            "b": 1.0,
+            "a": 0.2
+          }
+        },
+        "dark": {
+          "argb": "#33FFFFFF",
+          "rgba": "#FFFFFF33",
+          "figma": {
+            "r": 1.0,
+            "g": 1.0,
+            "b": 1.0,
+            "a": 0.2
+          }
+        }
+      }
+    },
+    "background_primary": {
+      "scene": "一级背景（实色/不透明色）",
+      "light": "#FFFFFFFF",
+      "dark": "#FFE5E5E5",
+      "alias": "Huawei reference",
+      "modes": {
+        "light": {
+          "argb": "#FFFFFFFF",
+          "rgba": "#FFFFFFFF",
+          "figma": {
+            "r": 1.0,
+            "g": 1.0,
+            "b": 1.0,
+            "a": 1.0
+          }
+        },
+        "dark": {
+          "argb": "#FFE5E5E5",
+          "rgba": "#E5E5E5FF",
+          "figma": {
+            "r": 0.8980392156862745,
+            "g": 0.8980392156862745,
+            "b": 0.8980392156862745,
+            "a": 1.0
+          }
+        }
+      }
+    },
+    "background_secondary": {
+      "scene": "二级背景（实色/不透明色）",
+      "light": "#FFF1F3F5",
+      "dark": "#FF191A1C",
+      "alias": "Huawei reference",
+      "modes": {
+        "light": {
+          "argb": "#FFF1F3F5",
+          "rgba": "#F1F3F5FF",
+          "figma": {
+            "r": 0.9450980392156862,
+            "g": 0.9529411764705882,
+            "b": 0.9607843137254902,
+            "a": 1.0
+          }
+        },
+        "dark": {
+          "argb": "#FF191A1C",
+          "rgba": "#191A1CFF",
+          "figma": {
+            "r": 0.09803921568627451,
+            "g": 0.10196078431372549,
+            "b": 0.10980392156862745,
+            "a": 1.0
+          }
+        }
+      }
+    },
+    "background_tertiary": {
+      "scene": "三级背景（实色/不透明色）",
+      "light": "#FFE5E5EA",
+      "dark": "#FF202224",
+      "alias": "Huawei reference",
+      "modes": {
+        "light": {
+          "argb": "#FFE5E5EA",
+          "rgba": "#E5E5EAFF",
+          "figma": {
+            "r": 0.8980392156862745,
+            "g": 0.8980392156862745,
+            "b": 0.9176470588235294,
+            "a": 1.0
+          }
+        },
+        "dark": {
+          "argb": "#FF202224",
+          "rgba": "#202224FF",
+          "figma": {
+            "r": 0.12549019607843137,
+            "g": 0.13333333333333333,
+            "b": 0.1411764705882353,
+            "a": 1.0
+          }
+        }
+      }
+    },
+    "background_fourth": {
+      "scene": "四级背景（实色/不透明色）",
+      "light": "#FFD1D1D6",
+      "dark": "#FF2E3033",
+      "alias": "Huawei reference",
+      "modes": {
+        "light": {
+          "argb": "#FFD1D1D6",
+          "rgba": "#D1D1D6FF",
+          "figma": {
+            "r": 0.8196078431372549,
+            "g": 0.8196078431372549,
+            "b": 0.8392156862745098,
+            "a": 1.0
+          }
+        },
+        "dark": {
+          "argb": "#FF2E3033",
+          "rgba": "#2E3033FF",
+          "figma": {
+            "r": 0.1803921568627451,
+            "g": 0.18823529411764706,
+            "b": 0.2,
+            "a": 1.0
+          }
+        }
+      }
+    },
+    "background_emphasize": {
+      "scene": "高亮背景（实色/不透明色）",
+      "light": "#FFFF5425",
+      "dark": "#FFFF5425",
+      "alias": "app override",
+      "modes": {
+        "light": {
+          "argb": "#FFFF5425",
+          "rgba": "#FF5425FF",
+          "figma": {
+            "r": 1.0,
+            "g": 0.32941176470588235,
+            "b": 0.1450980392156863,
+            "a": 1.0
+          }
+        },
+        "dark": {
+          "argb": "#FFFF5425",
+          "rgba": "#FF5425FF",
+          "figma": {
+            "r": 1.0,
+            "g": 0.32941176470588235,
+            "b": 0.1450980392156863,
+            "a": 1.0
+          }
+        }
+      }
+    },
+    "comp_foreground_primary": {
+      "scene": "前背景",
+      "light": "#FF000000",
+      "dark": "#FFE5E5E5",
+      "alias": "Huawei reference",
+      "modes": {
+        "light": {
+          "argb": "#FF000000",
+          "rgba": "#000000FF",
+          "figma": {
+            "r": 0.0,
+            "g": 0.0,
+            "b": 0.0,
+            "a": 1.0
+          }
+        },
+        "dark": {
+          "argb": "#FFE5E5E5",
+          "rgba": "#E5E5E5FF",
+          "figma": {
+            "r": 0.8980392156862745,
+            "g": 0.8980392156862745,
+            "b": 0.8980392156862745,
+            "a": 1.0
+          }
+        }
+      }
+    },
+    "comp_background_primary": {
+      "scene": "白色背景",
+      "light": "#FFFFFFFF",
+      "dark": "#FF202224",
+      "alias": "Huawei reference",
+      "modes": {
+        "light": {
+          "argb": "#FFFFFFFF",
+          "rgba": "#FFFFFFFF",
+          "figma": {
+            "r": 1.0,
+            "g": 1.0,
+            "b": 1.0,
+            "a": 1.0
+          }
+        },
+        "dark": {
+          "argb": "#FF202224",
+          "rgba": "#202224FF",
+          "figma": {
+            "r": 0.12549019607843137,
+            "g": 0.13333333333333333,
+            "b": 0.1411764705882353,
+            "a": 1.0
+          }
+        }
+      }
+    },
+    "comp_background_primary_contrary": {
+      "scene": "常亮背景",
+      "light": "#FFFFFFFF",
+      "dark": "#FFE5E5E5",
+      "alias": "Huawei reference",
+      "modes": {
+        "light": {
+          "argb": "#FFFFFFFF",
+          "rgba": "#FFFFFFFF",
+          "figma": {
+            "r": 1.0,
+            "g": 1.0,
+            "b": 1.0,
+            "a": 1.0
+          }
+        },
+        "dark": {
+          "argb": "#FFE5E5E5",
+          "rgba": "#E5E5E5FF",
+          "figma": {
+            "r": 0.8980392156862745,
+            "g": 0.8980392156862745,
+            "b": 0.8980392156862745,
+            "a": 1.0
+          }
+        }
+      }
+    },
+    "comp_background_gray": {
+      "scene": "灰色背景",
+      "light": "#FFF1F3F5",
+      "dark": "#FFE5E5EA",
+      "alias": "Huawei reference",
+      "modes": {
+        "light": {
+          "argb": "#FFF1F3F5",
+          "rgba": "#F1F3F5FF",
+          "figma": {
+            "r": 0.9450980392156862,
+            "g": 0.9529411764705882,
+            "b": 0.9607843137254902,
+            "a": 1.0
+          }
+        },
+        "dark": {
+          "argb": "#FFE5E5EA",
+          "rgba": "#E5E5EAFF",
+          "figma": {
+            "r": 0.8980392156862745,
+            "g": 0.8980392156862745,
+            "b": 0.9176470588235294,
+            "a": 1.0
+          }
+        }
+      }
+    },
+    "comp_background_secondary": {
+      "scene": "二级背景",
+      "light": "#19000000",
+      "dark": "#19FFFFFF",
+      "alias": "Huawei reference",
+      "modes": {
+        "light": {
+          "argb": "#19000000",
+          "rgba": "#00000019",
+          "figma": {
+            "r": 0.0,
+            "g": 0.0,
+            "b": 0.0,
+            "a": 0.09803921568627451
+          }
+        },
+        "dark": {
+          "argb": "#19FFFFFF",
+          "rgba": "#FFFFFF19",
+          "figma": {
+            "r": 1.0,
+            "g": 1.0,
+            "b": 1.0,
+            "a": 0.09803921568627451
+          }
+        }
+      }
+    },
+    "comp_background_tertiary": {
+      "scene": "三级背景",
+      "light": "#0C000000",
+      "dark": "#0CFFFFFF",
+      "alias": "Huawei reference",
+      "modes": {
+        "light": {
+          "argb": "#0C000000",
+          "rgba": "#0000000C",
+          "figma": {
+            "r": 0.0,
+            "g": 0.0,
+            "b": 0.0,
+            "a": 0.047058823529411764
+          }
+        },
+        "dark": {
+          "argb": "#0CFFFFFF",
+          "rgba": "#FFFFFF0C",
+          "figma": {
+            "r": 1.0,
+            "g": 1.0,
+            "b": 1.0,
+            "a": 0.047058823529411764
+          }
+        }
+      }
+    },
+    "comp_background_emphasize": {
+      "scene": "高亮背景",
+      "light": "#FFFF5425",
+      "dark": "#FFFF5425",
+      "alias": "app override",
+      "modes": {
+        "light": {
+          "argb": "#FFFF5425",
+          "rgba": "#FF5425FF",
+          "figma": {
+            "r": 1.0,
+            "g": 0.32941176470588235,
+            "b": 0.1450980392156863,
+            "a": 1.0
+          }
+        },
+        "dark": {
+          "argb": "#FFFF5425",
+          "rgba": "#FF5425FF",
+          "figma": {
+            "r": 1.0,
+            "g": 0.32941176470588235,
+            "b": 0.1450980392156863,
+            "a": 1.0
+          }
+        }
+      }
+    },
+    "comp_background_neutral": {
+      "scene": "黑色中性高亮背景",
+      "light": "#FF000000",
+      "dark": "#FFFFFFFF",
+      "alias": "Huawei reference",
+      "modes": {
+        "light": {
+          "argb": "#FF000000",
+          "rgba": "#000000FF",
+          "figma": {
+            "r": 0.0,
+            "g": 0.0,
+            "b": 0.0,
+            "a": 1.0
+          }
+        },
+        "dark": {
+          "argb": "#FFFFFFFF",
+          "rgba": "#FFFFFFFF",
+          "figma": {
+            "r": 1.0,
+            "g": 1.0,
+            "b": 1.0,
+            "a": 1.0
+          }
+        }
+      }
+    },
+    "comp_emphasize_secondary": {
+      "scene": "20%高亮背景",
+      "light": "#33FF5425",
+      "dark": "#33FF956D",
+      "alias": "app override",
+      "modes": {
+        "light": {
+          "argb": "#33FF5425",
+          "rgba": "#FF542533",
+          "figma": {
+            "r": 1.0,
+            "g": 0.32941176470588235,
+            "b": 0.1450980392156863,
+            "a": 0.2
+          }
+        },
+        "dark": {
+          "argb": "#33FF956D",
+          "rgba": "#FF956D33",
+          "figma": {
+            "r": 1.0,
+            "g": 0.5843137254901961,
+            "b": 0.42745098039215684,
+            "a": 0.2
+          }
+        }
+      }
+    },
+    "comp_emphasize_tertiary": {
+      "scene": "10%高亮背景",
+      "light": "#19FF5425",
+      "dark": "#19FF956D",
+      "alias": "app override",
+      "modes": {
+        "light": {
+          "argb": "#19FF5425",
+          "rgba": "#FF542519",
+          "figma": {
+            "r": 1.0,
+            "g": 0.32941176470588235,
+            "b": 0.1450980392156863,
+            "a": 0.09803921568627451
+          }
+        },
+        "dark": {
+          "argb": "#19FF956D",
+          "rgba": "#FF956D19",
+          "figma": {
+            "r": 1.0,
+            "g": 0.5843137254901961,
+            "b": 0.42745098039215684,
+            "a": 0.09803921568627451
+          }
+        }
+      }
+    },
+    "comp_divider": {
+      "scene": "分割线颜色",
+      "light": "#33000000",
+      "dark": "#33FFFFFF",
+      "alias": "Huawei reference",
+      "modes": {
+        "light": {
+          "argb": "#33000000",
+          "rgba": "#00000033",
+          "figma": {
+            "r": 0.0,
+            "g": 0.0,
+            "b": 0.0,
+            "a": 0.2
+          }
+        },
+        "dark": {
+          "argb": "#33FFFFFF",
+          "rgba": "#FFFFFF33",
+          "figma": {
+            "r": 1.0,
+            "g": 1.0,
+            "b": 1.0,
+            "a": 0.2
+          }
+        }
+      }
+    },
+    "comp_common_contrary": {
+      "scene": "通用反色",
+      "light": "#FFFFFFFF",
+      "dark": "#FF000000",
+      "alias": "Huawei reference",
+      "modes": {
+        "light": {
+          "argb": "#FFFFFFFF",
+          "rgba": "#FFFFFFFF",
+          "figma": {
+            "r": 1.0,
+            "g": 1.0,
+            "b": 1.0,
+            "a": 1.0
+          }
+        },
+        "dark": {
+          "argb": "#FF000000",
+          "rgba": "#000000FF",
+          "figma": {
+            "r": 0.0,
+            "g": 0.0,
+            "b": 0.0,
+            "a": 1.0
+          }
+        }
+      }
+    },
+    "comp_background_focus": {
+      "scene": "获焦态背景色",
+      "light": "#FFF1F3F5",
+      "dark": "#FF000000",
+      "alias": "Huawei reference",
+      "modes": {
+        "light": {
+          "argb": "#FFF1F3F5",
+          "rgba": "#F1F3F5FF",
+          "figma": {
+            "r": 0.9450980392156862,
+            "g": 0.9529411764705882,
+            "b": 0.9607843137254902,
+            "a": 1.0
+          }
+        },
+        "dark": {
+          "argb": "#FF000000",
+          "rgba": "#000000FF",
+          "figma": {
+            "r": 0.0,
+            "g": 0.0,
+            "b": 0.0,
+            "a": 1.0
+          }
+        }
+      }
+    },
+    "comp_focused_primary": {
+      "scene": "获焦态一级反色",
+      "light": "#E5000000",
+      "dark": "#E5FFFFFF",
+      "alias": "Huawei reference",
+      "modes": {
+        "light": {
+          "argb": "#E5000000",
+          "rgba": "#000000E5",
+          "figma": {
+            "r": 0.0,
+            "g": 0.0,
+            "b": 0.0,
+            "a": 0.8980392156862745
+          }
+        },
+        "dark": {
+          "argb": "#E5FFFFFF",
+          "rgba": "#FFFFFFE5",
+          "figma": {
+            "r": 1.0,
+            "g": 1.0,
+            "b": 1.0,
+            "a": 0.8980392156862745
+          }
+        }
+      }
+    },
+    "comp_focused_secondary": {
+      "scene": "获焦态二级反色",
+      "light": "#99000000",
+      "dark": "#99FFFFFF",
+      "alias": "Huawei reference",
+      "modes": {
+        "light": {
+          "argb": "#99000000",
+          "rgba": "#00000099",
+          "figma": {
+            "r": 0.0,
+            "g": 0.0,
+            "b": 0.0,
+            "a": 0.6
+          }
+        },
+        "dark": {
+          "argb": "#99FFFFFF",
+          "rgba": "#FFFFFF99",
+          "figma": {
+            "r": 1.0,
+            "g": 1.0,
+            "b": 1.0,
+            "a": 0.6
+          }
+        }
+      }
+    },
+    "comp_focused_tertiary": {
+      "scene": "获焦态三级反色",
+      "light": "#66000000",
+      "dark": "#66FFFFFF",
+      "alias": "Huawei reference",
+      "modes": {
+        "light": {
+          "argb": "#66000000",
+          "rgba": "#00000066",
+          "figma": {
+            "r": 0.0,
+            "g": 0.0,
+            "b": 0.0,
+            "a": 0.4
+          }
+        },
+        "dark": {
+          "argb": "#66FFFFFF",
+          "rgba": "#FFFFFF66",
+          "figma": {
+            "r": 1.0,
+            "g": 1.0,
+            "b": 1.0,
+            "a": 0.4
+          }
+        }
+      }
+    },
+    "interactive_hover": {
+      "scene": "通用悬停交互式颜色",
+      "light": "#0C000000",
+      "dark": "#0CFFFFFF",
+      "alias": "Huawei reference",
+      "modes": {
+        "light": {
+          "argb": "#0C000000",
+          "rgba": "#0000000C",
+          "figma": {
+            "r": 0.0,
+            "g": 0.0,
+            "b": 0.0,
+            "a": 0.047058823529411764
+          }
+        },
+        "dark": {
+          "argb": "#0CFFFFFF",
+          "rgba": "#FFFFFF0C",
+          "figma": {
+            "r": 1.0,
+            "g": 1.0,
+            "b": 1.0,
+            "a": 0.047058823529411764
+          }
+        }
+      }
+    },
+    "interactive_pressed": {
+      "scene": "通用按压交互式颜色",
+      "light": "#19000000",
+      "dark": "#19FFFFFF",
+      "alias": "Huawei reference",
+      "modes": {
+        "light": {
+          "argb": "#19000000",
+          "rgba": "#00000019",
+          "figma": {
+            "r": 0.0,
+            "g": 0.0,
+            "b": 0.0,
+            "a": 0.09803921568627451
+          }
+        },
+        "dark": {
+          "argb": "#19FFFFFF",
+          "rgba": "#FFFFFF19",
+          "figma": {
+            "r": 1.0,
+            "g": 1.0,
+            "b": 1.0,
+            "a": 0.09803921568627451
+          }
+        }
+      }
+    },
+    "interactive_focus": {
+      "scene": "通用获焦交互式颜色",
+      "light": "#FFD94720",
+      "dark": "#FFFF956D",
+      "alias": "app override",
+      "modes": {
+        "light": {
+          "argb": "#FFD94720",
+          "rgba": "#D94720FF",
+          "figma": {
+            "r": 0.8509803921568627,
+            "g": 0.2784313725490196,
+            "b": 0.12549019607843137,
+            "a": 1.0
+          }
+        },
+        "dark": {
+          "argb": "#FFFF956D",
+          "rgba": "#FF956DFF",
+          "figma": {
+            "r": 1.0,
+            "g": 0.5843137254901961,
+            "b": 0.42745098039215684,
+            "a": 1.0
+          }
+        }
+      }
+    },
+    "interactive_active": {
+      "scene": "通用激活交互式颜色",
+      "light": "#FFFF5425",
+      "dark": "#FFFF956D",
+      "alias": "app override",
+      "modes": {
+        "light": {
+          "argb": "#FFFF5425",
+          "rgba": "#FF5425FF",
+          "figma": {
+            "r": 1.0,
+            "g": 0.32941176470588235,
+            "b": 0.1450980392156863,
+            "a": 1.0
+          }
+        },
+        "dark": {
+          "argb": "#FFFF956D",
+          "rgba": "#FF956DFF",
+          "figma": {
+            "r": 1.0,
+            "g": 0.5843137254901961,
+            "b": 0.42745098039215684,
+            "a": 1.0
+          }
+        }
+      }
+    },
+    "interactive_select": {
+      "scene": "通用选择交互式颜色",
+      "light": "#33FF5425",
+      "dark": "#33FF956D",
+      "alias": "app override",
+      "modes": {
+        "light": {
+          "argb": "#33FF5425",
+          "rgba": "#FF542533",
+          "figma": {
+            "r": 1.0,
+            "g": 0.32941176470588235,
+            "b": 0.1450980392156863,
+            "a": 0.2
+          }
+        },
+        "dark": {
+          "argb": "#33FF956D",
+          "rgba": "#FF956D33",
+          "figma": {
+            "r": 1.0,
+            "g": 0.5843137254901961,
+            "b": 0.42745098039215684,
+            "a": 0.2
+          }
+        }
+      }
+    },
+    "interactive_click": {
+      "scene": "通用点击交互式颜色",
+      "light": "#19000000",
+      "dark": "#19FFFFFF",
+      "alias": "Huawei reference",
+      "modes": {
+        "light": {
+          "argb": "#19000000",
+          "rgba": "#00000019",
+          "figma": {
+            "r": 0.0,
+            "g": 0.0,
+            "b": 0.0,
+            "a": 0.09803921568627451
+          }
+        },
+        "dark": {
+          "argb": "#19FFFFFF",
+          "rgba": "#FFFFFF19",
+          "figma": {
+            "r": 1.0,
+            "g": 1.0,
+            "b": 1.0,
+            "a": 0.09803921568627451
+          }
+        }
+      }
+    },
+    "app_surface_page": {
+      "scene": "应用页面浅灰背景",
+      "light": "#FFF1F3F5",
+      "dark": "#FF000000",
+      "alias": "app extension",
+      "modes": {
+        "light": {
+          "argb": "#FFF1F3F5",
+          "rgba": "#F1F3F5FF",
+          "figma": {
+            "r": 0.9450980392156862,
+            "g": 0.9529411764705882,
+            "b": 0.9607843137254902,
+            "a": 1.0
+          }
+        },
+        "dark": {
+          "argb": "#FF000000",
+          "rgba": "#000000FF",
+          "figma": {
+            "r": 0.0,
+            "g": 0.0,
+            "b": 0.0,
+            "a": 1.0
+          }
+        }
+      }
+    },
+    "app_surface_card": {
+      "scene": "卡片／Sheet／悬浮TabBar表面",
+      "light": "#FFFFFFFF",
+      "dark": "#FF202224",
+      "alias": "app extension",
+      "modes": {
+        "light": {
+          "argb": "#FFFFFFFF",
+          "rgba": "#FFFFFFFF",
+          "figma": {
+            "r": 1.0,
+            "g": 1.0,
+            "b": 1.0,
+            "a": 1.0
+          }
+        },
+        "dark": {
+          "argb": "#FF202224",
+          "rgba": "#202224FF",
+          "figma": {
+            "r": 0.12549019607843137,
+            "g": 0.13333333333333333,
+            "b": 0.1411764705882353,
+            "a": 1.0
+          }
+        }
+      }
+    },
+    "app_surface_keyboard": {
+      "scene": "键盘按键、图片占位表面",
+      "light": "#FFF1F3F5",
+      "dark": "#FF2E3033",
+      "alias": "app extension",
+      "modes": {
+        "light": {
+          "argb": "#FFF1F3F5",
+          "rgba": "#F1F3F5FF",
+          "figma": {
+            "r": 0.9450980392156862,
+            "g": 0.9529411764705882,
+            "b": 0.9607843137254902,
+            "a": 1.0
+          }
+        },
+        "dark": {
+          "argb": "#FF2E3033",
+          "rgba": "#2E3033FF",
+          "figma": {
+            "r": 0.1803921568627451,
+            "g": 0.18823529411764706,
+            "b": 0.2,
+            "a": 1.0
+          }
+        }
+      }
+    },
+    "app_surface_summary": {
+      "scene": "预算／资产深色摘要卡表面",
+      "light": "#FF272D31",
+      "dark": "#FF202224",
+      "alias": "app extension",
+      "modes": {
+        "light": {
+          "argb": "#FF272D31",
+          "rgba": "#272D31FF",
+          "figma": {
+            "r": 0.15294117647058825,
+            "g": 0.17647058823529413,
+            "b": 0.19215686274509805,
+            "a": 1.0
+          }
+        },
+        "dark": {
+          "argb": "#FF202224",
+          "rgba": "#202224FF",
+          "figma": {
+            "r": 0.12549019607843137,
+            "g": 0.13333333333333333,
+            "b": 0.1411764705882353,
+            "a": 1.0
+          }
+        }
+      }
+    },
+    "app_border_subtle": {
+      "scene": "卡片白色轮廓（预留光效）",
+      "light": "#FFFFFFFF",
+      "dark": "#19FFFFFF",
+      "alias": "app extension",
+      "modes": {
+        "light": {
+          "argb": "#FFFFFFFF",
+          "rgba": "#FFFFFFFF",
+          "figma": {
+            "r": 1.0,
+            "g": 1.0,
+            "b": 1.0,
+            "a": 1.0
+          }
+        },
+        "dark": {
+          "argb": "#19FFFFFF",
+          "rgba": "#FFFFFF19",
+          "figma": {
+            "r": 1.0,
+            "g": 1.0,
+            "b": 1.0,
+            "a": 0.09803921568627451
+          }
+        }
+      }
+    },
+    "app_divider_subtle": {
+      "scene": "列表弱分割线",
+      "light": "#0C000000",
+      "dark": "#19FFFFFF",
+      "alias": "app extension",
+      "modes": {
+        "light": {
+          "argb": "#0C000000",
+          "rgba": "#0000000C",
+          "figma": {
+            "r": 0.0,
+            "g": 0.0,
+            "b": 0.0,
+            "a": 0.047058823529411764
+          }
+        },
+        "dark": {
+          "argb": "#19FFFFFF",
+          "rgba": "#FFFFFF19",
+          "figma": {
+            "r": 1.0,
+            "g": 1.0,
+            "b": 1.0,
+            "a": 0.09803921568627451
+          }
+        }
+      }
+    },
+    "app_scrim": {
+      "scene": "模态遮罩",
+      "light": "#66000000",
+      "dark": "#99000000",
+      "alias": "app extension",
+      "modes": {
+        "light": {
+          "argb": "#66000000",
+          "rgba": "#00000066",
+          "figma": {
+            "r": 0.0,
+            "g": 0.0,
+            "b": 0.0,
+            "a": 0.4
+          }
+        },
+        "dark": {
+          "argb": "#99000000",
+          "rgba": "#00000099",
+          "figma": {
+            "r": 0.0,
+            "g": 0.0,
+            "b": 0.0,
+            "a": 0.6
+          }
+        }
+      }
+    },
+    "app_income": {
+      "scene": "收入金额、收入方向箭头",
+      "light": "#FF008664",
+      "dark": "#FF55C9A5",
+      "alias": "app extension",
+      "modes": {
+        "light": {
+          "argb": "#FF008664",
+          "rgba": "#008664FF",
+          "figma": {
+            "r": 0.0,
+            "g": 0.5254901960784314,
+            "b": 0.39215686274509803,
+            "a": 1.0
+          }
+        },
+        "dark": {
+          "argb": "#FF55C9A5",
+          "rgba": "#55C9A5FF",
+          "figma": {
+            "r": 0.3333333333333333,
+            "g": 0.788235294117647,
+            "b": 0.6470588235294118,
+            "a": 1.0
+          }
+        }
+      }
+    },
+    "app_expense": {
+      "scene": "普通支出金额，不等同错误",
+      "light": "#E5000000",
+      "dark": "#E5FFFFFF",
+      "alias": "app extension",
+      "modes": {
+        "light": {
+          "argb": "#E5000000",
+          "rgba": "#000000E5",
+          "figma": {
+            "r": 0.0,
+            "g": 0.0,
+            "b": 0.0,
+            "a": 0.8980392156862745
+          }
+        },
+        "dark": {
+          "argb": "#E5FFFFFF",
+          "rgba": "#FFFFFFE5",
+          "figma": {
+            "r": 1.0,
+            "g": 1.0,
+            "b": 1.0,
+            "a": 0.8980392156862745
+          }
+        }
+      }
+    },
+    "app_discount": {
+      "scene": "优惠金额",
+      "light": "#FF008664",
+      "dark": "#FF55C9A5",
+      "alias": "app extension",
+      "modes": {
+        "light": {
+          "argb": "#FF008664",
+          "rgba": "#008664FF",
+          "figma": {
+            "r": 0.0,
+            "g": 0.5254901960784314,
+            "b": 0.39215686274509803,
+            "a": 1.0
+          }
+        },
+        "dark": {
+          "argb": "#FF55C9A5",
+          "rgba": "#55C9A5FF",
+          "figma": {
+            "r": 0.3333333333333333,
+            "g": 0.788235294117647,
+            "b": 0.6470588235294118,
+            "a": 1.0
+          }
+        }
+      }
+    },
+    "app_warning_background": {
+      "scene": "一级警示弱背景",
+      "light": "#19E84026",
+      "dark": "#19D94838",
+      "alias": "app extension",
+      "modes": {
+        "light": {
+          "argb": "#19E84026",
+          "rgba": "#E8402619",
+          "figma": {
+            "r": 0.9098039215686274,
+            "g": 0.25098039215686274,
+            "b": 0.14901960784313725,
+            "a": 0.09803921568627451
+          }
+        },
+        "dark": {
+          "argb": "#19D94838",
+          "rgba": "#D9483819",
+          "figma": {
+            "r": 0.8509803921568627,
+            "g": 0.2823529411764706,
+            "b": 0.2196078431372549,
+            "a": 0.09803921568627451
+          }
+        }
+      }
+    },
+    "app_alert_background": {
+      "scene": "二级警示弱背景",
+      "light": "#19ED6F21",
+      "dark": "#19DB6B42",
+      "alias": "app extension",
+      "modes": {
+        "light": {
+          "argb": "#19ED6F21",
+          "rgba": "#ED6F2119",
+          "figma": {
+            "r": 0.9294117647058824,
+            "g": 0.43529411764705883,
+            "b": 0.12941176470588237,
+            "a": 0.09803921568627451
+          }
+        },
+        "dark": {
+          "argb": "#19DB6B42",
+          "rgba": "#DB6B4219",
+          "figma": {
+            "r": 0.8588235294117647,
+            "g": 0.4196078431372549,
+            "b": 0.25882352941176473,
+            "a": 0.09803921568627451
+          }
+        }
+      }
+    },
+    "app_confirm_background": {
+      "scene": "确认弱背景",
+      "light": "#1964BB5C",
+      "dark": "#195BA854",
+      "alias": "app extension",
+      "modes": {
+        "light": {
+          "argb": "#1964BB5C",
+          "rgba": "#64BB5C19",
+          "figma": {
+            "r": 0.39215686274509803,
+            "g": 0.7333333333333333,
+            "b": 0.3607843137254902,
+            "a": 0.09803921568627451
+          }
+        },
+        "dark": {
+          "argb": "#195BA854",
+          "rgba": "#5BA85419",
+          "figma": {
+            "r": 0.3568627450980392,
+            "g": 0.6588235294117647,
+            "b": 0.32941176470588235,
+            "a": 0.09803921568627451
+          }
+        }
+      }
+    },
+    "app_gradient_start": {
+      "scene": "原版渐变起点",
+      "light": "#FFFD6E3E",
+      "dark": "#FFFD6E3E",
+      "alias": "app extension",
+      "modes": {
+        "light": {
+          "argb": "#FFFD6E3E",
+          "rgba": "#FD6E3EFF",
+          "figma": {
+            "r": 0.9921568627450981,
+            "g": 0.43137254901960786,
+            "b": 0.24313725490196078,
+            "a": 1.0
+          }
+        },
+        "dark": {
+          "argb": "#FFFD6E3E",
+          "rgba": "#FD6E3EFF",
+          "figma": {
+            "r": 0.9921568627450981,
+            "g": 0.43137254901960786,
+            "b": 0.24313725490196078,
+            "a": 1.0
+          }
+        }
+      }
+    },
+    "app_gradient_end": {
+      "scene": "原版渐变终点",
+      "light": "#FFFF0A0A",
+      "dark": "#FFFF0A0A",
+      "alias": "app extension",
+      "modes": {
+        "light": {
+          "argb": "#FFFF0A0A",
+          "rgba": "#FF0A0AFF",
+          "figma": {
+            "r": 1.0,
+            "g": 0.0392156862745098,
+            "b": 0.0392156862745098,
+            "a": 1.0
+          }
+        },
+        "dark": {
+          "argb": "#FFFF0A0A",
+          "rgba": "#FF0A0AFF",
+          "figma": {
+            "r": 1.0,
+            "g": 0.0392156862745098,
+            "b": 0.0392156862745098,
+            "a": 1.0
+          }
+        }
+      }
+    },
+    "app_button_on_gradient": {
+      "scene": "渐变按钮图文",
+      "light": "#FFFFFFFF",
+      "dark": "#FFFFFFFF",
+      "alias": "app extension",
+      "modes": {
+        "light": {
+          "argb": "#FFFFFFFF",
+          "rgba": "#FFFFFFFF",
+          "figma": {
+            "r": 1.0,
+            "g": 1.0,
+            "b": 1.0,
+            "a": 1.0
+          }
+        },
+        "dark": {
+          "argb": "#FFFFFFFF",
+          "rgba": "#FFFFFFFF",
+          "figma": {
+            "r": 1.0,
+            "g": 1.0,
+            "b": 1.0,
+            "a": 1.0
+          }
+        }
+      }
+    },
+    "app_switch_thumb": {
+      "scene": "开关滑块固定白色",
+      "light": "#FFFFFFFF",
+      "dark": "#FFFFFFFF",
+      "alias": "app extension",
+      "modes": {
+        "light": {
+          "argb": "#FFFFFFFF",
+          "rgba": "#FFFFFFFF",
+          "figma": {
+            "r": 1.0,
+            "g": 1.0,
+            "b": 1.0,
+            "a": 1.0
+          }
+        },
+        "dark": {
+          "argb": "#FFFFFFFF",
+          "rgba": "#FFFFFFFF",
+          "figma": {
+            "r": 1.0,
+            "g": 1.0,
+            "b": 1.0,
+            "a": 1.0
+          }
+        }
+      }
+    },
+    "app_switch_track_off": {
+      "scene": "未开启开关轨道",
+      "light": "#33000000",
+      "dark": "#33FFFFFF",
+      "alias": "app extension",
+      "modes": {
+        "light": {
+          "argb": "#33000000",
+          "rgba": "#00000033",
+          "figma": {
+            "r": 0.0,
+            "g": 0.0,
+            "b": 0.0,
+            "a": 0.2
+          }
+        },
+        "dark": {
+          "argb": "#33FFFFFF",
+          "rgba": "#FFFFFF33",
+          "figma": {
+            "r": 1.0,
+            "g": 1.0,
+            "b": 1.0,
+            "a": 0.2
+          }
+        }
+      }
+    },
+    "app_focus_ring": {
+      "scene": "键盘焦点描边",
+      "light": "#FFD94720",
+      "dark": "#FFFF956D",
+      "alias": "app extension",
+      "modes": {
+        "light": {
+          "argb": "#FFD94720",
+          "rgba": "#D94720FF",
+          "figma": {
+            "r": 0.8509803921568627,
+            "g": 0.2784313725490196,
+            "b": 0.12549019607843137,
+            "a": 1.0
+          }
+        },
+        "dark": {
+          "argb": "#FFFF956D",
+          "rgba": "#FF956DFF",
+          "figma": {
+            "r": 1.0,
+            "g": 0.5843137254901961,
+            "b": 0.42745098039215684,
+            "a": 1.0
+          }
+        }
+      }
+    },
+    "app_receipt_line": {
+      "scene": "账单虚线／齿边",
+      "light": "#33000000",
+      "dark": "#33FFFFFF",
+      "alias": "app extension",
+      "modes": {
+        "light": {
+          "argb": "#33000000",
+          "rgba": "#00000033",
+          "figma": {
+            "r": 0.0,
+            "g": 0.0,
+            "b": 0.0,
+            "a": 0.2
+          }
+        },
+        "dark": {
+          "argb": "#33FFFFFF",
+          "rgba": "#FFFFFF33",
+          "figma": {
+            "r": 1.0,
+            "g": 1.0,
+            "b": 1.0,
+            "a": 0.2
+          }
+        }
+      }
+    },
+    "app_chart_fill": {
+      "scene": "支出图表填充",
+      "light": "#19FF5425",
+      "dark": "#19FF956D",
+      "alias": "app extension",
+      "modes": {
+        "light": {
+          "argb": "#19FF5425",
+          "rgba": "#FF542519",
+          "figma": {
+            "r": 1.0,
+            "g": 0.32941176470588235,
+            "b": 0.1450980392156863,
+            "a": 0.09803921568627451
+          }
+        },
+        "dark": {
+          "argb": "#19FF956D",
+          "rgba": "#FF956D19",
+          "figma": {
+            "r": 1.0,
+            "g": 0.5843137254901961,
+            "b": 0.42745098039215684,
+            "a": 0.09803921568627451
+          }
+        }
+      }
+    },
+    "app_summary_secondary": {
+      "scene": "深色摘要次级文字",
+      "light": "#99FFFFFF",
+      "dark": "#99FFFFFF",
+      "alias": "app extension",
+      "modes": {
+        "light": {
+          "argb": "#99FFFFFF",
+          "rgba": "#FFFFFF99",
+          "figma": {
+            "r": 1.0,
+            "g": 1.0,
+            "b": 1.0,
+            "a": 0.6
+          }
+        },
+        "dark": {
+          "argb": "#99FFFFFF",
+          "rgba": "#FFFFFF99",
+          "figma": {
+            "r": 1.0,
+            "g": 1.0,
+            "b": 1.0,
+            "a": 0.6
+          }
+        }
+      }
+    },
+    "app_summary_accent": {
+      "scene": "摘要预算进度",
+      "light": "#FFFFAB7B",
+      "dark": "#FFFFAB7B",
+      "alias": "app extension",
+      "modes": {
+        "light": {
+          "argb": "#FFFFAB7B",
+          "rgba": "#FFAB7BFF",
+          "figma": {
+            "r": 1.0,
+            "g": 0.6705882352941176,
+            "b": 0.4823529411764706,
+            "a": 1.0
+          }
+        },
+        "dark": {
+          "argb": "#FFFFAB7B",
+          "rgba": "#FFAB7BFF",
+          "figma": {
+            "r": 1.0,
+            "g": 0.6705882352941176,
+            "b": 0.4823529411764706,
+            "a": 1.0
+          }
+        }
+      }
+    },
+    "app_warning_text": {
+      "scene": "一级警示正文",
+      "light": "#FFB52C1A",
+      "dark": "#FFFF9084",
+      "alias": "app extension",
+      "modes": {
+        "light": {
+          "argb": "#FFB52C1A",
+          "rgba": "#B52C1AFF",
+          "figma": {
+            "r": 0.7098039215686275,
+            "g": 0.17254901960784313,
+            "b": 0.10196078431372549,
+            "a": 1.0
+          }
+        },
+        "dark": {
+          "argb": "#FFFF9084",
+          "rgba": "#FF9084FF",
+          "figma": {
+            "r": 1.0,
+            "g": 0.5647058823529412,
+            "b": 0.5176470588235295,
+            "a": 1.0
+          }
+        }
+      }
+    },
+    "app_alert_text": {
+      "scene": "二级警示正文",
+      "light": "#FFA34600",
+      "dark": "#FFFFB38A",
+      "alias": "app extension",
+      "modes": {
+        "light": {
+          "argb": "#FFA34600",
+          "rgba": "#A34600FF",
+          "figma": {
+            "r": 0.6392156862745098,
+            "g": 0.27450980392156865,
+            "b": 0.0,
+            "a": 1.0
+          }
+        },
+        "dark": {
+          "argb": "#FFFFB38A",
+          "rgba": "#FFB38AFF",
+          "figma": {
+            "r": 1.0,
+            "g": 0.7019607843137254,
+            "b": 0.5411764705882353,
+            "a": 1.0
+          }
+        }
+      }
+    },
+    "app_confirm_text": {
+      "scene": "确认状态正文",
+      "light": "#FF287B27",
+      "dark": "#FF8FD185",
+      "alias": "app extension",
+      "modes": {
+        "light": {
+          "argb": "#FF287B27",
+          "rgba": "#287B27FF",
+          "figma": {
+            "r": 0.1568627450980392,
+            "g": 0.4823529411764706,
+            "b": 0.15294117647058825,
+            "a": 1.0
+          }
+        },
+        "dark": {
+          "argb": "#FF8FD185",
+          "rgba": "#8FD185FF",
+          "figma": {
+            "r": 0.5607843137254902,
+            "g": 0.8196078431372549,
+            "b": 0.5215686274509804,
+            "a": 1.0
+          }
+        }
+      }
+    },
+    "app_disabled_content": {
+      "scene": "禁用内容",
+      "light": "#33000000",
+      "dark": "#33FFFFFF",
+      "alias": "app extension",
+      "modes": {
+        "light": {
+          "argb": "#33000000",
+          "rgba": "#00000033",
+          "figma": {
+            "r": 0.0,
+            "g": 0.0,
+            "b": 0.0,
+            "a": 0.2
+          }
+        },
+        "dark": {
+          "argb": "#33FFFFFF",
+          "rgba": "#FFFFFF33",
+          "figma": {
+            "r": 1.0,
+            "g": 1.0,
+            "b": 1.0,
+            "a": 0.2
+          }
+        }
+      }
+    }
+  },
+  "notes": [
+    "系统基础与语义Token表，不使用智能穿戴表。",
+    "官方深色background_primary与comp_background_gray仍为浅色，已保留；页面使用app_surface_page等显式语义。",
+    "Figma通过RGB+opacity应用；不把ARGB直接当作Figma/CSS八位Hex。",
+    "保留原版橙红渐变。品牌/分类图标内色不执行全局替换。"
+  ]
+}

@@ -1,0 +1,91 @@
+{
+  "profile": "phone",
+  "unit": "fp",
+  "format": "xiaoqiao runtime typography tokens; not CSS lengths",
+  "tokens": {
+    "Display_L": {
+      "fontFamily": "system-default",
+      "fontSize": "56fp",
+      "fontWeight": "Light",
+      "fontWeightValue": 300
+    },
+    "Display_M": {
+      "fontFamily": "system-default",
+      "fontSize": "48fp",
+      "fontWeight": "Light",
+      "fontWeightValue": 300
+    },
+    "Display_S": {
+      "fontFamily": "system-default",
+      "fontSize": "38fp",
+      "fontWeight": "Light",
+      "fontWeightValue": 300
+    },
+    "Title_L": {
+      "fontFamily": "system-default",
+      "fontSize": "30fp",
+      "fontWeight": "Bold",
+      "fontWeightValue": 700
+    },
+    "Title_M": {
+      "fontFamily": "system-default",
+      "fontSize": "24fp",
+      "fontWeight": "Bold",
+      "fontWeightValue": 700
+    },
+    "Title_S": {
+      "fontFamily": "system-default",
+      "fontSize": "20fp",
+      "fontWeight": "Bold",
+      "fontWeightValue": 700
+    },
+    "Subtitle_L": {
+      "fontFamily": "system-default",
+      "fontSize": "18fp",
+      "fontWeight": "Medium",
+      "fontWeightValue": 500
+    },
+    "Subtitle_M": {
+      "fontFamily": "system-default",
+      "fontSize": "16fp",
+      "fontWeight": "Medium",
+      "fontWeightValue": 500
+    },
+    "Subtitle_S": {
+      "fontFamily": "system-default",
+      "fontSize": "14fp",
+      "fontWeight": "Medium",
+      "fontWeightValue": 500
+    },
+    "Body_L": {
+      "fontFamily": "system-default",
+      "fontSize": "16fp",
+      "fontWeight": "Medium",
+      "fontWeightValue": 500
+    },
+    "Body_M": {
+      "fontFamily": "system-default",
+      "fontSize": "14fp",
+      "fontWeight": "Regular",
+      "fontWeightValue": 400
+    },
+    "Body_S": {
+      "fontFamily": "system-default",
+      "fontSize": "12fp",
+      "fontWeight": "Regular",
+      "fontWeightValue": 400
+    },
+    "Caption_L": {
+      "fontFamily": "system-default",
+      "fontSize": "12fp",
+      "fontWeight": "Medium",
+      "fontWeightValue": 500
+    },
+    "Caption_M": {
+      "fontFamily": "system-default",
+      "fontSize": "10fp",
+      "fontWeight": "Medium",
+      "fontWeightValue": 500
+    }
+  }
+}

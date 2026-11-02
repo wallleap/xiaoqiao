@@ -1,0 +1,53 @@
+// 开发参考，未接入entry；ArkUI布局裸number默认vp。文字使用独立Typography中的fp。
+export class LayoutToken {
+  static readonly corner_radius_none: number = 0;
+  static readonly corner_radius_level1: number = 2;
+  static readonly corner_radius_level2: number = 4;
+  static readonly corner_radius_level3: number = 6;
+  static readonly corner_radius_level4: number = 8;
+  static readonly corner_radius_level5: number = 10;
+  static readonly corner_radius_level6: number = 12;
+  static readonly corner_radius_level7: number = 14;
+  static readonly corner_radius_level8: number = 16;
+  static readonly corner_radius_level9: number = 18;
+  static readonly corner_radius_level10: number = 20;
+  static readonly corner_radius_level11: number = 22;
+  static readonly corner_radius_level12: number = 24;
+  static readonly corner_radius_level13: number = 26;
+  static readonly corner_radius_level16: number = 32;
+  static readonly corner_radius_level18: number = 36;
+  static readonly Padding_level0: number = 0;
+  static readonly Padding_level1: number = 2;
+  static readonly Padding_level2: number = 4;
+  static readonly Padding_level3: number = 6;
+  static readonly Padding_level4: number = 8;
+  static readonly Padding_level5: number = 10;
+  static readonly Padding_level6: number = 12;
+  static readonly Padding_level7: number = 14;
+  static readonly Padding_level8: number = 16;
+  static readonly Padding_level9: number = 18;
+  static readonly Padding_level10: number = 20;
+  static readonly Padding_level11: number = 22;
+  static readonly Padding_level12: number = 24;
+  static readonly Padding_level13: number = 26;
+  static readonly Padding_level16: number = 32;
+  static readonly Padding_level17: number = 34;
+  static readonly Padding_level18: number = 36;
+  static readonly Padding_level19: number = 38;
+  static readonly Padding_level20: number = 40;
+  static readonly Padding_level21: number = 42;
+  static readonly Padding_level22: number = 44;
+  static readonly Padding_level23: number = 46;
+  static readonly Padding_level25: number = 50;
+  static readonly Padding_level26: number = 52;
+  static readonly Padding_level27: number = 54;
+  static readonly Padding_level28: number = 56;
+  static readonly Padding_level29: number = 58;
+  static readonly Padding_level30: number = 60;
+  static readonly Padding_level32: number = 64;
+  static readonly Padding_level33: number = 66;
+  static readonly Padding_level34: number = 68;
+  static readonly Padding_level35: number = 70;
+  static readonly Padding_level36: number = 72;
+  // 胶囊/圆形用实际尺寸的一半，不用超大常量冒充系统Token。
+}

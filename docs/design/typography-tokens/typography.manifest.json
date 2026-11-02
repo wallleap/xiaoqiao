@@ -1,0 +1,259 @@
+{
+  "version": "2026-10-30",
+  "source": "https://developer.huawei.com/consumer/cn/doc/doccenter-ux-design/typography-0000002622688363",
+  "unit": "fp",
+  "previewUnit": "SVG design px at 1x; not a runtime vp font size",
+  "fontFamilies": {
+    "text": "system-default",
+    "digits": "DIN series",
+    "preview": "existing Noto Sans SC / Inter fallback; no font installed or embedded"
+  },
+  "devicePolicy": {
+    "currentScreens": "phone: phone / tablet / foldable",
+    "pc": "independent reference profile; not inferred from viewport width",
+    "watch": "reference only; Caption_S unsupported on phone/pc"
+  },
+  "tokens": {
+    "Display_L": {
+      "scene": "展示性文本  Display",
+      "weight": "Light",
+      "weightValue": 300,
+      "size": {
+        "phone": 56,
+        "pc": 54,
+        "watch": 56
+      },
+      "unit": "fp",
+      "sourceUnit": "vp",
+      "family": "system-default"
+    },
+    "Display_M": {
+      "scene": "展示性文本  Display",
+      "weight": "Light",
+      "weightValue": 300,
+      "size": {
+        "phone": 48,
+        "pc": 46,
+        "watch": 48
+      },
+      "unit": "fp",
+      "sourceUnit": "vp",
+      "family": "system-default"
+    },
+    "Display_S": {
+      "scene": "展示性文本  Display",
+      "weight": "Light",
+      "weightValue": 300,
+      "size": {
+        "phone": 38,
+        "pc": 36,
+        "watch": 38
+      },
+      "unit": "fp",
+      "sourceUnit": "vp",
+      "family": "system-default"
+    },
+    "Title_L": {
+      "scene": "标题文本  Title",
+      "weight": "Bold",
+      "weightValue": 700,
+      "size": {
+        "phone": 30,
+        "pc": 28,
+        "watch": 30
+      },
+      "unit": "fp",
+      "sourceUnit": "vp",
+      "family": "system-default"
+    },
+    "Title_M": {
+      "scene": "标题文本  Title",
+      "weight": "Bold",
+      "weightValue": 700,
+      "size": {
+        "phone": 24,
+        "pc": 22,
+        "watch": 24
+      },
+      "unit": "fp",
+      "sourceUnit": "vp",
+      "family": "system-default"
+    },
+    "Title_S": {
+      "scene": "标题文本  Title",
+      "weight": "Bold",
+      "weightValue": 700,
+      "size": {
+        "phone": 20,
+        "pc": 18,
+        "watch": 20
+      },
+      "unit": "fp",
+      "sourceUnit": "vp",
+      "family": "system-default"
+    },
+    "Subtitle_L": {
+      "scene": "副标题文本  Subtitle",
+      "weight": "Medium",
+      "weightValue": 500,
+      "size": {
+        "phone": 18,
+        "pc": 16,
+        "watch": 18
+      },
+      "unit": "fp",
+      "sourceUnit": "vp",
+      "family": "system-default"
+    },
+    "Subtitle_M": {
+      "scene": "副标题文本  Subtitle",
+      "weight": "Medium",
+      "weightValue": 500,
+      "size": {
+        "phone": 16,
+        "pc": 14,
+        "watch": 16
+      },
+      "unit": "fp",
+      "sourceUnit": "vp",
+      "family": "system-default"
+    },
+    "Subtitle_S": {
+      "scene": "副标题文本  Subtitle",
+      "weight": "Medium",
+      "weightValue": 500,
+      "size": {
+        "phone": 14,
+        "pc": 12,
+        "watch": 14
+      },
+      "unit": "fp",
+      "sourceUnit": "vp",
+      "family": "system-default"
+    },
+    "Body_L": {
+      "scene": "正文文本  Body",
+      "weight": "Medium",
+      "weightValue": 500,
+      "size": {
+        "phone": 16,
+        "pc": 14,
+        "watch": 16
+      },
+      "unit": "fp",
+      "sourceUnit": "vp",
+      "family": "system-default"
+    },
+    "Body_M": {
+      "scene": "正文文本  Body",
+      "weight": "Regular",
+      "weightValue": 400,
+      "size": {
+        "phone": 14,
+        "pc": 14,
+        "watch": 14
+      },
+      "unit": "fp",
+      "sourceUnit": "vp",
+      "family": "system-default"
+    },
+    "Body_S": {
+      "scene": "正文文本  Body",
+      "weight": "Regular",
+      "weightValue": 400,
+      "size": {
+        "phone": 12,
+        "pc": 14,
+        "watch": 12
+      },
+      "unit": "fp",
+      "sourceUnit": "vp",
+      "family": "system-default"
+    },
+    "Caption_L": {
+      "scene": "说明文本  Caption",
+      "weight": "Medium",
+      "weightValue": 500,
+      "size": {
+        "phone": 12,
+        "pc": 12,
+        "watch": 12
+      },
+      "unit": "fp",
+      "sourceUnit": "vp",
+      "family": "system-default"
+    },
+    "Caption_M": {
+      "scene": "说明文本  Caption",
+      "weight": "Medium",
+      "weightValue": 500,
+      "size": {
+        "phone": 10,
+        "pc": 9,
+        "watch": 10
+      },
+      "unit": "fp",
+      "sourceUnit": "vp",
+      "family": "system-default"
+    },
+    "Caption_S": {
+      "scene": "说明文本  Caption",
+      "weight": "Medium",
+      "weightValue": 500,
+      "size": {
+        "phone": null,
+        "pc": null,
+        "watch": 8
+      },
+      "unit": "fp",
+      "sourceUnit": "vp",
+      "family": "system-default"
+    }
+  },
+  "appStyles": {
+    "Number_Display": {
+      "base": "Display_S",
+      "size": {
+        "phone": 38,
+        "pc": 36,
+        "watch": 38
+      },
+      "weightValue": 300,
+      "family": "DIN series",
+      "reason": "摘要金额沿用展示S层级"
+    },
+    "Number_Input": {
+      "base": "Display_M",
+      "size": {
+        "phone": 48,
+        "pc": 46,
+        "watch": 48
+      },
+      "weightValue": 300,
+      "family": "DIN series",
+      "reason": "记账金额输入沿用展示M层级"
+    },
+    "Number_Keypad": {
+      "base": "Title_L",
+      "size": {
+        "phone": 30,
+        "pc": 28,
+        "watch": 30
+      },
+      "weightValue": 400,
+      "family": "DIN series",
+      "reason": "键盘使用标题L尺寸、Regular字重；为控件角色覆盖，不将按键当作标题"
+    }
+  },
+  "applicationRules": {
+    "amount": "Number_Display, 38fp Light; long values step to Title_L30 / Title_M24 with complete-value detail",
+    "input": "Number_Input, 48fp Light; long input steps to Display_S38 / Title_L30 / Title_M24",
+    "currency": "14fp for display, 10fp for compact rows; system font",
+    "body": "Body_M14 Regular; important row titles Body_L16 Medium",
+    "lineHeight": "platform default / natural metrics; row height grows with font scale; no vp font constants"
+  },
+  "limits": [
+    "DIN is annotated only; actual DIN metrics unverified.",
+    "No native font registration, resource configuration or business logic changed."
+  ]
+}

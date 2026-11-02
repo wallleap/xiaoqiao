@@ -1,0 +1,196 @@
+{
+  "version": "2026-10-30",
+  "unit": "vp",
+  "sources": {
+    "radius": "https://developer.huawei.com/consumer/cn/doc/doccenter-ux-design/corner-radius-parameter-0000002556468705",
+    "spacing": "https://developer.huawei.com/consumer/cn/doc/doccenter-ux-design/interval-parameter-0000002562577161"
+  },
+  "referenceUpdated": {
+    "radius": "2026-08-12",
+    "spacing": "2026-07-10"
+  },
+  "radius": {
+    "corner_radius_none": 0,
+    "corner_radius_level1": 2,
+    "corner_radius_level2": 4,
+    "corner_radius_level3": 6,
+    "corner_radius_level4": 8,
+    "corner_radius_level5": 10,
+    "corner_radius_level6": 12,
+    "corner_radius_level7": 14,
+    "corner_radius_level8": 16,
+    "corner_radius_level9": 18,
+    "corner_radius_level10": 20,
+    "corner_radius_level11": 22,
+    "corner_radius_level12": 24,
+    "corner_radius_level13": 26,
+    "corner_radius_level16": 32,
+    "corner_radius_level18": 36
+  },
+  "spacing": {
+    "Padding_level0": 0,
+    "Padding_level1": 2,
+    "Padding_level2": 4,
+    "Padding_level3": 6,
+    "Padding_level4": 8,
+    "Padding_level5": 10,
+    "Padding_level6": 12,
+    "Padding_level7": 14,
+    "Padding_level8": 16,
+    "Padding_level9": 18,
+    "Padding_level10": 20,
+    "Padding_level11": 22,
+    "Padding_level12": 24,
+    "Padding_level13": 26,
+    "Padding_level16": 32,
+    "Padding_level17": 34,
+    "Padding_level18": 36,
+    "Padding_level19": 38,
+    "Padding_level20": 40,
+    "Padding_level21": 42,
+    "Padding_level22": 44,
+    "Padding_level23": 46,
+    "Padding_level25": 50,
+    "Padding_level26": 52,
+    "Padding_level27": 54,
+    "Padding_level28": 56,
+    "Padding_level29": 58,
+    "Padding_level30": 60,
+    "Padding_level32": 64,
+    "Padding_level33": 66,
+    "Padding_level34": 68,
+    "Padding_level35": 70,
+    "Padding_level36": 72
+  },
+  "deviceMargins": {
+    "phone": {
+      "horizontal": 16,
+      "top": 36,
+      "bottom": 28
+    },
+    "foldable": {
+      "horizontal": 24,
+      "top": 36,
+      "bottom": 28
+    },
+    "tablet": {
+      "horizontal": 32,
+      "top": 36,
+      "bottom": 28
+    },
+    "tv": {
+      "horizontal": 48,
+      "top": 27,
+      "bottom": 27
+    },
+    "watch": {
+      "horizontal": 26,
+      "top": 20,
+      "bottom": 20
+    },
+    "pc": {
+      "horizontal": 40,
+      "top": null,
+      "bottom": null
+    },
+    "cockpit": {
+      "horizontal": 48,
+      "top": null,
+      "bottom": null
+    }
+  },
+  "componentRadius": {
+    "radius_tag": {
+      "ref": "corner_radius_level2",
+      "value": 4
+    },
+    "radius_media": {
+      "ref": "corner_radius_level4",
+      "value": 8
+    },
+    "radius_input": {
+      "ref": "corner_radius_level6",
+      "value": 12
+    },
+    "radius_keypad": {
+      "ref": "corner_radius_level6",
+      "value": 12
+    },
+    "radius_card": {
+      "ref": "corner_radius_level8",
+      "value": 16
+    },
+    "radius_summary": {
+      "ref": "corner_radius_level10",
+      "value": 20
+    },
+    "radius_button": {
+      "ref": "corner_radius_level10",
+      "value": 20
+    },
+    "radius_menu": {
+      "ref": "corner_radius_level10",
+      "value": 20
+    },
+    "radius_sheet": {
+      "ref": "corner_radius_level16",
+      "value": 32
+    },
+    "radius_dialog": {
+      "ref": "corner_radius_level16",
+      "value": 32
+    }
+  },
+  "componentSpacing": {
+    "gap_text_vertical": {
+      "ref": "Padding_level1",
+      "value": 2
+    },
+    "gap_inline": {
+      "ref": "Padding_level4",
+      "value": 8
+    },
+    "gap_keypad": {
+      "ref": "Padding_level4",
+      "value": 8
+    },
+    "gap_card": {
+      "ref": "Padding_level6",
+      "value": 12
+    },
+    "gap_control": {
+      "ref": "Padding_level4",
+      "value": 8
+    },
+    "gap_control_large": {
+      "ref": "Padding_level8",
+      "value": 16
+    },
+    "gap_section": {
+      "ref": "Padding_level12",
+      "value": 24
+    },
+    "padding_card": {
+      "ref": "Padding_level8",
+      "value": 16
+    },
+    "padding_dialog": {
+      "ref": "Padding_level12",
+      "value": 24
+    },
+    "gap_columns": {
+      "ref": "Padding_level12",
+      "value": 24
+    }
+  },
+  "shapeExceptions": {
+    "capsule": "min(width,height)/2; app shape rule, not a Huawei token",
+    "circle": "diameter/2; app shape rule",
+    "tabbar": "capsule; preserves user-confirmed maximum rounding"
+  },
+  "safeAreaPolicy": "top/bottom are device margin references, not extra padding blindly stacked on status/navigation/system insets; original simulated status/navigation are preserved",
+  "fontUnit": "fp",
+  "figmaBinding": "SVG metadata + guide; no native Variables binding",
+  "missingLevels": "Keep official sparse levels; do not fabricate Padding_level14/15/24/31 or corner_radius_level14/15/17",
+  "nativeImplementationChanged": false
+}

@@ -1,0 +1,51 @@
+{
+  "checks": [
+    {
+      "name": "官方通用语义50项，未混入智能穿戴值",
+      "pass": true
+    },
+    {
+      "name": "77个应用Token，两种模式均完整",
+      "pass": true
+    },
+    {
+      "name": "154组ARGB/RGBA/Figma数值往返一致",
+      "pass": true
+    },
+    {
+      "name": "官方特殊深色值保留、应用页面显式黑色",
+      "pass": true
+    },
+    {
+      "name": "DTCG两份与Harmony资源草案两份共77项",
+      "pass": true
+    },
+    {
+      "name": "所有SVG可解析，引用有效、实际画笔无ARGB误用",
+      "pass": true
+    },
+    {
+      "name": "透明Token没有被预先混成固定灰色",
+      "pass": true
+    },
+    {
+      "name": "深色辅助文字使用白色60%透明度",
+      "pass": true
+    },
+    {
+      "name": "119页浅深模式布局与文字完全一致",
+      "pass": true
+    },
+    {
+      "name": "原版渐变端点保留",
+      "pass": true
+    }
+  ],
+  "svgFiles": 252,
+  "tokenPaints": 25784,
+  "issues": [],
+  "limits": [
+    "未执行原生构建；仅开发资源草案和设计产物。",
+    "未声称全局WCAG通过；四级/禁用前景及原版渐变按钮仍需实际字号/背景专项评审。"
+  ]
+}
