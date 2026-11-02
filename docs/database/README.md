@@ -1,6 +1,6 @@
 # 小巧记账数据库设计
 
-日期：2026-11-02。当前处于逻辑模型评审阶段，未创建应用数据库、执行迁移或修改ArkTS、SDK、依赖与权限配置。
+日期：2026-11-02。逻辑模型已进入 P0 接入验证，新增金额/业务/RDB 骨架和隔离测试；尚未创建正式账本或执行生产迁移。SDK、依赖与权限配置未修改。
 
 ## 已知需求
 
@@ -31,11 +31,11 @@
 
 ## 工作区核实
 
-- `entry/src/main/ets/pages/Index.ets`仍为Hello World；未发现已有持久层或SQL建表脚本。
+- `entry/src/main/ets/pages/Index.ets`仍为Hello World；P0 新增持久层骨架但未接入页面或应用启动。
 - `build-profile.json5`：targetSdkVersion为26.0.0，compatibleSdkVersion为6.1.1(24)。未修改。
 - 已读本机SDK的`@ohos.data.relationalStore.d.ts`，其中包含事务、backup/restore、INTEGER安全读取相关接口声明。类型声明核实不等于设备联调。
-- `git status --short`返回128：当前目录不是Git仓库，无法据此检查未提交改动；本轮仅新增本目录的设计文档。
+- 初次设计时尚未初始化 Git；随后已按用户要求完成初始化提交。P0 开始前工作区无未提交改动。
 
 ## 交付与限制
 
-本轮产出逻辑模型、SQL评审草案、字段字典与纯内存验证，不含已部署数据库、正式迁移、真实账单解析、真实WebDAV操作或云同步实现。既有UI工作已停止，不继续替换Figma控件。此前TabBar材质试改尚未完成验收，此次未回退或继续修改。
+设计产出包括逻辑模型、SQL评审草案、字段字典与纯内存验证；当前 [P0 接入与验证](../development/p0-foundation.md) 另行记录代码边界。不含已部署正式账本、正式迁移、真实账单解析、真实WebDAV操作或云同步实现。既有UI工作已停止，不继续替换Figma控件。此前TabBar材质试改尚未完成验收，此次未回退或继续修改。

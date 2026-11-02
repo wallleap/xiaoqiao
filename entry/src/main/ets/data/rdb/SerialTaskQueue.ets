@@ -1,0 +1,10 @@
+/** Single-runtime FIFO. Rejection reaches its caller without blocking subsequent tasks. */
+export class SerialTaskQueue {
+  private tail: Promise<void> = Promise.resolve();
+
+  run<T>(task: () => Promise<T>): Promise<T> {
+    const result = this.tail.then(task);
+    this.tail = result.then(() => {}, () => {});
+    return result;
+  }
+}
