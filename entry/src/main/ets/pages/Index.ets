@@ -35,6 +35,14 @@ struct Index {
     return this.preview ? '2026年10月' : `${now.getFullYear()}年${now.getMonth() + 1}月`;
   }
 
+  aboutToAppear(): void {
+    const fonts = this.getUIContext().getFont();
+    fonts.registerFont({ familyName: 'XiaoQiaoDINRegular',
+      familySrc: $rawfile('fonts/D-DIN-PRO-400-Regular.ttf') });
+    fonts.registerFont({ familyName: 'XiaoQiaoDINMedium',
+      familySrc: $rawfile('fonts/D-DIN-PRO-500-Medium.ttf') });
+  }
+
   aboutToDisappear(): void {
     this.snackBar?.dismiss();
   }
@@ -88,7 +96,13 @@ struct Index {
         Blank()
         Button({ type: ButtonType.Normal }) {
           Row({ space: 6 }) {
-            Text(this.preview ? '预算 ¥3,000.00' : '设置预算').fontSize('12fp')
+            Text() {
+              Span(this.preview ? '预算 ' : '设置预算')
+              if (this.preview) {
+                Span('¥')
+                Span('3,000.00').fontFamily('XiaoQiaoDINRegular')
+              }
+            }.fontSize('12fp')
               .fontColor($r('app.color.xq_font_on_secondary'))
             Image($r('app.media.lucide_pencil1')).width(14).height(14)
               .fillColor($r('app.color.xq_icon_on_secondary'))
@@ -103,7 +117,8 @@ struct Index {
           Stack() {
             Progress({ value: 82.9, total: 100, type: ProgressType.Ring })
               .width(64).height(64).color($r('app.color.xq_app_summary_accent')).style({ strokeWidth: 6 })
-            Text('82.9%').fontSize('12fp').fontWeight(FontWeight.Medium).fontColor($r('app.color.xq_app_summary_accent'))
+            Text('82.9%').fontFamily('XiaoQiaoDINMedium').fontSize('12fp').fontWeight(FontWeight.Medium)
+              .fontColor($r('app.color.xq_app_summary_accent'))
           }.accessibilityText('预算已使用百分之82.9')
         } else {
           Column({ space: 6 }) {

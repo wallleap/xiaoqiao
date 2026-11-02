@@ -1,4 +1,4 @@
-/** Numbers target the DIN family; use the system fallback until a licensed font is integrated. */
+/** Amount digits use the bundled D-DIN PRO Regular; symbols retain the system font. */
 @Component
 export struct AmountText {
   @Prop amount: string = '0.00';
@@ -13,6 +13,7 @@ export struct AmountText {
       }
       Text('¥').fontSize('12fp').fontColor(this.color).margin({ bottom: 4 })
       Text(this.amount)
+        .fontFamily('XiaoQiaoDINRegular')
         .fontSize(`${this.amountSize}fp`)
         .minFontSize(`${this.amountSize >= 30 ? 24 : Math.min(this.amountSize, 12)}fp`)
         .maxFontSize(`${this.amountSize}fp`)
