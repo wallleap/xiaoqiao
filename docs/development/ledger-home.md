@@ -133,3 +133,9 @@ ChipGroup 验证结果：主 HAP、测试 HAP 构建通过；主机检查 20/20�
 AmountText 的金额数字和摘要预算数字使用 Regular，预算百分比使用 Medium。中文、日期、货币符号和正负号保持系统默认字体；原有 fp 字号、金额精度、缩放约束与完整金额弹窗保持不变。其余五个字重暂不注册，文件保留在 rawfile，随资源打包；没有引入新的依赖或修改构建配置。后续新页面使用这些字体前也需确保在其 UIContext 中注册。
 
 DIN 接入验证：七个字体的 OS/2 字重信息均与文件名一致；主 HAP、测试 HAP 构建通过；API 26 手机模拟器 Hypium 5/5，Failure 0、Error 0。实际截图已确认金额和百分比字体变化，无裁切，原有卡片宽度、图标文字间距、金额右边距和金额弹窗流程通过。git diff --check 通过。本轮未提交，其他设备、大字号和深色模式尚未验收。
+
+## 应用图标与名称（2026-11-03）
+
+采用用户替换的 entry/src/main/resources/base/media/foreground.png、background.png 及 startIcon.png，保持原文件内容。将相同前景、背景同步到 AppScope/resources/base/media，确保应用级与 EntryAbility 级 layered_image 一致。AppScope 的 app_name 和用户更新的 EntryAbility_label 均为“小巧记账”；经用户确认保留包名 cn.oicode.xiaoqiao，不调整数据库或沙箱路径。
+
+图标前景、背景为 1024×1024，启动图标由用户更新为 256×256；主 HAP 构建通过。API 26 模拟器安装及启动成功；bm dump 确认包名未变、应用与入口均引用 layered_image，名称分别引用 app_name 与 EntryAbility_label，启动图标引用 startIcon。资源文件哈希确认应用级和入口级前景、背景一致。未改签名、权限和依赖配置，本轮未重跑业务 UI 测试或进行真机桌面视觉验收，未提交。
