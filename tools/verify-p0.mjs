@@ -103,6 +103,21 @@ await test('liability opening is negative; invalid account metadata, signs and c
   assert.throws(()=>new AccountDraft({...accountCommand(),opening:Money.fromMinorText('9007199254740992',new CurrencyUnit('CNY','CNY',2))}));
   for (const v of [0,-1,1.5,NaN,Number.MAX_SAFE_INTEGER]) assert.throws(()=>requireAccountRevision(v));
 });
+const { TransferRecord } = load(base + '/domain/model/TransferRecord.ets');
+const { TransferService } = load(base + '/domain/services/TransferService.ets');
+const transferCommand = () => { const c=incomeCommand(); return {id:'transfer-1',bookId:c.bookId,fromAccountId:'a',toAccountId:'b',amount:Money.parse('10.25',new CurrencyUnit('CNY','CNY',2)),includeInAssets:true,note:'调拨',occurredAtMs:c.occurredAtMs,localDate:c.localDate,timezone:c.timezone,offsetMinutes:c.offsetMinutes}; };
+await test('transfer snapshots exact positive CNY money and two distinct accounts', () => {
+  const c=transferCommand(); const r=new TransferRecord(c); c.note='changed';
+  assert.equal(r.command.amount.minor,1025n); assert.equal(r.command.note,'调拨');
+  for (const values of [{fromAccountId:''},{toAccountId:'a'},{amount:Money.parse('0',new CurrencyUnit('CNY','CNY',2))},{amount:Money.parse('-1',new CurrencyUnit('CNY','CNY',2))},{amount:Money.parse('1',usd)},{localDate:'2026-02-30'}]) assert.throws(()=>new TransferRecord({...transferCommand(),...values}));
+});
+await test('invalid transfer or revision never writes; update keeps the same identity', async () => {
+  const calls=[]; const service=new TransferService({saveTransfer:async r=>calls.push(['save',r.command.id]),updateTransfer:async(r,v)=>calls.push(['edit',r.command.id,v])});
+  await assert.rejects(service.save({...transferCommand(),toAccountId:'a'})); await assert.rejects(service.update(transferCommand(),0)); assert.equal(calls.length,0);
+  await service.save(transferCommand()); await service.update(transferCommand(),3);
+  assert.deepEqual(calls,[['save','transfer-1'],['edit','transfer-1',3]]);
+  await assert.rejects(new TransferService({saveTransfer:async()=>{throw new Error('PAIR_FAILED');}}).save(transferCommand()),/PAIR_FAILED/);
+});
 const { SerialTaskQueue } = load(base + '/data/rdb/SerialTaskQueue.ets');
 await test('queue holds later work until async task completes', async () => {
   const q = new SerialTaskQueue(); const events = []; let release;
@@ -200,10 +215,33 @@ await test('daily totals use visible date groups and exact integer amounts', () 
   assert.equal(dailyTotals(entries.filter(e => e.income), '2026-11-03').expenseMinor, '0');
   assert.equal(dailyTotals([], '2026-11-03').incomeMinor, '0');
 });
+await test('transfers are visible in all, match both accounts, and never enter income/expense filters or daily totals', () => {
+  const transfer={id:'t',title:'转账',category:'转账',account:'微信',toAccount:'银行卡',date:'2026-11-03',income:false,transfer:true,minor:'12345'};
+  assert.equal(filterEntries([transfer],LedgerKind.All,'','').length,1);
+  assert.equal(filterEntries([transfer],LedgerKind.Expense,'','').length,0);
+  assert.equal(filterEntries([transfer],LedgerKind.Income,'','').length,0);
+  assert.equal(filterEntries([transfer],LedgerKind.All,'银行','银行卡').length,1);
+  assert.equal(filterEntries([transfer],LedgerKind.All,'','微信').length,1);
+  assert.deepEqual(dailyTotals([transfer],transfer.date),{incomeMinor:'0',expenseMinor:'0'});
+});
 await test('today label compares the complete local calendar date', () => {
   const now = new Date(2026,10,3,0,1);
   assert.equal(isToday('2026-11-03', now), true);
   assert.equal(isToday('2025-11-03', now), false);
   assert.equal(isToday('2026-11-02', now), false);
+});
+await test('repayment binds fee and coupon to one transfer with exact outgoing and independent budget flag', () => {
+  const c=transferCommand(); const currency=c.amount.currency;
+  const r=new TransferRecord({...c, amount:Money.parse('100',currency), purpose:'credit_repayment',fee:Money.parse('2',currency),coupon:Money.parse('5',currency),feeInBudget:false});
+  assert.equal(r.outgoing.minor,9700n); assert.equal(r.command.amount.minor,10000n);
+  assert.equal(r.feeInExpense,true); assert.equal(r.feeInBudget,false);
+  const covered=new TransferRecord({...c,purpose:'loan_repayment',coupon:c.amount}); assert.equal(covered.outgoing.minor,0n);
+  for(const change of [{purpose:'unknown'},{fee:Money.parse('-1',currency)},{coupon:Money.parse('11',currency)},{coupon:Money.parse('1',currency)},{fee:Money.parse('1',usd)}]) assert.throws(()=>new TransferRecord({...c,...change}));
+});
+await test('embedded transfer fee participates in expense filter and daily totals, never principal or coupon', () => {
+  const entry={id:'repayment',title:'还款',category:'信用卡还款',account:'银行',toAccount:'信用卡',date:'2026-11-03',income:false,transfer:true,minor:'9700',expenseMinor:'200',transferCouponMinor:'500'};
+  assert.equal(filterEntries([entry],LedgerKind.Expense,'','').length,1);
+  assert.equal(filterEntries([entry],LedgerKind.Income,'','').length,0);
+  assert.deepEqual(dailyTotals([entry],entry.date),{incomeMinor:'0',expenseMinor:'200'});
 });
 console.log(`${count} host checks passed. Native ArkTS/RDB/Decimal and UI require the separate device suite.`);

@@ -1,3 +1,4 @@
+import { transferPurposeLabel } from '../domain/model/TransferRecord';
 import { ChipGroup, ChipSize, curves, window } from '@kit.ArkUI';
 import { HdsTabs, hdsMaterial, HdsNavigation, HdsNavigationTitleMode, HdsListItemCard,
   PrefixCustomBuilder, SuffixCustomBuilder, HdsSnackBar, SnackBarOperationType, ScrollEffectType, DividerShowType } from '@kit.UIDesignKit';
@@ -11,6 +12,7 @@ import { LedgerSwipeActions } from '../components/LedgerSwipeActions';
 import { common } from '@kit.AbilityKit';
 import { deviceInfo } from '@kit.BasicServicesKit';
 import { FilterMaterials } from '../presentation/materials/FilterMaterials';
+import { LedgerDatabase } from '../data/rdb/LedgerDatabase';
 import { LedgerWorkspace } from '../data/rdb/LedgerWorkspace';
 import { LedgerSnapshot, ExpenseCategory, LedgerAccount } from '../domain/model/LedgerSnapshot';
 import { EntryDetail } from '../domain/model/EntryDetail';
@@ -48,6 +50,7 @@ struct Index {
   @State private periodOpacity: number = 1;
   @State private ledger: LedgerSnapshot | undefined = undefined;
   @State private loadError: string = '';
+  @State private upgradeRequired: boolean = false;
   @State private loading: boolean = true;
   @State private showExpense: boolean = false;
   @State private showDetail: boolean = false;
@@ -115,7 +118,7 @@ struct Index {
 
   private async loadLedger(): Promise<void> {
     this.loading = true;
-    this.loadError = '';
+    this.loadError = ''; this.upgradeRequired = false;
     try {
       const context = this.getUIContext().getHostContext() as common.UIAbilityContext;
       // Nonpersistent override exists only for isolated device tests; normal launch always uses xiaoqiao.db.
@@ -125,9 +128,26 @@ struct Index {
       this.accountError = '';
       try { this.accountOverview = await this.workspace.accountOverview(); }
       catch (_) { this.accountError = '账户暂时无法读取，请重试'; }
-    } catch (_) {
-      this.loadError = '账本暂时无法读取，已有数据不会被覆盖。请重试';
+    } catch (error) {
+      this.upgradeRequired = (error as Error).message === 'LEDGER_UPGRADE_REQUIRED';
+      this.loadError = this.upgradeRequired ? '升级本地账本后，可使用转账手续费和还款优惠' : '账本暂时无法读取，已有数据不会被覆盖。请重试';
     } finally { this.loading = false; }
+  }
+
+  private confirmDatabaseUpgrade(): void {
+    if (this.loading) { return; }
+    this.getUIContext().getPromptAction().showDialog({ title: '升级本地账本？',
+      message: '先在本机备份，再增加转账用途、手续费和优惠字段。原账目及余额会核对保留，失败会回滚并保留备份。',
+      buttons: [{ text: '取消', color: $r('app.color.xq_font_primary') }, { text: '备份并升级', color: $r('app.color.xq_font_emphasize') }]
+    }).then(async (result) => {
+      if (result.index !== 1) { return; }
+      this.loading = true;
+      try {
+        const host = this.getUIContext().getHostContext() as common.UIAbilityContext;
+        await LedgerDatabase.upgrade(host); await this.loadLedger();
+      } catch (_) { this.loadError = '升级未完成，请保留本地数据后重试'; }
+      finally { this.loading = false; }
+    }).catch(() => {});
   }
 
   private openAccount(account: AccountProfile | undefined = undefined): void {
@@ -166,7 +186,7 @@ struct Index {
 
   @Builder
   private accountsPage() {
-    AccountsPage({ overview: this.accountOverview, loading: this.loading, error: this.accountError,
+    AccountsPage({ overview: this.accountOverview, loading: this.loading, error: this.upgradeRequired ? '请先返回账目页，备份并升级本地账本' : this.accountError,
       onCreate: () => { this.openAccount(); }, onEdit: (account: AccountProfile) => { this.openAccount(account); },
       onRetry: () => { this.loadLedger(); } })
   }
@@ -235,7 +255,7 @@ struct Index {
   private editCategories(income: boolean = false): ExpenseCategory[] {
     const values = (income ? this.ledger?.incomeCategories : this.ledger?.categories)?.slice() || [];
     const entry = this.editingEntry;
-    if (entry !== undefined && (entry.kind === 'income') === income && !values.some((item: ExpenseCategory) => item.id === entry.categoryId)) {
+    if (entry !== undefined && entry.kind !== 'transfer' && (entry.kind === 'income') === income && !values.some((item: ExpenseCategory) => item.id === entry.categoryId)) {
       values.push({ id: entry.categoryId, name: entry.categoryName, parentId: '', iconKey: entry.iconKey });
     }
     return values;
@@ -245,7 +265,10 @@ struct Index {
     const values = this.ledger?.accounts.slice() || [];
     const entry = this.editingEntry;
     if (entry !== undefined && entry.accountId.length > 0 && !values.some((item: LedgerAccount) => item.id === entry.accountId)) {
-      values.push({ id: entry.accountId, name: entry.accountName, currencyId: entry.currencyId });
+      values.push({ id: entry.accountId, name: entry.accountName, currencyId: entry.currencyId, kind: entry.accountKind });
+    }
+    if (entry?.kind === 'transfer' && entry.toAccountId && !values.some((item: LedgerAccount) => item.id === entry.toAccountId)) {
+      values.push({ id: entry.toAccountId, name: entry.toAccountName || '转入账户', currencyId: entry.currencyId, kind: entry.toAccountKind });
     }
     return values;
   }
@@ -256,7 +279,7 @@ struct Index {
       onClose: () => { this.closeDetail(); }, onEdit: () => { this.editDetail(); },
       onRetry: () => { this.openDetail(this.detailId); }, onDelete: () => {
         if (this.detail !== undefined) {
-          this.confirmDelete({ id: this.detail.id, category: this.detail.categoryPath, minor: this.detail.bookMinor });
+          this.confirmDelete({ id: this.detail.id, category: this.detail.kind === 'transfer' ? transferPurposeLabel(this.detail.transferPurpose || 'transfer') : this.detail.categoryPath, minor: this.detail.kind === 'transfer' ? (this.detail.transferOutMinor || this.detail.bookMinor) : this.detail.bookMinor });
         }
       } })
   }
@@ -490,12 +513,16 @@ struct Index {
   }
 
   @Builder
-  private entryAmount(entry: LedgerEntry) {
+  private entryAmount(entry: LedgerEntry, pageKind: LedgerKind) {
     Column({ space: 3 }) {
-      AmountText({ amount: displayAmount(entry.minor), amountSize: 16, bold: true, currencyBottom: 0,
-        sign: entry.income ? '+' : '−',
+      AmountText({ amount: displayAmount(entry.transfer && pageKind === LedgerKind.Expense ? (entry.expenseMinor || '0') : entry.minor), amountSize: 16, bold: true, currencyBottom: 0,
+        sign: entry.transfer && pageKind !== LedgerKind.Expense ? '' : entry.income ? '+' : '−',
         onOpen: () => { this.openDetail(entry.id); },
-        color: entry.income ? $r('app.color.xq_app_income') : $r('app.color.xq_brand') })
+        color: entry.transfer && pageKind !== LedgerKind.Expense ? $r('app.color.xq_font_primary') : entry.income ? $r('app.color.xq_app_income') : $r('app.color.xq_brand') })
+      if (entry.transfer && BigInt(entry.transferFeeMinor || '0') > BigInt(0)) {
+        Text(pageKind === LedgerKind.Expense ? '转出 ' + displayAmount(entry.minor) : '手续费 ' + displayAmount(entry.transferFeeMinor || '0')).fontSize('12fp')
+          .fontColor($r('app.color.xq_font_secondary')).maxLines(1).id(`ledger-transfer-fee-${entry.id}`)
+      }
       if (!entry.income && BigInt(entry.discountMinor) > BigInt(0)) {
         Row({ space: 6 }) {
           Text('¥' + displayAmount(entry.grossMinor)).fontFamily('XiaoQiaoDINRegular').fontSize('12fp')
@@ -514,7 +541,7 @@ struct Index {
 
   private entrySubtitle(entry: LedgerEntry): string {
     // The existing read model uses this label for a missing account; suppress it only in the card display.
-    const account = entry.account.trim();
+    const account = entry.transfer ? entry.account + ' → ' + (entry.toAccount || '转入账户') : entry.account.trim();
     return account.length > 0 && account !== '不使用账户' ? `${entry.time} · ${account}` : entry.time;
   }
 
@@ -522,7 +549,11 @@ struct Index {
   private categoryBadge(entry: LedgerEntry) {
     Row() {
       Stack() {
-        Image(entry.icon).width(28).height(28).objectFit(ImageFit.Contain).id(`ledger-category-glyph-${entry.id}`)
+        if (entry.transfer) {
+          Image(entry.icon).width(28).height(28).fillColor($r('app.color.xq_icon_primary')).id(`ledger-category-glyph-${entry.id}`)
+        } else {
+          Image(entry.icon).width(28).height(28).objectFit(ImageFit.Contain).id(`ledger-category-glyph-${entry.id}`)
+        }
       }.width(48).height(48).borderRadius(24).backgroundColor($r('app.color.xq_app_surface_page'))
         .id(`ledger-category-disc-${entry.id}`)
     }.width(68).height(48).padding({ left: 12, right: 8 })
@@ -543,14 +574,14 @@ struct Index {
   }
 
   @Builder
-  private ledgerRow(entry: LedgerEntry) {
+  private ledgerRow(entry: LedgerEntry, pageKind: LedgerKind) {
     HdsListItemCard({
       cardId: entry.id,
       cardWidth: this.recordWidth, cardBorderRadius: 16,
       cardPrefixMargin: 16, cardSuffixMargin: 16,
       cardBackgroundColor: $r('app.color.xq_comp_common_contrary'),
       prefixItem: new PrefixCustomBuilder(() => { this.entryContent(entry); }),
-      suffixItem: new SuffixCustomBuilder(() => { this.entryAmount(entry); })
+      suffixItem: new SuffixCustomBuilder(() => { this.entryAmount(entry, pageKind); })
     }).id(entry.id).width('100%').onClick(() => { this.openDetail(entry.id); })
   }
 
@@ -775,7 +806,9 @@ struct Index {
         Text('正在读取账本…').fontSize('14fp').padding(32)
       } else if (!this.preview && this.loadError.length > 0) {
         Text(this.loadError).fontSize('14fp').fontColor($r('app.color.xq_warning')).padding(16)
-        Button('重试读取').onClick(() => { this.loadLedger(); })
+        Button(this.upgradeRequired ? '备份并升级账本' : '重试读取').onClick(() => {
+          if (this.upgradeRequired) { this.confirmDatabaseUpgrade(); } else { this.loadLedger(); }
+        }).id('ledger-upgrade-or-retry')
       } else if (this.entries(pageKind).length === 0) {
         this.emptyState(pageKind)
       } else {
@@ -794,7 +827,7 @@ struct Index {
             LedgerSwipeActions({ entryId: entry.id, activeId: $activeSwipeId, busy: this.deleting,
               editable: !this.preview, onEdit: () => { this.openDetail(entry.id, true); },
               menuMaterial: this.materialReady && !this.forceLegacyMaterials ? this.filterMaterials?.menu : undefined,
-              content: () => { this.ledgerRow(entry); }, onDelete: () => {
+              content: () => { this.ledgerRow(entry, pageKind); }, onDelete: () => {
                 this.confirmDelete({ id: entry.id, category: entry.category, minor: entry.minor });
               } }).width('100%')
           }, (entry: LedgerEntry) => entry.id)
@@ -816,7 +849,7 @@ struct Index {
       ListItem() {
         Column({ space: 0 }) {
         this.header()
-          if (this.viewportWidth < 720) { this.summary() }
+          if (this.viewportWidth < 720 && !this.upgradeRequired) { this.summary() }
         }.width('100%').padding({ top: 12, bottom: 12 })
           .onAreaChange((_previous: Area, current: Area) => {
             this.filterStartOffset = Number(current.height);
@@ -832,7 +865,7 @@ struct Index {
         ListItem() {
           if (this.viewportWidth >= 720) {
             Row({ space: 24 }) {
-              Column() { this.summary() }.width(320).alignSelf(ItemAlign.Start)
+              Column() { if (!this.upgradeRequired) { this.summary() } }.width(320).alignSelf(ItemAlign.Start)
               Column() { this.animatedRecords() }.layoutWeight(1)
             }.width('100%').alignItems(VerticalAlign.Top)
           } else { this.animatedRecords() }

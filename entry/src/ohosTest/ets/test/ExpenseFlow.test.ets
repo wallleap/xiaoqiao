@@ -1,3 +1,4 @@
+import { verifyTransfersUI } from './TransfersFlow';
 import { verifyAccountsUI } from './AccountsFlow';
 import { common } from '@kit.AbilityKit';
 import { relationalStore } from '@kit.ArkData';
@@ -263,10 +264,10 @@ export default function expenseFlowTest() {
       expect(await driver.findComponent(ON.id('expense-discount-control'))).assertNull();
       expect(await (await driver.findComponent(ON.id('expense-account-label'))).getText()).assertEqual('收款账户');
       await (await driver.findComponent(ON.text('转账').within(ON.id('expense-kind-selector')))).click();
-      await driver.waitForComponent(ON.text('账户间转账尚未接入。'), 5000);
-      await (await driver.findComponent(ON.text('知道了'))).click();
-      await driver.delayMs(600);
-      expect(await driver.findComponent(ON.text('收入').selected(true).within(ON.id('expense-kind-selector'))) !== null).assertTrue();
+      await driver.waitForComponent(ON.id('expense-to-account-value'), 5000);
+      expect(await driver.findComponent(ON.id('expense-categories'))).assertNull();
+      expect(await driver.findComponent(ON.id('expense-discount-control'))).assertNull();
+      expect(await driver.findComponent(ON.text('转账').selected(true).within(ON.id('expense-kind-selector'))) !== null).assertTrue();
       await (await driver.findComponent(ON.text('支出').within(ON.id('expense-kind-selector')))).click();
       await driver.waitForComponent(ON.id('expense-category-expense-food'), 5000);
       expect(await driver.findComponent(ON.id('expense-discount-control')) !== null).assertTrue();
@@ -564,6 +565,7 @@ export default function expenseFlowTest() {
       await driver.waitForComponent(ON.text('开始记第一笔账'), 5000);
       expect((await workspace.snapshot(command.localDate.substring(0, 7))).incomeMinor).assertEqual('0');
       await verifyAccountsUI(driver, host, workspace, command.localDate.substring(0, 7));
+      await verifyTransfersUI(driver, host, workspace, command.localDate.substring(0, 7));
       } finally {
         // Only this run's UUID fixture is removed, even when the added account UI checks fail.
         await LedgerWorkspace.close(name);

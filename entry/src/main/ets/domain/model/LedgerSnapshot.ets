@@ -9,6 +9,7 @@ export interface LedgerAccount {
   id: string;
   name: string;
   currencyId: string;
+  kind?: string;
 }
 
 export interface SavedLedgerEntry {
@@ -21,6 +22,11 @@ export interface SavedLedgerEntry {
   occurredAtMs: number;
   offsetMinutes: number;
   income: boolean;
+  transfer?: boolean;
+  toAccount?: string;
+  expenseMinor?: string;
+  transferFeeMinor?: string;
+  transferCouponMinor?: string;
   minor: string;
   grossMinor: string;
   discountMinor: string;

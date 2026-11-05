@@ -11,6 +11,17 @@ export interface EntryDetail {
   iconKey: string;
   accountId: string;
   accountName: string;
+  toAccountId?: string;
+  toAccountName?: string;
+  accountKind?: string;
+  toAccountKind?: string;
+  transferPurpose?: string;
+  transferOutMinor?: string;
+  transferInMinor?: string;
+  transferFeeMinor?: string;
+  transferCouponMinor?: string;
+  feeInExpense?: boolean;
+  feeInBudget?: boolean;
   currencyId: string;
   currencyCode: string;
   currencySymbol: string;

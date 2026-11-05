@@ -13,6 +13,11 @@ export interface LedgerEntry {
   date: string;
   time: string;
   income: boolean;
+  transfer?: boolean;
+  toAccount?: string;
+  expenseMinor?: string;
+  transferFeeMinor?: string;
+  transferCouponMinor?: string;
   minor: string;
   grossMinor: string;
   discountMinor: string;
@@ -29,17 +34,17 @@ export function presentEntry(entry: SavedLedgerEntry): LedgerEntry {
   const local = new Date(entry.occurredAtMs + entry.offsetMinutes * 60000);
   return { id: entry.id, title: entry.note.length > 0 ? entry.note : entry.category, category: entry.category,
     account: entry.account, date: entry.date, time: String(local.getUTCHours()).padStart(2, '0') + ':' +
-      String(local.getUTCMinutes()).padStart(2, '0'), income: entry.income, minor: entry.minor,
-      grossMinor: entry.grossMinor, discountMinor: entry.discountMinor, icon: categoryIcon(entry.iconKey) };
+      String(local.getUTCMinutes()).padStart(2, '0'), income: entry.income, transfer: entry.transfer, toAccount: entry.toAccount, minor: entry.minor,
+      expenseMinor: entry.expenseMinor, transferFeeMinor: entry.transferFeeMinor, transferCouponMinor: entry.transferCouponMinor, grossMinor: entry.grossMinor, discountMinor: entry.discountMinor, icon: entry.transfer ? $r('app.media.lucide_arrow_left_right1') : categoryIcon(entry.iconKey) };
 }
 
 export function filterEntries(entries: LedgerEntry[], kind: LedgerKind, query: string,
   account: string): LedgerEntry[] {
   const keyword = query.trim().toLowerCase();
   return entries.filter((entry: LedgerEntry) =>
-    (kind === LedgerKind.All || entry.income === (kind === LedgerKind.Income)) &&
-    (account.length === 0 || entry.account === account) &&
-    (keyword.length === 0 || (entry.title + entry.category + entry.account).toLowerCase().includes(keyword)));
+    (kind === LedgerKind.All || (entry.transfer ? kind === LedgerKind.Expense && BigInt(entry.expenseMinor || '0') > BigInt(0) : entry.income === (kind === LedgerKind.Income))) &&
+    (account.length === 0 || entry.account === account || entry.toAccount === account) &&
+    (keyword.length === 0 || (entry.title + entry.category + entry.account + (entry.toAccount || '')).toLowerCase().includes(keyword)));
 }
 
 /** Explicit UI test fixture only. Normal launch has no example transactions. Never persisted. */
@@ -71,7 +76,8 @@ export function dailyTotals(entries: LedgerEntry[], date: string): DailyTotals {
   let expense = BigInt(0);
   for (const entry of entries) {
     if (entry.date === date) {
-      if (entry.income) { income += BigInt(entry.minor); } else { expense += BigInt(entry.minor); }
+      if (entry.transfer) { expense += BigInt(entry.expenseMinor || '0'); }
+      else if (entry.income) { income += BigInt(entry.minor); } else { expense += BigInt(entry.minor); }
     }
   }
   return { incomeMinor: income.toString(), expenseMinor: expense.toString() };

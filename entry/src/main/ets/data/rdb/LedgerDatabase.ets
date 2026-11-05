@@ -1,6 +1,7 @@
 import { common } from '@kit.AbilityKit';
 import { relationalStore } from '@kit.ArkData';
 import { REVIEW_SCHEMA_SHA256, REVIEW_SCHEMA_STATEMENTS } from './ReviewSchema';
+import { TransferMigration } from './TransferMigration';
 import { RdbSession } from './RdbSession';
 
 export const DEFAULT_BOOK_ID: string = 'book-default';
@@ -14,41 +15,41 @@ export class LedgerDatabase {
   }
 
   static async open(context: common.Context, name: string = 'xiaoqiao.db'): Promise<relationalStore.RdbStore> {
+    return LedgerDatabase.openInternal(context, name, name.startsWith('xiaoqiao_app_test_'));
+  }
+
+  /** Invoked only by the explicit local upgrade confirmation, never ordinary foreground loading. */
+  static async upgrade(context: common.Context): Promise<void> {
+    const store = await LedgerDatabase.openInternal(context, 'xiaoqiao.db', true);
+    await store.close();
+  }
+
+  private static async openInternal(context: common.Context, name: string, allowUpgrade: boolean): Promise<relationalStore.RdbStore> {
     LedgerDatabase.requireName(name);
-    const store = await relationalStore.getRdbStore(context,
-      { name: name, securityLevel: relationalStore.SecurityLevel.S1 });
+    const store = await relationalStore.getRdbStore(context, { name: name, securityLevel: relationalStore.SecurityLevel.S1 });
+    const session = RdbSession.forStore(store);
     try {
-      await RdbSession.forStore(store).write(async (db: relationalStore.RdbStore): Promise<void> => {
+      const empty = await session.read(async (db: relationalStore.RdbStore): Promise<boolean> => {
         const objects = await db.querySql("SELECT name FROM sqlite_master WHERE name NOT LIKE 'sqlite_%' AND type IN ('table','view','trigger')");
-        const empty = objects.rowCount === 0;
-        objects.close();
-        if (empty) {
-          // PRAGMA is configured before the transaction by RdbSession.
-          for (const sql of REVIEW_SCHEMA_STATEMENTS) {
-            if (!sql.startsWith('PRAGMA')) { await db.executeSql(sql); }
-          }
-          await LedgerDatabase.seed(db);
-        } else {
-          // No schema repair or version upgrade of nonempty databases; income defaults have their own one-time guard.
-          const meta = await db.querySql("SELECT value FROM db_meta WHERE key='schema_checksum'");
-          try {
-            if (!meta.goToFirstRow() || meta.getString(0) !== REVIEW_SCHEMA_SHA256) {
-              throw new Error('UNSUPPORTED_LEDGER_SCHEMA');
-            }
-          } finally { meta.close(); }
-          const migration = await db.querySql('SELECT version,checksum FROM schema_migrations ORDER BY version');
-          try {
-            if (migration.rowCount !== 1 || !migration.goToFirstRow() || migration.getLong(0) !== 1 ||
-              migration.getString(1) !== REVIEW_SCHEMA_SHA256) { throw new Error('UNSUPPORTED_LEDGER_SCHEMA'); }
-          } finally { migration.close(); }
-        }
-        await LedgerDatabase.ensureIncomeCategories(db);
+        try { return objects.rowCount === 0; } finally { objects.close(); }
       });
+      if (empty) {
+        await session.write(async (db: relationalStore.RdbStore): Promise<void> => {
+          for (const sql of REVIEW_SCHEMA_STATEMENTS) { if (!sql.startsWith('PRAGMA')) { await db.executeSql(sql); } }
+          await LedgerDatabase.seed(db);
+          await TransferMigration.apply(db, '', false);
+          await LedgerDatabase.ensureIncomeCategories(db);
+        });
+      } else {
+        const version = await session.read(async (db: relationalStore.RdbStore): Promise<number> => TransferMigration.status(db));
+        if (version === 1) {
+          if (!allowUpgrade) { throw new Error('LEDGER_UPGRADE_REQUIRED'); }
+          await TransferMigration.upgrade(store, name);
+        }
+        await session.write(async (db: relationalStore.RdbStore): Promise<void> => { await LedgerDatabase.ensureIncomeCategories(db); });
+      }
       return store;
-    } catch (error) {
-      await store.close();
-      throw error as Error;
-    }
+    } catch (error) { await store.close(); throw error as Error; }
   }
 
   /** Add defaults only once, only when this book has never had income categories. */
