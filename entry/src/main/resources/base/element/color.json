@@ -1,6 +1,18 @@
 {
   "color": [
     {
+      "name": "xq_app_filter_action_tint",
+      "value": "#33FFFFFF"
+    },
+    {
+      "name": "xq_app_filter_unselected",
+      "value": "#FFF1F3F5"
+    },
+    {
+      "name": "xq_app_filter_material_tint",
+      "value": "#99E5E5EA"
+    },
+    {
       "name": "start_window_background",
       "value": "#FFFFFF"
     },
@@ -38,7 +50,7 @@
     },
     {
       "name": "xq_font_emphasize",
-      "value": "#FFC83B14"
+      "value": "#FFFF5425"
     },
     {
       "name": "xq_font_on_primary",
@@ -218,7 +230,7 @@
     },
     {
       "name": "xq_app_surface_summary",
-      "value": "#FF272D31"
+      "value": "#FF000000"
     },
     {
       "name": "xq_app_border_subtle",
@@ -255,6 +267,18 @@
     {
       "name": "xq_app_confirm_background",
       "value": "#1964BB5C"
+    },
+    {
+      "name": "xq_app_summary_gradient_mid",
+      "value": "#FF2B261E"
+    },
+    {
+      "name": "xq_app_summary_gradient_end",
+      "value": "#FF4B3E2F"
+    },
+    {
+      "name": "xq_app_summary_track",
+      "value": "#33E7C68A"
     },
     {
       "name": "xq_app_gradient_start",
@@ -294,7 +318,7 @@
     },
     {
       "name": "xq_app_summary_accent",
-      "value": "#FFFFAB7B"
+      "value": "#FFE7C68A"
     },
     {
       "name": "xq_app_warning_text",

@@ -1,0 +1,689 @@
+import { HdsNavigation, HdsNavigationTitleMode, DividerShowType, hdsMaterial } from '@kit.UIDesignKit';
+import { FrameCallback, KeyboardAvoidMode, ChipGroup, ChipSize, curves } from '@kit.ArkUI';
+import { util } from '@kit.ArkTS';
+import { CurrencyUnit } from '../core/money/CurrencyUnit';
+import { ExpenseCommand } from '../domain/model/ExpenseRecord';
+import { ExpenseCategory, LedgerAccount } from '../domain/model/LedgerSnapshot';
+import { LedgerWorkspace } from '../data/rdb/LedgerWorkspace';
+import { ExpenseAmountInput } from '../presentation/ledger/ExpenseAmountInput';
+import { categoryIcon } from '../presentation/ledger/CategoryIcons';
+
+class AmountFocusFrame extends FrameCallback {
+  private readonly action: () => void;
+  constructor(action: () => void) { super(); this.action = action; }
+  onFrame(_time: number): void { this.action(); }
+  onIdle(_time: number): void {}
+}
+
+@Component
+export struct ExpenseEditor {
+  @Prop chipMaterial: SystemUiMaterial | undefined = undefined;
+  @Prop actionMaterial: SystemUiMaterial | undefined = undefined;
+  // The material is an immutable native instance supplied when the editor opens.
+  sheetMaterial: SystemUiMaterial | undefined = undefined;
+  workspace: LedgerWorkspace | undefined = undefined;
+  private readonly currency: CurrencyUnit = new CurrencyUnit('CNY', 'CNY', 2);
+  bookId: string = '';
+  categories: ExpenseCategory[] = [];
+  accounts: LedgerAccount[] = [];
+  onClose: () => void = () => {};
+  onSavingChange: (saving: boolean) => void = () => {};
+  onSaved: (date: string) => void = () => {};
+  @State private expression: string = '0';
+  @State private discount: string = '0';
+  @State private editingDiscount: boolean = false;
+  @State private amountFocusHighlight: boolean = false;
+  private amountFocusTimer: number = -1;
+  @State private note: string = '';
+  @State private selectedId: string = '';
+  @State private accountId: string = '';
+  @State private occurredAtMs: number = Date.now();
+  @State private occurredAtLabel: string = '';
+  @State private includeBudget: boolean = true;
+  @State private includeAssets: boolean = true;
+  @State private saving: boolean = false;
+  @State private saved: boolean = false;
+  @State private errorText: string = '';
+  @State private showOptions: boolean = false;
+  @State private optionKind: number = 0;
+  @State private parentId: string = '';
+  @State private compactCategories: boolean = false;
+  @State private categoryCollapse: number = 0;
+  @State private categoryPage: number = 0;
+  private categoryDragY: number = 0;
+  private categoryMotionVersion: number = 0;
+  @State private keyboardVisible: boolean = true;
+  @State private noteEditing: boolean = false;
+  @State private selectedKinds: number[] = [0];
+  private readonly scroller: Scroller = new Scroller();
+  private readonly amountController: TextInputController = new TextInputController();
+  private previousAvoidMode: KeyboardAvoidMode = KeyboardAvoidMode.OFFSET;
+  private active: boolean = false;
+  private saveId: string = util.generateRandomUUID();
+  private readonly keys: string[][] = [['1', '2', '3', '⌫'], ['4', '5', '6', '−'], ['7', '8', '9', '+'], ['清空', '0', '.', '保存']];
+
+  aboutToAppear(): void {
+    this.occurredAtLabel = this.dateLabel();
+    this.selectedId = this.categories.length > 0 ? this.categories[0].id : '';
+    this.active = true;
+    this.previousAvoidMode = this.getUIContext().getKeyboardAvoidMode();
+    this.getUIContext().setKeyboardAvoidMode(KeyboardAvoidMode.RESIZE);
+    this.focusAmountAfterFrame();
+  }
+
+  aboutToDisappear(): void {
+    this.active = false;
+    clearTimeout(this.amountFocusTimer);
+    this.amountController.stopEditing();
+    this.getUIContext().setKeyboardAvoidMode(this.previousAvoidMode);
+  }
+
+  private focusAmount(): void {
+    if (!this.active || this.saved) { return; }
+    this.editingDiscount = false;
+    this.getUIContext().getFocusController().requestFocus('expense-amount');
+  }
+
+  private focusAmountFromPaid(): void {
+    if (!this.active || this.saved || this.saving) { return; }
+    this.focusAmount();
+    this.amountController.caretPosition(this.expression.length);
+    clearTimeout(this.amountFocusTimer);
+    this.amountFocusHighlight = true;
+    this.amountFocusTimer = setTimeout(() => {
+      if (!this.active) { return; }
+      this.getUIContext().animateTo({ duration: 400, curve: Curve.EaseOut }, () => {
+        this.amountFocusHighlight = false;
+      });
+    }, 700);
+  }
+
+  private focusAmountAfterFrame(): void {
+    this.getUIContext().postFrameCallback(new AmountFocusFrame(() => { this.focusAmount(); }));
+  }
+
+  private statusBarColor(): string {
+    const context = this.getUIContext().getHostContext();
+    if (context === undefined) { return '#E5000000'; }
+    return '#' + (context.resourceManager.getColorSync($r('app.color.xq_font_primary').id) >>> 0).toString(16).padStart(8, '0');
+  }
+
+  private selectKind(selected: number[]): void {
+    if (selected.length !== 1 || selected[0] === 0) { return; }
+    if (selected[0] === 1) { this.inform('收入记账尚未接入，本次先完成新增支出。'); }
+    if (selected[0] === 2) { this.inform('账户间转账尚未接入，本次先完成新增支出。'); }
+    this.selectedKinds = [0];
+  }
+
+  private selected(): ExpenseCategory | undefined {
+    return this.categories.find((item: ExpenseCategory) => item.id === this.selectedId);
+  }
+
+  private roots(): ExpenseCategory[] { return this.categories.filter((item: ExpenseCategory) => item.parentId.length === 0); }
+
+  private categoryPageSize(): number { return this.compactCategories ? 4 : 8; }
+
+  private updateCategoryCollapse(value: number): void {
+    this.categoryMotionVersion++;
+    const next = Math.max(0, Math.min(80, value));
+    const compact = next >= 80;
+    if (compact !== this.compactCategories) {
+      this.categoryPage = compact ? this.categoryPage * 2 : Math.floor(this.categoryPage / 2);
+      this.compactCategories = compact;
+    }
+    this.categoryCollapse = next;
+  }
+
+  private consumeCategoryScroll(delta: number): number {
+    if (delta > 0) {
+      const consumed = Math.min(delta, 80 - this.categoryCollapse);
+      this.updateCategoryCollapse(this.categoryCollapse + consumed);
+      return delta - consumed;
+    }
+    const formOffset = Math.max(0, this.scroller.currentOffset().yOffset);
+    const available = Math.max(0, -delta - formOffset);
+    const consumed = Math.min(available, this.categoryCollapse);
+    this.updateCategoryCollapse(this.categoryCollapse - consumed);
+    return delta + consumed;
+  }
+
+  private settleCategories(): void {
+    if (this.categoryCollapse <= 0 || this.categoryCollapse >= 80) { return; }
+    const target = this.categoryCollapse >= 40 ? 80 : 0;
+    const version = ++this.categoryMotionVersion;
+    this.getUIContext().animateTo({ curve: curves.springMotion(0.28, 0.90), onFinish: () => {
+      if (this.active && this.categoryMotionVersion === version) { this.updateCategoryCollapse(target); }
+    } }, () => {
+      this.categoryCollapse = target;
+    });
+  }
+
+  private children(): ExpenseCategory[] { return this.categories.filter((item: ExpenseCategory) => item.parentId === this.parentId); }
+
+  private choose(item: ExpenseCategory): void {
+    this.selectedId = item.id; // Parent is already selected; dismissing the sheet keeps it.
+    if (this.categories.some((child: ExpenseCategory) => child.parentId === item.id)) {
+      this.parentId = item.id;
+      this.optionKind = 0;
+      this.showOptions = true;
+    } else { this.showOptions = false; }
+  }
+
+  private localDate(): string {
+    return `${new Date(this.occurredAtMs).getFullYear()}-${String(new Date(this.occurredAtMs).getMonth() + 1).padStart(2, '0')}-${String(new Date(this.occurredAtMs).getDate()).padStart(2, '0')}`;
+  }
+
+  private dateLabel(): string {
+    return this.localDate() + ' ' + String(new Date(this.occurredAtMs).getHours()).padStart(2, '0') + ':' + String(new Date(this.occurredAtMs).getMinutes()).padStart(2, '0');
+  }
+
+  private paidText(): string {
+    try {
+      return ExpenseAmountInput.paidAmount(this.expression, this.discount, this.currency).toDecimalString();
+    } catch (_) { return '—'; }
+  }
+
+  private canSaveAmounts(expression: string, discount: string): boolean {
+    try {
+      return ExpenseAmountInput.evaluate(expression, this.currency).minor > BigInt(0) &&
+        ExpenseAmountInput.paidAmount(expression, discount, this.currency).minor > BigInt(0);
+    } catch (_) { return false; }
+  }
+
+  private inform(message: string): void {
+    this.getUIContext().getPromptAction().showDialog({ title: '说明', message: message,
+      buttons: [{ text: '知道了', color: $r('app.color.xq_font_emphasize') }] });
+  }
+
+  private press(key: string): void {
+    if (this.saving || this.saved) { return; }
+    if (key === '保存') { this.save(); return; }
+    this.errorText = '';
+    if (key === '清空') {
+      if (this.editingDiscount) { this.discount = '0'; } else { this.expression = '0'; }
+      return;
+    }
+    try {
+      const next = ExpenseAmountInput.appendChecked(this.expression, this.discount, key, this.currency, this.editingDiscount);
+      if (this.editingDiscount) { this.discount = next; } else { this.expression = next; }
+    } catch (_) {
+      this.errorText = '金额无法计算或超出范围，请修改输入';
+    }
+  }
+
+  private async save(): Promise<void> {
+    if (this.saving || this.saved) { return; }
+    this.errorText = '';
+    let command: ExpenseCommand;
+    try {
+      const gross = ExpenseAmountInput.evaluate(this.expression, this.currency);
+      const reduction = ExpenseAmountInput.evaluateDiscount(this.discount || '0', this.currency);
+      const paid = ExpenseAmountInput.paidAmount(this.expression, this.discount, this.currency);
+      if (gross.minor <= BigInt(0) || reduction.minor < BigInt(0) || paid.minor <= BigInt(0)) {
+        this.errorText = '金额须大于 0，优惠须小于原金额'; return;
+      }
+      if (this.selectedId.length === 0) { this.errorText = '请选择分类'; return; }
+      const account = this.accountId.length > 0 ? this.accountId : undefined;
+      command = { id: this.saveId, bookId: this.bookId, categoryId: this.selectedId, gross: gross,
+        discount: reduction, bookPaid: paid, accountId: account, accountPaid: account === undefined ? undefined : paid,
+        includeInAssets: this.includeAssets, includeInBudget: this.includeBudget, note: this.note.trim(),
+        occurredAtMs: new Date(this.occurredAtMs).getTime(), localDate: this.localDate(),
+        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone, offsetMinutes: -new Date(this.occurredAtMs).getTimezoneOffset() };
+    } catch (_) { this.errorText = '请检查金额是否完整、精度及范围是否正确'; return; }
+    this.saving = true;
+    this.onSavingChange(true);
+    try {
+      const workspace = this.workspace;
+      if (workspace === undefined) { throw new Error('WORKSPACE_UNAVAILABLE'); }
+      await workspace.saveExpense(command);
+      this.saved = true;
+      this.onSaved(command.localDate);
+    } catch (_) {
+      // A retained id prevents a retry from recording the same command twice after an uncertain failure.
+      this.errorText = '保存未确认，请勿重复记账。关闭后检查首页，或稍后重试';
+    } finally { this.saving = false; this.onSavingChange(false); }
+  }
+
+  @Builder
+  private categoryItem(item: ExpenseCategory, compact: boolean = false, secondRow: boolean = false) {
+    Column({ space: compact ? 2 : 6 }) {
+      Stack({ alignContent: Alignment.TopEnd }) {
+        Image(categoryIcon(item.iconKey)).width(compact ? 28 : 32).height(compact ? 28 : 32)
+        if (this.categories.some((child: ExpenseCategory) => child.parentId === item.id)) {
+          Image($r('app.media.lucide_ellipsis1')).width(14).height(14)
+            .fillColor($r('app.color.xq_icon_emphasize')).offset({ x: 8, y: -4 })
+        }
+      }.padding(6).borderRadius(24)
+      if (!compact) {
+        Text(item.name).fontSize('12fp').maxLines(1)
+          .fontColor(this.selectedId === item.id ? $r('app.color.xq_font_emphasize') : $r('app.color.xq_font_secondary'))
+      }
+    }.width(compact ? 56 : '25%').height(compact ? 48 : 80).justifyContent(FlexAlign.Center)
+      .opacity(secondRow ? 1 - this.categoryCollapse / 80 : 1)
+      .id('expense-category-' + item.id + (compact ? '-compact' : ''))
+      .accessibilityText('分类' + item.name).onClick(() => { this.choose(item); })
+  }
+
+  @Builder
+  private categoryCard() {
+    Stack({ alignContent: Alignment.TopEnd }) {
+      Column() {
+        Swiper() {
+          ForEach(Array.from({ length: Math.ceil(this.roots().length / this.categoryPageSize()) }, (_value: number, index: number) => index), (page: number) => {
+            Column() {
+              Column() {
+                Flex({ wrap: FlexWrap.Wrap }) {
+                  ForEach(this.roots().slice(page * this.categoryPageSize(), (page + 1) * this.categoryPageSize()),
+                    (item: ExpenseCategory, index: number) => { this.categoryItem(item, false, index >= 4) },
+                    (item: ExpenseCategory) => item.id)
+                }.width('100%').height(this.compactCategories ? 80 : 160).flexShrink(0)
+              }.width('100%').height(160 - this.categoryCollapse).clip(true).flexShrink(0)
+            }.width('100%').height(180 - this.categoryCollapse).clip(true)
+          }, (page: number) => this.categoryPageSize() + '-' + page)
+        }.height(180 - this.categoryCollapse).index(this.categoryPage).loop(false)
+          .onChange((page: number) => { this.categoryPage = page; })
+          .id(this.compactCategories ? 'expense-categories-compact' : 'expense-categories-expanded')
+          .indicator(Indicator.dot().itemWidth(5).itemHeight(5).selectedItemWidth(12)
+          .selectedItemHeight(5).selectedColor($r('app.color.xq_brand')))
+      }.padding({ top: 12, left: 8, right: 8, bottom: 4 }).width('100%')
+        .backgroundColor($r('app.color.xq_app_surface_card')).borderRadius(20)
+      Polygon().points([[0, 10], [12, 0], [24, 10]]).width(24).height(10)
+        .fill($r('app.color.xq_app_surface_card')).margin({ right: 16 }).offset({ y: -8 })
+    }.id('expense-categories').width('100%').margin({ top: 14, bottom: 12 })
+      .parallelGesture(PanGesture({ direction: PanDirection.Vertical, distance: 8 })
+        .onActionStart(() => { this.categoryDragY = 0; })
+        .onActionUpdate((event: GestureEvent) => {
+          const remaining = this.consumeCategoryScroll(this.categoryDragY - event.offsetY);
+          this.categoryDragY = event.offsetY;
+          if (Math.abs(remaining) > 0.01) { this.scroller.scrollBy(0, remaining); }
+        })
+        .onActionEnd(() => { this.settleCategories(); })
+        .onActionCancel(() => { this.settleCategories(); }))
+  }
+
+  @Builder
+  private field(label: string, value: string, action: () => void) {
+    Row({ space: 12 }) {
+      Text(label).fontSize('14fp').fontColor($r('app.color.xq_font_secondary'))
+      Blank()
+      Text(value).fontSize('14fp').maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
+        .fontColor($r('app.color.xq_font_primary')).constraintSize({ maxWidth: '70%' })
+      Image($r('app.media.lucide_chevron_down1')).width(14).height(14).fillColor($r('app.color.xq_icon_tertiary'))
+    }.height(48).width('100%').onClick(action)
+  }
+
+  @Builder
+  private ruleSelect(budget: boolean) {
+    if (this.sheetMaterial !== undefined) {
+      Select([{ value: '计入' }, { value: '不计入' }]).selected((budget ? this.includeBudget : this.includeAssets) ? 0 : 1)
+        .value((budget ? this.includeBudget : this.includeAssets) ? '计入' : '不计入')
+        .font({ size: '14fp' }).fontColor($r('app.color.xq_font_primary')).height(40).width(88)
+        .optionFontColor($r('app.color.xq_font_primary'))
+        .selectedOptionFontColor($r('app.color.xq_font_emphasize'))
+        .selectedOptionBgColor($r('app.color.xq_comp_emphasize_tertiary'))
+        .backgroundColor(Color.Transparent).id(budget ? 'expense-budget-rule' : 'expense-assets-rule')
+        .menuSystemMaterial(this.sheetMaterial)
+        .onSelect((index: number) => {
+          if (budget) { this.includeBudget = index === 0; } else { this.includeAssets = index === 0; }
+        })
+    } else {
+      Select([{ value: '计入' }, { value: '不计入' }]).selected((budget ? this.includeBudget : this.includeAssets) ? 0 : 1)
+        .value((budget ? this.includeBudget : this.includeAssets) ? '计入' : '不计入')
+        .font({ size: '14fp' }).fontColor($r('app.color.xq_font_primary')).height(40).width(88)
+        .optionFontColor($r('app.color.xq_font_primary'))
+        .selectedOptionFontColor($r('app.color.xq_font_emphasize'))
+        .selectedOptionBgColor($r('app.color.xq_comp_emphasize_tertiary'))
+        .backgroundColor(Color.Transparent).id(budget ? 'expense-budget-rule' : 'expense-assets-rule')
+        .onSelect((index: number) => {
+          if (budget) { this.includeBudget = index === 0; } else { this.includeAssets = index === 0; }
+        })
+    }
+  }
+
+  @Builder
+  private rules() {
+    Row({ space: 8 }) {
+      Text('预算').fontSize('12fp').fontColor($r('app.color.xq_font_secondary'))
+      Image($r('app.media.lucide_info1')).width(16).height(16).fillColor($r('app.color.xq_icon_tertiary'))
+        .onClick(() => { this.inform('计入：实付金额参与预算支出统计。不计入：保留账目，但不占用预算。'); })
+      this.ruleSelect(true)
+      Blank()
+      Text('资产').fontSize('12fp').fontColor($r('app.color.xq_font_secondary'))
+      Image($r('app.media.lucide_info1')).width(16).height(16).fillColor($r('app.color.xq_icon_tertiary'))
+        .onClick(() => { this.inform('计入：改变所选资金账户的余额。不计入：仅记账，不改变余额。未使用账户时，两者都不会产生账户余额变动。'); })
+      this.ruleSelect(false)
+    }.width('100%').height(52).padding({ left: 16, right: 16 })
+      .backgroundColor($r('app.color.xq_app_surface_card')).borderRadius(16)
+  }
+
+  private pickDate(): void {
+    this.amountController.stopEditing();
+    let accepted: Date | undefined = undefined;
+    this.getUIContext().showDatePickerDialog({ selected: new Date(this.occurredAtMs),
+      selectedTextStyle: { color: $r('app.color.xq_font_emphasize') },
+      acceptButtonStyle: { fontColor: $r('app.color.xq_font_emphasize') },
+      cancelButtonStyle: { fontColor: $r('app.color.xq_font_emphasize') },
+      onDateAccept: (date: Date) => {
+        const next = new Date(this.occurredAtMs);
+        next.setFullYear(date.getFullYear(), date.getMonth(), date.getDate());
+        this.occurredAtMs = next.getTime();
+        this.occurredAtLabel = this.dateLabel();
+        accepted = next;
+      },
+      onDidDisappear: () => {
+        if (!this.active) { return; }
+        if (accepted !== undefined) { this.pickTime(accepted); }
+        else { this.focusAmountAfterFrame(); }
+      }
+    });
+  }
+
+  private pickTime(selected: Date): void {
+    this.getUIContext().showTimePickerDialog({ selected: selected, useMilitaryTime: true,
+      selectedTextStyle: { color: $r('app.color.xq_font_emphasize') },
+      acceptButtonStyle: { fontColor: $r('app.color.xq_font_emphasize') },
+      cancelButtonStyle: { fontColor: $r('app.color.xq_font_emphasize') },
+      onAccept: (result: TimePickerResult) => {
+        const value = new Date(this.occurredAtMs);
+        value.setHours(result.hour ?? 0, result.minute ?? 0, 0, 0);
+        this.occurredAtMs = value.getTime();
+        this.occurredAtLabel = this.dateLabel();
+      },
+      onDidDisappear: () => { this.focusAmountAfterFrame(); }
+    });
+  }
+
+  @Builder
+  private form() {
+    Column({ space: 12 }) {
+      Column() {
+        this.field('付款账户', this.accounts.find((item: LedgerAccount) => item.id === this.accountId)?.name || '不使用账户', () => {
+          this.optionKind = 1; this.showOptions = true;
+        })
+        Divider().color($r('app.color.xq_comp_background_tertiary'))
+        Row({ space: 10 }) {
+          Text('时间').fontSize('14fp').fontColor($r('app.color.xq_font_secondary'))
+          Blank()
+          Text(this.occurredAtLabel).fontSize('14fp').maxLines(1)
+            .textOverflow({ overflow: TextOverflow.Ellipsis }).fontColor($r('app.color.xq_font_primary'))
+            .constraintSize({ maxWidth: '70%' }).id('expense-date-value')
+          Image($r('app.media.lucide_chevron_down1')).width(14).height(14).fillColor($r('app.color.xq_icon_tertiary'))
+        }.height(48).width('100%').onClick(() => { this.pickDate(); })
+        Divider().color($r('app.color.xq_comp_background_tertiary'))
+        TextInput({ text: this.note, placeholder: '添加备注' }).id('expense-note').height(48).fontSize('14fp')
+          .backgroundColor(Color.Transparent).padding(0).maxLength(500)
+          .onFocus(() => { this.keyboardVisible = false; })
+          .onEditChange((editing: boolean) => { this.noteEditing = editing; })
+          .onChange((value: string) => { this.note = value; })
+          .onSubmit(() => { this.focusAmountAfterFrame(); })
+      }.padding({ left: 16, right: 16 }).width('100%').borderRadius(16).backgroundColor($r('app.color.xq_app_surface_card'))
+      this.rules()
+    }.width('100%').padding({ bottom: 24 })
+  }
+
+  private optionSheetOptions(): SheetOptions {
+    const options: SheetOptions = { height: 340, showClose: true,
+      onDisappear: () => { this.focusAmountAfterFrame(); } };
+    if (this.sheetMaterial !== undefined) {
+      options.systemMaterial = this.sheetMaterial;
+    } else {
+      options.backgroundColor = $r('app.color.xq_app_surface_card');
+    }
+    return options;
+  }
+
+  @Builder
+  private optionSheet() {
+    Column({ space: 12 }) {
+      Text(this.optionKind === 0 ? (this.categories.find((item: ExpenseCategory) => item.id === this.parentId)?.name || '选择分类') : '付款账户')
+        .fontSize('20fp').fontWeight(FontWeight.Bold).width('100%')
+      if (this.optionKind === 0) {
+        Text('已选中父分类；关闭可保留，或继续选择子分类').fontSize('12fp').fontColor($r('app.color.xq_font_secondary'))
+        Scroll() {
+          Flex({ wrap: FlexWrap.Wrap }) {
+            ForEach(this.children(), (item: ExpenseCategory) => { this.categoryItem(item) }, (item: ExpenseCategory) => item.id)
+          }.width('100%')
+        }.layoutWeight(1).width('100%')
+      } else {
+        Scroll() {
+          Column() {
+            this.field('不使用账户', this.accountId.length === 0 ? '已选' : '', () => { this.accountId = ''; this.showOptions = false; })
+            ForEach(this.accounts.filter((item: LedgerAccount) => item.currencyId === this.currency.id), (item: LedgerAccount) => {
+              this.field(item.name, this.accountId === item.id ? '已选' : '', () => { this.accountId = item.id; this.showOptions = false; })
+            }, (item: LedgerAccount) => item.id)
+            if (this.accounts.length === 0) {
+              Text('暂未添加资金账户，可以先记账。').fontSize('14fp').fontColor($r('app.color.xq_font_secondary')).padding(16)
+            }
+          }.width('100%')
+        }.layoutWeight(1).width('100%')
+      }
+      Button('关闭').width('100%').height(44).backgroundColor($r('app.color.xq_app_surface_page'))
+        .fontColor($r('app.color.xq_font_primary')).onClick(() => { this.showOptions = false; })
+    }.width('100%').height('100%').padding(24)
+  }
+
+  @Builder
+  private resumeAmountButton() {
+    if (this.sheetMaterial !== undefined) {
+      Row() {
+        Button('继续输入金额', { type: ButtonType.Capsule }).height(40).width('100%')
+          .backgroundColor(Color.Transparent)
+          .systemMaterial(this.sheetMaterial)
+          .fontColor($r('app.color.xq_font_emphasize')).id('expense-resume-amount')
+          .onClick(() => { this.focusAmount(); })
+      }.width('100%').height(40).borderRadius(20)
+        .backgroundBlurStyle(BlurStyle.COMPONENT_ULTRA_THIN)
+        .id('expense-resume-surface-immersive')
+    } else {
+      Row() {
+        Button('继续输入金额', { type: ButtonType.Capsule }).height(40).width('100%')
+          .backgroundColor(Color.Transparent)
+          .fontColor($r('app.color.xq_font_emphasize')).id('expense-resume-amount')
+          .onClick(() => { this.focusAmount(); })
+      }.width('100%').height(40).borderRadius(20)
+        .backgroundBlurStyle(BlurStyle.COMPONENT_ULTRA_THIN)
+        .border({ width: 1, color: '#66FFFFFF' })
+        .shadow({ radius: 16, color: '#14000000', offsetY: 4 }).id('expense-resume-surface-blur')
+    }
+  }
+
+  @Builder
+  private keyboardHideIcon() {
+    Image($r('app.media.lucide_chevron_down1')).width(20).height(20)
+      .fillColor($r('app.color.xq_icon_secondary'))
+  }
+
+  @Builder
+  private keyboardHide() {
+    if (this.actionMaterial !== undefined) {
+      Button({ type: ButtonType.Circle }) { this.keyboardHideIcon() }
+        .width(32).height(32).padding(0).backgroundColor(Color.Transparent)
+        .systemMaterial(this.actionMaterial).id('expense-hide-keyboard').accessibilityText('收起键盘')
+        .onClick(() => { this.amountController.stopEditing(); })
+    } else {
+      Button({ type: ButtonType.Circle }) { this.keyboardHideIcon() }
+        .width(32).height(32).padding(0).backgroundColor(Color.Transparent)
+        .id('expense-hide-keyboard').accessibilityText('收起键盘')
+        .onClick(() => { this.amountController.stopEditing(); })
+    }
+  }
+
+  @Builder
+  private settlement() {
+    Row({ space: 8 }) {
+        Row({ space: 8 }) {
+          Text('优惠').fontSize('12fp').fontWeight(FontWeight.Medium)
+            .fontColor(this.editingDiscount ? $r('app.color.xq_font_on_primary') : $r('app.color.xq_font_secondary'))
+          Text(this.discount).id('expense-discount').maxLines(1).flexShrink(1)
+            .textOverflow({ overflow: TextOverflow.Ellipsis }).fontSize('14fp').fontFamily('XiaoQiaoDINMedium').fontWeight(FontWeight.Medium)
+            .fontColor(this.editingDiscount ? $r('app.color.xq_font_on_primary') : $r('app.color.xq_font_primary'))
+        }.height(32).constraintSize({ maxWidth: '48%' }).flexShrink(0)
+          .padding({ left: 12, right: 12 }).borderRadius(10)
+          .backgroundColor(this.editingDiscount ? $r('app.color.xq_brand') : $r('app.color.xq_app_surface_keyboard'))
+          .id('expense-discount-control').accessibilityText('编辑优惠金额')
+          .onClick(() => { this.editingDiscount = !this.editingDiscount; })
+        Blank()
+        this.keyboardHide()
+      }.width('100%').height(40).padding({ left: 16, right: 16 })
+      .backgroundColor($r('app.color.xq_app_surface_card'))
+  }
+
+  @Builder
+  private keyboard() {
+    Column({ space: 6 }) {
+      ForEach(this.keys, (row: string[]) => {
+        Row({ space: 6 }) {
+          ForEach(row, (key: string) => {
+            Button({ type: ButtonType.Normal }) {
+              if (key === '+' || key === '−' || key === '⌫') {
+                Image(key === '+' ? $r('app.media.lucide_plus1') : key === '−' ?
+                  $r('app.media.lucide_minus1') : $r('app.media.lucide_delete1'))
+                  .width(24).height(24).fillColor($r('app.color.xq_icon_primary'))
+              } else {
+                Text(this.saving && key === '保存' ? '保存中' : key)
+                  .fontSize(key === '保存' || key === '清空' ? '16fp' : '24fp')
+                  .fontFamily(key === '保存' || key === '清空' ? '' : 'XiaoQiaoDINMedium')
+                  .fontWeight(FontWeight.Medium)
+                  .fontColor(key === '保存' ? Color.White : $r('app.color.xq_font_primary'))
+              }
+            }.id('expense-key-' + key).layoutWeight(1).height(48).borderRadius(12)
+              .accessibilityText(key === '+' ? '加' : key === '−' ? '减' : key === '⌫' ? '删除一位' : key)
+              .backgroundColor(key === '保存' ? $r('app.color.xq_brand') : $r('app.color.xq_app_surface_keyboard'))
+              .fontColor(key === '保存' ? Color.White : $r('app.color.xq_font_primary'))
+              .enabled(!this.saving && !this.saved && (key !== '保存' || this.canSaveAmounts(this.expression, this.discount)))
+              .onClick(() => { this.press(key); })
+          }, (key: string) => key)
+        }.width('100%')
+      }, (row: string[]) => row.join(','))
+    }.padding({ left: 16, right: 16, bottom: 12 }).width('100%')
+      .backgroundColor($r('app.color.xq_app_surface_card')).id('expense-keyboard')
+  }
+
+  @Builder
+  private amountKeyboard() {
+    Column() {
+      Column({ space: 8 }) {
+        Row() {
+          Text(this.errorText).fontSize('12fp').fontWeight(FontWeight.Medium).lineHeight('18fp')
+            .fontColor($r('app.color.xq_warning')).maxLines(1)
+            .textOverflow({ overflow: TextOverflow.Ellipsis }).layoutWeight(1).id('expense-error')
+        }.width('100%').height(20).padding({ left: 16, right: 16 }).id('expense-keyboard-error-slot')
+        this.settlement()
+        this.keyboard()
+      }.width('100%').padding({ top: 12, bottom: 12 })
+        .backgroundColor($r('app.color.xq_app_surface_card'))
+        .borderRadius({ topLeft: 24, topRight: 24 }).clip(true)
+        .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.BOTTOM]).id('expense-keyboard-panel')
+    }.width('100%').padding({ top: 8 })
+      .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.BOTTOM]).id('expense-native-keyboard')
+  }
+
+  @Builder
+  private title() {
+    Row() {
+      if (this.chipMaterial !== undefined) {
+        ChipGroup({
+          items: [{ label: { text: '支出' }, allowClose: false }, { label: { text: '收入' }, allowClose: false },
+            { label: { text: '转账' }, allowClose: false }],
+          multiple: false, selectedIndexes: this.selectedKinds,
+          itemStyle: { size: ChipSize.NORMAL, backgroundColor: $r('app.color.xq_app_filter_unselected'),
+            fontColor: $r('app.color.xq_font_secondary'), selectedBackgroundColor: $r('app.color.xq_brand'),
+            selectedFontColor: $r('app.color.xq_font_on_primary') },
+          backgroundSystemMaterial: this.chipMaterial,
+          chipGroupSpace: { startSpace: 0, endSpace: 0, itemSpace: 8 },
+          chipGroupPadding: { top: 4, bottom: 4 },
+          onChange: (selected: number[]) => { this.selectKind(selected); }
+        }).width(224).id('expense-kind-selector')
+      } else {
+        ChipGroup({
+          items: [{ label: { text: '支出' }, allowClose: false }, { label: { text: '收入' }, allowClose: false },
+            { label: { text: '转账' }, allowClose: false }],
+          multiple: false, selectedIndexes: this.selectedKinds,
+          itemStyle: { size: ChipSize.NORMAL, backgroundColor: $r('app.color.xq_app_filter_unselected'),
+            fontColor: $r('app.color.xq_font_secondary'), selectedBackgroundColor: $r('app.color.xq_brand'),
+            selectedFontColor: $r('app.color.xq_font_on_primary') },
+          chipGroupSpace: { startSpace: 0, endSpace: 0, itemSpace: 8 },
+          chipGroupPadding: { top: 4, bottom: 4 },
+          onChange: (selected: number[]) => { this.selectKind(selected); }
+        }).width(224).id('expense-kind-selector')
+      }
+    }.width('100%').justifyContent(FlexAlign.Center)
+  }
+
+  build() {
+    HdsNavigation() {
+      Column() {
+        Row({ space: 8 }) {
+          Column() {
+            Row({ space: 8 }) {
+              Text('¥').fontSize('14fp').fontColor($r('app.color.xq_font_tertiary'))
+              TextInput({ text: this.expression, controller: this.amountController })
+                .fontFamily('XiaoQiaoDINBold').fontWeight(FontWeight.Bold).fontSize('38fp').minFontSize('20fp').maxFontSize('38fp')
+                .fontColor($r('app.color.xq_font_primary')).caretColor($r('app.color.xq_brand'))
+                .backgroundColor(Color.Transparent).padding(0).borderRadius(0)
+                .layoutWeight(1).id('expense-amount').copyOption(CopyOptions.None).selectionMenuHidden(true)
+                .customKeyboard(this.amountKeyboard(), { supportAvoidance: true })
+                .onEditChange((editing: boolean) => { this.keyboardVisible = editing; })
+                .onClick(() => { this.editingDiscount = false; })
+                .onWillInsert((value: InsertValue): boolean => {
+                  for (const character of value.insertValue) {
+                    const key = character === '-' ? '−' : character;
+                    if (/^[0-9.+−]$/.test(key)) { this.press(key); }
+                  }
+                  return false;
+                })
+                .onWillDelete((): boolean => { this.press('⌫'); return false; })
+            }.height(48).width('100%')
+            Text('实付 ¥' + this.paidText()).fontSize('12fp').fontFamily('XiaoQiaoDINRegular').id('expense-paid')
+              .width('100%').height(24).maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis }).textAlign(TextAlign.Start)
+              .accessibilityDescription('点击编辑上方原金额').onClick(() => { this.focusAmountFromPaid(); })
+          }.layoutWeight(1).alignItems(HorizontalAlign.Start)
+          Image(categoryIcon(this.selected()?.iconKey || 'food')).width(32).height(32)
+        }.padding(16).width('100%').borderRadius(20).backgroundColor($r('app.color.xq_app_surface_card'))
+          .outlineWidth(2).outlineRadius(20)
+          .outlineColor(this.amountFocusHighlight ? $r('app.color.xq_brand') : Color.Transparent)
+          .id('expense-amount-card').onClick(() => { this.focusAmount(); })
+        this.categoryCard()
+        Stack({ alignContent: Alignment.Bottom }) {
+          Scroll(this.scroller) {
+            Column() { this.form() }.width('100%')
+              .padding({ bottom: this.keyboardVisible || this.noteEditing ? 0 : 56 })
+          }.height('100%').width('100%').align(Alignment.Top).scrollBar(BarState.Off).id('expense-form-scroll')
+            .edgeEffect(EdgeEffect.Spring, { alwaysEnabled: true })
+            .onWillScroll((_x: number, y: number, _state: ScrollState, source: ScrollSource) => {
+              if (source === ScrollSource.EDGE_EFFECT || source === ScrollSource.SCROLLER || source === ScrollSource.SCROLLER_ANIMATION) {
+                return { xOffset: 0, yOffset: y };
+              }
+              return { xOffset: 0, yOffset: this.consumeCategoryScroll(y) };
+            })
+            .onScrollStop(() => { this.settleCategories(); })
+          Column() {
+            if (this.errorText.length > 0 && !this.keyboardVisible && !this.noteEditing) {
+              Text(this.errorText).fontSize('12fp').fontColor($r('app.color.xq_warning')).padding(8).id('expense-error')
+            }
+            if (!this.keyboardVisible && !this.noteEditing) { this.resumeAmountButton() }
+          }.width('100%')
+        }.layoutWeight(1).width('100%')
+      }.width('100%').height('100%').padding({ left: 16, right: 16, top: 8 })
+        .constraintSize({ maxWidth: 720 }).align(Alignment.Top)
+    }.mode(NavigationMode.Stack).titleMode(HdsNavigationTitleMode.MINI).hideBackButton(false)
+      .dynamicHideTitleBar({ hideTitleArea: false, hideBottomBuilder: false, hideStatusBar: false })
+      .titleBar({ enableComponentSafeArea: true,
+        content: { title: { mainTitle: '' }, stackBuilder: this.title.bind(this),
+        divider: { showType: DividerShowType.OFF }, backIcon: { componentId: 'expense-close', label: '关闭记一笔', action: () => { if (!this.saving) { this.onClose(); } } } },
+        style: { systemMaterialEffect: {
+          materialType: hdsMaterial.MaterialType.IMMERSIVE,
+          materialLevel: hdsMaterial.MaterialLevel.ADAPTIVE
+        },
+          scrollEffectOpts: { enableScrollEffect: false },
+          originalStyle: { backgroundStyle: { backgroundColor: Color.Transparent },
+            contentStyle: { backIconStyle: { iconColor: $r('app.color.xq_icon_primary') } } } } })
+      .systemBarStyle({ statusBarContentColor: this.statusBarColor() }, { statusBarContentColor: this.statusBarColor() })
+      .backgroundColor($r('app.color.xq_app_surface_page'))
+      .height(LayoutPolicy.matchParent)
+      .ignoreLayoutSafeArea([LayoutSafeAreaType.SYSTEM], [LayoutSafeAreaEdge.TOP])
+      .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM])
+      .id('expense-navigation')
+      .bindSheet($$this.showOptions, this.optionSheet(), this.optionSheetOptions())
+  }
+}

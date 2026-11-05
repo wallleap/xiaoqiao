@@ -67,7 +67,7 @@ await test('queue propagates rejection and continues in FIFO order', async () =>
   const next = q.run(async () => { events.push('good'); return 'saved'; });
   await assertion; assert.equal(await next, 'saved'); assert.deepEqual(events, ['bad','good']);
 });
-const { LedgerKind, displayAmount, filterEntries } = load(base + '/presentation/ledger/LedgerOverview.ets');
+const { LedgerKind, displayAmount, filterEntries, dailyTotals, isToday } = load(base + '/presentation/ledger/LedgerOverview.ets');
 await test('ledger amount grouping preserves large integer precision', () => {
   assert.equal(displayAmount('9007199254740991'), '90,071,992,547,409.91');
   assert.equal(displayAmount('1'), '0.01');
@@ -82,5 +82,75 @@ await test('ledger filters intersect kind, search and account without changing s
   assert.deepEqual(filterEntries(rows,LedgerKind.All,' 地铁 ','微信').map(r=>r.id), ['c']);
   assert.equal(filterEntries(rows,LedgerKind.Income,'午餐','微信').length, 0);
   assert.equal(rows.length,3);
+});
+const { ExpenseAmountInput } = load(base + '/presentation/ledger/ExpenseAmountInput.ets');
+await test('expense keyboard evaluates exact decimal addition/subtraction and rejects incomplete input', () => {
+  assert.equal(ExpenseAmountInput.evaluate('0.10+0.20−0.05', cny).toDecimalString(), '0.25');
+  assert.equal(ExpenseAmountInput.evaluate('12+3−2', cny).toDecimalString(), '13.00');
+  assert.throws(() => ExpenseAmountInput.evaluate('12+', cny), /INCOMPLETE/);
+  assert.throws(() => ExpenseAmountInput.evaluate('90071992547409.92', cny), /OUT_OF_RANGE/);
+  assert.equal(ExpenseAmountInput.append('1.23', '4'), '1.23');
+  assert.equal(ExpenseAmountInput.append('12+', '−'), '12−');
+  assert.equal(ExpenseAmountInput.append('0', '.'), '0.');
+  assert.equal(ExpenseAmountInput.append('12', '⌫'), '1');
+});
+await test('discount input limits each operand and evaluated result to nine integer digits', () => {
+  assert.equal(ExpenseAmountInput.appendDiscount('123456789', '0', 2), '123456789');
+  assert.equal(ExpenseAmountInput.appendDiscount('123456789', '.', 2), '123456789.');
+  assert.equal(ExpenseAmountInput.appendDiscount('123456789.12', '3', 2), '123456789.12');
+  assert.equal(ExpenseAmountInput.appendDiscount('123456789+', '1', 2), '123456789+1');
+  assert.equal(ExpenseAmountInput.appendDiscount('123456789', '⌫', 2), '12345678');
+  assert.equal(ExpenseAmountInput.evaluateDiscount('999999999.99', cny).toDecimalString(), '999999999.99');
+  assert.equal(ExpenseAmountInput.evaluateDiscount('0.10+0.20−0.05', cny).toDecimalString(), '0.25');
+  assert.throws(() => ExpenseAmountInput.evaluateDiscount('1000000000', cny), /DISCOUNT_OUT_OF_RANGE/);
+  assert.throws(() => ExpenseAmountInput.evaluateDiscount('999999999.99+0.01', cny), /DISCOUNT_OUT_OF_RANGE/);
+  assert.throws(() => ExpenseAmountInput.evaluateDiscount('1−2', cny), /DISCOUNT_OUT_OF_RANGE/);
+  assert.throws(() => ExpenseAmountInput.evaluateDiscount('1+', cny), /INCOMPLETE/);
+});
+await test('paid input preflight rejects overflow without blocking pending operators or deletion', () => {
+  assert.equal(ExpenseAmountInput.appendChecked('1', '0', '+', cny, false), '1+');
+  assert.equal(ExpenseAmountInput.appendChecked('1+', '0', '2', cny, false), '1+2');
+  assert.equal(ExpenseAmountInput.paidAmount('1+', '0', cny, true).toDecimalString(), '1.00');
+  assert.throws(() => ExpenseAmountInput.paidAmount('1+', '0', cny), /INCOMPLETE/);
+  assert.throws(() => ExpenseAmountInput.appendChecked('90071992547409.9', '0', '2', cny, false), /OUT_OF_RANGE/);
+  assert.throws(() => ExpenseAmountInput.appendChecked('13', '999999999+', '1', cny, true), /OUT_OF_RANGE/);
+  assert.equal(ExpenseAmountInput.appendChecked('13', '999999999+', '⌫', cny, true), '999999999');
+  assert.equal(ExpenseAmountInput.appendChecked('1+', '0', '1', cny, true), '1');
+  assert.throws(() => ExpenseAmountInput.paidAmount('0−90071992547409.91', '1', cny), /OUT_OF_RANGE/);
+  assert.equal(ExpenseAmountInput.paidAmount('12+3−2', '5+2−5', cny).toDecimalString(), '11.00');
+});
+const { MonthlyBudget, DEFAULT_MONTHLY_BUDGET_MINOR } = load(base + '/domain/model/MonthlyBudget.ets');
+await test('monthly budget defaults, exact usage, overrun and zero allowance', () => {
+  assert.equal(DEFAULT_MONTHLY_BUDGET_MINOR, '250000');
+  assert.deepEqual(MonthlyBudget.period('2026-12'), {start:'2026-12-01', endExclusive:'2027-01-01'});
+  assert.throws(() => MonthlyBudget.period('2026-13'), /INVALID_MONTH/);
+  assert.throws(() => MonthlyBudget.parse('-1',cny), /NEGATIVE_BUDGET/);
+  assert.throws(() => MonthlyBudget.parse('1.001',cny), /PRECISION/);
+  assert.equal(MonthlyBudget.progress('250000','1100').remainingMinor,'248900');
+  assert.equal(MonthlyBudget.progress('300000','248600').percentText,'82.9%');
+  assert.equal(MonthlyBudget.progress('100','200').ringValue,100);
+  assert.equal(MonthlyBudget.progress('100','200').remainingMinor,'-100');
+  assert.equal(MonthlyBudget.progress('0','0').percentText,'—');
+  assert.equal(MonthlyBudget.parse('0',cny).minor.toString(),'0');
+});
+
+await test('daily totals use visible date groups and exact integer amounts', () => {
+  const entries = [
+    {date:'2026-11-03',income:true,minor:'900719925474099312345'},
+    {date:'2026-11-03',income:false,minor:'1'},
+    {date:'2026-11-03',income:false,minor:'2'},
+    {date:'2026-11-02',income:false,minor:'1000'}
+  ];
+  const result = dailyTotals(entries, '2026-11-03');
+  assert.equal(result.incomeMinor, '900719925474099312345');
+  assert.equal(result.expenseMinor, '3');
+  assert.equal(dailyTotals(entries.filter(e => e.income), '2026-11-03').expenseMinor, '0');
+  assert.equal(dailyTotals([], '2026-11-03').incomeMinor, '0');
+});
+await test('today label compares the complete local calendar date', () => {
+  const now = new Date(2026,10,3,0,1);
+  assert.equal(isToday('2026-11-03', now), true);
+  assert.equal(isToday('2025-11-03', now), false);
+  assert.equal(isToday('2026-11-02', now), false);
 });
 console.log(`${count} host checks passed. Native ArkTS/RDB/Decimal and UI require the separate device suite.`);

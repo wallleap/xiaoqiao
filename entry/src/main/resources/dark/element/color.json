@@ -1,6 +1,18 @@
 {
   "color": [
     {
+      "name": "xq_app_filter_action_tint",
+      "value": "#99202224"
+    },
+    {
+      "name": "xq_app_filter_unselected",
+      "value": "#FF202224"
+    },
+    {
+      "name": "xq_app_filter_material_tint",
+      "value": "#99202224"
+    },
+    {
       "name": "start_window_background",
       "value": "#000000"
     },
@@ -218,7 +230,7 @@
     },
     {
       "name": "xq_app_surface_summary",
-      "value": "#FF202224"
+      "value": "#FF000000"
     },
     {
       "name": "xq_app_border_subtle",
@@ -255,6 +267,18 @@
     {
       "name": "xq_app_confirm_background",
       "value": "#195BA854"
+    },
+    {
+      "name": "xq_app_summary_gradient_mid",
+      "value": "#FF2B261E"
+    },
+    {
+      "name": "xq_app_summary_gradient_end",
+      "value": "#FF4B3E2F"
+    },
+    {
+      "name": "xq_app_summary_track",
+      "value": "#33E7C68A"
     },
     {
       "name": "xq_app_gradient_start",
@@ -294,7 +318,7 @@
     },
     {
       "name": "xq_app_summary_accent",
-      "value": "#FFFFAB7B"
+      "value": "#FFE7C68A"
     },
     {
       "name": "xq_app_warning_text",
