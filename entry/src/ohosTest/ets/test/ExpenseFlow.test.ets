@@ -1,3 +1,4 @@
+import { verifyAccountCalibrationUI } from './AccountCalibrationFlow';
 import { verifyTransfersUI } from './TransfersFlow';
 import { verifyAccountsUI } from './AccountsFlow';
 import { common } from '@kit.AbilityKit';
@@ -566,6 +567,7 @@ export default function expenseFlowTest() {
       expect((await workspace.snapshot(command.localDate.substring(0, 7))).incomeMinor).assertEqual('0');
       await verifyAccountsUI(driver, host, workspace, command.localDate.substring(0, 7));
       await verifyTransfersUI(driver, host, workspace, command.localDate.substring(0, 7));
+      await verifyAccountCalibrationUI(driver, host, workspace, command.localDate.substring(0, 7));
       } finally {
         // Only this run's UUID fixture is removed, even when the added account UI checks fail.
         await LedgerWorkspace.close(name);

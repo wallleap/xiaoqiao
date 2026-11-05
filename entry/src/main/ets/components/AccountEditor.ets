@@ -1,3 +1,5 @@
+import { AccountCalibrationPage } from './AccountCalibrationPage';
+import { AccountAdjustmentHistoryPage } from './AccountAdjustmentHistoryPage';
 import { HdsNavigation, HdsNavigationTitleMode, hdsMaterial, DividerShowType } from '@kit.UIDesignKit';
 import { ChipGroup, ChipSize } from '@kit.ArkUI';
 import { util } from '@kit.ArkTS';
@@ -17,6 +19,7 @@ export struct AccountEditor {
   onSaved: () => void = () => {};
   onArchive: () => void = () => {};
   onBusy: (busy: boolean) => void = () => {};
+  @State private balancePage: number = 0;
   @State private name: string = '';
   @State private kind: string = 'asset';
   @State private styleKey: string = 'cash';
@@ -35,6 +38,9 @@ export struct AccountEditor {
       this.name = this.original.name; this.kind = this.original.kind; this.styleKey = this.original.iconKey;
       this.includeNet = this.original.includeInNetAssets;
     }
+  }
+  private metadataDirty(): boolean {
+    return this.original !== undefined && (this.name.trim() !== this.original.name || this.styleKey !== this.original.iconKey || this.includeNet !== this.original.includeInNetAssets);
   }
   private statusBarColor(): string {
     const host = this.getUIContext().getHostContext();
@@ -93,6 +99,12 @@ export struct AccountEditor {
   }
 
   build() {
+    if (this.original !== undefined && this.balancePage === 1) {
+      AccountCalibrationPage({ account: this.original, workspace: this.workspace, onClose: () => { this.balancePage = 0; },
+        onSaved: () => { this.onSaved(); }, onBusy: (value: boolean) => { this.busy = value; this.onBusy(value); } })
+    } else if (this.original !== undefined && this.balancePage === 2) {
+      AccountAdjustmentHistoryPage({ account: this.original, workspace: this.workspace, onClose: () => { this.balancePage = 0; } })
+    } else {
     HdsNavigation() {
       Column() {
         Scroll(this.scroller) {
@@ -129,7 +141,18 @@ export struct AccountEditor {
               } else {
                 Text(Money.fromMinorText(this.original.balanceMinor, this.currency).toDecimalString()).fontSize('28fp')
                   .fontFamily('XiaoQiaoDINMedium').fontColor($r('app.color.xq_font_primary')).width('100%').id('account-current-balance')
-                Text('余额随记账变化，编辑账户不会改动余额').fontSize('12fp').fontColor($r('app.color.xq_font_tertiary')).width('100%')
+                Text('余额随记账变化，校准会单独保留调整记录').fontSize('12fp').fontColor($r('app.color.xq_font_tertiary')).width('100%')
+                Row({ space: 12 }) {
+                  Button('校准余额', { type: ButtonType.Capsule }).fontSize('14fp').fontColor($r('app.color.xq_font_emphasize'))
+                    .backgroundColor($r('app.color.xq_app_surface_keyboard')).layoutWeight(1).height(40).id('account-calibrate')
+                    .enabled(!this.busy && !this.operationBusy && !this.conflict && !this.original.archived && !this.metadataDirty())
+                    .onClick(() => { this.balancePage = 1; })
+                  Button('调整记录', { type: ButtonType.Capsule }).fontSize('14fp').fontColor($r('app.color.xq_font_primary'))
+                    .backgroundColor($r('app.color.xq_app_surface_keyboard')).layoutWeight(1).height(40).id('account-adjustments')
+                    .enabled(!this.busy && !this.operationBusy).onClick(() => { this.balancePage = 2; })
+                }.width('100%')
+                if (this.metadataDirty()) { Text('请先保存账户信息，再校准余额').fontSize('12fp').fontColor($r('app.color.xq_font_tertiary')).width('100%') }
+
               }
             }.padding(20).width('100%').borderRadius(20).backgroundColor($r('app.color.xq_app_surface_card'))
             Row() {
@@ -166,5 +189,6 @@ export struct AccountEditor {
       .ignoreLayoutSafeArea([LayoutSafeAreaType.SYSTEM], [LayoutSafeAreaEdge.TOP])
       .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM])
       .bindSheet($$this.showStyles, this.styleSheet(), this.sheetOptions()).id('account-editor')
+    }
   }
 }

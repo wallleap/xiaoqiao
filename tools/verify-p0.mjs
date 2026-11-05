@@ -103,6 +103,24 @@ await test('liability opening is negative; invalid account metadata, signs and c
   assert.throws(()=>new AccountDraft({...accountCommand(),opening:Money.fromMinorText('9007199254740992',new CurrencyUnit('CNY','CNY',2))}));
   for (const v of [0,-1,1.5,NaN,Number.MAX_SAFE_INTEGER]) assert.throws(()=>requireAccountRevision(v));
 });
+const { AccountCalibration } = load(base + '/domain/model/AccountCalibration.ets');
+const calibrationCommand = () => { const c=new CurrencyUnit('CNY','CNY',2); return {id:'adjustment',accountId:'asset',expectedRevision:1,before:Money.parse('110',c),after:Money.parse('80.25',c),reason:'  核对余额  '}; };
+await test('calibration snapshots expected balance, trims reason, and computes exact signed delta', () => {
+  const c=calibrationCommand(); const r=new AccountCalibration(c); c.reason='changed'; c.after=c.before;
+  assert.equal(r.delta.minor,-2975n); assert.equal(r.command.before.minor,11000n); assert.equal(r.command.after.minor,8025n); assert.equal(r.command.reason,'核对余额');
+  const debt=calibrationCommand(); debt.before=Money.parse('-50',debt.before.currency); debt.after=Money.parse('5.25',debt.before.currency);
+  assert.equal(new AccountCalibration(debt).delta.minor,5525n);
+  assert.equal(new AccountCalibration({...calibrationCommand(),reason:'  '}).command.reason,'手动校准余额');
+});
+await test('calibration rejects unchanged balance, wrong currency, invalid identity and revision', () => {
+  const c=calibrationCommand();
+  for (const change of [{id:''},{accountId:''},{expectedRevision:0},{expectedRevision:NaN},{expectedRevision:Number.MAX_SAFE_INTEGER},{reason:'x'.repeat(201)},{after:c.before},{after:Money.parse('1',usd)}]) assert.throws(()=>new AccountCalibration({...c,...change}));
+});
+await test('calibration checks before, after and difference against persistence limits', () => {
+  const c=calibrationCommand(); const currency=c.before.currency;
+  for(const change of [{before:Money.fromMinorText('9007199254740992',currency)},{after:Money.fromMinorText('-9007199254740992',currency)},{before:Money.fromMinorText('-9007199254740991',currency),after:Money.fromMinorText('9007199254740991',currency)}]) assert.throws(()=>new AccountCalibration({...c,...change}),/PERSISTED_AMOUNT_OUT_OF_RANGE/);
+  assert.equal(new AccountCalibration({...c,before:Money.fromMinorText('9007199254740991',currency),after:Money.fromMinorText('9007199254740990',currency)}).delta.minor,-1n);
+});
 const { TransferRecord } = load(base + '/domain/model/TransferRecord.ets');
 const { TransferService } = load(base + '/domain/services/TransferService.ets');
 const transferCommand = () => { const c=incomeCommand(); return {id:'transfer-1',bookId:c.bookId,fromAccountId:'a',toAccountId:'b',amount:Money.parse('10.25',new CurrencyUnit('CNY','CNY',2)),includeInAssets:true,note:'调拨',occurredAtMs:c.occurredAtMs,localDate:c.localDate,timezone:c.timezone,offsetMinutes:c.offsetMinutes}; };

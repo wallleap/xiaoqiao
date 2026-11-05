@@ -1,3 +1,4 @@
+import accountCalibrationTest from './AccountCalibration.test';
 import transferMigrationTest from './TransferMigration.test';
 import abilityTest from './Ability.test';
 import p0Test from './P0.test';
@@ -16,6 +17,7 @@ export default function testsuite() {
   entryEditTest();
   incomeTest();
   accountsTest();
+  accountCalibrationTest();
   transfersTest();
   transferMigrationTest();
 }

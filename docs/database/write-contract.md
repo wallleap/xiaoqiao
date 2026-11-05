@@ -96,3 +96,10 @@ schema-v1.sql针对空库评审，不使用IF NOT EXISTS掩盖结构漂移。接
 同一串行事务中更新主表、附属字段和两侧movement，发布触发器验证后才posted。优惠仅还款可用，且不大于本金，还款目标须为负债账户；双方不同且CNY。编辑仍使用revision并保持balance_mode和导入身份。软删除一笔即同时撤销双方余额影响和手续费统计。上述规则取代新转账“分组独立手续费”方案；历史group_id记录保留旧保护，不自动转化。
 
 V1 SQL/checksum保持不变；V2增量SQL及生成器、旧库备份/升级确认和失败回滚见[转账闭环](../development/transfers-flow.md)。真实账本升级需通过明确确认入口；本轮验证仅限UUID隔离库。
+
+
+## 账户手动校准（2026-11-05）
+
+复用balance_adjustments(kind=calibration)追加差额，不改期初或历史transactions，不计收支/预算。命令携带预览的账户revision与before余额，串行事务重新计算v_effective_movements的BigInt余额并比较；同时核对账户未归档/删除及CNY。通过revision谓词更新账户版本、写draft校准、对应movement并发布，任一步失败全部回滚。前余额、目标余额、差额分别检查最小单位安全整数范围，零差额不写入。
+
+冲突不能静默重算后保存，必须刷新预览并由用户重新确认；稳定操作ID避免重试重复追加。历史仅只读posted期初/校准，按时间+ID游标分页。已发布调整保持不可变，后续历史交易修改仍影响当前余额，不回写旧校准。见[账户余额校准](../development/account-calibration.md)。

@@ -1,3 +1,4 @@
+import { AccountCalibrationCommand, AdjustmentCursor, AdjustmentPage } from '../../domain/model/AccountCalibration';
 import { common } from '@kit.AbilityKit';
 import { relationalStore } from '@kit.ArkData';
 import { util } from '@kit.ArkTS';
@@ -69,6 +70,8 @@ export class LedgerWorkspace {
   }
 
   async accountOverview(): Promise<AccountOverview> { return this.accountRepository.snapshot(); }
+  async calibrateAccount(command: AccountCalibrationCommand): Promise<void> { await this.accountRepository.calibrate(command); }
+  async accountAdjustments(id: string, cursor: AdjustmentCursor | undefined = undefined): Promise<AdjustmentPage> { return this.accountRepository.adjustmentHistory(id, cursor); }
   async createAccount(command: AccountCommand): Promise<void> { await this.accountRepository.create(command); }
   async updateAccount(command: AccountCommand, revision: number): Promise<void> { await this.accountRepository.update(command, revision); }
   async archiveAccount(id: string, revision: number, archived: boolean): Promise<void> { await this.accountRepository.archive(id, revision, archived); }

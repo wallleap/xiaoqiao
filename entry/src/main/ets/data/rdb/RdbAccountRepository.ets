@@ -1,3 +1,4 @@
+import { AccountCalibration, AccountCalibrationCommand, AccountAdjustment, AdjustmentCursor, AdjustmentPage } from '../../domain/model/AccountCalibration';
 import { relationalStore } from '@kit.ArkData';
 import { util } from '@kit.ArkTS';
 import { AccountCommand, AccountDraft, AccountOverview, AccountProfile, requireAccountRevision } from '../../domain/model/AccountProfile';
@@ -50,6 +51,53 @@ export class RdbAccountRepository {
       await db.insert('account_movements', { id: util.generateRandomUUID(), account_id: value.id, currency_id: 'CNY',
         adjustment_id: adjustment, leg: 'adjustment', delta_minor: minor, occurred_at_ms: now });
       await db.update({ posting_state: 'posted' }, new relationalStore.RdbPredicates('balance_adjustments').equalTo('id', adjustment));
+    });
+  }
+
+  async calibrate(command: AccountCalibrationCommand): Promise<void> {
+    const draft = new AccountCalibration(command); const value = draft.command;
+    await this.session.write(async (db: relationalStore.RdbStore): Promise<void> => {
+      const account = await db.querySql("SELECT revision FROM accounts WHERE id=? AND currency_id='CNY' AND deleted_at_ms IS NULL AND archived_at_ms IS NULL", [value.accountId]);
+      try {
+        if (!account.goToFirstRow() || account.getLong(0) !== value.expectedRevision) { throw new Error('ACCOUNT_CHANGED'); }
+      } finally { account.close(); }
+      let current = BigInt(0);
+      const movements = await db.querySql('SELECT CAST(delta_minor AS TEXT) FROM v_effective_movements WHERE account_id=?', [value.accountId]);
+      try { while (movements.goToNextRow()) { current += BigInt(movements.getString(0)); } } finally { movements.close(); }
+      if (current !== value.before.minor) { throw new Error('BALANCE_CHANGED'); }
+      const now = Date.now();
+      const changed = await db.update({ revision: value.expectedRevision + 1, updated_at_ms: now },
+        new relationalStore.RdbPredicates('accounts').equalTo('id', value.accountId).equalTo('revision', value.expectedRevision)
+          .equalTo('currency_id', 'CNY').isNull('archived_at_ms').isNull('deleted_at_ms'));
+      if (changed !== 1) { throw new Error('ACCOUNT_CHANGED'); }
+      await db.insert('balance_adjustments', { id: value.id, account_id: value.accountId, kind: 'calibration',
+        before_minor: value.before.toSafeMinorNumber(), after_minor: value.after.toSafeMinorNumber(), delta_minor: draft.delta.toSafeMinorNumber(),
+        reason: value.reason, occurred_at_ms: now, created_at_ms: now });
+      await db.insert('account_movements', { id: util.generateRandomUUID(), account_id: value.accountId, currency_id: 'CNY',
+        adjustment_id: value.id, leg: 'adjustment', delta_minor: draft.delta.toSafeMinorNumber(), occurred_at_ms: now });
+      const published = await db.update({ posting_state: 'posted' }, new relationalStore.RdbPredicates('balance_adjustments').equalTo('id', value.id).equalTo('posting_state', 'draft'));
+      if (published !== 1) { throw new Error('ACCOUNT_CHANGED'); }
+    });
+  }
+
+  async adjustmentHistory(accountId: string, cursor: AdjustmentCursor | undefined = undefined): Promise<AdjustmentPage> {
+    if (!accountId.trim() || (cursor !== undefined && (!cursor.id.trim() || !Number.isSafeInteger(cursor.occurredAtMs) || cursor.occurredAtMs < 0))) { throw new Error('INVALID_ADJUSTMENT_QUERY'); }
+    return this.session.read(async (db: relationalStore.RdbStore): Promise<AdjustmentPage> => {
+      const account = await db.querySql("SELECT id FROM accounts WHERE id=? AND currency_id='CNY' AND deleted_at_ms IS NULL", [accountId]);
+      try { if (!account.goToFirstRow()) { throw new Error('ACCOUNT_UNAVAILABLE'); } } finally { account.close(); }
+      const args: relationalStore.ValueType[] = [accountId];
+      let predicate: string = '';
+      if (cursor !== undefined) { predicate = ' AND (occurred_at_ms<? OR (occurred_at_ms=? AND id<?))'; args.push(cursor.occurredAtMs, cursor.occurredAtMs, cursor.id); }
+      const rows = await db.querySql("SELECT id,kind,CAST(before_minor AS TEXT),CAST(after_minor AS TEXT),CAST(delta_minor AS TEXT),reason,occurred_at_ms FROM balance_adjustments WHERE account_id=? AND posting_state='posted'" + predicate + ' ORDER BY occurred_at_ms DESC,id DESC LIMIT 21', args);
+      const items: AccountAdjustment[] = []; let more: boolean = false;
+      try {
+        while (rows.goToNextRow()) {
+          if (items.length === 20) { more = true; break; }
+          items.push({ id: rows.getString(0), kind: rows.getString(1), beforeMinor: rows.getString(2), afterMinor: rows.getString(3), deltaMinor: rows.getString(4), reason: rows.getString(5), occurredAtMs: rows.getLong(6) });
+        }
+      } finally { rows.close(); }
+      const last = items[items.length - 1];
+      return { items: items, next: more ? { occurredAtMs: last.occurredAtMs, id: last.id } : undefined };
     });
   }
 
