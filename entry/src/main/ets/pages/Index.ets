@@ -1,6 +1,9 @@
 import { ChipGroup, ChipSize, curves, window } from '@kit.ArkUI';
 import { HdsTabs, hdsMaterial, HdsNavigation, HdsNavigationTitleMode, HdsListItemCard,
   PrefixCustomBuilder, SuffixCustomBuilder, HdsSnackBar, SnackBarOperationType, ScrollEffectType, DividerShowType } from '@kit.UIDesignKit';
+import { AccountsPage } from '../components/AccountsPage';
+import { AccountEditor } from '../components/AccountEditor';
+import { AccountProfile, AccountOverview } from '../domain/model/AccountProfile';
 import { AmountText } from '../components/AmountText';
 import { ExpenseEditor } from '../components/ExpenseEditor';
 import { EntryDetailPage } from '../components/EntryDetailPage';
@@ -23,6 +26,12 @@ struct Index {
   @StorageProp('ledgerPreview') private preview: boolean = false;
   @StorageProp('ledgerScrollPreview') private scrollPreview: boolean = false;
   @StorageProp('ledgerForceLegacyMaterials') private forceLegacyMaterials: boolean = false;
+  @State private selectedTab: number = 0;
+  @State private accountOverview: AccountOverview | undefined = undefined;
+  @State private accountError: string = '';
+  @State private showAccountEditor: boolean = false;
+  @State private editingAccount: AccountProfile | undefined = undefined;
+  @State private accountSaving: boolean = false;
   @State private kind: LedgerKind = LedgerKind.All;
   @State private displayedKind: LedgerKind = LedgerKind.All;
   @State private kindDirection: number = 1;
@@ -113,9 +122,62 @@ struct Index {
       const name = AppStorage.get<string>('ledgerDatabaseName') || 'xiaoqiao.db';
       this.workspace = await LedgerWorkspace.open(context, name);
       this.ledger = await this.workspace.snapshot(this.selectedMonth);
+      this.accountError = '';
+      try { this.accountOverview = await this.workspace.accountOverview(); }
+      catch (_) { this.accountError = '账户暂时无法读取，请重试'; }
     } catch (_) {
       this.loadError = '账本暂时无法读取，已有数据不会被覆盖。请重试';
     } finally { this.loading = false; }
+  }
+
+  private openAccount(account: AccountProfile | undefined = undefined): void {
+    if (this.preview || this.loading || this.workspace === undefined || this.accountError.length > 0) {
+      this.notify('请先关闭预览并等待账户读取完成'); return;
+    }
+    const current = account === undefined ? undefined : this.accountOverview?.accounts.find((item: AccountProfile) => item.id === account.id);
+    if (account !== undefined && current === undefined) { this.notify('账户已变更，请刷新后重试'); return; }
+    this.editingAccount = current; this.showAccountEditor = true;
+  }
+
+  private async accountSaved(): Promise<void> {
+    this.showAccountEditor = false; this.editingAccount = undefined;
+    await this.loadLedger(); this.notify('账户已保存');
+  }
+
+  private archiveAccount(): void {
+    const account = this.editingAccount;
+    if (account === undefined || this.accountSaving) { return; }
+    const archive = !account.archived;
+    this.getUIContext().getPromptAction().showDialog({ title: archive ? '归档这个账户吗？' : '恢复使用这个账户？',
+      message: archive ? '归档后不再用于日常记账，余额和历史账目会保留。' : '恢复后可以在记账时选择这个账户。',
+      buttons: [{ text: '取消', color: $r('app.color.xq_font_primary') },
+        { text: archive ? '归档' : '恢复使用', color: $r('app.color.xq_font_emphasize') }]
+    }).then(async (result) => {
+      if (result.index !== 1 || this.workspace === undefined) { return; }
+      this.accountSaving = true;
+      try {
+        await this.workspace.archiveAccount(account.id, account.revision, archive);
+        this.showAccountEditor = false; this.editingAccount = undefined; await this.loadLedger();
+        this.notify(archive ? '账户已归档' : '账户已恢复');
+      } catch (_) { this.notify('账户已变更或暂时无法保存，请返回刷新后重试'); }
+      finally { this.accountSaving = false; }
+    }).catch(() => {});
+  }
+
+  @Builder
+  private accountsPage() {
+    AccountsPage({ overview: this.accountOverview, loading: this.loading, error: this.accountError,
+      onCreate: () => { this.openAccount(); }, onEdit: (account: AccountProfile) => { this.openAccount(account); },
+      onRetry: () => { this.loadLedger(); } })
+  }
+
+  @Builder
+  private accountEditorPage() {
+    AccountEditor({ workspace: this.workspace, original: this.editingAccount, operationBusy: this.accountSaving,
+      sheetMaterial: this.materialReady && !this.forceLegacyMaterials ? this.filterMaterials?.menu : undefined,
+      onClose: () => { if (!this.accountSaving) { this.showAccountEditor = false; this.editingAccount = undefined; } },
+      onBusy: (busy: boolean) => { this.accountSaving = busy; }, onSaved: () => { this.accountSaved(); },
+      onArchive: () => { this.archiveAccount(); } })
   }
 
   private openExpense(): void {
@@ -160,6 +222,7 @@ struct Index {
 
   private async expenseSaved(date: string): Promise<void> {
     const edited = this.editingEntry !== undefined;
+    this.selectedTab = 0;
     this.showExpense = false; this.editingEntry = undefined;
     this.selectedMonth = date.substring(0, 7);
     this.kind = LedgerKind.All; this.displayedKind = LedgerKind.All;
@@ -275,7 +338,7 @@ struct Index {
       const mainWindow = await window.getLastWindow(host);
       // A freshly recreated navigation can briefly retain the previous page's status-bar style.
       await mainWindow.setWindowSystemBarProperties({
-        statusBarContentColor: this.headerScrolled ? '#FFFFFFFF' : this.primaryStatusBarColor()
+        statusBarContentColor: this.selectedTab === 0 && this.headerScrolled ? '#FFFFFFFF' : this.primaryStatusBarColor()
       });
     } catch (_) { /* HdsNavigation still owns subsequent native scroll-style updates. */ }
   }
@@ -294,6 +357,7 @@ struct Index {
   }
 
   onBackPress(): boolean {
+    if (this.showAccountEditor) { if (!this.accountSaving) { this.showAccountEditor = false; this.editingAccount = undefined; } return true; }
     if (this.showExpense) { if (!this.savingExpense) { this.closeEditor(); } return true; }
     if (this.showDetail) { if (!this.deleting) { this.closeDetail(); } return true; }
     return false;
@@ -802,9 +866,9 @@ struct Index {
     } else {
       Column({ space: 4 }) {
         Image(this.tabIcons[index]).width(22).height(22)
-          .fillColor(index === 0 ? $r('app.color.xq_icon_emphasize') : $r('app.color.xq_icon_secondary'))
+          .fillColor(index === this.selectedTab ? $r('app.color.xq_icon_emphasize') : $r('app.color.xq_icon_secondary'))
         Text(this.labels[index]).fontSize('10fp')
-          .fontColor(index === 0 ? $r('app.color.xq_font_emphasize') : $r('app.color.xq_font_secondary'))
+          .fontColor(index === this.selectedTab ? $r('app.color.xq_font_emphasize') : $r('app.color.xq_font_secondary'))
       }.id(`ledger-tab-${index}`).height(56).width('100%').justifyContent(FlexAlign.Center)
     }
   }
@@ -955,11 +1019,11 @@ struct Index {
 
   @Builder
   private homeTabs() {
-    HdsTabs({ barPosition: BarPosition.End, index: 0 }) {
+    HdsTabs({ barPosition: BarPosition.End, index: this.selectedTab }) {
       TabContent() { this.homeNavigation() }.tabBar(this.tabItem(0))
       TabContent() {}.tabBar(this.tabItem(1))
       TabContent() {}.tabBar(this.tabItem(2))
-      TabContent() {}.tabBar(this.tabItem(3))
+      TabContent() { this.accountsPage() }.tabBar(this.tabItem(3))
       TabContent() {}.tabBar(this.tabItem(4))
     }.width('100%').height(LayoutPolicy.matchParent).scrollable(false).barHeight(64)
       .barOverlap(true).vertical(false)
@@ -970,18 +1034,17 @@ struct Index {
         } })
       .ignoreLayoutSafeArea([LayoutSafeAreaType.SYSTEM], [LayoutSafeAreaEdge.TOP, LayoutSafeAreaEdge.BOTTOM])
       .onContentWillChange((_current: number, next: number): boolean => {
-        if (next !== 0) {
-          if (next === 2) { this.openExpense(); } else { this.notify(`${this.labels[next]}页面尚未接入`); }
-          return false;
-        }
-        return true;
+        if (next === 0 || next === 3) { this.selectedTab = next; return true; }
+        if (next === 2) { this.openExpense(); } else { this.notify(`${this.labels[next]}页面尚未接入`); }
+        return false;
       })
       .backgroundColor($r('app.color.xq_comp_common_contrary'))
       .onAreaChange((_oldArea: Area, newArea: Area) => { this.viewportWidth = Number(newArea.width); })
   }
 
   build() {
-    if (this.showExpense) { this.expensePage() }
+    if (this.showAccountEditor) { this.accountEditorPage() }
+    else if (this.showExpense) { this.expensePage() }
     else if (this.showDetail) { this.detailPage() }
     else { this.homeTabs() }
   }

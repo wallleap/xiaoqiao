@@ -22,6 +22,12 @@ export class RdbLedgerRepository implements LedgerRepository, ExpenseUpdateRepos
   private async saveRecord(record: ExpenseRecord, kind: string): Promise<void> {
     const command = record.command;
     await this.session.write(async (store: relationalStore.RdbStore): Promise<void> => {
+      if (command.accountId !== undefined) {
+        const account = await store.querySql('SELECT currency_id FROM accounts WHERE id=? AND archived_at_ms IS NULL AND deleted_at_ms IS NULL', [command.accountId]);
+        try {
+          if (!account.goToFirstRow() || account.getString(0) !== record.paid.currency.id) { throw new Error('ACCOUNT_UNAVAILABLE'); }
+        } finally { account.close(); }
+      }
       const values: relationalStore.ValuesBucket = {
         id: command.id, book_id: command.bookId, kind: kind, category_id: command.categoryId,
         currency_id: record.paid.currency.id, gross_minor: command.gross.toSafeMinorNumber(),

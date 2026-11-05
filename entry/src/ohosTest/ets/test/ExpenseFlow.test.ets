@@ -1,3 +1,4 @@
+import { verifyAccountsUI } from './AccountsFlow';
 import { common } from '@kit.AbilityKit';
 import { relationalStore } from '@kit.ArkData';
 import { util } from '@kit.ArkTS';
@@ -209,6 +210,7 @@ export default function expenseFlowTest() {
       const host = await context();
       const name = AppStorage.get<string>('ledgerDatabaseName') || '';
       if (!name.startsWith('xiaoqiao_app_test_')) { throw new Error('ISOLATED_DATABASE_REQUIRED'); }
+      try {
       const driver = Driver.create();
       AppStorage.setOrCreate('ledgerPreview', false);
       await driver.waitForComponent(ON.text('开始记第一笔账'), 5000);
@@ -561,9 +563,12 @@ export default function expenseFlowTest() {
       await incomeConfirms[incomeConfirms.length - 1].click();
       await driver.waitForComponent(ON.text('开始记第一笔账'), 5000);
       expect((await workspace.snapshot(command.localDate.substring(0, 7))).incomeMinor).assertEqual('0');
-      // Only this run's explicitly named, nonproduction database is removed.
-      await LedgerWorkspace.close(name);
-      await relationalStore.deleteRdbStore(host, name);
+      await verifyAccountsUI(driver, host, workspace, command.localDate.substring(0, 7));
+      } finally {
+        // Only this run's UUID fixture is removed, even when the added account UI checks fail.
+        await LedgerWorkspace.close(name);
+        await relationalStore.deleteRdbStore(host, name);
+      }
     });
   });
 }

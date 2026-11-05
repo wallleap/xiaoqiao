@@ -89,6 +89,20 @@ await test('income routes save and same-id update separately and propagates conf
   await service.save(incomeCommand()); await assert.rejects(service.update(incomeCommand(),3),/TRANSACTION_CHANGED/);
   assert.deepEqual(calls,[['save','income-1'],['edit','income-1',3]]);
 });
+const { AccountDraft, requireAccountRevision } = load(base + '/domain/model/AccountProfile.ets');
+const accountCommand = () => ({id:'account-1',name:'  微信零钱  ',kind:'asset',styleKey:'wechat_pay',includeInNetAssets:true,opening:Money.parse('100.20',new CurrencyUnit('CNY','CNY',2))});
+await test('account opening is exact and brand metadata comes from the approved catalog', () => {
+  const c=accountCommand(); const draft=new AccountDraft(c); c.name='changed';
+  assert.equal(draft.command.name,'微信零钱'); assert.equal(draft.command.opening.minor,10020n);
+  assert.equal(draft.style.brand,'wechat'); assert.equal(draft.style.color,'#07B75A');
+});
+await test('liability opening is negative; invalid account metadata, signs and currencies reject', () => {
+  const c=accountCommand(); c.kind='liability'; assert.throws(()=>new AccountDraft(c));
+  c.opening=Money.parse('-20',new CurrencyUnit('CNY','CNY',2)); assert.equal(new AccountDraft(c).command.opening.minor,-2000n);
+  for (const change of [{name:''},{name:'x'.repeat(41)},{kind:'unknown'},{styleKey:'../arbitrary.svg'},{opening:Money.parse('1',usd)}]) assert.throws(()=>new AccountDraft({...accountCommand(),...change}));
+  assert.throws(()=>new AccountDraft({...accountCommand(),opening:Money.fromMinorText('9007199254740992',new CurrencyUnit('CNY','CNY',2))}));
+  for (const v of [0,-1,1.5,NaN,Number.MAX_SAFE_INTEGER]) assert.throws(()=>requireAccountRevision(v));
+});
 const { SerialTaskQueue } = load(base + '/data/rdb/SerialTaskQueue.ets');
 await test('queue holds later work until async task completes', async () => {
   const q = new SerialTaskQueue(); const events = []; let release;

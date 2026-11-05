@@ -2,6 +2,8 @@ import { common } from '@kit.AbilityKit';
 import { relationalStore } from '@kit.ArkData';
 import { util } from '@kit.ArkTS';
 import { CurrencyUnit } from '../../core/money/CurrencyUnit';
+import { AccountCommand, AccountOverview } from '../../domain/model/AccountProfile';
+import { RdbAccountRepository } from './RdbAccountRepository';
 import { IncomeCommand } from '../../domain/model/IncomeRecord';
 import { IncomeService } from '../../domain/services/IncomeService';
 import { ExpenseCommand } from '../../domain/model/ExpenseRecord';
@@ -23,10 +25,12 @@ export class LedgerWorkspace {
   private readonly writer: RecordExpense;
   private readonly updater: UpdateExpense;
   private readonly income: IncomeService;
+  private readonly accountRepository: RdbAccountRepository;
 
   private constructor(store: relationalStore.RdbStore) {
     this.store = store;
     this.session = RdbSession.forStore(store);
+    this.accountRepository = new RdbAccountRepository(store);
     this.income = new IncomeService(new RdbLedgerRepository(store));
     this.writer = new RecordExpense(new RdbLedgerRepository(store));
     this.updater = new UpdateExpense(new RdbLedgerRepository(store));
@@ -58,6 +62,11 @@ export class LedgerWorkspace {
   async updateExpense(command: ExpenseCommand, expectedRevision: number): Promise<void> {
     await this.updater.execute(command, expectedRevision);
   }
+
+  async accountOverview(): Promise<AccountOverview> { return this.accountRepository.snapshot(); }
+  async createAccount(command: AccountCommand): Promise<void> { await this.accountRepository.create(command); }
+  async updateAccount(command: AccountCommand, revision: number): Promise<void> { await this.accountRepository.update(command, revision); }
+  async archiveAccount(id: string, revision: number, archived: boolean): Promise<void> { await this.accountRepository.archive(id, revision, archived); }
 
   async saveIncome(command: IncomeCommand): Promise<void> { await this.income.save(command); }
   async updateIncome(command: IncomeCommand, revision: number): Promise<void> { await this.income.update(command, revision); }
