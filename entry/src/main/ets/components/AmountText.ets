@@ -9,6 +9,7 @@ export struct AmountText {
   currencyBottom: number = 4;
   color: ResourceColor = $r('app.color.xq_font_primary');
   sign: string = '';
+  onOpen: (() => void) | undefined = undefined;
 
   build() {
     Row({ space: 2 }) {
@@ -33,6 +34,7 @@ export struct AmountText {
         .fontColor(this.color)
         .accessibilityText(`${this.sign}人民币${this.amount}元`)
         .onClick(() => {
+          if (this.onOpen !== undefined) { this.onOpen(); return; }
           this.getUIContext().getPromptAction().showDialog({ title: '完整金额', message: `${this.sign}¥${this.amount}`,
             buttons: [{ text: '知道了', color: $r('app.color.xq_font_emphasize') }] });
         })

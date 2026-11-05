@@ -3,6 +3,8 @@ import { FrameCallback, KeyboardAvoidMode, ChipGroup, ChipSize, curves } from '@
 import { util } from '@kit.ArkTS';
 import { CurrencyUnit } from '../core/money/CurrencyUnit';
 import { ExpenseCommand } from '../domain/model/ExpenseRecord';
+import { EntryDetail } from '../domain/model/EntryDetail';
+import { Money } from '../core/money/Money';
 import { ExpenseCategory, LedgerAccount } from '../domain/model/LedgerSnapshot';
 import { LedgerWorkspace } from '../data/rdb/LedgerWorkspace';
 import { ExpenseAmountInput } from '../presentation/ledger/ExpenseAmountInput';
@@ -24,6 +26,7 @@ export struct ExpenseEditor {
   workspace: LedgerWorkspace | undefined = undefined;
   private readonly currency: CurrencyUnit = new CurrencyUnit('CNY', 'CNY', 2);
   bookId: string = '';
+  editingEntry: EntryDetail | undefined = undefined;
   categories: ExpenseCategory[] = [];
   accounts: LedgerAccount[] = [];
   onClose: () => void = () => {};
@@ -43,6 +46,8 @@ export struct ExpenseEditor {
   @State private includeAssets: boolean = true;
   @State private saving: boolean = false;
   @State private saved: boolean = false;
+  @State private conflicted: boolean = false;
+  private dateEdited: boolean = false;
   @State private errorText: string = '';
   @State private showOptions: boolean = false;
   @State private optionKind: number = 0;
@@ -63,8 +68,17 @@ export struct ExpenseEditor {
   private readonly keys: string[][] = [['1', '2', '3', '⌫'], ['4', '5', '6', '−'], ['7', '8', '9', '+'], ['清空', '0', '.', '保存']];
 
   aboutToAppear(): void {
-    this.occurredAtLabel = this.dateLabel();
     this.selectedId = this.categories.length > 0 ? this.categories[0].id : '';
+    const entry = this.editingEntry;
+    if (entry !== undefined) {
+      this.saveId = entry.id;
+      this.expression = Money.fromMinorText(entry.grossMinor, this.currency).toDecimalString();
+      this.discount = Money.fromMinorText(entry.discountMinor, this.currency).toDecimalString();
+      this.selectedId = entry.categoryId; this.accountId = entry.accountId;
+      this.includeAssets = entry.includeInAssets; this.includeBudget = entry.includeInBudget;
+      this.occurredAtMs = entry.occurredAtMs; this.note = entry.note;
+    }
+    this.occurredAtLabel = this.dateLabel();
     this.active = true;
     this.previousAvoidMode = this.getUIContext().getKeyboardAvoidMode();
     this.getUIContext().setKeyboardAvoidMode(KeyboardAvoidMode.RESIZE);
@@ -169,12 +183,22 @@ export struct ExpenseEditor {
     } else { this.showOptions = false; }
   }
 
+  private wallDate(): Date {
+    const entry = this.editingEntry;
+    if (entry !== undefined && !this.dateEdited) {
+      return new Date(this.occurredAtMs + (entry.offsetMinutes + new Date(this.occurredAtMs).getTimezoneOffset()) * 60000);
+    }
+    return new Date(this.occurredAtMs);
+  }
+
   private localDate(): string {
-    return `${new Date(this.occurredAtMs).getFullYear()}-${String(new Date(this.occurredAtMs).getMonth() + 1).padStart(2, '0')}-${String(new Date(this.occurredAtMs).getDate()).padStart(2, '0')}`;
+    const date = this.wallDate();
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
   }
 
   private dateLabel(): string {
-    return this.localDate() + ' ' + String(new Date(this.occurredAtMs).getHours()).padStart(2, '0') + ':' + String(new Date(this.occurredAtMs).getMinutes()).padStart(2, '0');
+    const date = this.wallDate();
+    return this.localDate() + ' ' + String(date.getHours()).padStart(2, '0') + ':' + String(date.getMinutes()).padStart(2, '0');
   }
 
   private paidText(): string {
@@ -196,7 +220,7 @@ export struct ExpenseEditor {
   }
 
   private press(key: string): void {
-    if (this.saving || this.saved) { return; }
+    if (this.saving || this.saved || this.conflicted) { return; }
     if (key === '保存') { this.save(); return; }
     this.errorText = '';
     if (key === '清空') {
@@ -212,7 +236,7 @@ export struct ExpenseEditor {
   }
 
   private async save(): Promise<void> {
-    if (this.saving || this.saved) { return; }
+    if (this.saving || this.saved || this.conflicted) { return; }
     this.errorText = '';
     let command: ExpenseCommand;
     try {
@@ -228,17 +252,24 @@ export struct ExpenseEditor {
         discount: reduction, bookPaid: paid, accountId: account, accountPaid: account === undefined ? undefined : paid,
         includeInAssets: this.includeAssets, includeInBudget: this.includeBudget, note: this.note.trim(),
         occurredAtMs: new Date(this.occurredAtMs).getTime(), localDate: this.localDate(),
-        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone, offsetMinutes: -new Date(this.occurredAtMs).getTimezoneOffset() };
+        timezone: this.editingEntry !== undefined && !this.dateEdited ? this.editingEntry.timezone : Intl.DateTimeFormat().resolvedOptions().timeZone,
+        offsetMinutes: this.editingEntry !== undefined && !this.dateEdited ? this.editingEntry.offsetMinutes : -new Date(this.occurredAtMs).getTimezoneOffset() };
     } catch (_) { this.errorText = '请检查金额是否完整、精度及范围是否正确'; return; }
     this.saving = true;
     this.onSavingChange(true);
     try {
       const workspace = this.workspace;
       if (workspace === undefined) { throw new Error('WORKSPACE_UNAVAILABLE'); }
-      await workspace.saveExpense(command);
+      if (this.editingEntry !== undefined) { await workspace.updateExpense(command, this.editingEntry.revision); }
+      else { await workspace.saveExpense(command); }
       this.saved = true;
       this.onSaved(command.localDate);
-    } catch (_) {
+    } catch (error) {
+      if (this.editingEntry !== undefined && (error as Error).message === 'TRANSACTION_CHANGED') {
+        this.conflicted = true;
+        this.errorText = '账目已变更或删除，请返回详情刷新后再编辑';
+        return;
+      }
       // A retained id prevents a retry from recording the same command twice after an uncertain failure.
       this.errorText = '保存未确认，请勿重复记账。关闭后检查首页，或稍后重试';
     } finally { this.saving = false; this.onSavingChange(false); }
@@ -359,16 +390,18 @@ export struct ExpenseEditor {
   private pickDate(): void {
     this.amountController.stopEditing();
     let accepted: Date | undefined = undefined;
-    this.getUIContext().showDatePickerDialog({ selected: new Date(this.occurredAtMs),
+    this.getUIContext().showDatePickerDialog({ selected: this.wallDate(),
       selectedTextStyle: { color: $r('app.color.xq_font_emphasize') },
       acceptButtonStyle: { fontColor: $r('app.color.xq_font_emphasize') },
       cancelButtonStyle: { fontColor: $r('app.color.xq_font_emphasize') },
       onDateAccept: (date: Date) => {
-        const next = new Date(this.occurredAtMs);
-        next.setFullYear(date.getFullYear(), date.getMonth(), date.getDate());
-        this.occurredAtMs = next.getTime();
+        const next = this.wallDate();
+        if (next.getFullYear() !== date.getFullYear() || next.getMonth() !== date.getMonth() || next.getDate() !== date.getDate()) {
+          next.setFullYear(date.getFullYear(), date.getMonth(), date.getDate());
+          this.dateEdited = true; this.occurredAtMs = next.getTime();
+        }
         this.occurredAtLabel = this.dateLabel();
-        accepted = next;
+        accepted = this.wallDate();
       },
       onDidDisappear: () => {
         if (!this.active) { return; }
@@ -384,9 +417,11 @@ export struct ExpenseEditor {
       acceptButtonStyle: { fontColor: $r('app.color.xq_font_emphasize') },
       cancelButtonStyle: { fontColor: $r('app.color.xq_font_emphasize') },
       onAccept: (result: TimePickerResult) => {
-        const value = new Date(this.occurredAtMs);
-        value.setHours(result.hour ?? 0, result.minute ?? 0, 0, 0);
-        this.occurredAtMs = value.getTime();
+        const value = this.wallDate();
+        if (value.getHours() !== (result.hour ?? 0) || value.getMinutes() !== (result.minute ?? 0)) {
+          value.setHours(result.hour ?? 0, result.minute ?? 0, 0, 0);
+          this.dateEdited = true; this.occurredAtMs = value.getTime();
+        }
         this.occurredAtLabel = this.dateLabel();
       },
       onDidDisappear: () => { this.focusAmountAfterFrame(); }
@@ -550,7 +585,7 @@ export struct ExpenseEditor {
               .accessibilityText(key === '+' ? '加' : key === '−' ? '减' : key === '⌫' ? '删除一位' : key)
               .backgroundColor(key === '保存' ? $r('app.color.xq_brand') : $r('app.color.xq_app_surface_keyboard'))
               .fontColor(key === '保存' ? Color.White : $r('app.color.xq_font_primary'))
-              .enabled(!this.saving && !this.saved && (key !== '保存' || this.canSaveAmounts(this.expression, this.discount)))
+              .enabled(!this.saving && !this.saved && !this.conflicted && (key !== '保存' || this.canSaveAmounts(this.expression, this.discount)))
               .onClick(() => { this.press(key); })
           }, (key: string) => key)
         }.width('100%')
@@ -581,7 +616,10 @@ export struct ExpenseEditor {
   @Builder
   private title() {
     Row() {
-      if (this.chipMaterial !== undefined) {
+      if (this.editingEntry !== undefined) {
+        Text('编辑账目').fontSize('20fp').fontWeight(FontWeight.Bold).fontColor($r('app.color.xq_font_primary'))
+          .id('expense-edit-title')
+      } else if (this.chipMaterial !== undefined) {
         ChipGroup({
           items: [{ label: { text: '支出' }, allowClose: false }, { label: { text: '收入' }, allowClose: false },
             { label: { text: '转账' }, allowClose: false }],

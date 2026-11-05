@@ -50,6 +50,25 @@ await test('invalid expense never reaches repository', async () => { let writes=
 await test('calendar day must match captured UTC offset', () => { const c=command(); c.localDate='2026-02-30'; assert.throws(()=>new ExpenseRecord(c),/INVALID_LOCAL_DATE/); });
 await test('incomplete settlement and missing FX snapshot rejected', () => { const c=command(); c.accountPaid=undefined; assert.throws(()=>new ExpenseRecord(c)); const foreign=command(); foreign.accountPaid=Money.parse('28',usd); assert.throws(()=>new ExpenseRecord(foreign),/FX_SNAPSHOT_COMMAND_REQUIRED/); });
 await test('repository failure propagates to caller', async () => { const service=new RecordExpense({saveExpense:async()=>{throw new Error('WRITE_FAILED')}}); await assert.rejects(service.execute(command()),/WRITE_FAILED/); });
+const { UpdateExpense } = load(base + '/domain/services/UpdateExpense.ets');
+await test('expense edit validates revision and amount before repository writes', async () => {
+  let writes=0;
+  const update=new UpdateExpense({updateExpense:async()=>{writes++;}});
+  for (const revision of [0,-1,1.5,NaN,Number.MAX_SAFE_INTEGER]) await assert.rejects(update.execute(command(),revision),/INVALID_EXPECTED_REVISION/);
+  const invalid=command(); invalid.discount=Money.parse('31',cny);
+  await assert.rejects(update.execute(invalid,1));
+  assert.equal(writes,0);
+});
+await test('expense edit passes the same identity and expected revision without creating a record', async () => {
+  let captured;
+  const update=new UpdateExpense({updateExpense:async(record,revision)=>{captured={id:record.command.id,minor:record.paid.minor,revision};}});
+  await update.execute(command(),7);
+  assert.deepEqual(captured,{id:'expense-1',minor:2800n,revision:7});
+});
+await test('expense edit conflicts propagate instead of being reported as success', async () => {
+  const update=new UpdateExpense({updateExpense:async()=>{throw new Error('TRANSACTION_CHANGED');}});
+  await assert.rejects(update.execute(command(),1),/TRANSACTION_CHANGED/);
+});
 const { SerialTaskQueue } = load(base + '/data/rdb/SerialTaskQueue.ets');
 await test('queue holds later work until async task completes', async () => {
   const q = new SerialTaskQueue(); const events = []; let release;

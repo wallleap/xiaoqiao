@@ -3,15 +3,19 @@ import { HdsTabs, hdsMaterial, HdsNavigation, HdsNavigationTitleMode, HdsListIte
   PrefixCustomBuilder, SuffixCustomBuilder, HdsSnackBar, SnackBarOperationType, ScrollEffectType, DividerShowType } from '@kit.UIDesignKit';
 import { AmountText } from '../components/AmountText';
 import { ExpenseEditor } from '../components/ExpenseEditor';
+import { EntryDetailPage } from '../components/EntryDetailPage';
 import { LedgerSwipeActions } from '../components/LedgerSwipeActions';
 import { common } from '@kit.AbilityKit';
 import { deviceInfo } from '@kit.BasicServicesKit';
 import { FilterMaterials } from '../presentation/materials/FilterMaterials';
 import { LedgerWorkspace } from '../data/rdb/LedgerWorkspace';
-import { LedgerSnapshot } from '../domain/model/LedgerSnapshot';
+import { LedgerSnapshot, ExpenseCategory, LedgerAccount } from '../domain/model/LedgerSnapshot';
+import { EntryDetail } from '../domain/model/EntryDetail';
 import { MonthlyBudget, BudgetProgress, DEFAULT_MONTHLY_BUDGET_MINOR } from '../domain/model/MonthlyBudget';
 import { Money } from '../core/money/Money';
 import { LedgerEntry, LedgerKind, displayAmount, filterEntries, previewEntries, presentEntry, dailyTotals, isToday } from '../presentation/ledger/LedgerOverview';
+
+interface EntryDeleteTarget { id: string; category: string; minor: string; }
 
 @Entry
 @Component
@@ -37,6 +41,13 @@ struct Index {
   @State private loadError: string = '';
   @State private loading: boolean = true;
   @State private showExpense: boolean = false;
+  @State private showDetail: boolean = false;
+  @State private detail: EntryDetail | undefined = undefined;
+  @State private editingEntry: EntryDetail | undefined = undefined;
+  @State private detailLoading: boolean = false;
+  @State private detailError: string = '';
+  private detailId: string = '';
+  private detailRequest: number = 0;
   @State private savingExpense: boolean = false;
   @State private selectedMonth: string = '';
   @State private budgetInput: string = '';
@@ -112,10 +123,82 @@ struct Index {
     if (this.loading || this.workspace === undefined || this.loadError.length > 0 || this.ledger === undefined) {
       this.notify('请先等待账本读取完成，或重试读取'); return;
     }
+    this.editingEntry = undefined;
+    this.showDetail = false;
     this.showExpense = true;
   }
 
-  private async confirmDelete(entry: LedgerEntry): Promise<void> {
+  private async openDetail(id: string, edit: boolean = false): Promise<void> {
+    if (this.preview) { this.notify('预览样例不打开真实账目'); return; }
+    if (this.workspace === undefined || this.detailLoading || this.deleting) { return; }
+    this.activeSwipeId = ''; this.detailId = id; this.detail = undefined;
+    this.showDetail = true; this.detailLoading = true; this.detailError = '';
+    const request = ++this.detailRequest;
+    try {
+      const detail = await this.workspace.entryDetail(id);
+      if (request !== this.detailRequest || !this.showDetail) { return; }
+      this.detail = detail;
+      if (edit) { this.editDetail(); }
+    } catch (_) {
+      if (request === this.detailRequest) { this.detailError = '账目可能已删除，或暂时无法读取。请返回或重新读取'; }
+    } finally { if (request === this.detailRequest) { this.detailLoading = false; } }
+  }
+
+  private editDetail(): void {
+    if (this.detail === undefined || !this.detail.canEdit || this.deleting) { return; }
+    this.editingEntry = this.detail; this.showExpense = true;
+  }
+
+  private closeDetail(): void {
+    this.detailRequest++; this.detailLoading = false; this.showDetail = false; this.detail = undefined;
+  }
+
+  private closeEditor(): void {
+    this.showExpense = false; this.editingEntry = undefined;
+    if (this.showDetail) { this.openDetail(this.detailId); }
+  }
+
+  private async expenseSaved(date: string): Promise<void> {
+    const edited = this.editingEntry !== undefined;
+    this.showExpense = false; this.editingEntry = undefined;
+    this.selectedMonth = date.substring(0, 7);
+    this.kind = LedgerKind.All; this.displayedKind = LedgerKind.All;
+    this.account = ''; this.keyword = ''; this.showSearch = false;
+    this.bodyScroller.scrollTo({ xOffset: 0, yOffset: 0 });
+    await this.loadLedger();
+    if (edited) { await this.openDetail(this.detailId); this.notify('账目已更新'); }
+  }
+
+  private editCategories(): ExpenseCategory[] {
+    const values = this.ledger?.categories.slice() || [];
+    const entry = this.editingEntry;
+    if (entry !== undefined && !values.some((item: ExpenseCategory) => item.id === entry.categoryId)) {
+      values.push({ id: entry.categoryId, name: entry.categoryName, parentId: '', iconKey: entry.iconKey });
+    }
+    return values;
+  }
+
+  private editAccounts(): LedgerAccount[] {
+    const values = this.ledger?.accounts.slice() || [];
+    const entry = this.editingEntry;
+    if (entry !== undefined && entry.accountId.length > 0 && !values.some((item: LedgerAccount) => item.id === entry.accountId)) {
+      values.push({ id: entry.accountId, name: entry.accountName, currencyId: entry.currencyId });
+    }
+    return values;
+  }
+
+  @Builder
+  private detailPage() {
+    EntryDetailPage({ entry: this.detail, loading: this.detailLoading, error: this.detailError, busy: this.deleting,
+      onClose: () => { this.closeDetail(); }, onEdit: () => { this.editDetail(); },
+      onRetry: () => { this.openDetail(this.detailId); }, onDelete: () => {
+        if (this.detail !== undefined) {
+          this.confirmDelete({ id: this.detail.id, category: this.detail.categoryPath, minor: this.detail.bookMinor });
+        }
+      } })
+  }
+
+  private async confirmDelete(entry: EntryDeleteTarget): Promise<void> {
     if (this.preview) { this.notify('预览样例不删除数据'); return; }
     const workspace = this.workspace;
     if (this.deleting || this.deletePromptOpen || workspace === undefined || this.loading) { return; }
@@ -132,6 +215,7 @@ struct Index {
       try { await workspace.deleteEntry(entry.id); }
       catch (_) { this.notify('删除失败，账目未删除，请重试'); return; }
       this.activeSwipeId = '';
+      if (this.showDetail && this.detailId === entry.id) { this.closeDetail(); }
       // Keep the current screen and scroll range while refreshing after the committed write.
       try { this.ledger = await workspace.snapshot(this.selectedMonth); }
       catch (_) {
@@ -203,22 +287,16 @@ struct Index {
         chipMaterial: this.materialReady && !this.forceLegacyMaterials ? this.filterMaterials?.chip : undefined,
         actionMaterial: this.materialReady && !this.forceLegacyMaterials ? this.filterMaterials?.action : undefined,
         sheetMaterial: this.materialReady && !this.forceLegacyMaterials ? this.filterMaterials?.menu : undefined,
-        categories: this.ledger.categories, accounts: this.ledger.accounts,
+        editingEntry: this.editingEntry, categories: this.editCategories(), accounts: this.editAccounts(),
         onSavingChange: (saving: boolean) => { this.savingExpense = saving; },
-        onClose: () => { this.showExpense = false; }, onSaved: (date: string) => {
-          this.showExpense = false;
-          this.selectedMonth = date.substring(0, 7);
-          this.kind = LedgerKind.All; this.account = ''; this.keyword = ''; this.showSearch = false;
-          this.bodyScroller.scrollTo({ xOffset: 0, yOffset: 0 });
-          this.loadLedger();
-        } })
+        onClose: () => { this.closeEditor(); }, onSaved: (date: string) => { this.expenseSaved(date); } })
     }
   }
 
   onBackPress(): boolean {
-    if (!this.showExpense) { return false; }
-    if (!this.savingExpense) { this.showExpense = false; }
-    return true;
+    if (this.showExpense) { if (!this.savingExpense) { this.closeEditor(); } return true; }
+    if (this.showDetail) { if (!this.deleting) { this.closeDetail(); } return true; }
+    return false;
   }
 
   aboutToDisappear(): void {
@@ -352,6 +430,7 @@ struct Index {
     Column({ space: 3 }) {
       AmountText({ amount: displayAmount(entry.minor), amountSize: 16, bold: true, currencyBottom: 0,
         sign: entry.income ? '+' : '−',
+        onOpen: () => { this.openDetail(entry.id); },
         color: entry.income ? $r('app.color.xq_app_income') : $r('app.color.xq_brand') })
       if (!entry.income && BigInt(entry.discountMinor) > BigInt(0)) {
         Row({ space: 6 }) {
@@ -408,7 +487,7 @@ struct Index {
       cardBackgroundColor: $r('app.color.xq_comp_common_contrary'),
       prefixItem: new PrefixCustomBuilder(() => { this.entryContent(entry); }),
       suffixItem: new SuffixCustomBuilder(() => { this.entryAmount(entry); })
-    }).id(entry.id).width('100%')
+    }).id(entry.id).width('100%').onClick(() => { this.openDetail(entry.id); })
   }
 
   @Builder
@@ -649,8 +728,11 @@ struct Index {
                 .id('ledger-entry-divider-' + entry.id)
             }
             LedgerSwipeActions({ entryId: entry.id, activeId: $activeSwipeId, busy: this.deleting,
+              editable: !this.preview && !entry.income, onEdit: () => { this.openDetail(entry.id, true); },
               menuMaterial: this.materialReady && !this.forceLegacyMaterials ? this.filterMaterials?.menu : undefined,
-              content: () => { this.ledgerRow(entry); }, onDelete: () => { this.confirmDelete(entry); } }).width('100%')
+              content: () => { this.ledgerRow(entry); }, onDelete: () => {
+                this.confirmDelete({ id: entry.id, category: entry.category, minor: entry.minor });
+              } }).width('100%')
           }, (entry: LedgerEntry) => entry.id)
         }.width('100%')
       }
@@ -899,6 +981,8 @@ struct Index {
   }
 
   build() {
-    if (this.showExpense) { this.expensePage() } else { this.homeTabs() }
+    if (this.showExpense) { this.expensePage() }
+    else if (this.showDetail) { this.detailPage() }
+    else { this.homeTabs() }
   }
 }

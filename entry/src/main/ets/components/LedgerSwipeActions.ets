@@ -9,6 +9,8 @@ export struct LedgerSwipeActions {
   @Prop menuMaterial: SystemUiMaterial | undefined = undefined;
   @BuilderParam content: () => void;
   onDelete: () => void = () => {};
+  onEdit: () => void = () => {};
+  @Prop editable: boolean = false;
   @State private swipeOffset: number = 0;
   @State private contentHeight: number = 0;
   private startOffset: number = 0;
@@ -28,7 +30,8 @@ export struct LedgerSwipeActions {
   @Builder
   private contextMenu() {
     Menu() {
-      MenuItem({ content: '编辑' }).enabled(false).id('ledger-menu-edit-' + this.entryId)
+      MenuItem({ content: '编辑' }).enabled(this.editable && !this.busy).id('ledger-menu-edit-' + this.entryId)
+        .onClick(() => { this.onEdit(); })
       MenuItem({ content: '删除' }).contentFontColor($r('app.color.xq_warning')).enabled(!this.busy)
         .id('ledger-menu-delete-' + this.entryId).onClick(() => { this.onDelete(); })
     }.width(224)
@@ -38,8 +41,9 @@ export struct LedgerSwipeActions {
     Stack({ alignContent: Alignment.End }) {
       Row({ space: 4 }) {
         Button('编辑').fontSize('14fp').fontColor($r('app.color.xq_font_secondary'))
-          .backgroundColor($r('app.color.xq_background_secondary')).enabled(false)
+          .backgroundColor($r('app.color.xq_background_secondary')).enabled(this.editable && !this.busy)
           .width(60).height('100%').borderRadius(12).id('ledger-edit-' + this.entryId)
+          .onClick(() => { this.activeId = ''; this.settle(false); this.onEdit(); })
         Button('删除').fontSize('14fp').fontColor(Color.White)
           .backgroundColor($r('app.color.xq_warning')).enabled(!this.busy)
           .width(60).height('100%').borderRadius(12).id('ledger-delete-' + this.entryId)
