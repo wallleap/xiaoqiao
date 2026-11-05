@@ -30,6 +30,7 @@ export interface LedgerSnapshot {
   bookId: string;
   bookName: string;
   categories: ExpenseCategory[];
+  incomeCategories: ExpenseCategory[];
   accounts: LedgerAccount[];
   entries: SavedLedgerEntry[];
   incomeMinor: string;

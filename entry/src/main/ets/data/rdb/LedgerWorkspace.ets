@@ -2,6 +2,8 @@ import { common } from '@kit.AbilityKit';
 import { relationalStore } from '@kit.ArkData';
 import { util } from '@kit.ArkTS';
 import { CurrencyUnit } from '../../core/money/CurrencyUnit';
+import { IncomeCommand } from '../../domain/model/IncomeRecord';
+import { IncomeService } from '../../domain/services/IncomeService';
 import { ExpenseCommand } from '../../domain/model/ExpenseRecord';
 import { ExpenseCategory, LedgerAccount, LedgerSnapshot, SavedLedgerEntry } from '../../domain/model/LedgerSnapshot';
 import { RecordExpense } from '../../domain/services/RecordExpense';
@@ -20,10 +22,12 @@ export class LedgerWorkspace {
   private readonly session: RdbSession;
   private readonly writer: RecordExpense;
   private readonly updater: UpdateExpense;
+  private readonly income: IncomeService;
 
   private constructor(store: relationalStore.RdbStore) {
     this.store = store;
     this.session = RdbSession.forStore(store);
+    this.income = new IncomeService(new RdbLedgerRepository(store));
     this.writer = new RecordExpense(new RdbLedgerRepository(store));
     this.updater = new UpdateExpense(new RdbLedgerRepository(store));
   }
@@ -55,6 +59,9 @@ export class LedgerWorkspace {
     await this.updater.execute(command, expectedRevision);
   }
 
+  async saveIncome(command: IncomeCommand): Promise<void> { await this.income.save(command); }
+  async updateIncome(command: IncomeCommand, revision: number): Promise<void> { await this.income.update(command, revision); }
+
   async entryDetail(id: string): Promise<EntryDetail> {
     if (id.trim().length === 0) { throw new Error('INVALID_TRANSACTION_ID'); }
     return this.session.read(async (db: relationalStore.RdbStore): Promise<EntryDetail> => {
@@ -63,7 +70,7 @@ export class LedgerWorkspace {
       let detail: EntryDetail;
       try {
         if (!rows.goToFirstRow()) { throw new Error('TRANSACTION_NOT_FOUND'); }
-        const canEdit = rows.getString(3) === 'expense' && rows.getString(10) === this.currency.id &&
+        const canEdit = (rows.getString(3) === 'expense' || rows.getString(3) === 'income') && rows.getString(10) === this.currency.id &&
           rows.getString(26) === this.currency.id && rows.getString(27) === this.currency.id && rows.getLong(28) === 0;
         detail = { id: rows.getString(0), bookId: rows.getString(1), bookName: rows.getString(2), kind: rows.getString(3),
           revision: rows.getLong(4), categoryId: rows.getString(5), categoryName: rows.getString(6), categoryPath: rows.getString(6),
@@ -144,10 +151,12 @@ export class LedgerWorkspace {
         bookName = book.getString(0);
       } finally { book.close(); }
       const categories: ExpenseCategory[] = [];
-      const categoryRows = await db.querySql("SELECT id,name,COALESCE(parent_id,''),COALESCE(icon_key,'other') FROM categories WHERE book_id=? AND kind='expense' AND deleted_at_ms IS NULL AND archived_at_ms IS NULL ORDER BY sort_order,id", [DEFAULT_BOOK_ID]);
+      const incomeCategories: ExpenseCategory[] = [];
+      const categoryRows = await db.querySql("SELECT id,name,COALESCE(parent_id,''),COALESCE(icon_key,'other'),kind FROM categories WHERE book_id=? AND deleted_at_ms IS NULL AND archived_at_ms IS NULL ORDER BY sort_order,id", [DEFAULT_BOOK_ID]);
       try {
         while (categoryRows.goToNextRow()) {
-          categories.push({ id: categoryRows.getString(0), name: categoryRows.getString(1),
+          const target = categoryRows.getString(4) === 'income' ? incomeCategories : categories;
+          target.push({ id: categoryRows.getString(0), name: categoryRows.getString(1),
             parentId: categoryRows.getString(2), iconKey: categoryRows.getString(3) });
         }
       } finally { categoryRows.close(); }
@@ -184,7 +193,7 @@ export class LedgerWorkspace {
           budgetTotal = budget.getString(0);
         }
       } finally { budget.close(); }
-      return { bookId: DEFAULT_BOOK_ID, bookName: bookName, categories: categories, accounts: accounts,
+      return { bookId: DEFAULT_BOOK_ID, bookName: bookName, categories: categories, incomeCategories: incomeCategories, accounts: accounts,
         entries: entries, incomeMinor: income.toString(), expenseMinor: expense.toString(),
         budgetTotalMinor: budgetTotal, budgetUsedMinor: budgetUsed.toString() };
     });

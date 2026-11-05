@@ -5,20 +5,25 @@ import { Money } from '../../core/money/Money';
 import { ExpenseRecord } from '../../domain/model/ExpenseRecord';
 import { LedgerRepository } from '../../domain/ports/LedgerRepository';
 import { ExpenseUpdateRepository } from '../../domain/ports/ExpenseUpdateRepository';
+import { IncomeRecord } from '../../domain/model/IncomeRecord';
+import { IncomeRepository } from '../../domain/ports/IncomeRepository';
 import { RdbSession } from './RdbSession';
 
-export class RdbLedgerRepository implements LedgerRepository, ExpenseUpdateRepository {
+export class RdbLedgerRepository implements LedgerRepository, ExpenseUpdateRepository, IncomeRepository {
   private readonly session: RdbSession;
 
   constructor(store: relationalStore.RdbStore) {
     this.session = RdbSession.forStore(store);
   }
 
-  async saveExpense(record: ExpenseRecord): Promise<void> {
+  async saveExpense(record: ExpenseRecord): Promise<void> { await this.saveRecord(record, 'expense'); }
+  async saveIncome(record: IncomeRecord): Promise<void> { await this.saveRecord(record.settlement, 'income'); }
+
+  private async saveRecord(record: ExpenseRecord, kind: string): Promise<void> {
     const command = record.command;
     await this.session.write(async (store: relationalStore.RdbStore): Promise<void> => {
       const values: relationalStore.ValuesBucket = {
-        id: command.id, book_id: command.bookId, kind: 'expense', category_id: command.categoryId,
+        id: command.id, book_id: command.bookId, kind: kind, category_id: command.categoryId,
         currency_id: record.paid.currency.id, gross_minor: command.gross.toSafeMinorNumber(),
         discount_minor: command.discount.toSafeMinorNumber(), paid_minor: record.paid.toSafeMinorNumber(),
         book_currency_id: command.bookPaid.currency.id, book_minor: command.bookPaid.toSafeMinorNumber(),
@@ -33,7 +38,7 @@ export class RdbLedgerRepository implements LedgerRepository, ExpenseUpdateRepos
       if (accountId !== undefined && accountPaid !== undefined) {
         const movement: relationalStore.ValuesBucket = {
           id: util.generateRandomUUID(), transaction_id: command.id, account_id: accountId,
-          currency_id: accountPaid.currency.id, leg: 'expense', delta_minor: -accountPaid.toSafeMinorNumber(),
+          currency_id: accountPaid.currency.id, leg: kind, delta_minor: (kind === 'income' ? 1 : -1) * accountPaid.toSafeMinorNumber(),
           occurred_at_ms: command.occurredAtMs
         };
         await store.insert('account_movements', movement);
@@ -61,10 +66,17 @@ export class RdbLedgerRepository implements LedgerRepository, ExpenseUpdateRepos
   }
 
   async updateExpense(record: ExpenseRecord, expectedRevision: number): Promise<void> {
+    await this.updateRecord(record, expectedRevision, 'expense');
+  }
+  async updateIncome(record: IncomeRecord, expectedRevision: number): Promise<void> {
+    await this.updateRecord(record.settlement, expectedRevision, 'income');
+  }
+
+  private async updateRecord(record: ExpenseRecord, expectedRevision: number, kind: string): Promise<void> {
     const command = record.command;
     await this.session.write(async (db: relationalStore.RdbStore): Promise<void> => {
-      const source = await db.querySql("SELECT category_id,currency_id,book_currency_id,(SELECT COUNT(*) FROM fx_snapshots WHERE transaction_id=t.id),(SELECT COUNT(*) FROM account_movements WHERE transaction_id=t.id AND currency_id<>t.currency_id),COALESCE((SELECT account_id FROM account_movements WHERE transaction_id=t.id LIMIT 1),'') FROM v_posted_transactions t WHERE id=? AND book_id=? AND kind='expense' AND revision=?",
-        [command.id, command.bookId, expectedRevision]);
+      const source = await db.querySql("SELECT category_id,currency_id,book_currency_id,(SELECT COUNT(*) FROM fx_snapshots WHERE transaction_id=t.id),(SELECT COUNT(*) FROM account_movements WHERE transaction_id=t.id AND currency_id<>t.currency_id),COALESCE((SELECT account_id FROM account_movements WHERE transaction_id=t.id LIMIT 1),'') FROM v_posted_transactions t WHERE id=? AND book_id=? AND kind=? AND revision=?",
+        [command.id, command.bookId, kind, expectedRevision]);
       let oldCategory: string;
       let oldAccount: string;
       try {
@@ -73,8 +85,8 @@ export class RdbLedgerRepository implements LedgerRepository, ExpenseUpdateRepos
           source.getLong(3) !== 0 || source.getLong(4) !== 0) { throw new Error('UNSUPPORTED_EXPENSE_EDIT'); }
         oldCategory = source.getString(0); oldAccount = source.getString(5);
       } finally { source.close(); }
-      const category = await db.querySql("SELECT id FROM categories WHERE id=? AND book_id=? AND kind='expense' AND deleted_at_ms IS NULL AND (archived_at_ms IS NULL OR id=?)",
-        [command.categoryId, command.bookId, oldCategory]);
+      const category = await db.querySql("SELECT id FROM categories WHERE id=? AND book_id=? AND kind=? AND deleted_at_ms IS NULL AND (archived_at_ms IS NULL OR id=?)",
+        [command.categoryId, command.bookId, kind, oldCategory]);
       try { if (!category.goToFirstRow()) { throw new Error('CATEGORY_UNAVAILABLE'); } }
       finally { category.close(); }
       if (command.accountId !== undefined) {
@@ -86,7 +98,7 @@ export class RdbLedgerRepository implements LedgerRepository, ExpenseUpdateRepos
       }
       const changed = await db.update({ posting_state: 'draft', revision: expectedRevision + 1, updated_at_ms: Date.now() },
         new relationalStore.RdbPredicates('transactions').equalTo('id', command.id).equalTo('book_id', command.bookId)
-          .equalTo('kind', 'expense').equalTo('revision', expectedRevision).equalTo('posting_state', 'posted').isNull('deleted_at_ms'));
+          .equalTo('kind', kind).equalTo('revision', expectedRevision).equalTo('posting_state', 'posted').isNull('deleted_at_ms'));
       if (changed !== 1) { throw new Error('TRANSACTION_CHANGED'); }
       // Leave import identity, balance_mode, attachments, tags and other unedited fields intact.
       await db.update({ category_id: command.categoryId, gross_minor: command.gross.toSafeMinorNumber(),
@@ -98,8 +110,8 @@ export class RdbLedgerRepository implements LedgerRepository, ExpenseUpdateRepos
       await db.delete(new relationalStore.RdbPredicates('account_movements').equalTo('transaction_id', command.id));
       if (command.accountId !== undefined && command.accountPaid !== undefined) {
         await db.insert('account_movements', { id: util.generateRandomUUID(), transaction_id: command.id,
-          account_id: command.accountId, currency_id: command.accountPaid.currency.id, leg: 'expense',
-          delta_minor: -command.accountPaid.toSafeMinorNumber(), occurred_at_ms: command.occurredAtMs });
+          account_id: command.accountId, currency_id: command.accountPaid.currency.id, leg: kind,
+          delta_minor: (kind === 'income' ? 1 : -1) * command.accountPaid.toSafeMinorNumber(), occurred_at_ms: command.occurredAtMs });
       }
       const published = await db.update({ posting_state: 'posted' }, new relationalStore.RdbPredicates('transactions')
         .equalTo('id', command.id).equalTo('revision', expectedRevision + 1).equalTo('posting_state', 'draft'));

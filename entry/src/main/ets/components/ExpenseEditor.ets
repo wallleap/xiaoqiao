@@ -2,6 +2,7 @@ import { HdsNavigation, HdsNavigationTitleMode, DividerShowType, hdsMaterial } f
 import { FrameCallback, KeyboardAvoidMode, ChipGroup, ChipSize, curves } from '@kit.ArkUI';
 import { util } from '@kit.ArkTS';
 import { CurrencyUnit } from '../core/money/CurrencyUnit';
+import { IncomeCommand } from '../domain/model/IncomeRecord';
 import { ExpenseCommand } from '../domain/model/ExpenseRecord';
 import { EntryDetail } from '../domain/model/EntryDetail';
 import { Money } from '../core/money/Money';
@@ -28,6 +29,8 @@ export struct ExpenseEditor {
   bookId: string = '';
   editingEntry: EntryDetail | undefined = undefined;
   categories: ExpenseCategory[] = [];
+  incomeCategories: ExpenseCategory[] = [];
+  @State private isIncome: boolean = false;
   accounts: LedgerAccount[] = [];
   onClose: () => void = () => {};
   onSavingChange: (saving: boolean) => void = () => {};
@@ -68,8 +71,10 @@ export struct ExpenseEditor {
   private readonly keys: string[][] = [['1', '2', '3', '⌫'], ['4', '5', '6', '−'], ['7', '8', '9', '+'], ['清空', '0', '.', '保存']];
 
   aboutToAppear(): void {
-    this.selectedId = this.categories.length > 0 ? this.categories[0].id : '';
     const entry = this.editingEntry;
+    this.isIncome = entry?.kind === 'income';
+    this.selectedKinds = [this.isIncome ? 1 : 0];
+    this.selectedId = this.activeCategories().length > 0 ? this.activeCategories()[0].id : '';
     if (entry !== undefined) {
       this.saveId = entry.id;
       this.expression = Money.fromMinorText(entry.grossMinor, this.currency).toDecimalString();
@@ -122,18 +127,29 @@ export struct ExpenseEditor {
     return '#' + (context.resourceManager.getColorSync($r('app.color.xq_font_primary').id) >>> 0).toString(16).padStart(8, '0');
   }
 
+  private activeCategories(): ExpenseCategory[] { return this.isIncome ? this.incomeCategories : this.categories; }
+  private effectiveDiscount(): string { return this.isIncome ? '0' : this.discount; }
+
   private selectKind(selected: number[]): void {
-    if (selected.length !== 1 || selected[0] === 0) { return; }
-    if (selected[0] === 1) { this.inform('收入记账尚未接入，本次先完成新增支出。'); }
-    if (selected[0] === 2) { this.inform('账户间转账尚未接入，本次先完成新增支出。'); }
-    this.selectedKinds = [0];
+    if (selected.length !== 1 || this.saving || this.editingEntry !== undefined) { return; }
+    if (selected[0] === 2) {
+      this.inform('账户间转账尚未接入。');
+      this.selectedKinds = [this.isIncome ? 1 : 0];
+      return;
+    }
+    if ((selected[0] === 1) === this.isIncome) { return; }
+    this.isIncome = selected[0] === 1;
+    this.selectedKinds = [this.isIncome ? 1 : 0];
+    this.editingDiscount = false; this.errorText = ''; this.parentId = ''; this.showOptions = false;
+    this.selectedId = this.activeCategories()[0]?.id || '';
+    this.categoryPage = 0;
   }
 
   private selected(): ExpenseCategory | undefined {
-    return this.categories.find((item: ExpenseCategory) => item.id === this.selectedId);
+    return this.activeCategories().find((item: ExpenseCategory) => item.id === this.selectedId);
   }
 
-  private roots(): ExpenseCategory[] { return this.categories.filter((item: ExpenseCategory) => item.parentId.length === 0); }
+  private roots(): ExpenseCategory[] { return this.activeCategories().filter((item: ExpenseCategory) => item.parentId.length === 0); }
 
   private categoryPageSize(): number { return this.compactCategories ? 4 : 8; }
 
@@ -172,11 +188,11 @@ export struct ExpenseEditor {
     });
   }
 
-  private children(): ExpenseCategory[] { return this.categories.filter((item: ExpenseCategory) => item.parentId === this.parentId); }
+  private children(): ExpenseCategory[] { return this.activeCategories().filter((item: ExpenseCategory) => item.parentId === this.parentId); }
 
   private choose(item: ExpenseCategory): void {
     this.selectedId = item.id; // Parent is already selected; dismissing the sheet keeps it.
-    if (this.categories.some((child: ExpenseCategory) => child.parentId === item.id)) {
+    if (this.activeCategories().some((child: ExpenseCategory) => child.parentId === item.id)) {
       this.parentId = item.id;
       this.optionKind = 0;
       this.showOptions = true;
@@ -203,14 +219,14 @@ export struct ExpenseEditor {
 
   private paidText(): string {
     try {
-      return ExpenseAmountInput.paidAmount(this.expression, this.discount, this.currency).toDecimalString();
+      return ExpenseAmountInput.paidAmount(this.expression, this.effectiveDiscount(), this.currency).toDecimalString();
     } catch (_) { return '—'; }
   }
 
   private canSaveAmounts(expression: string, discount: string): boolean {
     try {
       return ExpenseAmountInput.evaluate(expression, this.currency).minor > BigInt(0) &&
-        ExpenseAmountInput.paidAmount(expression, discount, this.currency).minor > BigInt(0);
+        ExpenseAmountInput.paidAmount(expression, this.isIncome ? '0' : discount, this.currency).minor > BigInt(0);
     } catch (_) { return false; }
   }
 
@@ -228,7 +244,7 @@ export struct ExpenseEditor {
       return;
     }
     try {
-      const next = ExpenseAmountInput.appendChecked(this.expression, this.discount, key, this.currency, this.editingDiscount);
+      const next = ExpenseAmountInput.appendChecked(this.expression, this.effectiveDiscount(), key, this.currency, this.editingDiscount);
       if (this.editingDiscount) { this.discount = next; } else { this.expression = next; }
     } catch (_) {
       this.errorText = '金额无法计算或超出范围，请修改输入';
@@ -241,16 +257,16 @@ export struct ExpenseEditor {
     let command: ExpenseCommand;
     try {
       const gross = ExpenseAmountInput.evaluate(this.expression, this.currency);
-      const reduction = ExpenseAmountInput.evaluateDiscount(this.discount || '0', this.currency);
-      const paid = ExpenseAmountInput.paidAmount(this.expression, this.discount, this.currency);
+      const reduction = ExpenseAmountInput.evaluateDiscount(this.effectiveDiscount() || '0', this.currency);
+      const paid = ExpenseAmountInput.paidAmount(this.expression, this.effectiveDiscount(), this.currency);
       if (gross.minor <= BigInt(0) || reduction.minor < BigInt(0) || paid.minor <= BigInt(0)) {
-        this.errorText = '金额须大于 0，优惠须小于原金额'; return;
+        this.errorText = this.isIncome ? '收入金额须大于 0' : '金额须大于 0，优惠须小于原金额'; return;
       }
       if (this.selectedId.length === 0) { this.errorText = '请选择分类'; return; }
       const account = this.accountId.length > 0 ? this.accountId : undefined;
       command = { id: this.saveId, bookId: this.bookId, categoryId: this.selectedId, gross: gross,
         discount: reduction, bookPaid: paid, accountId: account, accountPaid: account === undefined ? undefined : paid,
-        includeInAssets: this.includeAssets, includeInBudget: this.includeBudget, note: this.note.trim(),
+        includeInAssets: this.includeAssets, includeInBudget: !this.isIncome && this.includeBudget, note: this.note.trim(),
         occurredAtMs: new Date(this.occurredAtMs).getTime(), localDate: this.localDate(),
         timezone: this.editingEntry !== undefined && !this.dateEdited ? this.editingEntry.timezone : Intl.DateTimeFormat().resolvedOptions().timeZone,
         offsetMinutes: this.editingEntry !== undefined && !this.dateEdited ? this.editingEntry.offsetMinutes : -new Date(this.occurredAtMs).getTimezoneOffset() };
@@ -260,7 +276,14 @@ export struct ExpenseEditor {
     try {
       const workspace = this.workspace;
       if (workspace === undefined) { throw new Error('WORKSPACE_UNAVAILABLE'); }
-      if (this.editingEntry !== undefined) { await workspace.updateExpense(command, this.editingEntry.revision); }
+      if (this.isIncome) {
+        const income: IncomeCommand = { id: command.id, bookId: command.bookId, categoryId: command.categoryId,
+          amount: command.gross, bookAmount: command.bookPaid, accountId: command.accountId, accountAmount: command.accountPaid,
+          includeInAssets: command.includeInAssets, note: command.note, occurredAtMs: command.occurredAtMs,
+          localDate: command.localDate, timezone: command.timezone, offsetMinutes: command.offsetMinutes };
+        if (this.editingEntry !== undefined) { await workspace.updateIncome(income, this.editingEntry.revision); }
+        else { await workspace.saveIncome(income); }
+      } else if (this.editingEntry !== undefined) { await workspace.updateExpense(command, this.editingEntry.revision); }
       else { await workspace.saveExpense(command); }
       this.saved = true;
       this.onSaved(command.localDate);
@@ -280,7 +303,7 @@ export struct ExpenseEditor {
     Column({ space: compact ? 2 : 6 }) {
       Stack({ alignContent: Alignment.TopEnd }) {
         Image(categoryIcon(item.iconKey)).width(compact ? 28 : 32).height(compact ? 28 : 32)
-        if (this.categories.some((child: ExpenseCategory) => child.parentId === item.id)) {
+        if (this.activeCategories().some((child: ExpenseCategory) => child.parentId === item.id)) {
           Image($r('app.media.lucide_ellipsis1')).width(14).height(14)
             .fillColor($r('app.color.xq_icon_emphasize')).offset({ x: 8, y: -4 })
         }
@@ -374,11 +397,13 @@ export struct ExpenseEditor {
   @Builder
   private rules() {
     Row({ space: 8 }) {
-      Text('预算').fontSize('12fp').fontColor($r('app.color.xq_font_secondary'))
-      Image($r('app.media.lucide_info1')).width(16).height(16).fillColor($r('app.color.xq_icon_tertiary'))
-        .onClick(() => { this.inform('计入：实付金额参与预算支出统计。不计入：保留账目，但不占用预算。'); })
-      this.ruleSelect(true)
-      Blank()
+      if (!this.isIncome) {
+        Text('预算').fontSize('12fp').fontColor($r('app.color.xq_font_secondary'))
+        Image($r('app.media.lucide_info1')).width(16).height(16).fillColor($r('app.color.xq_icon_tertiary'))
+          .onClick(() => { this.inform('计入：实付金额参与预算支出统计。不计入：保留账目，但不占用预算。'); })
+        this.ruleSelect(true)
+        Blank()
+      }
       Text('资产').fontSize('12fp').fontColor($r('app.color.xq_font_secondary'))
       Image($r('app.media.lucide_info1')).width(16).height(16).fillColor($r('app.color.xq_icon_tertiary'))
         .onClick(() => { this.inform('计入：改变所选资金账户的余额。不计入：仅记账，不改变余额。未使用账户时，两者都不会产生账户余额变动。'); })
@@ -432,9 +457,16 @@ export struct ExpenseEditor {
   private form() {
     Column({ space: 12 }) {
       Column() {
-        this.field('付款账户', this.accounts.find((item: LedgerAccount) => item.id === this.accountId)?.name || '不使用账户', () => {
-          this.optionKind = 1; this.showOptions = true;
-        })
+        // Bind mutable account/type state directly; builder value parameters can retain the initial label.
+        Row({ space: 12 }) {
+          Text(this.isIncome ? '收款账户' : '付款账户').fontSize('14fp').fontColor($r('app.color.xq_font_secondary'))
+            .id('expense-account-label')
+          Blank()
+          Text(this.accounts.find((item: LedgerAccount) => item.id === this.accountId)?.name || '不使用账户')
+            .fontSize('14fp').maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
+            .fontColor($r('app.color.xq_font_primary')).constraintSize({ maxWidth: '70%' }).id('expense-account-value')
+          Image($r('app.media.lucide_chevron_down1')).width(14).height(14).fillColor($r('app.color.xq_icon_tertiary'))
+        }.height(48).width('100%').onClick(() => { this.optionKind = 1; this.showOptions = true; })
         Divider().color($r('app.color.xq_comp_background_tertiary'))
         Row({ space: 10 }) {
           Text('时间').fontSize('14fp').fontColor($r('app.color.xq_font_secondary'))
@@ -470,7 +502,7 @@ export struct ExpenseEditor {
   @Builder
   private optionSheet() {
     Column({ space: 12 }) {
-      Text(this.optionKind === 0 ? (this.categories.find((item: ExpenseCategory) => item.id === this.parentId)?.name || '选择分类') : '付款账户')
+      Text(this.optionKind === 0 ? (this.activeCategories().find((item: ExpenseCategory) => item.id === this.parentId)?.name || '选择分类') : (this.isIncome ? '收款账户' : '付款账户'))
         .fontSize('20fp').fontWeight(FontWeight.Bold).width('100%')
       if (this.optionKind === 0) {
         Text('已选中父分类；关闭可保留，或继续选择子分类').fontSize('12fp').fontColor($r('app.color.xq_font_secondary'))
@@ -546,6 +578,7 @@ export struct ExpenseEditor {
   @Builder
   private settlement() {
     Row({ space: 8 }) {
+      if (!this.isIncome) {
         Row({ space: 8 }) {
           Text('优惠').fontSize('12fp').fontWeight(FontWeight.Medium)
             .fontColor(this.editingDiscount ? $r('app.color.xq_font_on_primary') : $r('app.color.xq_font_secondary'))
@@ -557,8 +590,9 @@ export struct ExpenseEditor {
           .backgroundColor(this.editingDiscount ? $r('app.color.xq_brand') : $r('app.color.xq_app_surface_keyboard'))
           .id('expense-discount-control').accessibilityText('编辑优惠金额')
           .onClick(() => { this.editingDiscount = !this.editingDiscount; })
-        Blank()
-        this.keyboardHide()
+      }
+      Blank()
+      this.keyboardHide()
       }.width('100%').height(40).padding({ left: 16, right: 16 })
       .backgroundColor($r('app.color.xq_app_surface_card'))
   }
@@ -617,7 +651,7 @@ export struct ExpenseEditor {
   private title() {
     Row() {
       if (this.editingEntry !== undefined) {
-        Text('编辑账目').fontSize('20fp').fontWeight(FontWeight.Bold).fontColor($r('app.color.xq_font_primary'))
+        Text(this.isIncome ? '编辑收入' : '编辑账目').fontSize('20fp').fontWeight(FontWeight.Bold).fontColor($r('app.color.xq_font_primary'))
           .id('expense-edit-title')
       } else if (this.chipMaterial !== undefined) {
         ChipGroup({
@@ -672,9 +706,9 @@ export struct ExpenseEditor {
                 })
                 .onWillDelete((): boolean => { this.press('⌫'); return false; })
             }.height(48).width('100%')
-            Text('实付 ¥' + this.paidText()).fontSize('12fp').fontFamily('XiaoQiaoDINRegular').id('expense-paid')
+            Text((this.isIncome ? '到账 ¥' : '实付 ¥') + this.paidText()).fontSize('12fp').fontFamily('XiaoQiaoDINRegular').id('expense-paid')
               .width('100%').height(24).maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis }).textAlign(TextAlign.Start)
-              .accessibilityDescription('点击编辑上方原金额').onClick(() => { this.focusAmountFromPaid(); })
+              .accessibilityDescription(this.isIncome ? '点击编辑上方收入金额' : '点击编辑上方原金额').onClick(() => { this.focusAmountFromPaid(); })
           }.layoutWeight(1).alignItems(HorizontalAlign.Start)
           Image(categoryIcon(this.selected()?.iconKey || 'food')).width(32).height(32)
         }.padding(16).width('100%').borderRadius(20).backgroundColor($r('app.color.xq_app_surface_card'))

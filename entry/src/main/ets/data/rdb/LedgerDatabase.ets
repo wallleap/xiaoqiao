@@ -5,7 +5,7 @@ import { RdbSession } from './RdbSession';
 
 export const DEFAULT_BOOK_ID: string = 'book-default';
 
-/** Only creates an empty database. Unknown or mismatched existing schemas are never migrated here. */
+/** Creates schema only for an empty database. Compatible stores may receive one-time, nonoverwriting income defaults. */
 export class LedgerDatabase {
   static requireName(name: string): void {
     if (name !== 'xiaoqiao.db' && !/^xiaoqiao_app_test_[a-zA-Z0-9_-]+\.db$/.test(name)) {
@@ -29,7 +29,7 @@ export class LedgerDatabase {
           }
           await LedgerDatabase.seed(db);
         } else {
-          // No IF NOT EXISTS, schema repair, reseeding, or version upgrade of nonempty databases.
+          // No schema repair or version upgrade of nonempty databases; income defaults have their own one-time guard.
           const meta = await db.querySql("SELECT value FROM db_meta WHERE key='schema_checksum'");
           try {
             if (!meta.goToFirstRow() || meta.getString(0) !== REVIEW_SCHEMA_SHA256) {
@@ -42,12 +42,33 @@ export class LedgerDatabase {
               migration.getString(1) !== REVIEW_SCHEMA_SHA256) { throw new Error('UNSUPPORTED_LEDGER_SCHEMA'); }
           } finally { migration.close(); }
         }
+        await LedgerDatabase.ensureIncomeCategories(db);
       });
       return store;
     } catch (error) {
       await store.close();
       throw error as Error;
     }
+  }
+
+  /** Add defaults only once, only when this book has never had income categories. */
+  private static async ensureIncomeCategories(db: relationalStore.RdbStore): Promise<void> {
+    const marker = await db.querySql("SELECT value FROM db_meta WHERE key='income_categories_v1'");
+    try { if (marker.goToFirstRow()) { return; } } finally { marker.close(); }
+    const existing = await db.querySql("SELECT id FROM categories WHERE book_id=? AND kind='income' LIMIT 1", [DEFAULT_BOOK_ID]);
+    const hasIncome = existing.rowCount > 0;
+    existing.close();
+    if (!hasIncome) {
+      const names: string[] = ['工资', '奖金', '兼职', '理财', '红包', '其他收入'];
+      const icons: string[] = ['salary', 'bonus', 'sidejob', 'investment', 'gift', 'other'];
+      const now = Date.now();
+      for (let index = 0; index < names.length; index++) {
+        await db.insert('categories', { id: 'income-' + icons[index], book_id: DEFAULT_BOOK_ID, kind: 'income',
+          name: names[index], name_key: names[index], icon_key: icons[index], sort_order: index,
+          created_at_ms: now, updated_at_ms: now });
+      }
+    }
+    await db.insert('db_meta', { key: 'income_categories_v1', value: '1' });
   }
 
   private static async seed(db: relationalStore.RdbStore): Promise<void> {

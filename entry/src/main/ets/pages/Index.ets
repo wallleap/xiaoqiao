@@ -169,10 +169,10 @@ struct Index {
     if (edited) { await this.openDetail(this.detailId); this.notify('账目已更新'); }
   }
 
-  private editCategories(): ExpenseCategory[] {
-    const values = this.ledger?.categories.slice() || [];
+  private editCategories(income: boolean = false): ExpenseCategory[] {
+    const values = (income ? this.ledger?.incomeCategories : this.ledger?.categories)?.slice() || [];
     const entry = this.editingEntry;
-    if (entry !== undefined && !values.some((item: ExpenseCategory) => item.id === entry.categoryId)) {
+    if (entry !== undefined && (entry.kind === 'income') === income && !values.some((item: ExpenseCategory) => item.id === entry.categoryId)) {
       values.push({ id: entry.categoryId, name: entry.categoryName, parentId: '', iconKey: entry.iconKey });
     }
     return values;
@@ -287,7 +287,7 @@ struct Index {
         chipMaterial: this.materialReady && !this.forceLegacyMaterials ? this.filterMaterials?.chip : undefined,
         actionMaterial: this.materialReady && !this.forceLegacyMaterials ? this.filterMaterials?.action : undefined,
         sheetMaterial: this.materialReady && !this.forceLegacyMaterials ? this.filterMaterials?.menu : undefined,
-        editingEntry: this.editingEntry, categories: this.editCategories(), accounts: this.editAccounts(),
+        editingEntry: this.editingEntry, categories: this.editCategories(), incomeCategories: this.editCategories(true), accounts: this.editAccounts(),
         onSavingChange: (saving: boolean) => { this.savingExpense = saving; },
         onClose: () => { this.closeEditor(); }, onSaved: (date: string) => { this.expenseSaved(date); } })
     }
@@ -728,7 +728,7 @@ struct Index {
                 .id('ledger-entry-divider-' + entry.id)
             }
             LedgerSwipeActions({ entryId: entry.id, activeId: $activeSwipeId, busy: this.deleting,
-              editable: !this.preview && !entry.income, onEdit: () => { this.openDetail(entry.id, true); },
+              editable: !this.preview, onEdit: () => { this.openDetail(entry.id, true); },
               menuMaterial: this.materialReady && !this.forceLegacyMaterials ? this.filterMaterials?.menu : undefined,
               content: () => { this.ledgerRow(entry); }, onDelete: () => {
                 this.confirmDelete({ id: entry.id, category: entry.category, minor: entry.minor });

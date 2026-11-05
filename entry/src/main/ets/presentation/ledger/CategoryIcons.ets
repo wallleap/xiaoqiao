@@ -1,6 +1,10 @@
 /** Stable semantic keys stored in SQLite; resource handles stay in the presentation layer. */
 export function categoryIcon(key: string): Resource {
   switch (key) {
+    case 'salary': return $r('app.media.colorful_icon_0280');
+    case 'bonus': return $r('app.media.colorful_icon_0088');
+    case 'sidejob': return $r('app.media.colorful_icon_0161');
+    case 'investment': return $r('app.media.colorful_icon_0126');
     case 'food': return $r('app.media.colorful_icon_0287');
     case 'transport': return $r('app.media.colorful_icon_0224');
     case 'clothes': return $r('app.media.colorful_icon_0207');

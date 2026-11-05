@@ -256,14 +256,18 @@ export default function expenseFlowTest() {
       const restoredCategory = await (await driver.findComponent(ON.id('expense-category-expense-food'))).getBounds();
       expect(Math.abs(restoredCategory.top - firstCategoryBefore.top) <= 2).assertTrue();
       expect(Math.abs((await (await driver.findComponent(ON.id('expense-categories'))).getBounds()).bottom - expandedCard.bottom) <= 2).assertTrue();
-      for (const kind of ['收入', '转账']) {
-        await (await driver.findComponent(ON.text(kind).within(ON.id('expense-kind-selector')))).click();
-        await driver.waitForComponent(ON.text(kind === '收入' ? '收入记账尚未接入，本次先完成新增支出。' : '账户间转账尚未接入，本次先完成新增支出。'), 5000);
-        await (await driver.findComponent(ON.text('知道了'))).click();
-        await driver.delayMs(600);
-        expect(await driver.findComponent(ON.text('支出').selected(true).within(ON.id('expense-kind-selector'))) !== null).assertTrue();
-        expect(await driver.findComponent(ON.text(kind).selected(true).within(ON.id('expense-kind-selector')))).assertNull();
-      }
+      await (await driver.findComponent(ON.text('收入').within(ON.id('expense-kind-selector')))).click();
+      await driver.waitForComponent(ON.id('expense-category-income-salary'), 5000);
+      expect(await driver.findComponent(ON.id('expense-discount-control'))).assertNull();
+      expect(await (await driver.findComponent(ON.id('expense-account-label'))).getText()).assertEqual('收款账户');
+      await (await driver.findComponent(ON.text('转账').within(ON.id('expense-kind-selector')))).click();
+      await driver.waitForComponent(ON.text('账户间转账尚未接入。'), 5000);
+      await (await driver.findComponent(ON.text('知道了'))).click();
+      await driver.delayMs(600);
+      expect(await driver.findComponent(ON.text('收入').selected(true).within(ON.id('expense-kind-selector'))) !== null).assertTrue();
+      await (await driver.findComponent(ON.text('支出').within(ON.id('expense-kind-selector')))).click();
+      await driver.waitForComponent(ON.id('expense-category-expense-food'), 5000);
+      expect(await driver.findComponent(ON.id('expense-discount-control')) !== null).assertTrue();
       await (await driver.findComponent(ON.id('expense-amount'))).click();
       await driver.waitForComponent(ON.id('expense-native-keyboard'), 5000);
       await (await driver.findComponent(ON.id('expense-hide-keyboard'))).click();
@@ -510,6 +514,53 @@ export default function expenseFlowTest() {
       await driver.waitForComponent(ON.text('3,000.00'), 5000);
       expect(await driver.findComponent(ON.id('ledger-day-' + snapshot.entries[0].date))).assertNull();
       expect(await driver.screenCap(host.filesDir + '/xiaoqiao-ledger-deleted.png')).assertTrue();
+      // Income uses the same editor, but no discount/budget controls and no expense-budget effect.
+      await driver.delayMs(3200);
+      await (await driver.findComponent(ON.text('开始记第一笔账'))).click();
+      await driver.waitForComponent(ON.id('expense-keyboard'), 5000);
+      await (await driver.findComponent(ON.text('收入').within(ON.id('expense-kind-selector')))).click();
+      await driver.waitForComponent(ON.id('expense-category-income-salary'), 5000);
+      expect(await driver.findComponent(ON.id('expense-discount-control'))).assertNull();
+      expect(await driver.findComponent(ON.id('expense-budget-rule'))).assertNull();
+      expect(await (await driver.findComponent(ON.id('expense-account-label'))).getText()).assertEqual('收款账户');
+      for (const key of ['1', '2', '5', '+', '7', '5']) { await (await driver.findComponent(ON.id('expense-key-' + key))).click(); }
+      expect(await (await driver.findComponent(ON.id('expense-paid'))).getText()).assertEqual('到账 ¥200.00');
+      expect(await driver.screenCap(host.filesDir + '/xiaoqiao-income-input.png')).assertTrue();
+      await (await driver.findComponent(ON.id('expense-key-保存'))).click();
+      await driver.waitForComponent(ON.text('工资'), 5000);
+      let incomeSnapshot = await workspace.snapshot(command.localDate.substring(0, 7));
+      expect(incomeSnapshot.entries.length).assertEqual(1);
+      expect(incomeSnapshot.incomeMinor).assertEqual('20000'); expect(incomeSnapshot.budgetUsedMinor).assertEqual('0');
+      const incomeId = incomeSnapshot.entries[0].id;
+      expect(incomeSnapshot.entries[0].income).assertTrue();
+      await (await driver.findComponent(ON.id(incomeId))).click();
+      await driver.waitForComponent(ON.id('entry-detail-amount'), 5000);
+      expect(await (await driver.findComponent(ON.id('entry-detail-amount'))).getText()).assertEqual('200.00');
+      expect(await driver.findComponent(ON.id('entry-detail-discount'))).assertNull();
+      await (await driver.findComponent(ON.id('entry-detail-edit'))).click();
+      await driver.waitForComponent(ON.text('编辑收入'), 5000);
+      expect(await (await driver.findComponent(ON.id('expense-amount'))).getText()).assertEqual('200.00');
+      expect(await driver.findComponent(ON.id('expense-discount-control'))).assertNull();
+      await (await driver.findComponent(ON.id('expense-key-清空'))).click();
+      for (const key of ['2', '5', '0']) { await (await driver.findComponent(ON.id('expense-key-' + key))).click(); }
+      await (await driver.findComponent(ON.id('expense-key-保存'))).click();
+      await driver.waitForComponent(ON.id('entry-detail-amount').text('250.00'), 5000);
+      await driver.delayMs(3200);
+      expect(await driver.screenCap(host.filesDir + '/xiaoqiao-income-receipt.png')).assertTrue();
+      incomeSnapshot = await workspace.snapshot(command.localDate.substring(0, 7));
+      expect(incomeSnapshot.entries.length).assertEqual(1); expect(incomeSnapshot.entries[0].id).assertEqual(incomeId);
+      expect(incomeSnapshot.incomeMinor).assertEqual('25000'); expect(incomeSnapshot.budgetUsedMinor).assertEqual('0');
+      await (await driver.findComponent(ON.id('entry-detail-edit'))).click();
+      await driver.waitForComponent(ON.text('编辑收入'), 5000);
+      await (await driver.findComponent(ON.id('expense-close'))).click();
+      await driver.waitForComponent(ON.id('entry-detail-amount'), 5000);
+      expect((await workspace.entryDetail(incomeId)).revision).assertEqual(2);
+      await (await driver.findComponent(ON.id('entry-detail-delete'))).click();
+      await driver.waitForComponent(ON.text('确定删除这笔账目吗？'), 5000);
+      const incomeConfirms = await driver.findComponents(ON.text('删除'));
+      await incomeConfirms[incomeConfirms.length - 1].click();
+      await driver.waitForComponent(ON.text('开始记第一笔账'), 5000);
+      expect((await workspace.snapshot(command.localDate.substring(0, 7))).incomeMinor).assertEqual('0');
       // Only this run's explicitly named, nonproduction database is removed.
       await LedgerWorkspace.close(name);
       await relationalStore.deleteRdbStore(host, name);

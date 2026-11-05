@@ -69,6 +69,26 @@ await test('expense edit conflicts propagate instead of being reported as succes
   const update=new UpdateExpense({updateExpense:async()=>{throw new Error('TRANSACTION_CHANGED');}});
   await assert.rejects(update.execute(command(),1),/TRANSACTION_CHANGED/);
 });
+const { IncomeRecord } = load(base + '/domain/model/IncomeRecord.ets');
+const { IncomeService } = load(base + '/domain/services/IncomeService.ets');
+const incomeCommand = () => { const c=command(); return {id:'income-1',bookId:c.bookId,categoryId:'salary',amount:Money.parse('120.30',cny),bookAmount:Money.parse('120.30',cny),accountId:'cash',accountAmount:Money.parse('120.30',cny),includeInAssets:true,note:'工资',occurredAtMs:c.occurredAtMs,localDate:c.localDate,timezone:c.timezone,offsetMinutes:c.offsetMinutes}; };
+await test('income has no discount or expense budget and snapshots its command', () => {
+  const c=incomeCommand(); const r=new IncomeRecord(c); c.note='changed';
+  assert.equal(r.settlement.paid.minor,12030n); assert.equal(r.settlement.command.discount.minor,0n);
+  assert.equal(r.settlement.command.includeInBudget,false); assert.equal(r.settlement.command.note,'工资');
+});
+await test('invalid income amount and settlement never reach persistence', async () => {
+  let writes=0; const service=new IncomeService({saveIncome:async()=>writes++,updateIncome:async()=>writes++});
+  for (const amount of ['0','-1']) { const c=incomeCommand(); c.amount=Money.parse(amount,cny); await assert.rejects(service.save(c)); }
+  const c=incomeCommand(); c.accountAmount=Money.parse('1',cny); await assert.rejects(service.save(c));
+  const foreign=incomeCommand(); foreign.bookAmount=Money.parse('120.30',usd); await assert.rejects(service.save(foreign));
+  await assert.rejects(service.update(incomeCommand(),0),/INVALID_EXPECTED_REVISION/); assert.equal(writes,0);
+});
+await test('income routes save and same-id update separately and propagates conflicts', async () => {
+  const calls=[]; const service=new IncomeService({saveIncome:async r=>calls.push(['save',r.settlement.command.id]),updateIncome:async(r,v)=>{calls.push(['edit',r.settlement.command.id,v]); throw new Error('TRANSACTION_CHANGED');}});
+  await service.save(incomeCommand()); await assert.rejects(service.update(incomeCommand(),3),/TRANSACTION_CHANGED/);
+  assert.deepEqual(calls,[['save','income-1'],['edit','income-1',3]]);
+});
 const { SerialTaskQueue } = load(base + '/data/rdb/SerialTaskQueue.ets');
 await test('queue holds later work until async task completes', async () => {
   const q = new SerialTaskQueue(); const events = []; let release;
