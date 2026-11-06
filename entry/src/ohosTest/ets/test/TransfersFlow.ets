@@ -90,6 +90,10 @@ export async function verifyTransfersUI(driver: Driver, host: common.UIAbilityCo
   expect(accounts.find((item) => item.id === to.id)?.balanceMinor).assertEqual('0');
   // Add a liability account, then verify fee/coupon editing through the actual custom keyboard.
   await (await driver.findComponent(ON.id('ledger-tab-3'))).click();
+  const restoredSender = await driver.waitForComponent(ON.text('100.00').within(ON.id('account-row-' + from.id)), 5000);
+  expect(await restoredSender.getText()).assertEqual('100.00');
+  const restoredReceiver = await driver.waitForComponent(ON.text('0.00').within(ON.id('account-row-' + to.id)), 5000);
+  expect(await restoredReceiver.getText()).assertEqual('0.00');
   await (await driver.waitForComponent(ON.id('accounts-create'), 5000)).click();
   await (await driver.waitForComponent(ON.id('account-name'), 5000)).inputText('还款测试信用卡');
   await driver.delayMs(600); await driver.pressBack();
@@ -147,5 +151,8 @@ export async function verifyTransfersUI(driver: Driver, host: common.UIAbilityCo
   await driver.waitForComponent(ON.text('没有符合条件的账目'), 5000);
   expect((await workspace.snapshot(month)).expenseMinor).assertEqual('0');
   expect((await workspace.accountOverview()).accounts.find((item) => item.id === from.id)?.balanceMinor).assertEqual('10000');
-
+  await (await driver.findComponent(ON.id('ledger-tab-3'))).click();
+  expect(await (await driver.waitForComponent(ON.id('accounts-total-assets').text('100.00'), 5000)).getText()).assertEqual('100.00');
+  expect(await (await driver.waitForComponent(ON.id('accounts-total-liabilities').text('0.00'), 5000)).getText()).assertEqual('0.00');
+  expect(await (await driver.waitForComponent(ON.id('accounts-net').text('100.00'), 5000)).getText()).assertEqual('100.00');
 }

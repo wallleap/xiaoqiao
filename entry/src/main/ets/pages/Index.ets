@@ -125,13 +125,25 @@ struct Index {
       const name = AppStorage.get<string>('ledgerDatabaseName') || 'xiaoqiao.db';
       this.workspace = await LedgerWorkspace.open(context, name);
       this.ledger = await this.workspace.snapshot(this.selectedMonth);
-      this.accountError = '';
-      try { this.accountOverview = await this.workspace.accountOverview(); }
-      catch (_) { this.accountError = '账户暂时无法读取，请重试'; }
+      await this.refreshAccountOverview(this.workspace);
     } catch (error) {
       this.upgradeRequired = (error as Error).message === 'LEDGER_UPGRADE_REQUIRED';
       this.loadError = this.upgradeRequired ? '升级本地账本后，可使用转账手续费和还款优惠' : '账本暂时无法读取，已有数据不会被覆盖。请重试';
     } finally { this.loading = false; }
+  }
+
+  private async refreshAccountOverview(workspace: LedgerWorkspace): Promise<void> {
+    try {
+      this.accountOverview = await workspace.accountOverview();
+      this.accountError = '';
+    } catch (_) { this.accountError = '账户暂时无法读取，请重试'; }
+  }
+
+  private async refreshAfterDeletion(workspace: LedgerWorkspace): Promise<void> {
+    try {
+      this.ledger = await workspace.snapshot(this.selectedMonth);
+      this.loadError = '';
+    } catch (_) { this.loadError = '账目已删除，但列表刷新失败，请重试读取'; }
   }
 
   private confirmDatabaseUpgrade(): void {
@@ -302,13 +314,9 @@ struct Index {
       catch (_) { this.notify('删除失败，账目未删除，请重试'); return; }
       this.activeSwipeId = '';
       if (this.showDetail && this.detailId === entry.id) { this.closeDetail(); }
-      // Keep the current screen and scroll range while refreshing after the committed write.
-      try { this.ledger = await workspace.snapshot(this.selectedMonth); }
-      catch (_) {
-        this.loadError = '账目已删除，但列表刷新失败，请重试读取';
-        return;
-      }
-      this.notify('已删除账目');
+      // Refresh both views after the committed write without replacing the list with a loading view.
+      await Promise.all([this.refreshAfterDeletion(workspace), this.refreshAccountOverview(workspace)]);
+      this.notify(this.loadError.length > 0 || this.accountError.length > 0 ? '账目已删除，部分数据刷新失败' : '已删除账目');
     } catch (_) { /* Dismissing the native confirmation does not write any data. */ }
     finally { this.deleting = false; this.deletePromptOpen = false; }
   }
