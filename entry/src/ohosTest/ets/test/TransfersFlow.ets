@@ -17,6 +17,7 @@ export async function verifyTransfersUI(driver: Driver, host: common.UIAbilityCo
   await (await driver.findComponent(ON.id('ledger-add-expense'))).click();
   await driver.waitForComponent(ON.id('expense-keyboard'), 5000);
   await (await driver.findComponent(ON.text('转账').within(ON.id('expense-kind-selector')))).click();
+  expect(await driver.waitForComponent(ON.id('expense-to-account-value'), 5000) !== null).assertTrue();
   expect(await driver.findComponent(ON.id('expense-categories'))).assertNull();
   expect(await driver.findComponent(ON.id('expense-discount-control'))).assertNull();
   expect(await driver.findComponent(ON.id('expense-budget-rule'))).assertNull();
@@ -151,8 +152,14 @@ export async function verifyTransfersUI(driver: Driver, host: common.UIAbilityCo
   await driver.waitForComponent(ON.text('没有符合条件的账目'), 5000);
   expect((await workspace.snapshot(month)).expenseMinor).assertEqual('0');
   expect((await workspace.accountOverview()).accounts.find((item) => item.id === from.id)?.balanceMinor).assertEqual('10000');
+  // The delete snackbar overlaps the floating tabs until it dismisses.
+  await driver.delayMs(3200);
   await (await driver.findComponent(ON.id('ledger-tab-3'))).click();
-  expect(await (await driver.waitForComponent(ON.id('accounts-total-assets').text('100.00'), 5000)).getText()).assertEqual('100.00');
-  expect(await (await driver.waitForComponent(ON.id('accounts-total-liabilities').text('0.00'), 5000)).getText()).assertEqual('0.00');
-  expect(await (await driver.waitForComponent(ON.id('accounts-net').text('100.00'), 5000)).getText()).assertEqual('100.00');
+  expect(await driver.waitForComponent(ON.id('accounts-page'), 5000) !== null).assertTrue();
+  // AccountsFlow excludes the funding account from net assets. Its row still shows the restored balance.
+  expect(await (await driver.findComponent(ON.text('100.00').within(ON.id('account-row-' + from.id)))).getText()).assertEqual('100.00');
+  expect(await (await driver.findComponent(ON.text('0.00').within(ON.id('account-row-' + debt.id)))).getText()).assertEqual('0.00');
+  expect(await (await driver.findComponent(ON.id('accounts-total-assets'))).getText()).assertEqual('0.00');
+  expect(await (await driver.findComponent(ON.id('accounts-total-liabilities'))).getText()).assertEqual('0.00');
+  expect(await (await driver.findComponent(ON.id('accounts-net'))).getText()).assertEqual('0.00');
 }
