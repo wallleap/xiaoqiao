@@ -19,6 +19,7 @@ import { MonthlyBudget, DEFAULT_MONTHLY_BUDGET_MINOR } from '../../domain/model/
 import { LedgerDatabase, DEFAULT_BOOK_ID } from './LedgerDatabase';
 import { RdbLedgerRepository } from './RdbLedgerRepository';
 import { RdbSession } from './RdbSession';
+import { LocalLedgerBackup } from './LocalLedgerBackup';
 
 /** Owns the store for the foreground ledger. All runtime SQL goes through its shared serial session. */
 export class LedgerWorkspace {
@@ -26,15 +27,17 @@ export class LedgerWorkspace {
   readonly currency: CurrencyUnit = new CurrencyUnit('CNY', 'CNY', 2);
   private readonly store: relationalStore.RdbStore;
   private readonly session: RdbSession;
+  readonly localBackup: LocalLedgerBackup;
   private readonly writer: RecordExpense;
   private readonly updater: UpdateExpense;
   private readonly income: IncomeService;
   private readonly transfer: TransferService;
   private readonly accountRepository: RdbAccountRepository;
 
-  private constructor(store: relationalStore.RdbStore) {
+  private constructor(context: common.Context, name: string, store: relationalStore.RdbStore) {
     this.store = store;
     this.session = RdbSession.forStore(store);
+    this.localBackup = new LocalLedgerBackup(context, name, this.session);
     this.accountRepository = new RdbAccountRepository(store);
     this.transfer = new TransferService(new RdbTransferRepository(store));
     this.income = new IncomeService(new RdbLedgerRepository(store));
@@ -45,7 +48,7 @@ export class LedgerWorkspace {
   static async open(context: common.Context, name: string = 'xiaoqiao.db'): Promise<LedgerWorkspace> {
     const existing = LedgerWorkspace.instances.get(name);
     if (existing !== undefined) { return existing; }
-    const pending = LedgerDatabase.open(context, name).then((store: relationalStore.RdbStore) => new LedgerWorkspace(store));
+    const pending = LedgerDatabase.open(context, name).then((store: relationalStore.RdbStore) => new LedgerWorkspace(context, name, store));
     LedgerWorkspace.instances.set(name, pending);
     try { return await pending; } catch (error) {
       LedgerWorkspace.instances.delete(name);

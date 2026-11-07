@@ -10,6 +10,7 @@ import { Money } from '../core/money/Money';
 import { ExpenseCategory, LedgerAccount } from '../domain/model/LedgerSnapshot';
 import { LedgerWorkspace } from '../data/rdb/LedgerWorkspace';
 import { ExpenseAmountInput } from '../presentation/ledger/ExpenseAmountInput';
+import { AmountKeyboard } from './AmountKeyboard';
 import { categoryIcon } from '../presentation/ledger/CategoryIcons';
 
 class AmountFocusFrame extends FrameCallback {
@@ -18,6 +19,8 @@ class AmountFocusFrame extends FrameCallback {
   onFrame(_time: number): void { this.action(); }
   onIdle(_time: number): void {}
 }
+
+enum ExpenseErrorField { Amount, Discount, Fee, Coupon, Category, Accounts, Save }
 
 @Component
 export struct ExpenseEditor {
@@ -60,6 +63,7 @@ export struct ExpenseEditor {
   @State private conflicted: boolean = false;
   private dateEdited: boolean = false;
   @State private errorText: string = '';
+  @State private errorField: ExpenseErrorField = ExpenseErrorField.Amount;
   @State private showOptions: boolean = false;
   @State private optionKind: number = 0;
   @State private parentId: string = '';
@@ -76,7 +80,6 @@ export struct ExpenseEditor {
   private previousAvoidMode: KeyboardAvoidMode = KeyboardAvoidMode.OFFSET;
   private active: boolean = false;
   private saveId: string = util.generateRandomUUID();
-  private readonly keys: string[][] = [['1', '2', '3', '⌫'], ['4', '5', '6', '−'], ['7', '8', '9', '+'], ['清空', '0', '.', '保存']];
 
   aboutToAppear(): void {
     const entry = this.editingEntry;
@@ -200,6 +203,7 @@ export struct ExpenseEditor {
 
   private choose(item: ExpenseCategory): void {
     this.selectedId = item.id; // Parent is already selected; dismissing the sheet keeps it.
+    this.clearFieldError(ExpenseErrorField.Category);
     if (this.activeCategories().some((child: ExpenseCategory) => child.parentId === item.id)) {
       this.parentId = item.id;
       this.optionKind = 0;
@@ -268,6 +272,16 @@ export struct ExpenseEditor {
       buttons: [{ text: '知道了', color: $r('app.color.xq_font_emphasize') }] });
   }
 
+  private showError(field: ExpenseErrorField, message: string): void {
+    this.errorField = field;
+    this.errorText = message;
+    if (field === ExpenseErrorField.Accounts) { this.scroller.scrollTo({ xOffset: 0, yOffset: 0 }); }
+  }
+
+  private clearFieldError(field: ExpenseErrorField): void {
+    if (this.errorField === field) { this.errorText = ''; }
+  }
+
   private press(key: string): void {
     if (this.saving || this.saved || this.conflicted) { return; }
     if (key === '保存') { this.save(); return; }
@@ -280,7 +294,12 @@ export struct ExpenseEditor {
           this.transferOutgoing(this.transferTarget === 0 ? next : this.expression, this.transferTarget === 1 ? next : this.transferFee, this.transferTarget === 2 ? next : this.transferCoupon, true);
         }
         if (this.transferTarget === 1) { this.transferFee = next; } else if (this.transferTarget === 2) { this.transferCoupon = next; } else { this.expression = next; }
-      } catch (_) { this.errorText = '金额超出范围，或还款优惠大于还款金额'; }
+      } catch (_) {
+        const field = this.transferTarget === 1 ? ExpenseErrorField.Fee :
+          this.transferTarget === 2 ? ExpenseErrorField.Coupon : ExpenseErrorField.Amount;
+        const label = this.transferTarget === 1 ? '手续费' : this.transferTarget === 2 ? '还款优惠' : '转账金额';
+        this.showError(field, label + '超出范围，或还款优惠大于还款金额');
+      }
       return;
     }
     if (key === '清空') {
@@ -291,7 +310,8 @@ export struct ExpenseEditor {
       const next = ExpenseAmountInput.appendChecked(this.expression, this.effectiveDiscount(), key, this.currency, this.editingDiscount);
       if (this.editingDiscount) { this.discount = next; } else { this.expression = next; }
     } catch (_) {
-      this.errorText = '金额无法计算或超出范围，请修改输入';
+      this.showError(this.editingDiscount ? ExpenseErrorField.Discount : ExpenseErrorField.Amount,
+        this.editingDiscount ? '优惠金额无法计算或超出范围，请修改输入' : '金额无法计算或超出范围，请修改输入');
     }
   }
 
@@ -303,18 +323,20 @@ export struct ExpenseEditor {
       if (this.isTransfer) {
         this.transferOutgoing();
         if (this.isRepayment() && this.accounts.find((item: LedgerAccount) => item.id === this.toAccountId)?.kind !== 'liability') {
-          this.errorText = '请选择负债账户作为还款账户'; return;
+          this.showError(ExpenseErrorField.Accounts, '请选择负债账户作为还款账户'); return;
         }
       }
       const gross = ExpenseAmountInput.evaluate(this.expression, this.currency);
       const reduction = ExpenseAmountInput.evaluateDiscount(this.effectiveDiscount() || '0', this.currency);
       const paid = ExpenseAmountInput.paidAmount(this.expression, this.effectiveDiscount(), this.currency);
       if (gross.minor <= BigInt(0) || reduction.minor < BigInt(0) || paid.minor <= BigInt(0)) {
-        this.errorText = this.isIncome ? '收入金额须大于 0' : '金额须大于 0，优惠须小于原金额'; return;
+        const field = !this.isIncome && !this.isTransfer && gross.minor > BigInt(0) ?
+          ExpenseErrorField.Discount : ExpenseErrorField.Amount;
+        this.showError(field, field === ExpenseErrorField.Discount ? '优惠须小于原金额' : '金额须大于 0'); return;
       }
-      if (!this.isTransfer && this.selectedId.length === 0) { this.errorText = '请选择分类'; return; }
+      if (!this.isTransfer && this.selectedId.length === 0) { this.showError(ExpenseErrorField.Category, '请选择分类'); return; }
       if (this.isTransfer && (!this.accountId || !this.toAccountId || this.accountId === this.toAccountId)) {
-        this.errorText = '请选择两个不同的转出和转入账户'; return;
+        this.showError(ExpenseErrorField.Accounts, '请选择两个不同的转出和转入账户'); return;
       }
       const account = this.accountId.length > 0 ? this.accountId : undefined;
       command = { id: this.saveId, bookId: this.bookId, categoryId: this.isTransfer ? 'transfer' : this.selectedId, gross: gross,
@@ -323,7 +345,7 @@ export struct ExpenseEditor {
         occurredAtMs: new Date(this.occurredAtMs).getTime(), localDate: this.localDate(),
         timezone: this.editingEntry !== undefined && !this.dateEdited ? this.editingEntry.timezone : Intl.DateTimeFormat().resolvedOptions().timeZone,
         offsetMinutes: this.editingEntry !== undefined && !this.dateEdited ? this.editingEntry.offsetMinutes : -new Date(this.occurredAtMs).getTimezoneOffset() };
-    } catch (_) { this.errorText = '请检查金额是否完整、精度及范围是否正确'; return; }
+    } catch (_) { this.showError(ExpenseErrorField.Amount, '请检查金额是否完整、精度及范围是否正确'); return; }
     this.saving = true;
     this.onSavingChange(true);
     try {
@@ -352,12 +374,18 @@ export struct ExpenseEditor {
     } catch (error) {
       if (this.editingEntry !== undefined && (error as Error).message === 'TRANSACTION_CHANGED') {
         this.conflicted = true;
-        this.errorText = '账目已变更或删除，请返回详情刷新后再编辑';
+        this.showError(ExpenseErrorField.Save, '账目已变更或删除，请返回详情刷新后再编辑');
         return;
       }
       // A retained id prevents a retry from recording the same command twice after an uncertain failure.
-      this.errorText = '保存未确认，请勿重复记账。关闭后检查首页，或稍后重试';
+      this.showError(ExpenseErrorField.Save, '保存未确认，请勿重复记账。关闭后检查首页，或稍后重试');
     } finally { this.saving = false; this.onSavingChange(false); }
+  }
+
+  @Builder
+  private errorMessage() {
+    Text(this.errorText).width('100%').fontSize('12fp').fontWeight(FontWeight.Medium)
+      .fontColor($r('app.color.xq_warning')).id('expense-error')
   }
 
   @Builder
@@ -401,6 +429,9 @@ export struct ExpenseEditor {
           .id(this.compactCategories ? 'expense-categories-compact' : 'expense-categories-expanded')
           .indicator(Indicator.dot().itemWidth(5).itemHeight(5).selectedItemWidth(12)
           .selectedItemHeight(5).selectedColor($r('app.color.xq_brand')))
+        if (this.errorText.length > 0 && this.errorField === ExpenseErrorField.Category) {
+          Row() { this.errorMessage() }.width('100%').padding({ left: 8, right: 8, bottom: 8 })
+        }
       }.padding({ top: 12, left: 8, right: 8, bottom: 4 }).width('100%')
         .backgroundColor($r('app.color.xq_app_surface_card')).borderRadius(20)
       Polygon().points([[0, 10], [12, 0], [24, 10]]).width(24).height(10)
@@ -544,17 +575,23 @@ export struct ExpenseEditor {
         }.height(48).padding({ left: 16, right: 16 }).width('100%').borderRadius(16)
           .backgroundColor($r('app.color.xq_app_surface_card')).id('transfer-purpose')
           .onClick(() => { this.optionKind = 3; this.showOptions = true; })
-        Row({ space: 12 }) {
-          this.transferAccountSide(true)
-          Button({ type: ButtonType.Circle }) {
-            Image($r('app.media.lucide_arrow_left_right1')).width(22).height(22).fillColor($r('app.color.xq_icon_secondary'))
-          }.width(44).height(44).padding(0).backgroundColor(Color.Transparent)
-            .enabled(!this.saving && !this.saved && !this.conflicted).id('transfer-swap-accounts')
-            .accessibilityText('交换转出和转入账户').onClick(() => {
-              if (this.isRepayment() && this.accounts.find((item: LedgerAccount) => item.id === this.accountId)?.kind !== 'liability') { this.inform('还款的转入账户须为负债账户'); return; }
-              const previous = this.accountId; this.accountId = this.toAccountId; this.toAccountId = previous;
-            })
-          this.transferAccountSide(false)
+        Column({ space: 4 }) {
+          Row({ space: 12 }) {
+            this.transferAccountSide(true)
+            Button({ type: ButtonType.Circle }) {
+              Image($r('app.media.lucide_arrow_left_right1')).width(22).height(22).fillColor($r('app.color.xq_icon_secondary'))
+            }.width(44).height(44).padding(0).backgroundColor(Color.Transparent)
+              .enabled(!this.saving && !this.saved && !this.conflicted).id('transfer-swap-accounts')
+              .accessibilityText('交换转出和转入账户').onClick(() => {
+                if (this.isRepayment() && this.accounts.find((item: LedgerAccount) => item.id === this.accountId)?.kind !== 'liability') {
+                  this.showError(ExpenseErrorField.Accounts, '还款的转入账户须为负债账户'); return;
+                }
+                const previous = this.accountId; this.accountId = this.toAccountId; this.toAccountId = previous;
+                this.clearFieldError(ExpenseErrorField.Accounts);
+              })
+            this.transferAccountSide(false)
+          }.width('100%')
+          if (this.errorText.length > 0 && this.errorField === ExpenseErrorField.Accounts) { this.errorMessage() }
         }.padding(16).width('100%').borderRadius(16).backgroundColor($r('app.color.xq_app_surface_card'))
           .id('transfer-accounts-card')
         Row() {
@@ -625,8 +662,9 @@ export struct ExpenseEditor {
         ForEach(TRANSFER_PURPOSES, (item: TransferPurpose) => {
           this.field(item.label, this.transferPurpose === item.key ? '已选' : '', () => {
             this.transferPurpose = item.key;
-            if (!item.repayment) { this.transferCoupon = '0'; }
+            if (!item.repayment) { this.transferCoupon = '0'; this.clearFieldError(ExpenseErrorField.Coupon); }
             if (item.repayment && this.accounts.find((account: LedgerAccount) => account.id === this.toAccountId)?.kind !== 'liability') { this.toAccountId = ''; }
+            this.clearFieldError(ExpenseErrorField.Accounts);
             this.showOptions = false;
           })
         }, (item: TransferPurpose) => item.key)
@@ -646,6 +684,7 @@ export struct ExpenseEditor {
             ForEach(this.accounts.filter((item: LedgerAccount) => item.currencyId === this.currency.id && (!this.isTransfer || this.optionKind !== 2 || !this.isRepayment() || item.kind === 'liability') && (!this.isTransfer || item.id !== (this.optionKind === 2 ? this.accountId : this.toAccountId))), (item: LedgerAccount) => {
               this.field(item.name, (this.optionKind === 2 ? this.toAccountId : this.accountId) === item.id ? '已选' : '', () => {
                 if (this.optionKind === 2) { this.toAccountId = item.id; } else { this.accountId = item.id; }
+                this.clearFieldError(ExpenseErrorField.Accounts);
                 this.showOptions = false;
               })
             }, (item: LedgerAccount) => item.id)
@@ -739,58 +778,34 @@ export struct ExpenseEditor {
       }
       Blank()
       this.keyboardHide()
-      }.width('100%').height(40).padding({ left: 16, right: 16 })
-      .backgroundColor($r('app.color.xq_app_surface_card'))
+    }.width('100%').height(36)
   }
 
   @Builder
-  private keyboard() {
-    Column({ space: 6 }) {
-      ForEach(this.keys, (row: string[]) => {
-        Row({ space: 6 }) {
-          ForEach(row, (key: string) => {
-            Button({ type: ButtonType.Normal }) {
-              if (key === '+' || key === '−' || key === '⌫') {
-                Image(key === '+' ? $r('app.media.lucide_plus1') : key === '−' ?
-                  $r('app.media.lucide_minus1') : $r('app.media.lucide_delete1'))
-                  .width(24).height(24).fillColor($r('app.color.xq_icon_primary'))
-              } else {
-                Text(this.saving && key === '保存' ? '保存中' : key)
-                  .fontSize(key === '保存' || key === '清空' ? '16fp' : '24fp')
-                  .fontFamily(key === '保存' || key === '清空' ? '' : 'XiaoQiaoDINMedium')
-                  .fontWeight(FontWeight.Medium)
-                  .fontColor(key === '保存' ? Color.White : $r('app.color.xq_font_primary'))
-              }
-            }.id('expense-key-' + key).layoutWeight(1).height(48).borderRadius(12)
-              .accessibilityText(key === '+' ? '加' : key === '−' ? '减' : key === '⌫' ? '删除一位' : key)
-              .backgroundColor(key === '保存' ? $r('app.color.xq_brand') : $r('app.color.xq_app_surface_keyboard'))
-              .fontColor(key === '保存' ? Color.White : $r('app.color.xq_font_primary'))
-              .enabled(!this.saving && !this.saved && !this.conflicted && (key !== '保存' || this.canSaveAmounts(this.expression, this.discount)))
-              .onClick(() => { this.press(key); })
-          }, (key: string) => key)
-        }.width('100%')
-      }, (row: string[]) => row.join(','))
-    }.padding({ left: 16, right: 16, bottom: 12 }).width('100%')
-      .backgroundColor($r('app.color.xq_app_surface_card')).id('expense-keyboard')
+  private keyboardToolbar() {
+    this.settlement()
+    if (this.errorText.length > 0 && (this.errorField === ExpenseErrorField.Discount ||
+      this.errorField === ExpenseErrorField.Fee || this.errorField === ExpenseErrorField.Coupon)) {
+      this.errorMessage()
+    }
+  }
+
+  @Builder
+  private keyboardFooter() {
+    if (this.errorText.length > 0 && this.errorField === ExpenseErrorField.Save) { this.errorMessage() }
   }
 
   @Builder
   private amountKeyboard() {
-    Column() {
-      Column({ space: 8 }) {
-        Row() {
-          Text(this.errorText).fontSize('12fp').fontWeight(FontWeight.Medium).lineHeight('18fp')
-            .fontColor($r('app.color.xq_warning')).maxLines(1)
-            .textOverflow({ overflow: TextOverflow.Ellipsis }).layoutWeight(1).id('expense-error')
-        }.width('100%').height(20).padding({ left: 16, right: 16 }).id('expense-keyboard-error-slot')
-        this.settlement()
-        this.keyboard()
-      }.width('100%').padding({ top: 12, bottom: 12 })
-        .backgroundColor($r('app.color.xq_app_surface_card'))
-        .borderRadius({ topLeft: 24, topRight: 24 }).clip(true)
-        .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.BOTTOM]).id('expense-keyboard-panel')
-    }.width('100%').padding({ top: 8 })
-      .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.BOTTOM]).id('expense-native-keyboard')
+    AmountKeyboard({
+      prefix: 'expense',
+      disabled: this.saving || this.saved || this.conflicted,
+      canSubmit: this.canSaveAmounts(this.expression, this.discount),
+      submitLabel: this.saving ? '保存中' : '保存',
+      accessory: () => { this.keyboardToolbar() },
+      footer: () => { this.keyboardFooter() },
+      onKey: (key: string) => { this.press(key); }
+    })
   }
 
   @Builder
@@ -855,6 +870,10 @@ export struct ExpenseEditor {
             Text(this.isTransfer ? '实际转出 ¥' + this.transferOutgoingText() + ' · 转入 ¥' + this.paidText() : (this.isIncome ? '到账 ¥' : '实付 ¥') + this.paidText()).fontSize('12fp').fontFamily('XiaoQiaoDINRegular').id('expense-paid')
               .width('100%').height(24).maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis }).textAlign(TextAlign.Start)
               .accessibilityDescription(this.isIncome ? '点击编辑上方收入金额' : '点击编辑上方原金额').onClick(() => { this.focusAmountFromPaid(); })
+            if (this.errorText.length > 0 && (this.errorField === ExpenseErrorField.Amount ||
+              (!this.keyboardVisible && this.errorField !== ExpenseErrorField.Category && this.errorField !== ExpenseErrorField.Accounts))) {
+              this.errorMessage()
+            }
           }.layoutWeight(1).alignItems(HorizontalAlign.Start)
           if (this.isTransfer) {
             Image($r('app.media.lucide_arrow_left_right1')).width(32).height(32).fillColor($r('app.color.xq_icon_primary'))
@@ -879,9 +898,6 @@ export struct ExpenseEditor {
             })
             .onScrollStop(() => { this.settleCategories(); })
           Column() {
-            if (this.errorText.length > 0 && !this.keyboardVisible && !this.noteEditing) {
-              Text(this.errorText).fontSize('12fp').fontColor($r('app.color.xq_warning')).padding(8).id('expense-error')
-            }
             if (!this.keyboardVisible && !this.noteEditing) { this.resumeAmountButton() }
           }.width('100%')
         }.layoutWeight(1).width('100%').margin({ top: this.isTransfer ? 12 : 0 })

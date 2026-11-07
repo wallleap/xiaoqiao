@@ -8,6 +8,8 @@ import { LedgerWorkspace } from '../data/rdb/LedgerWorkspace';
 import { Money } from '../core/money/Money';
 import { CurrencyUnit } from '../core/money/CurrencyUnit';
 import { AccountAvatar } from './AccountAvatar';
+import { MoneyAmountField } from './MoneyAmountField';
+import { ExpenseAmountInput } from '../presentation/ledger/ExpenseAmountInput';
 
 @Component
 export struct AccountEditor {
@@ -32,6 +34,7 @@ export struct AccountEditor {
   private readonly draftId: string = util.generateRandomUUID();
   private readonly scroller: Scroller = new Scroller();
   private readonly currency: CurrencyUnit = new CurrencyUnit('CNY', 'CNY', 2);
+  private readonly openingController: TextInputController = new TextInputController();
 
   aboutToAppear(): void {
     if (this.original !== undefined) {
@@ -47,6 +50,10 @@ export struct AccountEditor {
     return host === undefined ? '#E5000000' : '#' + (host.resourceManager.getColorSync($r('app.color.xq_font_primary').id) >>> 0).toString(16).padStart(8, '0');
   }
   private style(): AccountStyle | undefined { return ACCOUNT_STYLES.find((item: AccountStyle) => item.key === this.styleKey); }
+  private validOpening(): boolean {
+    if (this.original !== undefined) { return true; }
+    try { ExpenseAmountInput.nonnegative(this.opening, this.currency); return true; } catch (_) { return false; }
+  }
   private sheetOptions(): SheetOptions {
     const options: SheetOptions = { height: 440, showClose: true };
     if (this.sheetMaterial !== undefined) { options.systemMaterial = this.sheetMaterial; }
@@ -58,14 +65,14 @@ export struct AccountEditor {
     this.error = '';
     let command: AccountCommand;
     try {
-      let opening = Money.parse(this.original === undefined ? this.opening : '0', this.currency);
-      if (opening.minor < BigInt(0)) { this.error = '请输入非负金额，待还金额会计为负余额'; return; }
+      let opening = ExpenseAmountInput.nonnegative(this.original === undefined ? this.opening : '0', this.currency);
       if (this.kind === 'liability') { opening = Money.fromMinorText((-opening.minor).toString(), this.currency); }
       command = { id: this.original?.id || this.draftId, name: this.name, kind: this.kind, styleKey: this.styleKey,
         includeInNetAssets: this.includeNet, opening: opening };
       if (this.name.trim().length === 0) { this.error = '请填写账户名称'; return; }
       new AccountDraft(command);
     } catch (_) { this.error = '金额最多两位小数，请检查输入及范围'; return; }
+    if (this.original === undefined) { this.openingController.stopEditing(); }
     this.busy = true; this.onBusy(true);
     try {
       if (this.workspace === undefined) { throw new Error('WORKSPACE_UNAVAILABLE'); }
@@ -133,9 +140,9 @@ export struct AccountEditor {
               Text(this.original === undefined ? (this.kind === 'liability' ? '期初待还金额 · CNY' : '期初余额 · CNY') : '当前余额 · CNY')
                 .fontSize('14fp').fontColor($r('app.color.xq_font_secondary')).width('100%').id('account-opening-label')
               if (this.original === undefined) {
-                TextInput({ text: this.opening }).type(InputType.NUMBER_DECIMAL).fontFamily('XiaoQiaoDINMedium').fontSize('28fp')
-                  .backgroundColor(Color.Transparent).padding(0).maxLength(18).id('account-opening')
-                  .onChange((value: string) => { this.opening = value; })
+                MoneyAmountField({ value: $opening, fieldId: 'account-opening', currency: this.currency,
+                  controller: this.openingController, disabled: this.busy || this.operationBusy || this.conflict,
+                  onSubmit: () => { this.save(); } })
                 Text(this.kind === 'liability' ? '输入待还金额，按负余额计入净资产' : '期初余额不计入收入或预算')
                   .fontSize('12fp').fontColor($r('app.color.xq_font_tertiary')).width('100%')
               } else {
@@ -174,7 +181,7 @@ export struct AccountEditor {
           }
           Button(this.busy ? '保存中' : '保存账户', { type: ButtonType.Capsule }).height(48).layoutWeight(2)
             .fontSize('16fp').fontColor(Color.White).backgroundColor($r('app.color.xq_brand'))
-            .enabled(!this.busy && !this.operationBusy && !this.conflict).id('account-save').onClick(() => { this.save(); })
+            .enabled(!this.busy && !this.operationBusy && !this.conflict && this.validOpening()).id('account-save').onClick(() => { this.save(); })
         }.padding({ left: 16, right: 16, top: 12, bottom: 8 }).width('100%')
       }.width('100%').height('100%').constraintSize({ maxWidth: 720 }).align(Alignment.Top)
     }.mode(NavigationMode.Stack).titleMode(HdsNavigationTitleMode.MINI)

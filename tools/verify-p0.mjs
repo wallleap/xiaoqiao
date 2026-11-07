@@ -206,6 +206,16 @@ await test('paid input preflight rejects overflow without blocking pending opera
   assert.equal(ExpenseAmountInput.paidAmount('12+3−2', '5+2−5', cny).toDecimalString(), '11.00');
 });
 const { MonthlyBudget, DEFAULT_MONTHLY_BUDGET_MINOR } = load(base + '/domain/model/MonthlyBudget.ets');
+await test('standalone amount drafts enforce precision, nonnegative results and exact bounds', () => {
+  assert.equal(ExpenseAmountInput.nonnegative('0.10+0.20−0.05', cny).toDecimalString(), '0.25');
+  assert.equal(ExpenseAmountInput.nonnegative('0', cny).toDecimalString(), '0.00');
+  assert.equal(ExpenseAmountInput.appendNonnegative('1.23', '4', cny), '1.23');
+  assert.equal(ExpenseAmountInput.appendNonnegative('1', '−', cny), '1−');
+  assert.throws(() => ExpenseAmountInput.nonnegative('1−', cny), /INCOMPLETE/);
+  assert.throws(() => ExpenseAmountInput.appendNonnegative('1−', '2', cny), /NEGATIVE_AMOUNT/);
+  assert.throws(() => ExpenseAmountInput.appendNonnegative('90071992547409.9', '2', cny), /OUT_OF_RANGE/);
+  assert.equal(ExpenseAmountInput.appendNonnegative('1−', '⌫', cny), '1');
+});
 await test('monthly budget defaults, exact usage, overrun and zero allowance', () => {
   assert.equal(DEFAULT_MONTHLY_BUDGET_MINOR, '250000');
   assert.deepEqual(MonthlyBudget.period('2026-12'), {start:'2026-12-01', endExclusive:'2027-01-01'});

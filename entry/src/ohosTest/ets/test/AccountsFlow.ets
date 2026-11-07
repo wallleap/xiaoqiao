@@ -2,6 +2,7 @@ import { common } from '@kit.AbilityKit';
 import { Driver, ON } from '@kit.TestKit';
 import { expect } from '@ohos/hypium';
 import { LedgerWorkspace } from '../../../main/ets/data/rdb/LedgerWorkspace';
+import { enterAmount, hideAmountKeyboard } from './AmountKeyboardFlow';
 
 /** Runs only inside ExpenseFlow's UUID test database, before that fixture is removed. */
 export async function verifyAccountsUI(driver: Driver, host: common.UIAbilityContext, workspace: LedgerWorkspace, month: string): Promise<void> {
@@ -15,9 +16,8 @@ export async function verifyAccountsUI(driver: Driver, host: common.UIAbilityCon
   await driver.delayMs(600); // Wait for native IME attachment before sending Back.
   await driver.pressBack();
   await driver.waitForComponent(ON.id('account-editor'), 5000);
-  await (await driver.findComponent(ON.id('account-opening'))).inputText('100.00');
-  await driver.delayMs(600); // Wait for native IME attachment before sending Back.
-  await driver.pressBack();
+  await enterAmount(driver, 'account-opening', '100.00');
+  await hideAmountKeyboard(driver, 'account-opening');
   await driver.waitForComponent(ON.id('account-editor'), 5000);
   await (await driver.findComponent(ON.id('account-choose-style'))).click();
   await (await driver.waitForComponent(ON.id('account-style-wechat_pay'), 5000)).click();

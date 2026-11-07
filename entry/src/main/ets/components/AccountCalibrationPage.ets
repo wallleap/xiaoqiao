@@ -6,6 +6,8 @@ import { AccountCalibration, AccountCalibrationCommand } from '../domain/model/A
 import { LedgerWorkspace } from '../data/rdb/LedgerWorkspace';
 import { CurrencyUnit } from '../core/money/CurrencyUnit';
 import { Money } from '../core/money/Money';
+import { MoneyAmountField } from './MoneyAmountField';
+import { ExpenseAmountInput } from '../presentation/ledger/ExpenseAmountInput';
 
 @Component
 export struct AccountCalibrationPage {
@@ -45,8 +47,7 @@ export struct AccountCalibrationPage {
   }
   private money(minor: string): string { return Money.fromMinorText(minor, this.currency).toDecimalString(); }
   private after(): Money {
-    const value = Money.parse(this.amount, this.currency);
-    if (value.minor < BigInt(0)) { throw new Error('INVALID_CALIBRATION'); }
+    const value = ExpenseAmountInput.nonnegative(this.amount, this.currency);
     return this.negative ? value.negate() : value;
   }
   private draft(): AccountCalibration {
@@ -121,9 +122,13 @@ export struct AccountCalibrationPage {
                 itemStyle: { size: ChipSize.NORMAL, backgroundColor: $r('app.color.xq_app_filter_unselected'), selectedBackgroundColor: $r('app.color.xq_brand'), fontColor: $r('app.color.xq_font_secondary'), selectedFontColor: $r('app.color.xq_font_on_primary') },
                 onChange: (values: number[]) => { if (values.length === 1 && !this.busy) { this.negative = this.current?.kind === 'liability' ? values[0] === 0 : values[0] === 1; } }
               }).width('100%').id('calibration-direction')
-              TextInput({ text: this.amount, controller: this.amountController }).type(InputType.NUMBER_DECIMAL).fontSize('30fp').fontFamily('XiaoQiaoDINBold')
-                .backgroundColor(Color.Transparent).padding(0).maxLength(18).enabled(!this.busy).id('calibration-amount')
-                .onChange((value: string) => { this.amount = value; })
+              MoneyAmountField({ value: $amount, fieldId: 'calibration-amount', fontSize: '30fp', fontFamily: 'XiaoQiaoDINBold',
+                currency: this.currency, controller: this.amountController, disabled: this.busy,
+                canSubmit: !this.conflict && this.valid(), submitLabel: '预览', onSubmit: () => { this.confirm(); } })
+              if (this.current !== undefined && this.afterText() !== '—' && !this.valid()) {
+                Text(this.afterText() === this.money(this.current.balanceMinor) ? '金额与当前余额相同' : '调整差额超出允许范围')
+                  .fontSize('12fp').fontColor($r('app.color.xq_warning')).width('100%')
+              }
               TextInput({ text: this.reason, placeholder: '调整原因（可选）', controller: this.reasonController }).fontSize('14fp').maxLength(200)
                 .backgroundColor($r('app.color.xq_app_surface_keyboard')).borderRadius(12).enabled(!this.busy).id('calibration-reason')
                 .onChange((value: string) => { this.reason = value; })

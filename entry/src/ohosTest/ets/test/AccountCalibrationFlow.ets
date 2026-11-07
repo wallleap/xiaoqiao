@@ -4,6 +4,7 @@ import { expect } from '@ohos/hypium';
 import { LedgerWorkspace } from '../../../main/ets/data/rdb/LedgerWorkspace';
 import { DEFAULT_BOOK_ID } from '../../../main/ets/data/rdb/LedgerDatabase';
 import { Money } from '../../../main/ets/core/money/Money';
+import { enterAmount, hideAmountKeyboard } from './AmountKeyboardFlow';
 
 async function waitText(driver: Driver, id: string, value: string): Promise<void> {
   const component = await driver.waitForComponent(ON.id(id).text(value), 5000);
@@ -32,8 +33,8 @@ export async function verifyAccountCalibrationUI(driver: Driver, host: common.UI
   await (await driver.waitForComponent(ON.id('account-row-' + asset.id), 5000)).click();
   await (await driver.waitForComponent(ON.id('account-calibrate'), 5000)).click();
   await waitText(driver, 'calibration-before', '100.00');
-  await (await driver.findComponent(ON.id('calibration-amount'))).inputText('80.00');
-  await driver.delayMs(600); await driver.pressBack();
+  await enterAmount(driver, 'calibration-amount', '80.00');
+  await hideAmountKeyboard(driver, 'calibration-amount');
   await driver.waitForComponent(ON.id('account-calibration-page'), 5000);
   await (await driver.findComponent(ON.id('calibration-reason'))).inputText('与银行对账');
   await driver.delayMs(600); await driver.pressBack();
@@ -61,8 +62,8 @@ export async function verifyAccountCalibrationUI(driver: Driver, host: common.UI
   await (await driver.findComponent(ON.id('adjustment-history-close'))).click();
   await (await driver.waitForComponent(ON.id('account-calibrate'), 5000)).click();
   await waitText(driver, 'calibration-before', '80.00');
-  await (await driver.waitForComponent(ON.id('calibration-amount'), 5000)).inputText('70.00');
-  await driver.delayMs(600); await driver.pressBack();
+  await enterAmount(driver, 'calibration-amount', '70.00');
+  await hideAmountKeyboard(driver, 'calibration-amount');
   // Simulate an intervening real income while the preview still carries the old balance.
   const date = new Date(); const ten = Money.parse('10', workspace.currency);
   await workspace.saveIncome({ id: 'calibration-intervening-income', bookId: DEFAULT_BOOK_ID, categoryId: 'income-salary', amount: ten, bookAmount: ten,
@@ -91,8 +92,8 @@ export async function verifyAccountCalibrationUI(driver: Driver, host: common.UI
   await (await driver.findComponent(ON.id('account-row-' + debt.id))).click();
   await (await driver.waitForComponent(ON.id('account-calibrate'), 5000)).click();
   await waitText(driver, 'calibration-before', '0.00');
-  await (await driver.waitForComponent(ON.id('calibration-amount'), 5000)).inputText('40.00');
-  await driver.delayMs(600); await driver.pressBack();
+  await enterAmount(driver, 'calibration-amount', '40.00');
+  await hideAmountKeyboard(driver, 'calibration-amount');
   await waitText(driver, 'calibration-after', '-40.00');
   await waitText(driver, 'calibration-delta', '-40.00');
   await driver.delayMs(500); expect(await driver.screenCap(host.filesDir + '/xiaoqiao-calibration-debt.png')).assertTrue();
@@ -104,8 +105,8 @@ export async function verifyAccountCalibrationUI(driver: Driver, host: common.UI
   await (await driver.waitForComponent(ON.id('account-calibrate'), 5000)).click();
   await waitText(driver, 'calibration-before', '-40.00');
   await (await driver.waitForComponent(ON.text('溢缴余额').within(ON.id('calibration-direction')), 5000)).click();
-  await (await driver.findComponent(ON.id('calibration-amount'))).inputText('5.25');
-  await driver.delayMs(600); await driver.pressBack();
+  await enterAmount(driver, 'calibration-amount', '5.25');
+  await hideAmountKeyboard(driver, 'calibration-amount');
   await waitText(driver, 'calibration-after', '5.25');
   await waitText(driver, 'calibration-delta', '+45.25');
   await (await driver.findComponent(ON.id('calibration-confirm'))).click();

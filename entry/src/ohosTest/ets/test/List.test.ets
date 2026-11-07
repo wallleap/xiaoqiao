@@ -8,6 +8,7 @@ import transfersTest from './Transfers.test';
 import accountsTest from './Accounts.test';
 import incomeTest from './Income.test';
 import entryEditTest from './EntryEdit.test';
+import localLedgerBackupTest from './LocalLedgerBackup.test';
 
 export default function testsuite() {
   abilityTest();
@@ -20,4 +21,5 @@ export default function testsuite() {
   accountCalibrationTest();
   transfersTest();
   transferMigrationTest();
+  localLedgerBackupTest();
 }

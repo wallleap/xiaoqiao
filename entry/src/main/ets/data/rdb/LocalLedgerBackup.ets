@@ -1,0 +1,187 @@
+import { common } from '@kit.AbilityKit';
+import { relationalStore } from '@kit.ArkData';
+import { fileIo as fs } from '@kit.CoreFileKit';
+import { RdbSession } from './RdbSession';
+import { TransferMigration } from './TransferMigration';
+
+const MAX_BACKUP_BYTES: number = 128 * 1024 * 1024;
+
+export interface LocalBackupPreview {
+  books: number;
+  entries: number;
+  accounts: number;
+  bytes: number;
+}
+
+/** One instance per foreground workspace. All file operations and restore run on its serial queue. */
+export class LocalLedgerBackup {
+  private readonly context: common.Context;
+  private readonly session: RdbSession;
+  private readonly directory: string;
+  private readonly prefix: string;
+  private readonly candidateName: string;
+  private prepared: boolean = false;
+
+  constructor(context: common.Context, name: string, session: RdbSession) {
+    this.context = context;
+    this.session = session;
+    this.directory = context.databaseDir + '/rdb/';
+    this.prefix = this.directory + name.slice(0, -3) + '_local_backup';
+    this.candidateName = name.slice(0, -3) + '_local_backup_candidate.db';
+  }
+
+  private get candidate(): string { return this.directory + this.candidateName; }
+  private get pending(): string { return this.prefix + '_pending.db'; }
+  private get previous(): string { return this.prefix + '_previous.db'; }
+
+  private static async removeTemporary(path: string): Promise<void> {
+    try { if (await fs.access(path)) { await fs.unlink(path); } } catch (_) { /* The next operation uses the same staging path. */ }
+  }
+
+  private static async syncFile(path: string): Promise<void> {
+    const file = await fs.open(path, fs.OpenMode.READ_WRITE);
+    try { await fs.fsync(file.fd); } finally { await fs.close(file); }
+  }
+
+  private static async copy(source: string, target: string): Promise<void> {
+    const input = await fs.open(source, fs.OpenMode.READ_ONLY);
+    try {
+      const stat = await fs.stat(input.fd);
+      if (!stat.isFile() || stat.size <= 0 || stat.size > MAX_BACKUP_BYTES) { throw new Error('BACKUP_SIZE_UNSUPPORTED'); }
+      const output = await fs.open(target, fs.OpenMode.WRITE_ONLY | fs.OpenMode.CREATE | fs.OpenMode.TRUNC);
+      try {
+        await fs.copyFile(input.fd, output.fd);
+        if ((await fs.stat(output.fd)).size !== stat.size) { throw new Error('BACKUP_COPY_INCOMPLETE'); }
+        await fs.fsync(output.fd);
+      } finally { await fs.close(output); }
+    } finally { await fs.close(input); }
+  }
+
+  private static async schema(db: relationalStore.RdbStore): Promise<string> {
+    const rows = await db.querySql("SELECT type,name,sql FROM sqlite_master WHERE name NOT LIKE 'sqlite_%' ORDER BY type,name");
+    const objects: string[][] = [];
+    try {
+      while (rows.goToNextRow()) { objects.push([rows.getString(0), rows.getString(1), rows.isColumnNull(2) ? '' : rows.getString(2)]); }
+    } finally { rows.close(); }
+    return JSON.stringify(objects);
+  }
+
+  private static async check(db: relationalStore.RdbStore): Promise<void> {
+    if (await TransferMigration.status(db) !== 2) { throw new Error('BACKUP_VERSION_UNSUPPORTED'); }
+    const integrity = await db.querySql('PRAGMA integrity_check(1)');
+    try {
+      if (integrity.rowCount !== 1 || !integrity.goToFirstRow() || integrity.getString(0) !== 'ok') {
+        throw new Error('BACKUP_INTEGRITY_FAILED');
+      }
+    } finally { integrity.close(); }
+    const references = await db.querySql('PRAGMA foreign_key_check');
+    try { if (references.rowCount !== 0) { throw new Error('BACKUP_FOREIGN_KEY_FAILED'); } } finally { references.close(); }
+  }
+
+  private static async preview(db: relationalStore.RdbStore, bytes: number): Promise<LocalBackupPreview> {
+    const counts = await db.querySql('SELECT (SELECT COUNT(*) FROM books WHERE deleted_at_ms IS NULL),' +
+      '(SELECT COUNT(*) FROM v_posted_transactions),(SELECT COUNT(*) FROM accounts WHERE deleted_at_ms IS NULL),' +
+      '(SELECT COUNT(*) FROM attachments)');
+    try {
+      if (!counts.goToFirstRow()) { throw new Error('BACKUP_PREVIEW_FAILED'); }
+      if (counts.getLong(3) !== 0) { throw new Error('BACKUP_ATTACHMENTS_UNSUPPORTED'); }
+      return { books: counts.getLong(0), entries: counts.getLong(1), accounts: counts.getLong(2), bytes: bytes };
+    } finally { counts.close(); }
+  }
+
+  private async inspectCandidate(schema: string): Promise<LocalBackupPreview> {
+    const candidate = await relationalStore.getRdbStore(this.context, { name: this.candidateName,
+      securityLevel: relationalStore.SecurityLevel.S1, isReadOnly: true });
+    try {
+      if (await LocalLedgerBackup.schema(candidate) !== schema) { throw new Error('BACKUP_SCHEMA_MISMATCH'); }
+      await LocalLedgerBackup.check(candidate);
+      return await LocalLedgerBackup.preview(candidate, (await fs.stat(this.candidate)).size);
+    } finally { await candidate.close(); }
+  }
+
+  async exportTo(uri: string, previous: boolean = false): Promise<void> {
+    await this.session.read(async (db: relationalStore.RdbStore): Promise<void> => {
+      if (previous) {
+        await LocalLedgerBackup.copy(this.previous, uri);
+        return;
+      }
+      const path = this.prefix + '_export.db';
+      try {
+        await LocalLedgerBackup.check(db);
+        await LocalLedgerBackup.preview(db, 0);
+        await db.backup(path);
+        await LocalLedgerBackup.copy(path, uri);
+      } finally { await LocalLedgerBackup.removeTemporary(path); }
+    });
+  }
+
+  async hasPrevious(): Promise<boolean> { return fs.access(this.previous); }
+
+  async prepare(uri: string): Promise<LocalBackupPreview> {
+    return this.session.read(async (db: relationalStore.RdbStore): Promise<LocalBackupPreview> => {
+      this.prepared = false;
+      try {
+        await LocalLedgerBackup.copy(uri, this.candidate);
+        const preview = await this.inspectCandidate(await LocalLedgerBackup.schema(db));
+        this.prepared = true;
+        return preview;
+      } finally { if (!this.prepared) { await LocalLedgerBackup.removeTemporary(this.candidate); } }
+    });
+  }
+
+  async discard(): Promise<void> {
+    await this.session.read(async (): Promise<void> => {
+      this.prepared = false;
+      await LocalLedgerBackup.removeTemporary(this.candidate);
+    });
+  }
+
+  async restore(): Promise<void> {
+    await this.session.read(async (db: relationalStore.RdbStore): Promise<void> => {
+      if (!this.prepared || await fs.access(this.pending)) { throw new Error('BACKUP_RESTORE_NOT_READY'); }
+      this.prepared = false;
+      const temporary = this.prefix + '_rollback_work.db';
+      try {
+        const schema = await LocalLedgerBackup.schema(db);
+        const expected = await this.inspectCandidate(schema);
+        await LocalLedgerBackup.check(db);
+        await LocalLedgerBackup.preview(db, 0);
+        await db.backup(temporary);
+        if ((await fs.stat(temporary)).size > MAX_BACKUP_BYTES) { throw new Error('BACKUP_SIZE_UNSUPPORTED'); }
+        await LocalLedgerBackup.syncFile(temporary);
+        // A pending rollback copy is also the startup recovery marker.
+        await fs.rename(temporary, this.pending);
+        try {
+          await db.restore(this.candidate);
+          await LocalLedgerBackup.check(db);
+          if (await LocalLedgerBackup.schema(db) !== schema) { throw new Error('BACKUP_RESTORED_SCHEMA_MISMATCH'); }
+          const actual = await LocalLedgerBackup.preview(db, 0);
+          if (actual.books !== expected.books || actual.entries !== expected.entries || actual.accounts !== expected.accounts) {
+            throw new Error('BACKUP_RESTORED_DATA_MISMATCH');
+          }
+          await fs.rename(this.pending, this.previous);
+        } catch (_) {
+          try { await this.recover(db); }
+          catch (_) {
+            this.session.invalidate();
+            throw new Error('BACKUP_RECOVERY_REQUIRED');
+          }
+          throw new Error('BACKUP_RESTORE_ROLLED_BACK');
+        }
+      } finally {
+        await LocalLedgerBackup.removeTemporary(temporary);
+        await LocalLedgerBackup.removeTemporary(this.candidate);
+      }
+    });
+  }
+
+  /** Called before exposing a newly opened store, or inside the live session's exclusive restore task. */
+  async recover(db: relationalStore.RdbStore): Promise<void> {
+    if (!await fs.access(this.pending)) { return; }
+    try {
+      await db.restore(this.pending);
+      await LocalLedgerBackup.check(db);
+      await fs.rename(this.pending, this.previous);
+    } catch (_) { throw new Error('BACKUP_RECOVERY_REQUIRED'); }
+  }
+}

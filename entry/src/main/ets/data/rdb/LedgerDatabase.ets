@@ -3,6 +3,7 @@ import { relationalStore } from '@kit.ArkData';
 import { REVIEW_SCHEMA_SHA256, REVIEW_SCHEMA_STATEMENTS } from './ReviewSchema';
 import { TransferMigration } from './TransferMigration';
 import { RdbSession } from './RdbSession';
+import { LocalLedgerBackup } from './LocalLedgerBackup';
 
 export const DEFAULT_BOOK_ID: string = 'book-default';
 
@@ -29,6 +30,9 @@ export class LedgerDatabase {
     const store = await relationalStore.getRdbStore(context, { name: name, securityLevel: relationalStore.SecurityLevel.S1 });
     const session = RdbSession.forStore(store);
     try {
+      await session.read(async (db: relationalStore.RdbStore): Promise<void> => {
+        await new LocalLedgerBackup(context, name, session).recover(db);
+      });
       const empty = await session.read(async (db: relationalStore.RdbStore): Promise<boolean> => {
         const objects = await db.querySql("SELECT name FROM sqlite_master WHERE name NOT LIKE 'sqlite_%' AND type IN ('table','view','trigger')");
         try { return objects.rowCount === 0; } finally { objects.close(); }

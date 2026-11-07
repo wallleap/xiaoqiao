@@ -1,6 +1,7 @@
 import { verifyAccountCalibrationUI } from './AccountCalibrationFlow';
 import { verifyTransfersUI } from './TransfersFlow';
 import { verifyAccountsUI } from './AccountsFlow';
+import { enterAmount } from './AmountKeyboardFlow';
 import { common } from '@kit.AbilityKit';
 import { relationalStore } from '@kit.ArkData';
 import { util } from '@kit.ArkTS';
@@ -226,6 +227,19 @@ export default function expenseFlowTest() {
       expect(Math.abs(keyboardBounds.left - navigationBounds.left) <= 2).assertTrue();
       expect(Math.abs(keyboardBounds.right - navigationBounds.right) <= 2).assertTrue();
       expect((await (await driver.findComponent(ON.id('expense-amount'))).getBounds()).bottom < keyboardBounds.top).assertTrue();
+      expect(await driver.findComponent(ON.id('expense-error'))).assertNull();
+      const firstKeyBounds = await (await driver.findComponent(ON.id('expense-key-1'))).getBounds();
+      const initialDiscountBounds = await (await driver.findComponent(ON.id('expense-discount-control'))).getBounds();
+      const keyHeight = firstKeyBounds.bottom - firstKeyBounds.top;
+      const lastKeyBounds = await (await driver.findComponent(ON.id('expense-key-保存'))).getBounds();
+      const panelBounds = await (await driver.findComponent(ON.id('expense-keyboard-panel'))).getBounds();
+      expect(firstKeyBounds.top - initialDiscountBounds.bottom < keyHeight * 0.25).assertTrue();
+      const pixelsPerVp = keyHeight / 48;
+      const sideInset = firstKeyBounds.left - panelBounds.left;
+      expect(Math.abs(sideInset - 16 * pixelsPerVp) <= 2).assertTrue();
+      // The 32vp chip is centered in the 36vp toolbar below the 20vp top inset.
+      expect(Math.abs(initialDiscountBounds.top - panelBounds.top - 22 * pixelsPerVp) <= 2).assertTrue();
+      expect(Math.abs(panelBounds.bottom - lastKeyBounds.bottom - 32 * pixelsPerVp) <= 2).assertTrue();
       await driver.waitForComponent(ON.id('expense-kind-selector'), 5000);
       const amountBeforeCollapse = await (await driver.findComponent(ON.id('expense-amount'))).getBounds();
       const titleBeforeCollapse = await (await driver.findComponent(ON.id('expense-kind-selector'))).getBounds();
@@ -305,9 +319,9 @@ export default function expenseFlowTest() {
       const inputError = await driver.findComponent(ON.id('expense-error'));
       expect(await inputError.getText()).assertEqual('金额无法计算或超出范围，请修改输入');
       const errorBounds = await inputError.getBounds();
-      const errorPanel = await (await driver.findComponent(ON.id('expense-keyboard-panel'))).getBounds();
-      const discountBounds = await (await driver.findComponent(ON.id('expense-discount-control'))).getBounds();
-      expect(errorBounds.top >= errorPanel.top && errorBounds.bottom <= discountBounds.top).assertTrue();
+      const paidForError = await (await driver.findComponent(ON.id('expense-paid'))).getBounds();
+      const amountCardForError = await (await driver.findComponent(ON.id('expense-amount-card'))).getBounds();
+      expect(errorBounds.top >= paidForError.bottom && errorBounds.bottom <= amountCardForError.bottom).assertTrue();
       const keyboardWithError = await (await driver.findComponent(ON.id('expense-native-keyboard'))).getBounds();
       expect(keyboardWithError.bottom - keyboardWithError.top).assertEqual(keyboardBounds.bottom - keyboardBounds.top);
       expect(await driver.screenCap(host.filesDir + '/xiaoqiao-keyboard-error.png')).assertTrue();
@@ -326,6 +340,21 @@ export default function expenseFlowTest() {
       const discountControl = await driver.findComponent(ON.id('expense-discount-control'));
       const discountBefore = await discountControl.getBounds();
       await discountControl.click();
+      for (const key of ['−', '1']) { await (await driver.findComponent(ON.id('expense-key-' + key))).click(); }
+      const discountError = await driver.waitForComponent(ON.id('expense-error').text('优惠金额无法计算或超出范围，请修改输入'), 5000);
+      expect(discountError !== null).assertTrue();
+      const discountErrorBounds = await discountError.getBounds();
+      const discountInError = await (await driver.findComponent(ON.id('expense-discount-control'))).getBounds();
+      const firstKeyInError = await (await driver.findComponent(ON.id('expense-key-1'))).getBounds();
+      expect(discountErrorBounds.top >= discountInError.bottom && discountErrorBounds.bottom <= firstKeyInError.top).assertTrue();
+      // Wait for native keyboard avoidance to settle after the error line changes the panel height.
+      await driver.delayMs(350);
+      await (await driver.findComponent(ON.id('expense-key-清空'))).click();
+      for (let attempt = 0; attempt < 20; attempt++) {
+        if (await driver.findComponent(ON.id('expense-error')) === null) { break; }
+        await driver.delayMs(50);
+      }
+      expect(await driver.findComponent(ON.id('expense-error'))).assertNull();
       for (const key of ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0']) {
         await (await driver.findComponent(ON.id('expense-key-' + key))).click();
       }
@@ -446,10 +475,12 @@ export default function expenseFlowTest() {
       await driver.waitForComponent(ON.id(savedId), 5000);
       await (await driver.findComponent(ON.id('ledger-edit-budget'))).click();
       await driver.waitForComponent(ON.text('修改月预算'), 5000);
-      await (await driver.findComponent(ON.id('ledger-budget-input'))).inputText('3000');
+      await enterAmount(driver, 'ledger-budget-input', '3000+');
+      expect(await driver.waitForComponent(ON.id('ledger-budget-input-key-保存').enabled(false), 3000) !== null).assertTrue();
+      await (await driver.findComponent(ON.id('ledger-budget-input-key-⌫'))).click();
       await driver.delayMs(600);
       expect(await driver.screenCap(host.filesDir + '/xiaoqiao-budget-editing.png')).assertTrue();
-      const budgetSave = await driver.waitForComponent(ON.id('ledger-budget-save'), 3000);
+      const budgetSave = await driver.waitForComponent(ON.id('ledger-budget-input-key-保存').enabled(true), 3000);
       if (budgetSave === null) { throw new Error('BUDGET_SAVE_NOT_VISIBLE'); }
       await budgetSave.click();
       const remaining = await driver.waitForComponent(ON.text('2,989.00'), 5000);

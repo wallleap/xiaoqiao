@@ -40,6 +40,9 @@ export class RdbSession {
     });
   }
 
+  /** An exclusive maintenance operation can quarantine the handle if rollback fails. */
+  invalidate(): void { this.unusable = true; }
+
   write<T>(work: (store: relationalStore.RdbStore) => Promise<T>): Promise<T> {
     return this.queue.run(async (): Promise<T> => {
       this.requireUsable();

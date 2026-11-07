@@ -61,6 +61,18 @@ export class ExpenseAmountInput {
     return next;
   }
 
+  static nonnegative(expression: string, currency: CurrencyUnit, allowPending: boolean = false): Money {
+    const amount = ExpenseAmountInput.paidAmount(expression, '0', currency, allowPending);
+    if (amount.minor < BigInt(0)) { throw new Error('NEGATIVE_AMOUNT'); }
+    return amount;
+  }
+
+  static appendNonnegative(expression: string, key: string, currency: CurrencyUnit): string {
+    const next = ExpenseAmountInput.append(expression, key, currency.scale);
+    if (key !== '⌫') { ExpenseAmountInput.nonnegative(next, currency, true); }
+    return next;
+  }
+
   static evaluate(expression: string, currency: CurrencyUnit): Money {
     if (expression.length > 64 || !/^\d+(\.\d*)?([+−]\d+(\.\d*)?)*$/.test(expression)) {
       throw new Error('INCOMPLETE_AMOUNT_EXPRESSION');

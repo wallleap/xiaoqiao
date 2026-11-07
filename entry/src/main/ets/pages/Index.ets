@@ -3,6 +3,8 @@ import { ChipGroup, ChipSize, curves, window } from '@kit.ArkUI';
 import { HdsTabs, hdsMaterial, HdsNavigation, HdsNavigationTitleMode, HdsListItemCard,
   PrefixCustomBuilder, SuffixCustomBuilder, HdsSnackBar, SnackBarOperationType, ScrollEffectType, DividerShowType } from '@kit.UIDesignKit';
 import { AccountsPage } from '../components/AccountsPage';
+import { LocalBackupPage } from '../components/LocalBackupPage';
+import { MoneyAmountField } from '../components/MoneyAmountField';
 import { AccountEditor } from '../components/AccountEditor';
 import { AccountProfile, AccountOverview } from '../domain/model/AccountProfile';
 import { AmountText } from '../components/AmountText';
@@ -18,6 +20,7 @@ import { LedgerSnapshot, ExpenseCategory, LedgerAccount } from '../domain/model/
 import { EntryDetail } from '../domain/model/EntryDetail';
 import { MonthlyBudget, BudgetProgress, DEFAULT_MONTHLY_BUDGET_MINOR } from '../domain/model/MonthlyBudget';
 import { Money } from '../core/money/Money';
+import { ExpenseAmountInput } from '../presentation/ledger/ExpenseAmountInput';
 import { LedgerEntry, LedgerKind, displayAmount, filterEntries, previewEntries, presentEntry, dailyTotals, isToday } from '../presentation/ledger/LedgerOverview';
 
 interface EntryDeleteTarget { id: string; category: string; minor: string; }
@@ -29,6 +32,7 @@ struct Index {
   @StorageProp('ledgerScrollPreview') private scrollPreview: boolean = false;
   @StorageProp('ledgerForceLegacyMaterials') private forceLegacyMaterials: boolean = false;
   @State private selectedTab: number = 0;
+  @State private backupBusy: boolean = false;
   @State private accountOverview: AccountOverview | undefined = undefined;
   @State private accountError: string = '';
   @State private showAccountEditor: boolean = false;
@@ -63,6 +67,7 @@ struct Index {
   @State private savingExpense: boolean = false;
   @State private selectedMonth: string = '';
   @State private budgetInput: string = '';
+  private readonly budgetController: TextInputController = new TextInputController();
   @State private budgetError: string = '';
   @State private budgetSaving: boolean = false;
   @State private materialReady: boolean = false;
@@ -127,9 +132,16 @@ struct Index {
       this.ledger = await this.workspace.snapshot(this.selectedMonth);
       await this.refreshAccountOverview(this.workspace);
     } catch (error) {
-      this.upgradeRequired = (error as Error).message === 'LEDGER_UPGRADE_REQUIRED';
-      this.loadError = this.upgradeRequired ? '升级本地账本后，可使用转账手续费和还款优惠' : '账本暂时无法读取，已有数据不会被覆盖。请重试';
+      const code = (error as Error).message;
+      this.upgradeRequired = code === 'LEDGER_UPGRADE_REQUIRED';
+      if (code === 'BACKUP_RECOVERY_REQUIRED') { this.showRecoveryError(); }
+      else { this.loadError = this.upgradeRequired ? '升级本地账本后，可使用转账手续费和还款优惠' : '账本暂时无法读取，已有数据不会被覆盖。请重试'; }
     } finally { this.loading = false; }
+  }
+
+  private showRecoveryError(): void {
+    this.loadError = '账本恢复中断，恢复前副本已保留。请退出应用并重新打开。';
+    this.accountError = this.loadError;
   }
 
   private async refreshAccountOverview(workspace: LedgerWorkspace): Promise<void> {
@@ -213,6 +225,7 @@ struct Index {
   }
 
   private openExpense(): void {
+    if (this.backupBusy) { return; }
     if (this.preview) { this.notify('预览样例不写入数据库，请关闭预览后记账'); return; }
     if (this.loading || this.workspace === undefined || this.loadError.length > 0 || this.ledger === undefined) {
       this.notify('请先等待账本读取完成，或重试读取'); return;
@@ -345,15 +358,22 @@ struct Index {
     const workspace = this.workspace;
     if (this.budgetSaving || workspace === undefined) { return; }
     this.budgetError = '';
-    try { MonthlyBudget.parse(this.budgetInput, workspace.currency); }
+    let amount: string;
+    try { amount = ExpenseAmountInput.nonnegative(this.budgetInput, workspace.currency).toDecimalString(); }
     catch (_) { this.budgetError = '请输入 0 或以上的有效金额，最多两位小数，且不超过金额上限'; return; }
+    this.budgetController.stopEditing();
     this.budgetSaving = true;
     try {
-      await workspace.setMonthlyBudget(this.selectedMonth, this.budgetInput);
+      await workspace.setMonthlyBudget(this.selectedMonth, amount);
       await this.loadLedger();
       this.showSelection = false;
     } catch (_) { this.budgetError = '预算未能保存，请稍后重试'; }
     finally { this.budgetSaving = false; }
+  }
+
+  private validBudget(): boolean {
+    if (this.workspace === undefined) { return false; }
+    try { ExpenseAmountInput.nonnegative(this.budgetInput, this.workspace.currency); return true; } catch (_) { return false; }
   }
 
   private primaryStatusBarColor(): string {
@@ -970,13 +990,11 @@ struct Index {
           Text('修改月预算').fontSize('20fp').fontWeight(FontWeight.Bold).width('100%')
           Text(this.month() + ' · 人民币').fontSize('14fp').fontColor($r('app.color.xq_font_secondary')).width('100%')
           Row({ space: 12 }) {
-            TextInput({ text: this.budgetInput, placeholder: '2500.00' }).id('ledger-budget-input')
-              .type(InputType.NUMBER_DECIMAL).enterKeyType(EnterKeyType.Done).fontSize('24fp').fontFamily('XiaoQiaoDINRegular')
-              .height(56).layoutWeight(1).maxLength(32).enabled(!this.budgetSaving)
-              .onChange((value: string) => { this.budgetInput = value; })
-              .onSubmit(() => { this.saveBudget(); })
+            MoneyAmountField({ value: $budgetInput, fieldId: 'ledger-budget-input', fontSize: '24fp',
+              fontFamily: 'XiaoQiaoDINRegular', fieldHeight: 56, controller: this.budgetController,
+              disabled: this.budgetSaving, onSubmit: () => { this.saveBudget(); } }).layoutWeight(1)
             Button(this.budgetSaving ? '保存中' : '保存').id('ledger-budget-save').width(80).height(48)
-              .fontSize('16fp').fontColor(Color.White).backgroundColor($r('app.color.xq_brand')).enabled(!this.budgetSaving)
+              .fontSize('16fp').fontColor(Color.White).backgroundColor($r('app.color.xq_brand')).enabled(!this.budgetSaving && this.validBudget())
               .onClick(() => { this.saveBudget(); })
           }.width('100%')
           Text('仅修改当前月份的预算，不改变账目或账户余额。').fontSize('12fp')
@@ -1065,7 +1083,20 @@ struct Index {
       TabContent() {}.tabBar(this.tabItem(1))
       TabContent() {}.tabBar(this.tabItem(2))
       TabContent() { this.accountsPage() }.tabBar(this.tabItem(3))
-      TabContent() {}.tabBar(this.tabItem(4))
+      TabContent() {
+        LocalBackupPage({
+          getBackup: () => this.workspace?.localBackup,
+          ready: !this.preview && !this.loading && !this.deleting && this.loadError.length === 0 && this.ledger !== undefined,
+          onBusy: (busy: boolean) => { this.backupBusy = busy; },
+          onRecoveryRequired: () => { this.showRecoveryError(); },
+          onRestored: async (): Promise<boolean> => {
+            this.kind = LedgerKind.All; this.displayedKind = LedgerKind.All;
+            this.account = ''; this.keyword = ''; this.showSearch = false;
+            await this.loadLedger();
+            return this.loadError.length === 0 && this.accountError.length === 0;
+          }
+        })
+      }.tabBar(this.tabItem(4))
     }.width('100%').height(LayoutPolicy.matchParent).scrollable(false).barHeight(64)
       .barOverlap(true).vertical(false)
       .barFloatingStyle({ barSideMargin: 16, barBottomMargin: 28,
@@ -1075,7 +1106,8 @@ struct Index {
         } })
       .ignoreLayoutSafeArea([LayoutSafeAreaType.SYSTEM], [LayoutSafeAreaEdge.TOP, LayoutSafeAreaEdge.BOTTOM])
       .onContentWillChange((_current: number, next: number): boolean => {
-        if (next === 0 || next === 3) { this.selectedTab = next; return true; }
+        if (this.backupBusy) { return false; }
+        if (next === 0 || next === 3 || next === 4) { this.selectedTab = next; return true; }
         if (next === 2) { this.openExpense(); } else { this.notify(`${this.labels[next]}页面尚未接入`); }
         return false;
       })
