@@ -13,10 +13,12 @@ import { EntryDetailPage } from '../components/EntryDetailPage';
 import { LedgerSwipeActions } from '../components/LedgerSwipeActions';
 import { common } from '@kit.AbilityKit';
 import { deviceInfo } from '@kit.BasicServicesKit';
+import { util } from '@kit.ArkTS';
 import { FilterMaterials } from '../presentation/materials/FilterMaterials';
 import { LedgerDatabase } from '../data/rdb/LedgerDatabase';
 import { LedgerWorkspace } from '../data/rdb/LedgerWorkspace';
 import { LedgerSnapshot, ExpenseCategory, LedgerAccount } from '../domain/model/LedgerSnapshot';
+import { LedgerBook } from '../domain/model/LedgerBook';
 import { EntryDetail } from '../domain/model/EntryDetail';
 import { MonthlyBudget, BudgetProgress, DEFAULT_MONTHLY_BUDGET_MINOR } from '../domain/model/MonthlyBudget';
 import { Money } from '../core/money/Money';
@@ -47,6 +49,12 @@ struct Index {
   @State private selectionKind: number = 0;
   @State private account: string = '';
   @State private pendingAccount: string = '';
+  @State private books: LedgerBook[] = [];
+  @State private bookName: string = '';
+  @State private editingBook: LedgerBook | undefined = undefined;
+  @State private bookEditing: boolean = false;
+  @State private bookBusy: boolean = false;
+  @State private bookError: string = '';
   @State private viewportWidth: number = 390;
   @State private recordWidth: number = 358;
   @State private bodyViewportHeight: number = 0;
@@ -139,6 +147,107 @@ struct Index {
       if (code === 'BACKUP_RECOVERY_REQUIRED') { this.showRecoveryError(); }
       else { this.loadError = this.upgradeRequired ? '升级本地账本后，可使用转账手续费和还款优惠' : '账本暂时无法读取，已有数据不会被覆盖。请重试'; }
     } finally { this.loading = false; }
+  }
+
+  private async openBookSheet(): Promise<void> {
+    if (this.preview) {
+      this.books = [{ id: 'preview-book', name: '日常账本', revision: 1, archived: false }];
+      this.selectionKind = 0; this.bookEditing = false; this.editingBook = undefined;
+      this.bookError = ''; this.showSelection = true;
+      return;
+    }
+    if (this.workspace === undefined || this.loading) { this.notify('请先等待账本读取完成'); return; }
+    this.selectionKind = 0;
+    this.bookEditing = false;
+    this.editingBook = undefined;
+    this.bookError = '';
+    try {
+      this.books = await this.workspace.books();
+      this.showSelection = true;
+    } catch (_) { this.notify('账本列表暂时无法读取，请重试'); }
+  }
+
+  private beginCreateBook(): void {
+    if (this.preview) { this.notify('预览样例不修改账本'); return; }
+    this.bookEditing = true;
+    this.editingBook = undefined;
+    this.bookName = '';
+    this.bookError = '';
+  }
+
+  private beginEditBook(book: LedgerBook): void {
+    if (this.preview) { this.notify('预览样例不修改账本'); return; }
+    this.bookEditing = true;
+    this.editingBook = book;
+    this.bookName = book.name;
+    this.bookError = '';
+  }
+
+  private async switchBook(book: LedgerBook): Promise<void> {
+    if (this.preview) { this.showSelection = false; return; }
+    if (this.bookBusy || book.archived || this.workspace === undefined) { return; }
+    if (this.ledger !== undefined && this.ledger.bookId === book.id) {
+      this.showSelection = false; return;
+    }
+    this.bookBusy = true;
+    try {
+      await this.workspace.selectBook(book.id);
+      this.kind = LedgerKind.All; this.displayedKind = LedgerKind.All;
+      this.account = ''; this.keyword = ''; this.showSearch = false;
+      this.bodyScroller.scrollTo({ xOffset: 0, yOffset: 0 });
+      await this.loadLedger();
+      this.showSelection = false;
+    } catch (_) { this.bookError = '账本切换失败，请返回刷新后重试'; }
+    finally { this.bookBusy = false; }
+  }
+
+  private async saveBook(): Promise<void> {
+    const workspace = this.workspace;
+    if (this.bookBusy || workspace === undefined) { return; }
+    const name = this.bookName.trim();
+    if (name.length === 0) { this.bookError = '请填写账本名称'; return; }
+    if (name.length > 40) { this.bookError = '账本名称最多 40 个字符'; return; }
+    this.bookBusy = true;
+    this.bookError = '';
+    try {
+      if (this.editingBook === undefined) {
+        await workspace.createBook(name, util.generateRandomUUID());
+      } else {
+        await workspace.updateBook(this.editingBook.id, name, this.editingBook.revision);
+      }
+      this.books = await workspace.books();
+      await this.loadLedger();
+      this.bookEditing = false;
+      this.editingBook = undefined;
+      this.bookName = '';
+    } catch (error) {
+      const code = (error as Error).message;
+      this.bookError = code === 'LEDGER_BOOK_NAME_EXISTS' ? '已有同名账本，请换一个名称' :
+        code === 'LEDGER_BOOK_CHANGED' ? '账本已在别处更新，请关闭后重新打开' : '账本未能保存，请稍后重试';
+    } finally { this.bookBusy = false; }
+  }
+
+  private archiveBook(book: LedgerBook): void {
+    if (this.preview) { this.notify('预览样例不修改账本'); return; }
+    if (this.bookBusy || this.workspace === undefined) { return; }
+    const archive = !book.archived;
+    this.getUIContext().getPromptAction().showDialog({
+      title: archive ? '归档这个账本吗？' : '恢复使用这个账本？',
+      message: archive ? `“${book.name}”的账目和预算会保留，归档后不出现在日常选择中。` : `恢复“${book.name}”后，可以重新切换和记账。`,
+      buttons: [{ text: '取消', color: $r('app.color.xq_font_primary') },
+        { text: archive ? '归档' : '恢复', color: $r('app.color.xq_font_emphasize') }]
+    }).then(async (result) => {
+      if (result.index !== 1 || this.workspace === undefined) { return; }
+      this.bookBusy = true; this.bookError = '';
+      try {
+        await this.workspace.archiveBook(book.id, book.revision, archive);
+        this.books = await this.workspace.books();
+        if (archive && this.ledger?.bookId === book.id) { await this.loadLedger(); }
+        this.notify(archive ? '账本已归档' : '账本已恢复');
+      } catch (error) {
+        this.bookError = (error as Error).message === 'LAST_ACTIVE_LEDGER_BOOK' ? '至少需要保留一个未归档账本' : '账本状态未能保存，请重试';
+      } finally { this.bookBusy = false; }
+    }).catch(() => {});
   }
 
   private showRecoveryError(): void {
@@ -470,7 +579,8 @@ struct Index {
         }
       }.id('ledger-book-selector').backgroundColor(Color.Transparent).padding(0).height(48)
         .constraintSize({ maxWidth: 'calc(100% - 48vp)' })
-      .accessibilityText('选择账本，当前日常账本').onClick(() => { this.selectionKind = 0; this.showSelection = true; })
+      .accessibilityText(`选择账本，当前${this.ledger?.bookName || '日常账本'}`)
+      .onClick(() => { this.openBookSheet(); })
       Blank()
       this.searchAction()
     }.width('100%').padding({ left: this.viewportWidth >= 600 ? 32 : 16, right: this.viewportWidth >= 600 ? 32 : 16 })
@@ -969,8 +1079,9 @@ struct Index {
   }
 
   private selectionSheetOptions(): SheetOptions {
+    const bookHeight = this.bookEditing ? 520 : Math.min(620, 340 + Math.max(0, this.books.length - 1) * 68);
     const options: SheetOptions = {
-      height: this.selectionKind === 0 ? 280 : this.selectionKind === 2 ? 360 : 440, showClose: true,
+      height: this.selectionKind === 0 ? bookHeight : this.selectionKind === 2 ? 360 : 440, showClose: true,
       keyboardAvoidMode: this.selectionKind === 2 ? SheetKeyboardAvoidMode.TRANSLATE_AND_RESIZE : SheetKeyboardAvoidMode.TRANSLATE_AND_SCROLL
     };
     if (this.materialReady && !this.forceLegacyMaterials && this.filterMaterials !== undefined) {
@@ -982,15 +1093,84 @@ struct Index {
   }
 
   @Builder
+  private bookRow(book: LedgerBook) {
+    Column({ space: 8 }) {
+      Row({ space: 8 }) {
+        Text(book.name).fontSize('16fp').fontWeight(FontWeight.Medium).layoutWeight(1).maxLines(1)
+          .textOverflow({ overflow: TextOverflow.Ellipsis }).fontColor($r('app.color.xq_font_primary'))
+        if (!book.archived && this.ledger?.bookId === book.id) {
+          Text('当前').fontSize('12fp').fontColor($r('app.color.xq_font_emphasize'))
+        }
+      }.width('100%')
+      Row({ space: 8 }) {
+        if (book.archived) {
+          Text('已归档').fontSize('12fp').fontColor($r('app.color.xq_font_secondary')).layoutWeight(1)
+        } else {
+          Text(this.ledger?.bookId === book.id ? '正在使用' : '点击切换').fontSize('12fp')
+            .fontColor($r('app.color.xq_font_secondary')).layoutWeight(1)
+        }
+        Button('编辑', { type: ButtonType.Capsule }).height(32).fontSize('12fp')
+          .fontColor($r('app.color.xq_font_emphasize')).backgroundColor($r('app.color.xq_app_surface_keyboard'))
+          .enabled(!this.bookBusy).id('ledger-book-edit-' + book.id)
+          .onClick(() => { this.beginEditBook(book); })
+        Button(book.archived ? '恢复使用' : '归档', { type: ButtonType.Capsule }).height(32).fontSize('12fp')
+          .fontColor(book.archived ? $r('app.color.xq_font_emphasize') : $r('app.color.xq_font_secondary'))
+          .backgroundColor($r('app.color.xq_app_surface_keyboard')).enabled(!this.bookBusy)
+          .id('ledger-book-archive-' + book.id).onClick(() => { this.archiveBook(book); })
+      }.width('100%')
+    }.width('100%').padding(16).borderRadius(16).backgroundColor($r('app.color.xq_app_surface_card'))
+      .id('ledger-book-row-' + book.id)
+      .onClick(() => { if (!book.archived && !this.bookEditing) { this.switchBook(book); } })
+  }
+
+  @Builder
   private bookSheet() {
     Column({ space: 16 }) {
-      Text('选择账本').fontSize('20fp').fontWeight(FontWeight.Bold).width('100%')
-      Row() {
-        Text('日常账本').fontSize('16fp').layoutWeight(1)
-        Text('当前账本').fontSize('12fp').fontColor($r('app.color.xq_font_emphasize'))
-      }.height(56).width('100%').onClick(() => { this.showSelection = false; })
-      Text('账本管理将在后续接入').fontSize('12fp').fontColor($r('app.color.xq_font_secondary')).width('100%')
-    }.padding(24).width('100%')
+      Row({ space: 12 }) {
+        Text('选择账本').fontSize('20fp').fontWeight(FontWeight.Bold).layoutWeight(1)
+        Button('新建账本', { type: ButtonType.Capsule }).height(36).fontSize('14fp')
+          .fontColor($r('app.color.xq_font_emphasize')).backgroundColor($r('app.color.xq_app_surface_keyboard'))
+          .enabled(!this.bookBusy && !this.bookEditing).id('ledger-book-new')
+          .onClick(() => { this.beginCreateBook(); })
+      }.width('100%').padding({ right: 40 })
+      if (this.bookEditing) {
+        Column({ space: 12 }) {
+          Text(this.editingBook === undefined ? '新账本' : '编辑账本').fontSize('14fp')
+            .fontColor($r('app.color.xq_font_secondary')).width('100%')
+          TextInput({ text: this.bookName, placeholder: '账本名称，如：旅行账本' }).height(48).fontSize('16fp')
+            .maxLength(40).borderRadius(12).backgroundColor($r('app.color.xq_app_surface_keyboard'))
+            .id('ledger-book-name').onChange((value: string) => { this.bookName = value; this.bookError = ''; })
+            .onSubmit(() => { this.saveBook(); })
+          Row({ space: 12 }) {
+            Button('取消', { type: ButtonType.Capsule }).layoutWeight(1).height(40).fontSize('14fp')
+              .fontColor($r('app.color.xq_font_primary')).backgroundColor($r('app.color.xq_app_surface_keyboard'))
+              .enabled(!this.bookBusy).onClick(() => { this.bookEditing = false; this.editingBook = undefined; this.bookError = ''; })
+            Button(this.bookBusy ? '保存中' : '保存', { type: ButtonType.Capsule }).layoutWeight(1).height(40).fontSize('14fp')
+              .fontColor(Color.White).backgroundColor($r('app.color.xq_brand')).enabled(!this.bookBusy)
+              .id('ledger-book-save').onClick(() => { this.saveBook(); })
+          }.width('100%')
+        }.padding(16).width('100%').borderRadius(16).backgroundColor($r('app.color.xq_app_surface_card'))
+      }
+      if (this.bookError.length > 0) {
+        Text(this.bookError).fontSize('12fp').fontColor($r('app.color.xq_warning')).width('100%').id('ledger-book-error')
+      }
+      Scroll() {
+        Column({ space: 10 }) {
+          ForEach(this.books.filter((book: LedgerBook) => !book.archived), (book: LedgerBook) => {
+            this.bookRow(book)
+          }, (book: LedgerBook) => book.id)
+          if (this.books.some((book: LedgerBook) => book.archived)) {
+            Text('已归档').fontSize('14fp').fontColor($r('app.color.xq_font_secondary'))
+              .width('100%').margin({ top: 8 })
+            ForEach(this.books.filter((book: LedgerBook) => book.archived), (book: LedgerBook) => {
+              this.bookRow(book)
+            }, (book: LedgerBook) => book.id)
+          }
+        }.width('100%')
+      }.layoutWeight(1).width('100%').align(Alignment.Top).scrollBar(BarState.Off).edgeEffect(EdgeEffect.Spring)
+      Text('资金账户和余额在各账本间共用；账目与预算独立。').fontSize('12fp')
+        .fontColor($r('app.color.xq_font_secondary')).width('100%')
+    }.padding(24).width('100%').height('100%').id('ledger-book-sheet')
   }
 
   @Builder

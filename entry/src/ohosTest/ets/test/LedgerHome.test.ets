@@ -261,6 +261,8 @@ export default function ledgerHomeTest() {
         const books = await driver.findComponent(ON.id('ledger-book-selector'));
         await books.click();
         await driver.waitForComponent(ON.text('选择账本'), 5000);
+        await driver.waitForComponent(ON.id('ledger-book-new'), 5000);
+        expect(await driver.screenCap(ability.context.filesDir + '/xiaoqiao-books-preview.png')).assertTrue();
         await driver.pressBack();
         // Restore committed filters before the next test uses the real isolated ledger.
         await driver.delayMs(600);

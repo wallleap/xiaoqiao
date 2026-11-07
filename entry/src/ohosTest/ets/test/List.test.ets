@@ -13,6 +13,7 @@ import accountsTest from './Accounts.test';
 import incomeTest from './Income.test';
 import entryEditTest from './EntryEdit.test';
 import localLedgerBackupTest from './LocalLedgerBackup.test';
+import booksTest from './Books.test';
 
 export default function testsuite() {
   abilityTest();
@@ -28,5 +29,6 @@ export default function testsuite() {
   localLedgerBackupTest();
   webDavTest();
   backupPackageTest();
+  booksTest();
   if (abilityDelegatorRegistry.getArguments().parameters['-s class'] === 'WebDavHttp') { webDavHttpTest(); }
 }
