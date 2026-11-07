@@ -84,7 +84,7 @@ struct Index {
   @State private filtersInNavigation: boolean = false;
   @State private navigationTitleOpacity: number = 1;
   @State private navigationFilterOffset: number = 56;
-  @State private filterHeight: number = 60;
+  private readonly filterHeight: number = 56;
   @State private activeSwipeId: string = '';
   @State private deleting: boolean = false;
   private deletePromptOpen: boolean = false;
@@ -912,13 +912,9 @@ struct Index {
     Row({ space: 12 }) {
       Column() { this.filterChips() }.layoutWeight(1)
       this.filterSuffix()
-    }.width('100%').alignItems(VerticalAlign.Center)
-      .padding({ bottom: this.filtersInNavigation ? 0 : 12 })
+    }.width('100%').height(this.filterHeight).alignItems(VerticalAlign.Center)
+      .padding({ bottom: this.filtersInNavigation ? 0 : 8 })
       .id(this.materialReady && !this.forceLegacyMaterials ? 'ledger-filter-surface-native' : 'ledger-filter-surface-legacy')
-      .onAreaChange((_previous: Area, current: Area) => {
-        const height = Number(current.height);
-        if (!this.filtersInNavigation && height > 0 && height !== this.filterHeight) { this.filterHeight = height; }
-      })
   }
 
   @Builder

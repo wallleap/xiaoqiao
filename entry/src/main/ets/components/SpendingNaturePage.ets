@@ -172,7 +172,7 @@ export struct SpendingNaturePage {
                 .id('spending-nature-row-' + item.id)
             }, (item: SpendingNatureProfile) => item.id + ':' + item.revision)
           }
-        }.width('100%').constraintSize({ maxWidth: 640 }).padding({ left: 16, right: 16, top: 12, bottom: 32 })
+        }.width('100%').constraintSize({ maxWidth: 640 }).padding({ left: 16, right: 16, top: 40, bottom: 32 })
       }.id('spending-nature-scroll').width('100%').height('100%').align(Alignment.Top).scrollBar(BarState.Off)
         .edgeEffect(EdgeEffect.Spring, { alwaysEnabled: true })
     }.mode(NavigationMode.Stack).titleMode(HdsNavigationTitleMode.MINI)
