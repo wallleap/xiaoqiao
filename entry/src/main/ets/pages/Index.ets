@@ -6,6 +6,7 @@ import { AccountsPage } from '../components/AccountsPage';
 import { LocalBackupPage } from '../components/LocalBackupPage';
 import { SpendingNaturePage } from '../components/SpendingNaturePage';
 import { BudgetPage } from '../components/BudgetPage';
+import { CategoryManagementPage } from '../components/CategoryManagementPage';
 import { MoneyAmountField } from '../components/MoneyAmountField';
 import { AccountEditor } from '../components/AccountEditor';
 import { AccountProfile, AccountOverview } from '../domain/model/AccountProfile';
@@ -39,6 +40,7 @@ struct Index {
   @State private backupBusy: boolean = false;
   @State private showSpendingNatures: boolean = false;
   @State private showBudgetPage: boolean = false;
+  @State private showCategories: boolean = false;
   @State private accountOverview: AccountOverview | undefined = undefined;
   @State private accountError: string = '';
   @State private showAccountEditor: boolean = false;
@@ -357,6 +359,18 @@ struct Index {
   }
 
   @Builder
+  private categoryManagementPage() {
+    CategoryManagementPage({
+      workspace: this.workspace,
+      sheetMaterial: this.materialReady && !this.forceLegacyMaterials ? this.filterMaterials?.menu : undefined,
+      onClose: () => {
+        this.showCategories = false;
+        this.loadLedger();
+      }
+    })
+  }
+
+  @Builder
   private accountEditorPage() {
     AccountEditor({ workspace: this.workspace, original: this.editingAccount, operationBusy: this.accountSaving,
       sheetMaterial: this.materialReady && !this.forceLegacyMaterials ? this.filterMaterials?.menu : undefined,
@@ -561,6 +575,7 @@ struct Index {
 
   onBackPress(): boolean {
     if (this.showBudgetPage) { this.showBudgetPage = false; this.loadLedger(); return true; }
+    if (this.showCategories) { this.showCategories = false; this.loadLedger(); return true; }
     if (this.showSpendingNatures) { this.showSpendingNatures = false; this.loadLedger(); return true; }
     if (this.showAccountEditor) { if (!this.accountSaving) { this.showAccountEditor = false; this.editingAccount = undefined; } return true; }
     if (this.showExpense) { if (!this.savingExpense) { this.closeEditor(); } return true; }
@@ -1335,6 +1350,7 @@ struct Index {
           onBusy: (busy: boolean) => { this.backupBusy = busy; },
           onRecoveryRequired: () => { this.showRecoveryError(); },
           onOpenSpendingNatures: () => { this.showSpendingNatures = true; },
+          onOpenCategories: () => { this.showCategories = true; },
           onRestored: async (): Promise<boolean> => {
             this.kind = LedgerKind.All; this.displayedKind = LedgerKind.All;
             this.account = ''; this.keyword = ''; this.showSearch = false;
@@ -1363,6 +1379,7 @@ struct Index {
 
   build() {
     if (this.showBudgetPage) { this.budgetPage() }
+    else if (this.showCategories) { this.categoryManagementPage() }
     else if (this.showSpendingNatures) { this.spendingNaturePage() }
     else if (this.showAccountEditor) { this.accountEditorPage() }
     else if (this.showExpense) { this.expensePage() }

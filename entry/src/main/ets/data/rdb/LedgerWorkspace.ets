@@ -19,6 +19,7 @@ import { EntryDetail } from '../../domain/model/EntryDetail';
 import { MonthlyBudget, DEFAULT_MONTHLY_BUDGET_MINOR } from '../../domain/model/MonthlyBudget';
 import { LedgerBook, ValidatedLedgerBook } from '../../domain/model/LedgerBook';
 import { BudgetNatureLine, SpendingNatureCommand, SpendingNatureProfile, ValidatedSpendingNature } from '../../domain/model/SpendingNature';
+import { CategoryCommand, CategoryProfile, ValidatedCategory } from '../../domain/model/CategoryProfile';
 import { LedgerDatabase, DEFAULT_BOOK_ID } from './LedgerDatabase';
 import { RdbLedgerRepository } from './RdbLedgerRepository';
 import { RdbSession } from './RdbSession';
@@ -253,6 +254,150 @@ export class LedgerWorkspace {
       const changed = await db.update({ archived_at_ms: archived ? Date.now() : null, updated_at_ms: Date.now(), revision: revision + 1 },
         new relationalStore.RdbPredicates('spending_natures').equalTo('id', id).equalTo('revision', revision).isNull('deleted_at_ms'));
       if (changed !== 1) { throw new Error('SPENDING_NATURE_CHANGED'); }
+    });
+  }
+
+  async categories(): Promise<CategoryProfile[]> {
+    return this.session.read(async (db: relationalStore.RdbStore): Promise<CategoryProfile[]> => {
+      this.activeBookId = await this.activeBookFromMeta(db);
+      const values: CategoryProfile[] = [];
+      const rows = await db.querySql('SELECT id,kind,COALESCE(parent_id,\'\'),name,COALESCE(icon_key,\'other\'),sort_order,revision,archived_at_ms ' +
+        'FROM categories WHERE book_id=? AND deleted_at_ms IS NULL ORDER BY kind DESC,archived_at_ms IS NOT NULL,sort_order,created_at_ms,id',
+        [this.activeBookId]);
+      try {
+        while (rows.goToNextRow()) {
+          values.push({ id: rows.getString(0), kind: rows.getString(1), parentId: rows.getString(2), name: rows.getString(3),
+            iconKey: rows.getString(4), sortOrder: rows.getLong(5), revision: rows.getLong(6), archived: !rows.isColumnNull(7) });
+        }
+      } finally { rows.close(); }
+      return values;
+    });
+  }
+
+  async createCategory(command: CategoryCommand): Promise<void> {
+    const draft = new ValidatedCategory(command).command;
+    await this.session.write(async (db: relationalStore.RdbStore): Promise<void> => {
+      this.activeBookId = await this.activeBookFromMeta(db);
+      if (draft.parentId !== undefined) {
+        const parent = await db.querySql('SELECT id FROM categories WHERE id=? AND book_id=? AND kind=? AND deleted_at_ms IS NULL AND archived_at_ms IS NULL',
+          [draft.parentId, this.activeBookId, draft.kind]);
+        try { if (!parent.goToFirstRow()) { throw new Error('CATEGORY_PARENT_UNAVAILABLE'); } } finally { parent.close(); }
+      }
+      const duplicate = await db.querySql('SELECT id FROM categories WHERE book_id=? AND kind=? AND COALESCE(parent_id,\'\')=? AND name_key=? AND deleted_at_ms IS NULL',
+        [this.activeBookId, draft.kind, draft.parentId || '', draft.name]);
+      try { if (duplicate.goToFirstRow()) { throw new Error('CATEGORY_NAME_EXISTS'); } } finally { duplicate.close(); }
+      const order = await db.querySql('SELECT COALESCE(MAX(sort_order),-1)+1 FROM categories WHERE book_id=? AND kind=? AND COALESCE(parent_id,\'\')=? AND deleted_at_ms IS NULL',
+        [this.activeBookId, draft.kind, draft.parentId || '']);
+      let sortOrder: number = 0;
+      try { if (order.goToFirstRow()) { sortOrder = order.getLong(0); } } finally { order.close(); }
+      const now = Date.now();
+      await db.insert('categories', { id: draft.id, book_id: this.activeBookId, kind: draft.kind,
+        parent_id: draft.parentId, name: draft.name, name_key: draft.name, icon_key: draft.iconKey,
+        sort_order: sortOrder, created_at_ms: now, updated_at_ms: now });
+    });
+  }
+
+  async updateCategory(command: CategoryCommand, revision: number): Promise<void> {
+    const draft = new ValidatedCategory(command).command;
+    if (!Number.isSafeInteger(revision) || revision < 1 || revision >= Number.MAX_SAFE_INTEGER) { throw new Error('INVALID_EXPECTED_REVISION'); }
+    await this.session.write(async (db: relationalStore.RdbStore): Promise<void> => {
+      this.activeBookId = await this.activeBookFromMeta(db);
+      const source = await db.querySql('SELECT kind,COALESCE(parent_id,\'\'),sort_order,archived_at_ms FROM categories WHERE id=? AND book_id=? AND revision=? AND deleted_at_ms IS NULL',
+        [draft.id, this.activeBookId, revision]);
+      let oldParent: string = '';
+      let sortOrder: number = 0;
+      try {
+        if (!source.goToFirstRow() || source.getString(0) !== draft.kind) { throw new Error('CATEGORY_CHANGED'); }
+        oldParent = source.getString(1); sortOrder = source.getLong(2);
+      } finally { source.close(); }
+      if (draft.parentId !== undefined) {
+        const parent = await db.querySql('SELECT id FROM categories WHERE id=? AND book_id=? AND kind=? AND deleted_at_ms IS NULL AND archived_at_ms IS NULL',
+          [draft.parentId, this.activeBookId, draft.kind]);
+        try { if (!parent.goToFirstRow()) { throw new Error('CATEGORY_PARENT_UNAVAILABLE'); } } finally { parent.close(); }
+        const cycle = await db.querySql('SELECT ancestor_id FROM category_closure WHERE ancestor_id=? AND descendant_id=?',
+          [draft.id, draft.parentId]);
+        try { if (cycle.goToFirstRow()) { throw new Error('CATEGORY_CYCLE'); } } finally { cycle.close(); }
+      }
+      if ((draft.parentId || '') !== oldParent) {
+        const order = await db.querySql('SELECT COALESCE(MAX(sort_order),-1)+1 FROM categories WHERE book_id=? AND kind=? AND COALESCE(parent_id,\'\')=? AND deleted_at_ms IS NULL',
+          [this.activeBookId, draft.kind, draft.parentId || '']);
+        try { if (order.goToFirstRow()) { sortOrder = order.getLong(0); } } finally { order.close(); }
+      }
+      const duplicate = await db.querySql('SELECT id FROM categories WHERE id<>? AND book_id=? AND kind=? AND COALESCE(parent_id,\'\')=? AND name_key=? AND deleted_at_ms IS NULL',
+        [draft.id, this.activeBookId, draft.kind, draft.parentId || '', draft.name]);
+      try { if (duplicate.goToFirstRow()) { throw new Error('CATEGORY_NAME_EXISTS'); } } finally { duplicate.close(); }
+      const changed = await db.update({ parent_id: draft.parentId || null, name: draft.name, name_key: draft.name,
+        icon_key: draft.iconKey, sort_order: sortOrder, updated_at_ms: Date.now(), revision: revision + 1 },
+        new relationalStore.RdbPredicates('categories').equalTo('id', draft.id).equalTo('book_id', this.activeBookId)
+          .equalTo('kind', draft.kind).equalTo('revision', revision).isNull('deleted_at_ms'));
+      if (changed !== 1) { throw new Error('CATEGORY_CHANGED'); }
+    });
+  }
+
+  async moveCategory(id: string, revision: number, direction: number): Promise<void> {
+    if (direction !== -1 && direction !== 1) { throw new Error('INVALID_CATEGORY_DIRECTION'); }
+    await this.session.write(async (db: relationalStore.RdbStore): Promise<void> => {
+      this.activeBookId = await this.activeBookFromMeta(db);
+      const current = await db.querySql('SELECT kind,COALESCE(parent_id,\'\'),sort_order FROM categories WHERE id=? AND book_id=? AND revision=? AND deleted_at_ms IS NULL AND archived_at_ms IS NULL',
+        [id, this.activeBookId, revision]);
+      let kind: string = '';
+      let parent: string = '';
+      let sortOrder: number = 0;
+      try {
+        if (!current.goToFirstRow()) { throw new Error('CATEGORY_CHANGED'); }
+        kind = current.getString(0); parent = current.getString(1); sortOrder = current.getLong(2);
+      } finally { current.close(); }
+      const comparator = direction < 0 ? '<' : '>';
+      const ordering = direction < 0 ? 'DESC' : 'ASC';
+      const neighbor = await db.querySql('SELECT id,sort_order,revision FROM categories WHERE book_id=? AND kind=? AND COALESCE(parent_id,\'\')=? ' +
+        'AND archived_at_ms IS NULL AND deleted_at_ms IS NULL AND (sort_order ' + comparator + ' ? OR (sort_order=? AND id ' + comparator + ' ?)) ' +
+        'ORDER BY sort_order ' + ordering + ',id ' + ordering + ' LIMIT 1',
+        [this.activeBookId, kind, parent, sortOrder, sortOrder, id]);
+      let neighborId: string = '';
+      let neighborSort: number = 0;
+      let neighborRevision: number = 0;
+      try {
+        if (neighbor.goToFirstRow()) {
+          neighborId = neighbor.getString(0); neighborSort = neighbor.getLong(1); neighborRevision = neighbor.getLong(2);
+        }
+      } finally { neighbor.close(); }
+      if (neighborId.length === 0) { return; }
+      const now = Date.now();
+      const first = await db.update({ sort_order: neighborSort, updated_at_ms: now, revision: revision + 1 },
+        new relationalStore.RdbPredicates('categories').equalTo('id', id).equalTo('revision', revision));
+      const second = await db.update({ sort_order: sortOrder, updated_at_ms: now, revision: neighborRevision + 1 },
+        new relationalStore.RdbPredicates('categories').equalTo('id', neighborId).equalTo('revision', neighborRevision));
+      if (first !== 1 || second !== 1) { throw new Error('CATEGORY_CHANGED'); }
+    });
+  }
+
+  async archiveCategory(id: string, revision: number, archived: boolean): Promise<void> {
+    if (!Number.isSafeInteger(revision) || revision < 1 || revision >= Number.MAX_SAFE_INTEGER) { throw new Error('INVALID_EXPECTED_REVISION'); }
+    await this.session.write(async (db: relationalStore.RdbStore): Promise<void> => {
+      this.activeBookId = await this.activeBookFromMeta(db);
+      const source = await db.querySql('SELECT kind,COALESCE(parent_id,\'\') FROM categories WHERE id=? AND book_id=? AND revision=? AND deleted_at_ms IS NULL',
+        [id, this.activeBookId, revision]);
+      let kind: string = '';
+      let parentId: string = '';
+      try {
+        if (!source.goToFirstRow()) { throw new Error('CATEGORY_CHANGED'); }
+        kind = source.getString(0); parentId = source.getString(1);
+      } finally { source.close(); }
+      if (archived) {
+        const children = await db.querySql('SELECT id FROM categories WHERE parent_id=? AND deleted_at_ms IS NULL AND archived_at_ms IS NULL LIMIT 1',
+          [id]);
+        try { if (children.goToFirstRow()) { throw new Error('CATEGORY_HAS_CHILDREN'); } } finally { children.close(); }
+        const other = await db.querySql('SELECT id FROM categories WHERE id<>? AND book_id=? AND kind=? AND deleted_at_ms IS NULL AND archived_at_ms IS NULL LIMIT 1',
+          [id, this.activeBookId, kind]);
+        try { if (!other.goToFirstRow()) { throw new Error('LAST_ACTIVE_CATEGORY'); } } finally { other.close(); }
+      } else if (parentId.length > 0) {
+        const parent = await db.querySql('SELECT id FROM categories WHERE id=? AND deleted_at_ms IS NULL AND archived_at_ms IS NULL', [parentId]);
+        try { if (!parent.goToFirstRow()) { throw new Error('CATEGORY_PARENT_UNAVAILABLE'); } } finally { parent.close(); }
+      }
+      const changed = await db.update({ archived_at_ms: archived ? Date.now() : null, updated_at_ms: Date.now(), revision: revision + 1 },
+        new relationalStore.RdbPredicates('categories').equalTo('id', id).equalTo('book_id', this.activeBookId)
+          .equalTo('revision', revision).isNull('deleted_at_ms'));
+      if (changed !== 1) { throw new Error('CATEGORY_CHANGED'); }
     });
   }
 
