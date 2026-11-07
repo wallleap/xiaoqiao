@@ -129,13 +129,13 @@ export struct LocalBackupPage {
           Column({ space: 12 }) {
             Row() {
               Column({ space: 4 }) {
-                Text('分类与标签').fontSize('18fp').fontWeight(FontWeight.Medium)
+                Text('分类、预算与标签').fontSize('18fp').fontWeight(FontWeight.Medium)
                   .fontColor($r('app.color.xq_font_primary')).width('100%')
-                Text('收支分类负责分层统计，支出性质描述消费目的，标签继续用于交叉检索。')
+                Text('收支分类负责记账明细，预算分类用于月度分类预算，标签继续用于交叉检索。')
                   .fontSize('12fp').fontColor($r('app.color.xq_font_secondary')).width('100%')
               }.layoutWeight(1).alignItems(HorizontalAlign.Start)
             }.width('100%')
-            Button('管理支出性质', { type: ButtonType.Capsule }).width('100%').height(44).fontSize('14fp')
+            Button('管理预算分类', { type: ButtonType.Capsule }).width('100%').height(44).fontSize('14fp')
               .fontColor($r('app.color.xq_font_emphasize')).backgroundColor($r('app.color.xq_app_surface_page'))
               .enabled(this.ready && !this.busy).id('settings-spending-natures')
               .onClick(() => { this.onOpenSpendingNatures(); })

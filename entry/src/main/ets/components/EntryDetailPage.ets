@@ -109,7 +109,7 @@ export struct EntryDetailPage {
         } else {
           this.field('收支分类', this.entry.categoryPath)
           if (this.entry.spendingNatureName !== undefined && this.entry.spendingNatureName.length > 0) {
-            this.field('支出性质', this.entry.spendingNatureName)
+            this.field('预算分类', this.entry.spendingNatureName)
           }
           this.field('资金账户', this.entry.accountName || '不使用账户')
           this.field('计入预算', this.entry.includeInBudget ? '计入' : '不计入')

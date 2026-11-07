@@ -470,7 +470,7 @@ export struct ExpenseEditor {
   private spendingNatureSelector() {
     Column({ space: 12 }) {
       Row({ space: 6 }) {
-        Text('支出性质').fontSize('14fp').fontWeight(FontWeight.Medium).fontColor($r('app.color.xq_font_primary'))
+        Text('预算分类').fontSize('14fp').fontWeight(FontWeight.Medium).fontColor($r('app.color.xq_font_primary'))
         Image($r('app.media.lucide_info1')).width(16).height(16).fillColor($r('app.color.xq_icon_tertiary'))
         Blank()
         if (this.selectedNatureId.length > 0) {
@@ -479,7 +479,7 @@ export struct ExpenseEditor {
             .id('expense-nature-clear').onClick(() => { this.selectedNatureId = ''; })
         }
       }.width('100%').onClick(() => {
-        this.inform('支出性质用于区分生存保障、体验享受、成长提升和突发支出；可以为空，不影响金额与账户。');
+        this.inform('预算分类用于月度分类预算和支出目的分析；可以为空，不影响金额、账户或收支分类。');
       })
       Flex({ wrap: FlexWrap.Wrap, justifyContent: FlexAlign.Start }) {
         ForEach(this.spendingNatures, (nature: SpendingNatureChoice) => {

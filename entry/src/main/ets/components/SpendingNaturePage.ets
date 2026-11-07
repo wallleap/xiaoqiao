@@ -35,7 +35,7 @@ export struct SpendingNaturePage {
     if (this.workspace === undefined) { this.loading = false; return; }
     this.loading = true; this.error = '';
     try { this.values = await this.workspace.spendingNatures(); }
-    catch (_) { this.error = '支出性质暂时无法读取，请返回后重试'; }
+    catch (_) { this.error = '预算分类暂时无法读取，请返回后重试'; }
     finally { this.loading = false; }
   }
 
@@ -60,8 +60,8 @@ export struct SpendingNaturePage {
       this.showEditor = false;
     } catch (error) {
       const code = (error as Error).message;
-      this.error = code === 'SPENDING_NATURE_NAME_EXISTS' ? '已有同名支出性质' :
-        code === 'SPENDING_NATURE_CHANGED' ? '支出性质已更新，请关闭后重新打开' :
+      this.error = code === 'SPENDING_NATURE_NAME_EXISTS' ? '已有同名预算分类' :
+        code === 'SPENDING_NATURE_CHANGED' ? '预算分类已更新，请关闭后重新打开' :
         this.name.trim().length === 0 ? '请填写名称' : '保存失败，请稍后重试';
     } finally { this.busy = false; }
   }
@@ -70,8 +70,8 @@ export struct SpendingNaturePage {
     if (this.busy || this.workspace === undefined) { return; }
     const archived = !item.archived;
     this.getUIContext().getPromptAction().showDialog({
-      title: archived ? '归档这个支出性质？' : '恢复这个支出性质？',
-      message: archived ? '历史账目继续保留该性质，新记账时不再显示。' : '恢复后可重新用于新支出。',
+      title: archived ? '归档这个预算分类？' : '恢复这个预算分类？',
+      message: archived ? '历史账目和预算继续保留该分类，新记账时不再显示。' : '恢复后可重新用于新支出和分类预算。',
       buttons: [{ text: '取消', color: $r('app.color.xq_font_primary') },
         { text: archived ? '归档' : '恢复', color: $r('app.color.xq_font_emphasize') }]
     }).then(async (result) => {
@@ -81,7 +81,7 @@ export struct SpendingNaturePage {
         await this.workspace.archiveSpendingNature(item.id, item.revision, archived);
         this.values = await this.workspace.spendingNatures();
       } catch (error) {
-        this.error = (error as Error).message === 'LAST_ACTIVE_SPENDING_NATURE' ? '至少保留一个使用中的支出性质' : '无法更新状态，请重试';
+        this.error = (error as Error).message === 'LAST_ACTIVE_SPENDING_NATURE' ? '至少保留一个使用中的预算分类' : '无法更新状态，请重试';
       } finally { this.busy = false; }
     }).catch(() => {});
   }
@@ -96,7 +96,7 @@ export struct SpendingNaturePage {
   @Builder
   private editorSheet() {
     Column({ space: 16 }) {
-      Text(this.editing === undefined ? '新增支出性质' : '编辑支出性质').fontSize('20fp').fontWeight(FontWeight.Bold).width('100%')
+      Text(this.editing === undefined ? '新增预算分类' : '编辑预算分类').fontSize('20fp').fontWeight(FontWeight.Bold).width('100%')
       TextInput({ text: this.name, placeholder: '例如：健康投入' }).fontSize('16fp').height(48).maxLength(20)
         .borderRadius(12).backgroundColor($r('app.color.xq_app_surface_keyboard'))
         .id('spending-nature-name').onChange((value: string) => { this.name = value; this.error = ''; })
@@ -130,9 +130,9 @@ export struct SpendingNaturePage {
       Scroll(this.scroller) {
         Column({ space: 16 }) {
           Column({ space: 8 }) {
-            Text('用于区分生存保障、体验享受、成长提升和突发支出。收入、转账与标签不受影响。')
+            Text('用于月度分类预算和支出目的分析。细则仍由收支分类记录，标签继续负责交叉检索。')
               .fontSize('14fp').fontColor($r('app.color.xq_font_secondary')).width('100%')
-            Button('新增自定义性质', { type: ButtonType.Capsule }).width('100%').height(44).fontSize('14fp')
+            Button('新增自定义预算分类', { type: ButtonType.Capsule }).width('100%').height(44).fontSize('14fp')
               .fontColor(Color.White).backgroundColor($r('app.color.xq_brand')).enabled(!this.busy)
               .id('spending-nature-create').onClick(() => { this.beginCreate(); })
           }.padding(16).width('100%').borderRadius(20).backgroundColor($r('app.color.xq_app_surface_card'))
@@ -159,7 +159,7 @@ export struct SpendingNaturePage {
                       Text('内置').fontSize('10fp').fontColor($r('app.color.xq_font_tertiary'))
                     }
                   }
-                  Text(item.archived ? '历史账目仍保留' : '可用于新支出').fontSize('12fp').fontColor($r('app.color.xq_font_secondary'))
+                  Text(item.archived ? '历史预算仍保留' : '可分配月度预算').fontSize('12fp').fontColor($r('app.color.xq_font_secondary'))
                 }.layoutWeight(1).alignItems(HorizontalAlign.Start)
                 Button('编辑', { type: ButtonType.Capsule }).height(32).fontSize('12fp')
                   .fontColor($r('app.color.xq_font_emphasize')).backgroundColor($r('app.color.xq_app_surface_keyboard'))
@@ -172,12 +172,12 @@ export struct SpendingNaturePage {
                 .id('spending-nature-row-' + item.id)
             }, (item: SpendingNatureProfile) => item.id + ':' + item.revision)
           }
-        }.width('100%').constraintSize({ maxWidth: 640 }).padding({ left: 16, right: 16, top: 40, bottom: 32 })
+        }.width('100%').constraintSize({ maxWidth: 640 }).padding({ left: 16, right: 16, top: 12, bottom: 32 })
       }.id('spending-nature-scroll').width('100%').height('100%').align(Alignment.Top).scrollBar(BarState.Off)
         .edgeEffect(EdgeEffect.Spring, { alwaysEnabled: true })
     }.mode(NavigationMode.Stack).titleMode(HdsNavigationTitleMode.MINI)
-      .titleBar({ enableComponentSafeArea: true, avoidLayoutSafeArea: true,
-        content: { title: { mainTitle: '支出性质' }, divider: { showType: DividerShowType.OFF },
+      .titleBar({ enableComponentSafeArea: true,
+        content: { title: { mainTitle: '预算分类' }, divider: { showType: DividerShowType.OFF },
           backIcon: { componentId: 'spending-nature-close', action: () => { if (!this.busy) { this.onClose(); } } } },
         style: {
           originalStyle: { contentStyle: { titleStyle: { mainTitleColor: $r('app.color.xq_font_primary') },
@@ -186,7 +186,8 @@ export struct SpendingNaturePage {
           scrollEffectOpts: { enableScrollEffect: true, scrollEffectType: ScrollEffectType.IMMERSIVE_GRADIENT_BLUR } } })
       .systemBarStyle({ statusBarContentColor: this.statusBarColor() }, { statusBarContentColor: this.statusBarColor() })
       .bindToScrollable([this.scroller]).backgroundColor($r('app.color.xq_app_surface_page'))
-      .ignoreLayoutSafeArea([LayoutSafeAreaType.SYSTEM], [LayoutSafeAreaEdge.TOP, LayoutSafeAreaEdge.BOTTOM])
+      .ignoreLayoutSafeArea([LayoutSafeAreaType.SYSTEM], [LayoutSafeAreaEdge.TOP])
+      .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM])
       .bindSheet($$this.showEditor, this.editorSheet(), this.sheetOptions()).id('spending-nature-page')
   }
 }
