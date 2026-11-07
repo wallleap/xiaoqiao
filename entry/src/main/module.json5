@@ -10,6 +10,7 @@
       "2in1"
     ],
     "deliveryWithInstall": true,
+    "requestPermissions": [{ "name": "ohos.permission.INTERNET" }],
     "installationFree": false,
     "pages": "$profile:main_pages",
     "abilities": [

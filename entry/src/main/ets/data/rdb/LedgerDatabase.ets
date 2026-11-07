@@ -1,3 +1,4 @@
+import { LedgerBackupPackage } from '../backup/LedgerBackupPackage';
 import { common } from '@kit.AbilityKit';
 import { relationalStore } from '@kit.ArkData';
 import { REVIEW_SCHEMA_SHA256, REVIEW_SCHEMA_STATEMENTS } from './ReviewSchema';
@@ -31,7 +32,9 @@ export class LedgerDatabase {
     const session = RdbSession.forStore(store);
     try {
       await session.read(async (db: relationalStore.RdbStore): Promise<void> => {
-        await new LocalLedgerBackup(context, name, session).recover(db);
+        const backup = new LocalLedgerBackup(context, name, session);
+        await backup.recover(db);
+        await new LedgerBackupPackage(context, name, backup).recover(db);
       });
       const empty = await session.read(async (db: relationalStore.RdbStore): Promise<boolean> => {
         const objects = await db.querySql("SELECT name FROM sqlite_master WHERE name NOT LIKE 'sqlite_%' AND type IN ('table','view','trigger')");

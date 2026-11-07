@@ -6,11 +6,19 @@ import { TransferMigration } from './TransferMigration';
 
 const MAX_BACKUP_BYTES: number = 128 * 1024 * 1024;
 
+export interface BackupResourceRef { path: string; sha256: string; bytes: number; }
+export interface BackupResourceSwap {
+  begin(db: relationalStore.RdbStore, rollback: string): Promise<void>;
+  finish(): Promise<void>;
+  recover(db: relationalStore.RdbStore): Promise<void>;
+}
+
 export interface LocalBackupPreview {
   books: number;
   entries: number;
   accounts: number;
   bytes: number;
+  resources?: number;
 }
 
 /** One instance per foreground workspace. All file operations and restore run on its serial queue. */
@@ -84,7 +92,7 @@ export class LocalLedgerBackup {
       '(SELECT COUNT(*) FROM attachments)');
     try {
       if (!counts.goToFirstRow()) { throw new Error('BACKUP_PREVIEW_FAILED'); }
-      if (counts.getLong(3) !== 0) { throw new Error('BACKUP_ATTACHMENTS_UNSUPPORTED'); }
+
       return { books: counts.getLong(0), entries: counts.getLong(1), accounts: counts.getLong(2), bytes: bytes };
     } finally { counts.close(); }
   }
@@ -99,30 +107,50 @@ export class LocalLedgerBackup {
     } finally { await candidate.close(); }
   }
 
-  async exportTo(uri: string, previous: boolean = false): Promise<void> {
-    await this.session.read(async (db: relationalStore.RdbStore): Promise<void> => {
-      if (previous) {
-        await LocalLedgerBackup.copy(this.previous, uri);
-        return;
+  static async resources(db: relationalStore.RdbStore): Promise<BackupResourceRef[]> {
+    const result: BackupResourceRef[] = [];
+    const rows = await db.querySql('SELECT relative_path,content_sha256,byte_size,state FROM attachments');
+    try {
+      while (rows.goToNextRow()) {
+        if (rows.getString(3) !== 'ready') { throw new Error('BACKUP_RESOURCE_NOT_READY'); }
+        result.push({ path: rows.getString(0), sha256: rows.getString(1), bytes: rows.getLong(2) });
       }
+    } finally { rows.close(); }
+    const icons = await db.querySql("SELECT icon_key FROM categories WHERE icon_key LIKE 'resource:%' UNION SELECT icon_key FROM accounts WHERE icon_key LIKE 'resource:%'");
+    try {
+      while (icons.goToNextRow()) {
+        const path = icons.getString(0).slice(9);
+        result.push({ path: path, sha256: path.split('/').pop()?.split('.')[0] || '', bytes: 0 });
+      }
+    } finally { icons.close(); }
+    return result;
+  }
+
+  async exportTo(uri: string, previous: boolean = false): Promise<BackupResourceRef[]> {
+    return this.session.read(async (db: relationalStore.RdbStore): Promise<BackupResourceRef[]> => {
+      if (previous) { await LocalLedgerBackup.copy(this.previous, uri); return []; }
       const path = this.prefix + '_export.db';
       try {
-        await LocalLedgerBackup.check(db);
-        await LocalLedgerBackup.preview(db, 0);
-        await db.backup(path);
-        await LocalLedgerBackup.copy(path, uri);
+        await LocalLedgerBackup.check(db); await LocalLedgerBackup.preview(db, 0);
+        const resources = await LocalLedgerBackup.resources(db);
+        await db.backup(path); await LocalLedgerBackup.copy(path, uri); return resources;
       } finally { await LocalLedgerBackup.removeTemporary(path); }
     });
   }
 
   async hasPrevious(): Promise<boolean> { return fs.access(this.previous); }
 
-  async prepare(uri: string): Promise<LocalBackupPreview> {
+  async prepare(uri: string, checkResources?: (references: BackupResourceRef[]) => Promise<void>): Promise<LocalBackupPreview> {
     return this.session.read(async (db: relationalStore.RdbStore): Promise<LocalBackupPreview> => {
       this.prepared = false;
       try {
         await LocalLedgerBackup.copy(uri, this.candidate);
         const preview = await this.inspectCandidate(await LocalLedgerBackup.schema(db));
+        if (checkResources !== undefined) {
+          const candidate = await relationalStore.getRdbStore(this.context, { name: this.candidateName,
+            securityLevel: relationalStore.SecurityLevel.S1, isReadOnly: true });
+          try { await checkResources(await LocalLedgerBackup.resources(candidate)); } finally { await candidate.close(); }
+        }
         this.prepared = true;
         return preview;
       } finally { if (!this.prepared) { await LocalLedgerBackup.removeTemporary(this.candidate); } }
@@ -136,7 +164,7 @@ export class LocalLedgerBackup {
     });
   }
 
-  async restore(): Promise<void> {
+  async restore(resources?: BackupResourceSwap): Promise<void> {
     await this.session.read(async (db: relationalStore.RdbStore): Promise<void> => {
       if (!this.prepared || await fs.access(this.pending)) { throw new Error('BACKUP_RESTORE_NOT_READY'); }
       this.prepared = false;
@@ -152,6 +180,7 @@ export class LocalLedgerBackup {
         // A pending rollback copy is also the startup recovery marker.
         await fs.rename(temporary, this.pending);
         try {
+          if (resources !== undefined) { await resources.begin(db, this.pending); }
           await db.restore(this.candidate);
           await LocalLedgerBackup.check(db);
           if (await LocalLedgerBackup.schema(db) !== schema) { throw new Error('BACKUP_RESTORED_SCHEMA_MISMATCH'); }
@@ -160,8 +189,9 @@ export class LocalLedgerBackup {
             throw new Error('BACKUP_RESTORED_DATA_MISMATCH');
           }
           await fs.rename(this.pending, this.previous);
+          if (resources !== undefined) { await resources.finish(); }
         } catch (_) {
-          try { await this.recover(db); }
+          try { await this.recover(db); if (resources !== undefined) { await resources.recover(db); } }
           catch (_) {
             this.session.invalidate();
             throw new Error('BACKUP_RECOVERY_REQUIRED');

@@ -1,3 +1,4 @@
+import { LedgerBackupPackage } from '../backup/LedgerBackupPackage';
 import { AccountCalibrationCommand, AdjustmentCursor, AdjustmentPage } from '../../domain/model/AccountCalibration';
 import { common } from '@kit.AbilityKit';
 import { relationalStore } from '@kit.ArkData';
@@ -27,6 +28,7 @@ export class LedgerWorkspace {
   readonly currency: CurrencyUnit = new CurrencyUnit('CNY', 'CNY', 2);
   private readonly store: relationalStore.RdbStore;
   private readonly session: RdbSession;
+  readonly backup: LedgerBackupPackage;
   readonly localBackup: LocalLedgerBackup;
   private readonly writer: RecordExpense;
   private readonly updater: UpdateExpense;
@@ -38,6 +40,7 @@ export class LedgerWorkspace {
     this.store = store;
     this.session = RdbSession.forStore(store);
     this.localBackup = new LocalLedgerBackup(context, name, this.session);
+    this.backup = new LedgerBackupPackage(context, name, this.localBackup);
     this.accountRepository = new RdbAccountRepository(store);
     this.transfer = new TransferService(new RdbTransferRepository(store));
     this.income = new IncomeService(new RdbLedgerRepository(store));

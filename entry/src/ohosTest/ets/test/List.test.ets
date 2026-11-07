@@ -1,3 +1,7 @@
+import backupPackageTest from './BackupPackage.test';
+import { abilityDelegatorRegistry } from '@kit.TestKit';
+import webDavHttpTest from './WebDavHttp.test';
+import webDavTest from './WebDav.test';
 import accountCalibrationTest from './AccountCalibration.test';
 import transferMigrationTest from './TransferMigration.test';
 import abilityTest from './Ability.test';
@@ -22,4 +26,7 @@ export default function testsuite() {
   transfersTest();
   transferMigrationTest();
   localLedgerBackupTest();
+  webDavTest();
+  backupPackageTest();
+  if (abilityDelegatorRegistry.getArguments().parameters['-s class'] === 'WebDavHttp') { webDavHttpTest(); }
 }

@@ -1111,7 +1111,7 @@ struct Index {
       TabContent() { this.accountsPage() }.tabBar(this.tabItem(3))
       TabContent() {
         LocalBackupPage({
-          getBackup: () => this.workspace?.localBackup,
+          getBackup: () => this.workspace?.backup,
           ready: !this.preview && !this.loading && !this.deleting && this.loadError.length === 0 && this.ledger !== undefined,
           onBusy: (busy: boolean) => { this.backupBusy = busy; },
           onRecoveryRequired: () => { this.showRecoveryError(); },
