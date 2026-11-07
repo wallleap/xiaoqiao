@@ -9,6 +9,11 @@ import { LedgerBackupPackage } from '../../../main/ets/data/backup/LedgerBackupP
 import { BackupFileInfo, BackupFiles } from '../../../main/ets/data/backup/BackupFiles';
 import { BackupZip } from '../../../main/ets/data/backup/BackupZip';
 import { LedgerResources, StoredLedgerResource } from '../../../main/ets/data/backup/LedgerResources';
+import { DEFAULT_BOOK_ID } from '../../../main/ets/data/rdb/LedgerDatabase';
+import { REVIEW_SCHEMA_SHA256, REVIEW_SCHEMA_STATEMENTS } from '../../../main/ets/data/rdb/ReviewSchema';
+import { RdbSession } from '../../../main/ets/data/rdb/RdbSession';
+import { SpendingNatureMigration } from '../../../main/ets/data/rdb/SpendingNatureMigration';
+import { TransferMigration } from '../../../main/ets/data/rdb/TransferMigration';
 
 async function context(): Promise<common.UIAbilityContext> {
   const delegator = abilityDelegatorRegistry.getAbilityDelegator();
@@ -149,6 +154,47 @@ export default function backupPackageTest() {
         expect((await workspace.snapshot('2026-11')).budgetTotalMinor).assertEqual('400000');
         expect(await fs.access(workspace.backup.resources.root + '/' + newer.relativePath)).assertTrue();
       } finally { await clean(host, name, [archive, rollback]); }
+    });
+    it('upgrades_v2_manifest_on_candidate_copy_before_restore', 0, async () => {
+      const host = await context();
+      const oldName = 'xiaoqiao_app_test_package_v2_' + util.generateRandomUUID() + '.db';
+      const name = 'xiaoqiao_app_test_package_target_' + util.generateRandomUUID() + '.db';
+      const archive = host.cacheDir + '/' + name + '.xqbackup', stage = archive + '.source';
+      try {
+        const old = await database(host, oldName);
+        await RdbSession.forStore(old).write(async (db: relationalStore.RdbStore): Promise<void> => {
+          for (const sql of REVIEW_SCHEMA_STATEMENTS) { if (!sql.startsWith('PRAGMA')) { await db.executeSql(sql); } }
+          await db.insert('db_meta', { key: 'schema_checksum', value: REVIEW_SCHEMA_SHA256 });
+          await db.insert('schema_migrations', { version: 1, checksum: REVIEW_SCHEMA_SHA256, applied_at_ms: 1 });
+          await db.insert('currencies', { id: 'CNY', code: 'CNY', name: '人民币', symbol: '¥', minor_unit: 2,
+            valid_from: '2026-01-01', source_version: 'v2-fixture' });
+          await db.insert('books', { id: DEFAULT_BOOK_ID, name: 'V2 旧账本', base_currency_id: 'CNY',
+            timezone: 'Asia/Shanghai', created_at_ms: 1, updated_at_ms: 1 });
+          await TransferMigration.apply(db, '', false);
+        });
+        await BackupFiles.mkdir(stage);
+        await RdbSession.forStore(old).read(async (db: relationalStore.RdbStore): Promise<void> => {
+          await db.backup(stage + '/ledger.db');
+        });
+        await old.close();
+        const files = [await BackupFiles.info(stage + '/ledger.db', 'ledger.db')];
+        const manifest: FixtureManifest = { format: 'xiaoqiao', version: 1, schema: 2, createdAt: new Date().toISOString(), files: files };
+        await BackupFiles.writeText(stage + '/manifest.json', JSON.stringify(manifest));
+        await BackupZip.encode(stage, archive, [await BackupFiles.info(stage + '/manifest.json', 'manifest.json'), ...files]);
+
+        const workspace = await LedgerWorkspace.open(host, name);
+        const preview = await workspace.backup.prepare(archive);
+        expect(preview.books).assertEqual(1);
+        await workspace.backup.restore();
+        expect((await workspace.snapshot('2027-01')).bookName).assertEqual('V2 旧账本');
+        await LedgerWorkspace.close(name);
+        const restored = await database(host, name);
+        try { expect(await SpendingNatureMigration.status(restored)).assertEqual(3); }
+        finally { await restored.close(); }
+      } finally {
+        await clean(host, name, [archive, stage]);
+        await relationalStore.deleteRdbStore(host, oldName);
+      }
     });
   });
 }

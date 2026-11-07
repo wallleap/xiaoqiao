@@ -85,6 +85,7 @@ SQL SUM仅对整数列使用；不得用TOTAL或转REAL绕过溢出。SQL 64位�
 | --- | --- |
 | 身份与归属 | id、book_id、kind（expense/income/transfer）、group_id |
 | 分类 | category_id；支出/收入要求有效分类，导入未分类须由用户明确选择系统未分类项；转账不使用收支分类 |
+| 支出性质 | spending_nature_id；V3 新增的支出单值维度，收入/转账必须为空，历史账目允许为空 |
 | 原币与优惠 | currency_id、gross_minor、discount_minor、paid_minor；非负整数，gross−discount=paid；收入/转账discount=0 |
 | 统计快照 | book_currency_id、book_minor；收支按本笔折算快照固化；转账本金不参与收支累计，book_minor可空，不为无关统计强制补第三币种报价 |
 | 规则 | include_in_budget、include_in_assets（是否影响账户余额）、balance_mode（apply/preserve） |

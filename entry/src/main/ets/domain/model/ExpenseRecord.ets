@@ -12,6 +12,7 @@ export interface ExpenseCommand {
   readonly accountPaid?: Money;
   readonly includeInAssets: boolean;
   readonly includeInBudget: boolean;
+  readonly spendingNatureId?: string;
   readonly note: string;
   readonly occurredAtMs: number;
   readonly localDate: string;
@@ -42,6 +43,9 @@ export class ExpenseRecord {
       (command.accountPaid !== undefined && command.accountPaid.minor <= BigInt(0))) {
       throw new Error('INVALID_SETTLEMENT');
     }
+    if (command.spendingNatureId !== undefined && command.spendingNatureId.trim().length === 0) {
+      throw new Error('INVALID_SPENDING_NATURE');
+    }
     // P0 manual command intentionally handles only same-currency settlement.
     // Foreign-currency persistence requires explicit FX snapshot commands first.
     if (!this.paid.currency.matches(command.bookPaid.currency) || this.paid.minor !== command.bookPaid.minor ||
@@ -64,6 +68,7 @@ export class ExpenseRecord {
       gross: command.gross, discount: command.discount, bookPaid: command.bookPaid,
       accountId: command.accountId, accountPaid: command.accountPaid,
       includeInAssets: command.includeInAssets, includeInBudget: command.includeInBudget,
+      spendingNatureId: command.spendingNatureId,
       note: command.note, occurredAtMs: command.occurredAtMs, localDate: command.localDate,
       timezone: command.timezone, offsetMinutes: command.offsetMinutes
     };

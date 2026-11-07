@@ -335,6 +335,70 @@
     {
       "name": "xq_app_disabled_content",
       "value": "#33FFFFFF"
+    },
+    {
+      "name": "xq_nature_survival_bg",
+      "value": "#33FF956D"
+    },
+    {
+      "name": "xq_nature_survival_text",
+      "value": "#FFFFA07E"
+    },
+    {
+      "name": "xq_nature_experience_bg",
+      "value": "#33FF7066"
+    },
+    {
+      "name": "xq_nature_experience_text",
+      "value": "#FFFF8C83"
+    },
+    {
+      "name": "xq_nature_growth_bg",
+      "value": "#33D7C354"
+    },
+    {
+      "name": "xq_nature_growth_text",
+      "value": "#FFF0D666"
+    },
+    {
+      "name": "xq_nature_emergency_bg",
+      "value": "#33FFB181"
+    },
+    {
+      "name": "xq_nature_emergency_text",
+      "value": "#FFFFC09A"
+    },
+    {
+      "name": "xq_nature_calm_bg",
+      "value": "#333CB38E"
+    },
+    {
+      "name": "xq_nature_calm_text",
+      "value": "#FF7BD6B7"
+    },
+    {
+      "name": "xq_nature_creative_bg",
+      "value": "#338C7AE0"
+    },
+    {
+      "name": "xq_nature_creative_text",
+      "value": "#FFB5A7FF"
+    },
+    {
+      "name": "xq_nature_social_bg",
+      "value": "#33689BEA"
+    },
+    {
+      "name": "xq_nature_social_text",
+      "value": "#FF9FBFFF"
+    },
+    {
+      "name": "xq_nature_neutral_bg",
+      "value": "#33FFFFFF"
+    },
+    {
+      "name": "xq_nature_neutral_text",
+      "value": "#FFB4BAC5"
     }
   ]
 }

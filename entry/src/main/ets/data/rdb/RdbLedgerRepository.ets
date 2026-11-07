@@ -38,6 +38,7 @@ export class RdbLedgerRepository implements LedgerRepository, ExpenseUpdateRepos
         occurred_local_date: command.localDate, occurred_timezone: command.timezone,
         occurred_offset_minutes: command.offsetMinutes, created_at_ms: Date.now(), updated_at_ms: Date.now()
       };
+      if (command.spendingNatureId !== undefined) { values.spending_nature_id = command.spendingNatureId; }
       await store.insert('transactions', values);
       const accountId = command.accountId;
       const accountPaid = command.accountPaid;
@@ -81,20 +82,27 @@ export class RdbLedgerRepository implements LedgerRepository, ExpenseUpdateRepos
   private async updateRecord(record: ExpenseRecord, expectedRevision: number, kind: string): Promise<void> {
     const command = record.command;
     await this.session.write(async (db: relationalStore.RdbStore): Promise<void> => {
-      const source = await db.querySql("SELECT category_id,currency_id,book_currency_id,(SELECT COUNT(*) FROM fx_snapshots WHERE transaction_id=t.id),(SELECT COUNT(*) FROM account_movements WHERE transaction_id=t.id AND currency_id<>t.currency_id),COALESCE((SELECT account_id FROM account_movements WHERE transaction_id=t.id LIMIT 1),'') FROM v_posted_transactions t WHERE id=? AND book_id=? AND kind=? AND revision=?",
+      const source = await db.querySql("SELECT t.category_id,t.currency_id,t.book_currency_id,(SELECT COUNT(*) FROM fx_snapshots WHERE transaction_id=t.id),(SELECT COUNT(*) FROM account_movements WHERE transaction_id=t.id AND currency_id<>t.currency_id),COALESCE((SELECT account_id FROM account_movements WHERE transaction_id=t.id LIMIT 1),''),COALESCE(tx.spending_nature_id,'') FROM v_posted_transactions t JOIN transactions tx ON tx.id=t.id WHERE t.id=? AND t.book_id=? AND t.kind=? AND t.revision=?",
         [command.id, command.bookId, kind, expectedRevision]);
       let oldCategory: string;
       let oldAccount: string;
+      let oldNature: string;
       try {
         if (!source.goToFirstRow()) { throw new Error('TRANSACTION_CHANGED'); }
         if (source.getString(1) !== record.paid.currency.id || source.getString(2) !== command.bookPaid.currency.id ||
           source.getLong(3) !== 0 || source.getLong(4) !== 0) { throw new Error('UNSUPPORTED_EXPENSE_EDIT'); }
-        oldCategory = source.getString(0); oldAccount = source.getString(5);
+        oldCategory = source.getString(0); oldAccount = source.getString(5); oldNature = source.getString(6);
       } finally { source.close(); }
       const category = await db.querySql("SELECT id FROM categories WHERE id=? AND book_id=? AND kind=? AND deleted_at_ms IS NULL AND (archived_at_ms IS NULL OR id=?)",
         [command.categoryId, command.bookId, kind, oldCategory]);
       try { if (!category.goToFirstRow()) { throw new Error('CATEGORY_UNAVAILABLE'); } }
       finally { category.close(); }
+      if (command.spendingNatureId !== undefined) {
+        const nature = await db.querySql('SELECT id FROM spending_natures WHERE id=? AND deleted_at_ms IS NULL AND (archived_at_ms IS NULL OR id=?)',
+          [command.spendingNatureId, oldNature]);
+        try { if (!nature.goToFirstRow()) { throw new Error('SPENDING_NATURE_UNAVAILABLE'); } }
+        finally { nature.close(); }
+      }
       if (command.accountId !== undefined) {
         const account = await db.querySql('SELECT currency_id FROM accounts WHERE id=? AND deleted_at_ms IS NULL AND (archived_at_ms IS NULL OR id=?)',
           [command.accountId, oldAccount]);
@@ -110,7 +118,8 @@ export class RdbLedgerRepository implements LedgerRepository, ExpenseUpdateRepos
       await db.update({ category_id: command.categoryId, gross_minor: command.gross.toSafeMinorNumber(),
         discount_minor: command.discount.toSafeMinorNumber(), paid_minor: record.paid.toSafeMinorNumber(),
         book_minor: command.bookPaid.toSafeMinorNumber(), include_in_assets: command.includeInAssets ? 1 : 0,
-        include_in_budget: command.includeInBudget ? 1 : 0, note: command.note, occurred_at_ms: command.occurredAtMs,
+        include_in_budget: command.includeInBudget ? 1 : 0, spending_nature_id: command.spendingNatureId || null,
+        note: command.note, occurred_at_ms: command.occurredAtMs,
         occurred_local_date: command.localDate, occurred_timezone: command.timezone,
         occurred_offset_minutes: command.offsetMinutes }, new relationalStore.RdbPredicates('transactions').equalTo('id', command.id));
       await db.delete(new relationalStore.RdbPredicates('account_movements').equalTo('transaction_id', command.id));

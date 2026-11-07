@@ -26,8 +26,14 @@ function sample(workspace: LedgerWorkspace, id: string, categoryId: string = 'ex
 
 async function context(): Promise<common.UIAbilityContext> {
   const delegator = abilityDelegatorRegistry.getAbilityDelegator();
-  const ability = await delegator.getCurrentTopAbility();
-  return ability.context;
+  try { return (await delegator.getCurrentTopAbility()).context; }
+  catch (_) { /* Class-only execution can start before EntryAbility is on top. */ }
+  const monitor: abilityDelegatorRegistry.AbilityMonitor = { abilityName: 'EntryAbility', moduleName: 'entry' };
+  await delegator.addAbilityMonitor(monitor);
+  try {
+    await delegator.startAbility({ bundleName: 'cn.oicode.xiaoqiao', abilityName: 'EntryAbility' });
+    return (await delegator.waitAbilityMonitor(monitor, 10000)).context;
+  } finally { await delegator.removeAbilityMonitor(monitor); }
 }
 
 export default function expenseFlowTest() {
@@ -396,6 +402,8 @@ export default function expenseFlowTest() {
       expect(await driver.screenCap(host.filesDir + '/xiaoqiao-expense-note-keyboard.png')).assertTrue();
       await (await driver.findComponent(ON.id('expense-note'))).inputText('');
       await driver.pressBack();
+      const nature = await formScroll.scrollSearch(ON.id('expense-nature-nature-growth'));
+      await nature.click();
       await (await driver.findComponent(ON.id('expense-amount'))).click();
       await driver.waitForComponent(ON.id('expense-native-keyboard'), 5000);
       expect(await (await driver.findComponent(ON.id('expense-amount'))).getText()).assertEqual('12+3−2');
@@ -420,6 +428,7 @@ export default function expenseFlowTest() {
       expect(snapshot.entries[0].minor).assertEqual('1100');
       expect(snapshot.entries[0].grossMinor).assertEqual('1300');
       expect(snapshot.entries[0].discountMinor).assertEqual('200');
+      expect((await workspace.entryDetail(snapshot.entries[0].id)).spendingNatureId).assertEqual('nature-growth');
       const original = await driver.waitForComponent(ON.id('ledger-original-' + snapshot.entries[0].id), 5000);
       expect(await original.getText()).assertEqual('¥13.00');
       expect(await (await driver.findComponent(ON.id('ledger-discount-value-' + snapshot.entries[0].id))).getText())
@@ -446,6 +455,7 @@ export default function expenseFlowTest() {
       await driver.waitForComponent(ON.id('entry-detail-amount'), 5000);
       expect(await (await driver.findComponent(ON.id('entry-detail-amount'))).getText()).assertEqual('11.00');
       expect(await (await driver.findComponent(ON.id('entry-detail-discount'))).getText()).assertEqual('优惠 2.00');
+      await driver.waitForComponent(ON.text('成长提升'), 5000);
       expect(await driver.screenCap(host.filesDir + '/xiaoqiao-entry-receipt.png')).assertTrue();
       await (await driver.findComponent(ON.id('entry-detail-edit'))).click();
       await driver.waitForComponent(ON.id('expense-edit-title'), 5000);

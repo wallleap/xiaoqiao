@@ -12,12 +12,13 @@ import { RdbAccountRepository } from './RdbAccountRepository';
 import { IncomeCommand } from '../../domain/model/IncomeRecord';
 import { IncomeService } from '../../domain/services/IncomeService';
 import { ExpenseCommand } from '../../domain/model/ExpenseRecord';
-import { ExpenseCategory, LedgerAccount, LedgerSnapshot, SavedLedgerEntry } from '../../domain/model/LedgerSnapshot';
+import { ExpenseCategory, LedgerAccount, LedgerSnapshot, SavedLedgerEntry, SpendingNatureChoice } from '../../domain/model/LedgerSnapshot';
 import { RecordExpense } from '../../domain/services/RecordExpense';
 import { UpdateExpense } from '../../domain/services/UpdateExpense';
 import { EntryDetail } from '../../domain/model/EntryDetail';
 import { MonthlyBudget, DEFAULT_MONTHLY_BUDGET_MINOR } from '../../domain/model/MonthlyBudget';
 import { LedgerBook, ValidatedLedgerBook } from '../../domain/model/LedgerBook';
+import { SpendingNatureCommand, SpendingNatureProfile, ValidatedSpendingNature } from '../../domain/model/SpendingNature';
 import { LedgerDatabase, DEFAULT_BOOK_ID } from './LedgerDatabase';
 import { RdbLedgerRepository } from './RdbLedgerRepository';
 import { RdbSession } from './RdbSession';
@@ -200,6 +201,61 @@ export class LedgerWorkspace {
     });
   }
 
+  async spendingNatures(): Promise<SpendingNatureProfile[]> {
+    return this.session.read(async (db: relationalStore.RdbStore): Promise<SpendingNatureProfile[]> => {
+      const values: SpendingNatureProfile[] = [];
+      const rows = await db.querySql('SELECT id,name,color_token,built_in,sort_order,revision,archived_at_ms FROM spending_natures WHERE deleted_at_ms IS NULL ORDER BY archived_at_ms IS NOT NULL,sort_order,created_at_ms,id');
+      try {
+        while (rows.goToNextRow()) {
+          values.push({ id: rows.getString(0), name: rows.getString(1), colorKey: rows.getString(2), builtIn: rows.getLong(3) === 1,
+            sortOrder: rows.getLong(4), revision: rows.getLong(5), archived: !rows.isColumnNull(6) });
+        }
+      } finally { rows.close(); }
+      return values;
+    });
+  }
+
+  async createSpendingNature(command: SpendingNatureCommand): Promise<void> {
+    const draft = new ValidatedSpendingNature(command).command;
+    await this.session.write(async (db: relationalStore.RdbStore): Promise<void> => {
+      const duplicate = await db.querySql('SELECT id FROM spending_natures WHERE deleted_at_ms IS NULL AND name_key=? LIMIT 1', [draft.name]);
+      try { if (duplicate.goToFirstRow()) { throw new Error('SPENDING_NATURE_NAME_EXISTS'); } } finally { duplicate.close(); }
+      const order = await db.querySql('SELECT COALESCE(MAX(sort_order),-1)+1 FROM spending_natures');
+      let sortOrder: number = 0;
+      try { if (order.goToFirstRow()) { sortOrder = order.getLong(0); } } finally { order.close(); }
+      const now = Date.now();
+      await db.insert('spending_natures', { id: draft.id, name: draft.name, name_key: draft.name, color_token: draft.colorKey,
+        built_in: 0, sort_order: sortOrder, created_at_ms: now, updated_at_ms: now });
+    });
+  }
+
+  async updateSpendingNature(command: SpendingNatureCommand, revision: number): Promise<void> {
+    const draft = new ValidatedSpendingNature(command).command;
+    if (!Number.isSafeInteger(revision) || revision < 1 || revision >= Number.MAX_SAFE_INTEGER) { throw new Error('INVALID_EXPECTED_REVISION'); }
+    await this.session.write(async (db: relationalStore.RdbStore): Promise<void> => {
+      const duplicate = await db.querySql('SELECT id FROM spending_natures WHERE id<>? AND deleted_at_ms IS NULL AND name_key=? LIMIT 1',
+        [draft.id, draft.name]);
+      try { if (duplicate.goToFirstRow()) { throw new Error('SPENDING_NATURE_NAME_EXISTS'); } } finally { duplicate.close(); }
+      const changed = await db.update({ name: draft.name, name_key: draft.name, color_token: draft.colorKey,
+        updated_at_ms: Date.now(), revision: revision + 1 }, new relationalStore.RdbPredicates('spending_natures')
+        .equalTo('id', draft.id).equalTo('revision', revision).isNull('deleted_at_ms'));
+      if (changed !== 1) { throw new Error('SPENDING_NATURE_CHANGED'); }
+    });
+  }
+
+  async archiveSpendingNature(id: string, revision: number, archived: boolean): Promise<void> {
+    if (!Number.isSafeInteger(revision) || revision < 1 || revision >= Number.MAX_SAFE_INTEGER) { throw new Error('INVALID_EXPECTED_REVISION'); }
+    await this.session.write(async (db: relationalStore.RdbStore): Promise<void> => {
+      if (archived) {
+        const other = await db.querySql('SELECT id FROM spending_natures WHERE id<>? AND deleted_at_ms IS NULL AND archived_at_ms IS NULL LIMIT 1', [id]);
+        try { if (!other.goToFirstRow()) { throw new Error('LAST_ACTIVE_SPENDING_NATURE'); } } finally { other.close(); }
+      }
+      const changed = await db.update({ archived_at_ms: archived ? Date.now() : null, updated_at_ms: Date.now(), revision: revision + 1 },
+        new relationalStore.RdbPredicates('spending_natures').equalTo('id', id).equalTo('revision', revision).isNull('deleted_at_ms'));
+      if (changed !== 1) { throw new Error('SPENDING_NATURE_CHANGED'); }
+    });
+  }
+
   async updateExpense(command: ExpenseCommand, expectedRevision: number): Promise<void> {
     await this.updater.execute(command, expectedRevision);
   }
@@ -221,7 +277,7 @@ export class LedgerWorkspace {
     if (id.trim().length === 0) { throw new Error('INVALID_TRANSACTION_ID'); }
     return this.session.read(async (db: relationalStore.RdbStore): Promise<EntryDetail> => {
       this.activeBookId = await this.activeBookFromMeta(db);
-      const rows = await db.querySql("SELECT t.id,t.book_id,b.name,t.kind,t.revision,COALESCE(t.category_id,''),COALESCE(c.name,'转账'),COALESCE(c.icon_key,'other'),COALESCE(m.account_id,d.from_account_id,''),COALESCE(a.name,''),t.currency_id,u.code,u.symbol,u.minor_unit,CAST(t.gross_minor AS TEXT),CAST(t.discount_minor AS TEXT),CAST(t.paid_minor AS TEXT),CAST(COALESCE(t.book_minor,t.paid_minor) AS TEXT),t.include_in_budget,t.include_in_assets,t.balance_mode,t.occurred_at_ms,t.occurred_local_date,t.occurred_timezone,t.occurred_offset_minutes,t.note,t.book_currency_id,COALESCE(m.currency_id,t.currency_id),(SELECT COUNT(*) FROM fx_snapshots WHERE transaction_id=t.id),COALESCE(mi.account_id,''),COALESCE(ai.name,''),COALESCE(mi.currency_id,t.currency_id),t.group_id,COALESCE(d.purpose,'transfer'),CAST(COALESCE(d.out_minor,t.paid_minor) AS TEXT),CAST(COALESCE(d.in_minor,t.paid_minor) AS TEXT),CAST(COALESCE(d.fee_minor,0) AS TEXT),CAST(COALESCE(d.coupon_minor,0) AS TEXT),COALESCE(d.fee_in_expense,1),COALESCE(d.fee_in_budget,1),COALESCE(a.kind,'asset'),COALESCE(ai.kind,'asset') FROM v_posted_transactions t JOIN books b ON b.id=t.book_id JOIN currencies u ON u.id=t.currency_id LEFT JOIN categories c ON c.id=t.category_id LEFT JOIN transfer_details d ON d.transaction_id=t.id LEFT JOIN account_movements m ON m.transaction_id=t.id AND m.leg<>'transfer_in' LEFT JOIN accounts a ON a.id=COALESCE(m.account_id,d.from_account_id) LEFT JOIN account_movements mi ON mi.transaction_id=t.id AND mi.leg='transfer_in' LEFT JOIN accounts ai ON ai.id=mi.account_id WHERE t.id=? AND t.book_id=?",
+      const rows = await db.querySql("SELECT t.id,t.book_id,b.name,t.kind,t.revision,COALESCE(t.category_id,''),COALESCE(c.name,'转账'),COALESCE(c.icon_key,'other'),COALESCE(m.account_id,d.from_account_id,''),COALESCE(a.name,''),t.currency_id,u.code,u.symbol,u.minor_unit,CAST(t.gross_minor AS TEXT),CAST(t.discount_minor AS TEXT),CAST(t.paid_minor AS TEXT),CAST(COALESCE(t.book_minor,t.paid_minor) AS TEXT),t.include_in_budget,t.include_in_assets,t.balance_mode,t.occurred_at_ms,t.occurred_local_date,t.occurred_timezone,t.occurred_offset_minutes,t.note,t.book_currency_id,COALESCE(m.currency_id,t.currency_id),(SELECT COUNT(*) FROM fx_snapshots WHERE transaction_id=t.id),COALESCE(mi.account_id,''),COALESCE(ai.name,''),COALESCE(mi.currency_id,t.currency_id),t.group_id,COALESCE(d.purpose,'transfer'),CAST(COALESCE(d.out_minor,t.paid_minor) AS TEXT),CAST(COALESCE(d.in_minor,t.paid_minor) AS TEXT),CAST(COALESCE(d.fee_minor,0) AS TEXT),CAST(COALESCE(d.coupon_minor,0) AS TEXT),COALESCE(d.fee_in_expense,1),COALESCE(d.fee_in_budget,1),COALESCE(a.kind,'asset'),COALESCE(ai.kind,'asset'),COALESCE(nt.spending_nature_id,''),COALESCE(n.name,''),COALESCE(n.color_token,'') FROM v_posted_transactions t JOIN transactions nt ON nt.id=t.id JOIN books b ON b.id=t.book_id JOIN currencies u ON u.id=t.currency_id LEFT JOIN categories c ON c.id=t.category_id LEFT JOIN spending_natures n ON n.id=nt.spending_nature_id LEFT JOIN transfer_details d ON d.transaction_id=t.id LEFT JOIN account_movements m ON m.transaction_id=t.id AND m.leg<>'transfer_in' LEFT JOIN accounts a ON a.id=COALESCE(m.account_id,d.from_account_id) LEFT JOIN account_movements mi ON mi.transaction_id=t.id AND mi.leg='transfer_in' LEFT JOIN accounts ai ON ai.id=mi.account_id WHERE t.id=? AND t.book_id=?",
         [id, this.activeBookId]);
       let detail: EntryDetail;
       try {
@@ -237,7 +293,8 @@ export class LedgerWorkspace {
           occurredAtMs: rows.getLong(21), localDate: rows.getString(22), timezone: rows.getString(23), offsetMinutes: rows.getLong(24),
           note: rows.getString(25), toAccountId: rows.getString(29), toAccountName: rows.getString(30), transferPurpose: rows.getString(33), transferOutMinor: rows.getString(34),
           transferInMinor: rows.getString(35), transferFeeMinor: rows.getString(36), transferCouponMinor: rows.getString(37),
-          feeInExpense: rows.getLong(38) === 1, feeInBudget: rows.getLong(39) === 1, accountKind: rows.getString(40), toAccountKind: rows.getString(41), canEdit: canEdit };
+          feeInExpense: rows.getLong(38) === 1, feeInBudget: rows.getLong(39) === 1, accountKind: rows.getString(40), toAccountKind: rows.getString(41),
+          spendingNatureId: rows.getString(42), spendingNatureName: rows.getString(43), spendingNatureColor: rows.getString(44), canEdit: canEdit };
       } finally { rows.close(); }
       const path: string[] = [];
       const visited: Set<string> = new Set();
@@ -322,6 +379,13 @@ export class LedgerWorkspace {
             parentId: categoryRows.getString(2), iconKey: categoryRows.getString(3) });
         }
       } finally { categoryRows.close(); }
+      const spendingNatures: SpendingNatureChoice[] = [];
+      const natureRows = await db.querySql('SELECT id,name,color_token FROM spending_natures WHERE deleted_at_ms IS NULL AND archived_at_ms IS NULL ORDER BY sort_order,created_at_ms,id');
+      try {
+        while (natureRows.goToNextRow()) {
+          spendingNatures.push({ id: natureRows.getString(0), name: natureRows.getString(1), colorKey: natureRows.getString(2) });
+        }
+      } finally { natureRows.close(); }
       const accounts: LedgerAccount[] = [];
       const accountRows = await db.querySql("SELECT id,name,currency_id,kind FROM accounts WHERE deleted_at_ms IS NULL AND archived_at_ms IS NULL ORDER BY sort_order,id");
       try {
@@ -359,7 +423,8 @@ export class LedgerWorkspace {
           budgetTotal = budget.getString(0);
         }
       } finally { budget.close(); }
-      return { bookId: this.activeBookId, bookName: bookName, categories: categories, incomeCategories: incomeCategories, accounts: accounts,
+      return { bookId: this.activeBookId, bookName: bookName, categories: categories, incomeCategories: incomeCategories,
+        spendingNatures: spendingNatures, accounts: accounts,
         entries: entries, incomeMinor: income.toString(), expenseMinor: expense.toString(),
         budgetTotalMinor: budgetTotal, budgetUsedMinor: budgetUsed.toString() };
     });

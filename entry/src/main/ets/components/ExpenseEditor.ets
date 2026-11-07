@@ -7,11 +7,12 @@ import { IncomeCommand } from '../domain/model/IncomeRecord';
 import { ExpenseCommand } from '../domain/model/ExpenseRecord';
 import { EntryDetail } from '../domain/model/EntryDetail';
 import { Money } from '../core/money/Money';
-import { ExpenseCategory, LedgerAccount } from '../domain/model/LedgerSnapshot';
+import { ExpenseCategory, LedgerAccount, SpendingNatureChoice } from '../domain/model/LedgerSnapshot';
 import { LedgerWorkspace } from '../data/rdb/LedgerWorkspace';
 import { ExpenseAmountInput } from '../presentation/ledger/ExpenseAmountInput';
 import { AmountKeyboard } from './AmountKeyboard';
 import { categoryIcon } from '../presentation/ledger/CategoryIcons';
+import { spendingNatureBackground, spendingNatureText } from '../presentation/ledger/SpendingNatureStyles';
 
 class AmountFocusFrame extends FrameCallback {
   private readonly action: () => void;
@@ -34,6 +35,7 @@ export struct ExpenseEditor {
   editingEntry: EntryDetail | undefined = undefined;
   categories: ExpenseCategory[] = [];
   incomeCategories: ExpenseCategory[] = [];
+  spendingNatures: SpendingNatureChoice[] = [];
   @State private isIncome: boolean = false;
   @State private isTransfer: boolean = false;
   accounts: LedgerAccount[] = [];
@@ -52,6 +54,7 @@ export struct ExpenseEditor {
   private amountFocusTimer: number = -1;
   @State private note: string = '';
   @State private selectedId: string = '';
+  @State private selectedNatureId: string = '';
   @State private accountId: string = '';
   @State private toAccountId: string = '';
   @State private occurredAtMs: number = Date.now();
@@ -96,6 +99,7 @@ export struct ExpenseEditor {
       this.expression = Money.fromMinorText(entry.grossMinor, this.currency).toDecimalString();
       this.discount = Money.fromMinorText(entry.discountMinor, this.currency).toDecimalString();
       this.selectedId = entry.categoryId; this.accountId = entry.accountId; this.toAccountId = entry.toAccountId || '';
+      this.selectedNatureId = entry.spendingNatureId || '';
       this.includeAssets = entry.includeInAssets; this.includeBudget = entry.includeInBudget;
       this.occurredAtMs = entry.occurredAtMs; this.note = entry.note;
     }
@@ -153,6 +157,7 @@ export struct ExpenseEditor {
     this.selectedKinds = [selected[0]];
     this.editingDiscount = false; this.transferTarget = 0; this.errorText = ''; this.parentId = ''; this.showOptions = false;
     this.selectedId = this.activeCategories()[0]?.id || '';
+    if (this.isIncome || this.isTransfer) { this.selectedNatureId = ''; }
     this.categoryPage = 0;
   }
 
@@ -334,14 +339,16 @@ export struct ExpenseEditor {
           ExpenseErrorField.Discount : ExpenseErrorField.Amount;
         this.showError(field, field === ExpenseErrorField.Discount ? '优惠须小于原金额' : '金额须大于 0'); return;
       }
-      if (!this.isTransfer && this.selectedId.length === 0) { this.showError(ExpenseErrorField.Category, '请选择分类'); return; }
+      if (!this.isTransfer && this.selectedId.length === 0) { this.showError(ExpenseErrorField.Category, '请选择收支分类'); return; }
       if (this.isTransfer && (!this.accountId || !this.toAccountId || this.accountId === this.toAccountId)) {
         this.showError(ExpenseErrorField.Accounts, '请选择两个不同的转出和转入账户'); return;
       }
       const account = this.accountId.length > 0 ? this.accountId : undefined;
       command = { id: this.saveId, bookId: this.bookId, categoryId: this.isTransfer ? 'transfer' : this.selectedId, gross: gross,
         discount: reduction, bookPaid: paid, accountId: account, accountPaid: account === undefined ? undefined : paid,
-        includeInAssets: this.includeAssets, includeInBudget: !this.isIncome && !this.isTransfer && this.includeBudget, note: this.note.trim(),
+        includeInAssets: this.includeAssets, includeInBudget: !this.isIncome && !this.isTransfer && this.includeBudget,
+        spendingNatureId: !this.isIncome && !this.isTransfer && this.selectedNatureId.length > 0 ? this.selectedNatureId : undefined,
+        note: this.note.trim(),
         occurredAtMs: new Date(this.occurredAtMs).getTime(), localDate: this.localDate(),
         timezone: this.editingEntry !== undefined && !this.dateEdited ? this.editingEntry.timezone : Intl.DateTimeFormat().resolvedOptions().timeZone,
         offsetMinutes: this.editingEntry !== undefined && !this.dateEdited ? this.editingEntry.offsetMinutes : -new Date(this.occurredAtMs).getTimezoneOffset() };
@@ -405,7 +412,7 @@ export struct ExpenseEditor {
     }.width(compact ? 56 : '25%').height(compact ? 48 : 80).justifyContent(FlexAlign.Center)
       .opacity(secondRow ? 1 - this.categoryCollapse / 80 : 1)
       .id('expense-category-' + item.id + (compact ? '-compact' : ''))
-      .accessibilityText('分类' + item.name).onClick(() => { this.choose(item); })
+      .accessibilityText('收支分类' + item.name).onClick(() => { this.choose(item); })
   }
 
   @Builder
@@ -457,6 +464,37 @@ export struct ExpenseEditor {
         .fontColor($r('app.color.xq_font_primary')).constraintSize({ maxWidth: '70%' })
       Image($r('app.media.lucide_chevron_down1')).width(14).height(14).fillColor($r('app.color.xq_icon_tertiary'))
     }.height(48).width('100%').onClick(action)
+  }
+
+  @Builder
+  private spendingNatureSelector() {
+    Column({ space: 12 }) {
+      Row({ space: 6 }) {
+        Text('支出性质').fontSize('14fp').fontWeight(FontWeight.Medium).fontColor($r('app.color.xq_font_primary'))
+        Image($r('app.media.lucide_info1')).width(16).height(16).fillColor($r('app.color.xq_icon_tertiary'))
+        Blank()
+        if (this.selectedNatureId.length > 0) {
+          Button('清除', { type: ButtonType.Capsule }).height(28).fontSize('12fp')
+            .fontColor($r('app.color.xq_font_secondary')).backgroundColor(Color.Transparent)
+            .id('expense-nature-clear').onClick(() => { this.selectedNatureId = ''; })
+        }
+      }.width('100%').onClick(() => {
+        this.inform('支出性质用于区分生存保障、体验享受、成长提升和突发支出；可以为空，不影响金额与账户。');
+      })
+      Flex({ wrap: FlexWrap.Wrap, justifyContent: FlexAlign.Start }) {
+        ForEach(this.spendingNatures, (nature: SpendingNatureChoice) => {
+          Button(nature.name, { type: ButtonType.Capsule }).height(38).fontSize('14fp')
+            .fontColor(spendingNatureText(nature.colorKey))
+            .backgroundColor(spendingNatureBackground(nature.colorKey))
+            .border({ width: this.selectedNatureId === nature.id ? 1.5 : 0,
+              color: this.selectedNatureId === nature.id ? spendingNatureText(nature.colorKey) : Color.Transparent })
+            .margin({ right: 8, bottom: 8 })
+            .id('expense-nature-' + nature.id)
+            .onClick(() => { this.selectedNatureId = nature.id; })
+        }, (nature: SpendingNatureChoice) => nature.id)
+      }.width('100%')
+    }.padding(16).width('100%').borderRadius(16).backgroundColor($r('app.color.xq_app_surface_card'))
+      .id('expense-spending-nature')
   }
 
   @Builder
@@ -630,6 +668,7 @@ export struct ExpenseEditor {
           .onChange((value: string) => { this.note = value; })
           .onSubmit(() => { this.focusAmountAfterFrame(); })
       }.padding({ left: 16, right: 16 }).width('100%').borderRadius(16).backgroundColor($r('app.color.xq_app_surface_card'))
+      if (!this.isIncome && !this.isTransfer) { this.spendingNatureSelector() }
       if (this.isTransfer) {
         Row() {
           Text('手续费计入预算').fontSize('14fp').fontColor($r('app.color.xq_font_primary'))
@@ -656,7 +695,7 @@ export struct ExpenseEditor {
   @Builder
   private optionSheet() {
     Column({ space: 12 }) {
-      Text(this.optionKind === 3 ? '转账用途' : this.optionKind === 0 ? (this.activeCategories().find((item: ExpenseCategory) => item.id === this.parentId)?.name || '选择分类') : (this.isTransfer ? (this.optionKind === 2 ? '转入账户' : '转出账户') : this.isIncome ? '收款账户' : '付款账户'))
+      Text(this.optionKind === 3 ? '转账用途' : this.optionKind === 0 ? (this.activeCategories().find((item: ExpenseCategory) => item.id === this.parentId)?.name || '选择收支分类') : (this.isTransfer ? (this.optionKind === 2 ? '转入账户' : '转出账户') : this.isIncome ? '收款账户' : '付款账户'))
         .fontSize('20fp').fontWeight(FontWeight.Bold).width('100%')
       if (this.optionKind === 3) {
         ForEach(TRANSFER_PURPOSES, (item: TransferPurpose) => {

@@ -9,7 +9,7 @@ assets/images/<sha256>.png|jpg|webp
 assets/icons/<sha256>.png|jpg|webp|svg
 ```
 
-清单包含 `format=xiaoqiao`、`version=1`、`schema=2`、UTC 创建时间和每个数据库/资源文件的相对路径、字节数、SHA-256、CRC32。清单不包含自身。格式版本和数据库版本独立保存，无法识别的版本明确拒绝，不猜测导入。标准 ZIP 工具可以读取此容器；应用只接受本版本生成的 STORE 条目，不接受重新打包后的压缩、ZIP64、多磁盘或加密 ZIP。
+清单包含 `format=xiaoqiao`、`version=1`、`schema=3`、UTC 创建时间和每个数据库/资源文件的相对路径、字节数、SHA-256、CRC32。清单不包含自身。格式版本和数据库版本独立保存；读取 `schema=2` 的旧包时会在候选数据库副本上执行支出性质 V3 迁移，无法识别的版本仍明确拒绝，不猜测导入。标准 ZIP 工具可以读取此容器；应用只接受本版本生成的 STORE 条目，不接受重新打包后的压缩、ZIP64、多磁盘或加密 ZIP。
 
 ## 资源契约
 
@@ -44,3 +44,5 @@ assets/icons/<sha256>.png|jpg|webp|svg
 BackupPackage 原生用例覆盖图片/图标去重、附件和自定义图标引用、账本及资源的恢复和恢复前副本、缺失资源拒绝导出、CRC/路径穿越/不安全 SVG 拒绝、提交失败时整体回退，以及资源切换中断后的启动恢复。测试全部使用 UUID 隔离库和虚构资源。
 
 2026-11-07 验证：主 HAP、ohosTest HAP 构建通过；完整原生回归 38/38 通过（含 5 项 BackupPackage 和 6 项 WebDav）；显式 WebDavHttp 本机原生 HTTP 集成测试 1/1 通过；主机 P0 检查 44/44 通过，RDB 和转账生成文件一致性检查通过。包含数据库、PNG 和 SVG 的虚构备份包另经 Python 标准 zipfile、CRC 和 SHA-256 独立核对。设置页原生截图已检查。真实 HTTPS WebDAV 服务、真实设备断电和大容量性能未验证。
+
+2026-11-07 支出性质 V3 验证：BackupPackage 6/6 通过，其中新增 V2 清单候选副本升级测试；完整 API 26 原生回归 45/45 通过。V2 包恢复时先在候选数据库上创建 V3 支出性质结构，再执行原结构、数据、资源与恢复事务检查。

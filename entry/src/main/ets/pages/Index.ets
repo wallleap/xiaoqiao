@@ -4,6 +4,7 @@ import { HdsTabs, hdsMaterial, HdsNavigation, HdsNavigationTitleMode, HdsListIte
   PrefixCustomBuilder, SuffixCustomBuilder, HdsSnackBar, SnackBarOperationType, ScrollEffectType, DividerShowType } from '@kit.UIDesignKit';
 import { AccountsPage } from '../components/AccountsPage';
 import { LocalBackupPage } from '../components/LocalBackupPage';
+import { SpendingNaturePage } from '../components/SpendingNaturePage';
 import { MoneyAmountField } from '../components/MoneyAmountField';
 import { AccountEditor } from '../components/AccountEditor';
 import { AccountProfile, AccountOverview } from '../domain/model/AccountProfile';
@@ -17,7 +18,7 @@ import { util } from '@kit.ArkTS';
 import { FilterMaterials } from '../presentation/materials/FilterMaterials';
 import { LedgerDatabase } from '../data/rdb/LedgerDatabase';
 import { LedgerWorkspace } from '../data/rdb/LedgerWorkspace';
-import { LedgerSnapshot, ExpenseCategory, LedgerAccount } from '../domain/model/LedgerSnapshot';
+import { LedgerSnapshot, ExpenseCategory, LedgerAccount, SpendingNatureChoice } from '../domain/model/LedgerSnapshot';
 import { LedgerBook } from '../domain/model/LedgerBook';
 import { EntryDetail } from '../domain/model/EntryDetail';
 import { MonthlyBudget, BudgetProgress, DEFAULT_MONTHLY_BUDGET_MINOR } from '../domain/model/MonthlyBudget';
@@ -35,6 +36,7 @@ struct Index {
   @StorageProp('ledgerForceLegacyMaterials') private forceLegacyMaterials: boolean = false;
   @State private selectedTab: number = 0;
   @State private backupBusy: boolean = false;
+  @State private showSpendingNatures: boolean = false;
   @State private accountOverview: AccountOverview | undefined = undefined;
   @State private accountError: string = '';
   @State private showAccountEditor: boolean = false;
@@ -327,6 +329,18 @@ struct Index {
   }
 
   @Builder
+  private spendingNaturePage() {
+    SpendingNaturePage({
+      workspace: this.workspace,
+      sheetMaterial: this.materialReady && !this.forceLegacyMaterials ? this.filterMaterials?.menu : undefined,
+      onClose: () => {
+        this.showSpendingNatures = false;
+        this.loadLedger();
+      }
+    })
+  }
+
+  @Builder
   private accountEditorPage() {
     AccountEditor({ workspace: this.workspace, original: this.editingAccount, operationBusy: this.accountSaving,
       sheetMaterial: this.materialReady && !this.forceLegacyMaterials ? this.filterMaterials?.menu : undefined,
@@ -405,6 +419,17 @@ struct Index {
     }
     if (entry?.kind === 'transfer' && entry.toAccountId && !values.some((item: LedgerAccount) => item.id === entry.toAccountId)) {
       values.push({ id: entry.toAccountId, name: entry.toAccountName || '转入账户', currencyId: entry.currencyId, kind: entry.toAccountKind });
+    }
+    return values;
+  }
+
+  private editSpendingNatures(): SpendingNatureChoice[] {
+    const values = this.ledger?.spendingNatures.slice() || [];
+    const entry = this.editingEntry;
+    if (entry !== undefined && entry.spendingNatureId !== undefined && entry.spendingNatureId.length > 0 &&
+      !values.some((item: SpendingNatureChoice) => item.id === entry.spendingNatureId)) {
+      values.push({ id: entry.spendingNatureId, name: entry.spendingNatureName || '已归档性质',
+        colorKey: entry.spendingNatureColor || 'neutral' });
     }
     return values;
   }
@@ -513,12 +538,14 @@ struct Index {
         actionMaterial: this.materialReady && !this.forceLegacyMaterials ? this.filterMaterials?.action : undefined,
         sheetMaterial: this.materialReady && !this.forceLegacyMaterials ? this.filterMaterials?.menu : undefined,
         editingEntry: this.editingEntry, categories: this.editCategories(), incomeCategories: this.editCategories(true), accounts: this.editAccounts(),
+        spendingNatures: this.editSpendingNatures(),
         onSavingChange: (saving: boolean) => { this.savingExpense = saving; },
         onClose: () => { this.closeEditor(); }, onSaved: (date: string) => { this.expenseSaved(date); } })
     }
   }
 
   onBackPress(): boolean {
+    if (this.showSpendingNatures) { this.showSpendingNatures = false; this.loadLedger(); return true; }
     if (this.showAccountEditor) { if (!this.accountSaving) { this.showAccountEditor = false; this.editingAccount = undefined; } return true; }
     if (this.showExpense) { if (!this.savingExpense) { this.closeEditor(); } return true; }
     if (this.showDetail) { if (!this.deleting) { this.closeDetail(); } return true; }
@@ -597,7 +624,7 @@ struct Index {
     }.id('ledger-period').width('100%').margin({ top: 2, bottom: 16 })
       .opacity(this.periodOpacity).visibility(this.periodOpacity > 0 ? Visibility.Visible : Visibility.Hidden)
     if (this.showSearch) {
-      Search({ value: this.keyword, placeholder: '搜索备注、分类或账户' })
+      Search({ value: this.keyword, placeholder: '搜索备注、收支分类或账户' })
         .id('ledger-search').onChange((value: string) => { this.keyword = value; })
         .height(48).margin({ bottom: 16 })
     }
@@ -1295,6 +1322,7 @@ struct Index {
           ready: !this.preview && !this.loading && !this.deleting && this.loadError.length === 0 && this.ledger !== undefined,
           onBusy: (busy: boolean) => { this.backupBusy = busy; },
           onRecoveryRequired: () => { this.showRecoveryError(); },
+          onOpenSpendingNatures: () => { this.showSpendingNatures = true; },
           onRestored: async (): Promise<boolean> => {
             this.kind = LedgerKind.All; this.displayedKind = LedgerKind.All;
             this.account = ''; this.keyword = ''; this.showSearch = false;
@@ -1322,7 +1350,8 @@ struct Index {
   }
 
   build() {
-    if (this.showAccountEditor) { this.accountEditorPage() }
+    if (this.showSpendingNatures) { this.spendingNaturePage() }
+    else if (this.showAccountEditor) { this.accountEditorPage() }
     else if (this.showExpense) { this.expensePage() }
     else if (this.showDetail) { this.detailPage() }
     else { this.homeTabs() }

@@ -9,6 +9,9 @@ export interface EntryDetail {
   categoryName: string;
   categoryPath: string;
   iconKey: string;
+  spendingNatureId?: string;
+  spendingNatureName?: string;
+  spendingNatureColor?: string;
   accountId: string;
   accountName: string;
   toAccountId?: string;

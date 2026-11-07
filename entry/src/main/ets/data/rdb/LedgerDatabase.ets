@@ -3,6 +3,7 @@ import { common } from '@kit.AbilityKit';
 import { relationalStore } from '@kit.ArkData';
 import { REVIEW_SCHEMA_SHA256, REVIEW_SCHEMA_STATEMENTS } from './ReviewSchema';
 import { TransferMigration } from './TransferMigration';
+import { SpendingNatureMigration } from './SpendingNatureMigration';
 import { RdbSession } from './RdbSession';
 import { LocalLedgerBackup } from './LocalLedgerBackup';
 
@@ -45,13 +46,18 @@ export class LedgerDatabase {
           for (const sql of REVIEW_SCHEMA_STATEMENTS) { if (!sql.startsWith('PRAGMA')) { await db.executeSql(sql); } }
           await LedgerDatabase.seed(db);
           await TransferMigration.apply(db, '', false);
+          await SpendingNatureMigration.apply(db, '', false);
           await LedgerDatabase.ensureIncomeCategories(db);
         });
       } else {
-        const version = await session.read(async (db: relationalStore.RdbStore): Promise<number> => TransferMigration.status(db));
+        let version = await session.read(async (db: relationalStore.RdbStore): Promise<number> => SpendingNatureMigration.status(db));
         if (version === 1) {
           if (!allowUpgrade) { throw new Error('LEDGER_UPGRADE_REQUIRED'); }
           await TransferMigration.upgrade(store, name);
+          version = 2;
+        }
+        if (version === 2) {
+          await SpendingNatureMigration.upgrade(store, name);
         }
         await session.write(async (db: relationalStore.RdbStore): Promise<void> => { await LedgerDatabase.ensureIncomeCategories(db); });
       }

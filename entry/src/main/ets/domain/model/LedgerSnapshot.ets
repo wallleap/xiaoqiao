@@ -5,6 +5,12 @@ export interface ExpenseCategory {
   iconKey: string;
 }
 
+export interface SpendingNatureChoice {
+  id: string;
+  name: string;
+  colorKey: string;
+}
+
 export interface LedgerAccount {
   id: string;
   name: string;
@@ -37,6 +43,7 @@ export interface LedgerSnapshot {
   bookName: string;
   categories: ExpenseCategory[];
   incomeCategories: ExpenseCategory[];
+  spendingNatures: SpendingNatureChoice[];
   accounts: LedgerAccount[];
   entries: SavedLedgerEntry[];
   incomeMinor: string;

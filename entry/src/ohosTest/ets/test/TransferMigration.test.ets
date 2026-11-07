@@ -8,6 +8,25 @@ import { TransferMigration } from '../../../main/ets/data/rdb/TransferMigration'
 import { LedgerDatabase, DEFAULT_BOOK_ID } from '../../../main/ets/data/rdb/LedgerDatabase';
 import { LedgerWorkspace } from '../../../main/ets/data/rdb/LedgerWorkspace';
 import { RdbSession } from '../../../main/ets/data/rdb/RdbSession';
+import { SpendingNatureMigration } from '../../../main/ets/data/rdb/SpendingNatureMigration';
+
+let cachedMigrationContext: common.UIAbilityContext | undefined = undefined;
+
+async function migrationContext(): Promise<common.UIAbilityContext> {
+  if (cachedMigrationContext !== undefined) { return cachedMigrationContext; }
+  const delegator = abilityDelegatorRegistry.getAbilityDelegator();
+  try {
+    cachedMigrationContext = (await delegator.getCurrentTopAbility()).context;
+    return cachedMigrationContext;
+  } catch (_) { /* Class-only runs may start before EntryAbility is visible. */ }
+  const monitor: abilityDelegatorRegistry.AbilityMonitor = { abilityName: 'EntryAbility', moduleName: 'entry' };
+  await delegator.addAbilityMonitor(monitor);
+  try {
+    await delegator.startAbility({ bundleName: 'cn.oicode.xiaoqiao', abilityName: 'EntryAbility' });
+    cachedMigrationContext = (await delegator.waitAbilityMonitor(monitor, 10000)).context;
+    return cachedMigrationContext;
+  } finally { await delegator.removeAbilityMonitor(monitor); }
+}
 
 async function legacy(host: common.Context, name: string, reject: boolean): Promise<relationalStore.RdbStore> {
   const db = await relationalStore.getRdbStore(host, { name: name, securityLevel: relationalStore.SecurityLevel.S1 });
@@ -34,22 +53,27 @@ async function verifyLegacy(db: relationalStore.RdbStore): Promise<void> {
 export default function transferMigrationTest() {
   describe('TransferMigration', () => {
     it('verified_v1_upgrade_preserves_legacy_rows_and_restorable_backup', 0, async () => {
-      const host = (await abilityDelegatorRegistry.getAbilityDelegator().getCurrentTopAbility()).context;
+      const host = await migrationContext();
       const name = 'xiaoqiao_app_test_migration_' + util.generateRandomUUID() + '.db';
       try {
         const original = await legacy(host, name, false); await original.close();
         const db = await LedgerDatabase.open(host, name);
         try {
-          expect(await TransferMigration.status(db)).assertEqual(2); await verifyLegacy(db);
+          expect(await TransferMigration.status(db)).assertEqual(3);
+          expect(await SpendingNatureMigration.status(db)).assertEqual(3); await verifyLegacy(db);
           const details = await db.querySql('SELECT COUNT(*) FROM transfer_details');
           try { details.goToFirstRow(); expect(details.getLong(0)).assertEqual(0); } finally { details.close(); }
           await db.restore(TransferMigration.backupName(name));
           expect(await TransferMigration.status(db)).assertEqual(1); await verifyLegacy(db);
         } finally { await db.close(); }
-      } finally { await LedgerWorkspace.close(name); await relationalStore.deleteRdbStore(host, name); await relationalStore.deleteRdbStore(host, TransferMigration.backupName(name)); }
+      } finally {
+        await LedgerWorkspace.close(name); await relationalStore.deleteRdbStore(host, name);
+        await relationalStore.deleteRdbStore(host, TransferMigration.backupName(name));
+        await relationalStore.deleteRdbStore(host, SpendingNatureMigration.backupName(name));
+      }
     });
     it('late_upgrade_failure_rolls_back_schema_marker_trigger_and_money', 0, async () => {
-      const host = (await abilityDelegatorRegistry.getAbilityDelegator().getCurrentTopAbility()).context;
+      const host = await migrationContext();
       const name = 'xiaoqiao_app_test_migration_failure_' + util.generateRandomUUID() + '.db';
       try {
         const original = await legacy(host, name, true); await original.close();

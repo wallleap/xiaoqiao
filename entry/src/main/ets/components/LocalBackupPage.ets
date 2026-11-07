@@ -19,6 +19,7 @@ export struct LocalBackupPage {
   onBusy: (busy: boolean) => void = () => {};
   onRestored: () => Promise<boolean> = async () => true;
   onRecoveryRequired: () => void = () => {};
+  onOpenSpendingNatures: () => void = () => {};
   private readonly scroller: Scroller = new Scroller();
 
   aboutToAppear(): void { this.refreshPrevious(); }
@@ -126,6 +127,20 @@ export struct LocalBackupPage {
       Scroll(this.scroller) {
         Column({ space: 16 }) {
           Column({ space: 12 }) {
+            Row() {
+              Column({ space: 4 }) {
+                Text('分类与标签').fontSize('18fp').fontWeight(FontWeight.Medium)
+                  .fontColor($r('app.color.xq_font_primary')).width('100%')
+                Text('收支分类负责分层统计，支出性质描述消费目的，标签继续用于交叉检索。')
+                  .fontSize('12fp').fontColor($r('app.color.xq_font_secondary')).width('100%')
+              }.layoutWeight(1).alignItems(HorizontalAlign.Start)
+            }.width('100%')
+            Button('管理支出性质', { type: ButtonType.Capsule }).width('100%').height(44).fontSize('14fp')
+              .fontColor($r('app.color.xq_font_emphasize')).backgroundColor($r('app.color.xq_app_surface_page'))
+              .enabled(this.ready && !this.busy).id('settings-spending-natures')
+              .onClick(() => { this.onOpenSpendingNatures(); })
+          }.padding(16).width('100%').borderRadius(20).backgroundColor($r('app.color.xq_app_surface_card'))
+          Column({ space: 12 }) {
             Text('本地备份与恢复').fontSize('20fp').fontWeight(FontWeight.Bold).fontColor($r('app.color.xq_font_primary'))
             Text('将账本、图片和自定义图标一起备份，或从备份包恢复。').fontSize('14fp').fontColor($r('app.color.xq_font_secondary'))
             Button('保存本地备份').width('100%').constraintSize({ minHeight: 44 }).fontSize('16fp')
@@ -177,7 +192,7 @@ export struct LocalBackupPage {
             Text('请先在账目页完成账本读取或升级。').fontSize('14fp').fontColor($r('app.color.xq_font_secondary'))
           }
         }.width('100%').constraintSize({ maxWidth: 640 }).padding({ left: 16, right: 16, top: 12, bottom: 128 })
-      }.width('100%').height('100%').align(Alignment.Top).scrollBar(BarState.Off).clip(false)
+      }.id('settings-scroll').width('100%').height('100%').align(Alignment.Top).scrollBar(BarState.Off).clip(false)
         .edgeEffect(EdgeEffect.Spring, { alwaysEnabled: true })
     }.mode(NavigationMode.Stack).titleMode(HdsNavigationTitleMode.MINI).hideBackButton(true)
       .titleBar({ enableComponentSafeArea: true, avoidLayoutSafeArea: true,
