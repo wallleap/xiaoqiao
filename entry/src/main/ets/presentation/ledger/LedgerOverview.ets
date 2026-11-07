@@ -5,6 +5,23 @@ import { categoryIcon } from './CategoryIcons';
 
 export enum LedgerKind { All, Expense, Income }
 
+export interface NavigationHandoff {
+  titleOpacity: number;
+  filterOffset: number;
+  inNavigation: boolean;
+}
+
+/** Scroll-linked handoff: fade the title before the filters enter its fixed frame. */
+export function navigationHandoff(offset: number, filterStart: number, titleHeight: number): NavigationHandoff {
+  if (!Number.isFinite(filterStart)) {
+    return { titleOpacity: 1, filterOffset: titleHeight, inNavigation: false };
+  }
+  const fade = Math.max(0, Math.min(1, (offset - filterStart + titleHeight) / titleHeight));
+  return { titleOpacity: 1 - fade * fade * (3 - 2 * fade),
+    filterOffset: Math.max(0, Math.min(titleHeight, filterStart + titleHeight - offset)),
+    inNavigation: offset >= filterStart };
+}
+
 export interface LedgerEntry {
   id: string;
   title: string;

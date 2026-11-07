@@ -1,5 +1,6 @@
 import { describe, it, expect } from '@ohos/hypium';
 import { Driver, ON, On, Component, abilityDelegatorRegistry } from '@kit.TestKit';
+import { ConfigurationConstant } from '@kit.AbilityKit';
 
 async function waitForAbsence(driver: Driver, selector: On): Promise<void> {
   for (let attempt = 0; attempt < 20; attempt++) {
@@ -37,6 +38,9 @@ export default function ledgerHomeTest() {
         const emptyTabBefore = await emptyTab.getBounds();
         // Native HDS title safe area must keep the period out of the title frame.
         const titleFrame = await (await driver.findComponent(ON.id('ledger-navigation-title'))).getBounds();
+        const initialSummary = await (await driver.findComponent(ON.id('ledger-summary'))).getBounds();
+        const initialFilters = await (await driver.findComponent(ON.id('ledger-filter-placeholder'))).getBounds();
+        expect(Math.abs(initialFilters.top - initialSummary.bottom - 24 * (titleFrame.bottom - titleFrame.top) / 56) <= 2).assertTrue();
         const period = await (await driver.findComponent(ON.id('ledger-period'))).getBounds();
         expect(period.top >= titleFrame.bottom).assertTrue();
         const firstEntryAction = await driver.findComponent(ON.text('开始记第一笔账'));
@@ -116,6 +120,12 @@ export default function ledgerHomeTest() {
         expect((await driver.findComponents(ON.id('ledger-filters'))).length).assertEqual(1);
         expect(Math.abs((await (await driver.findComponent(ON.id('ledger-filter-action'))).getBounds()).right -
           filterButtonBefore.right) <= 2).assertTrue();
+        ability.context.getApplicationContext().setColorMode(ConfigurationConstant.ColorMode.COLOR_MODE_DARK);
+        await driver.delayMs(400);
+        expect(await driver.screenCap(ability.context.filesDir + '/xiaoqiao-home-filter-dark.png')).assertTrue();
+        ability.context.getApplicationContext().setColorMode(ConfigurationConstant.ColorMode.COLOR_MODE_LIGHT);
+        await driver.delayMs(400);
+        expect(await driver.screenCap(ability.context.filesDir + '/xiaoqiao-home-filter-light.png')).assertTrue();
         let tail: Component | null = null;
         for (let attempt = 0; attempt < 12; attempt++) {
           tail = await driver.findComponent(ON.id('preview-scroll-tail'));
@@ -129,7 +139,7 @@ export default function ledgerHomeTest() {
         if (tail === null) { throw new Error('SCROLL_TAIL_NOT_VISIBLE'); }
         const tailBounds = await tail.getBounds();
         const navigationAfter = await (await driver.findComponent(ON.id('ledger-navigation-title'))).getBounds();
-        const tabAfter = await tab.getBounds();
+        const tabAfter = await (await driver.findComponent(ON.id('ledger-tab-0'))).getBounds();
         expect(navigationAfter.top).assertEqual(navigationBefore.top);
         expect(navigationAfter.bottom).assertEqual(navigationBefore.bottom);
         expect(tabAfter.top).assertEqual(tabBefore.top);
@@ -260,6 +270,7 @@ export default function ledgerHomeTest() {
         await (await driver.findComponent(ON.text('完成'))).click();
         await waitForAbsence(driver, ON.text('资金账户'));
       } finally {
+        ability.context.getApplicationContext().setColorMode(ConfigurationConstant.ColorMode.COLOR_MODE_NOT_SET);
         AppStorage.setOrCreate('ledgerForceLegacyMaterials', false);
         AppStorage.setOrCreate('ledgerScrollPreview', false);
         AppStorage.setOrCreate('ledgerPreview', false);

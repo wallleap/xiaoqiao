@@ -153,7 +153,22 @@ await test('queue propagates rejection and continues in FIFO order', async () =>
   const next = q.run(async () => { events.push('good'); return 'saved'; });
   await assertion; assert.equal(await next, 'saved'); assert.deepEqual(events, ['bad','good']);
 });
-const { LedgerKind, displayAmount, filterEntries, dailyTotals, isToday } = load(base + '/presentation/ledger/LedgerOverview.ets');
+const { LedgerKind, displayAmount, filterEntries, dailyTotals, isToday, navigationHandoff } = load(base + '/presentation/ledger/LedgerOverview.ets');
+await test('navigation title fades before filters enter and docking follows scroll in both directions', () => {
+  assert.deepEqual(navigationHandoff(0, Infinity, 56), { titleOpacity: 1, filterOffset: 56, inNavigation: false });
+  assert.equal(navigationHandoff(244, 300, 56).titleOpacity, 1);
+  const halfway = navigationHandoff(272, 300, 56);
+  assert.equal(halfway.titleOpacity, 0.5);
+  assert.equal(halfway.inNavigation, false);
+  assert.deepEqual(navigationHandoff(300, 300, 56), { titleOpacity: 0, filterOffset: 56, inNavigation: true });
+  assert.deepEqual(navigationHandoff(328, 300, 56), { titleOpacity: 0, filterOffset: 28, inNavigation: true });
+  assert.deepEqual(navigationHandoff(356, 300, 56), { titleOpacity: 0, filterOffset: 0, inNavigation: true });
+  for (const offset of [400, 356, 328, 300, 272, 244, 0, -10]) {
+    const frame = navigationHandoff(offset, 300, 56);
+    assert.ok(frame.titleOpacity >= 0 && frame.titleOpacity <= 1);
+    assert.ok(frame.filterOffset >= 0 && frame.filterOffset <= 56);
+  }
+});
 await test('ledger amount grouping preserves large integer precision', () => {
   assert.equal(displayAmount('9007199254740991'), '90,071,992,547,409.91');
   assert.equal(displayAmount('1'), '0.01');

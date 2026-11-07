@@ -21,7 +21,7 @@ import { EntryDetail } from '../domain/model/EntryDetail';
 import { MonthlyBudget, BudgetProgress, DEFAULT_MONTHLY_BUDGET_MINOR } from '../domain/model/MonthlyBudget';
 import { Money } from '../core/money/Money';
 import { ExpenseAmountInput } from '../presentation/ledger/ExpenseAmountInput';
-import { LedgerEntry, LedgerKind, displayAmount, filterEntries, previewEntries, presentEntry, dailyTotals, isToday } from '../presentation/ledger/LedgerOverview';
+import { LedgerEntry, LedgerKind, displayAmount, filterEntries, previewEntries, presentEntry, dailyTotals, isToday, navigationHandoff } from '../presentation/ledger/LedgerOverview';
 
 interface EntryDeleteTarget { id: string; category: string; minor: string; }
 
@@ -72,6 +72,8 @@ struct Index {
   @State private budgetSaving: boolean = false;
   @State private materialReady: boolean = false;
   @State private filtersInNavigation: boolean = false;
+  @State private navigationTitleOpacity: number = 1;
+  @State private navigationFilterOffset: number = 56;
   @State private filterHeight: number = 60;
   @State private activeSwipeId: string = '';
   @State private deleting: boolean = false;
@@ -430,18 +432,50 @@ struct Index {
   }
 
   @Builder
+  private searchGlyph() {
+    Image($r('app.media.lucide_search1')).width(22).height(22)
+      .fillColor(this.headerScrolled ? $r('app.color.xq_icon_on_primary') : $r('app.color.xq_icon_primary'))
+  }
+
+  @Builder
+  private searchAction() {
+    if (this.materialReady && !this.forceLegacyMaterials) {
+      Button({ type: ButtonType.Circle }) { this.searchGlyph() }
+        .width(40).height(40).padding(0).backgroundColor(Color.Transparent)
+        .systemMaterial(this.filterMaterials?.action)
+        .id('搜索账目').accessibilityText('搜索账目').onClick(() => { this.toggleSearch(); })
+    } else {
+      Button({ type: ButtonType.Circle }) { this.searchGlyph() }
+        .width(40).height(40).padding(0).backgroundColor($r('app.color.xq_app_surface_card'))
+        .id('搜索账目').accessibilityText('搜索账目').onClick(() => { this.toggleSearch(); })
+    }
+  }
+
+  private toggleSearch(): void {
+    if (this.showSearch) { this.keyword = ''; }
+    this.showSearch = !this.showSearch;
+    this.bodyScroller.scrollTo({ xOffset: 0, yOffset: 0 });
+  }
+
+  @Builder
   private bookTitle() {
     Row() {
       Button({ type: ButtonType.Normal }) {
         Row({ space: 6 }) {
           Text(this.preview ? '日常账本' : this.ledger?.bookName || '日常账本').fontSize('24fp').fontWeight(FontWeight.Bold)
             .fontColor(this.headerScrolled ? $r('app.color.xq_font_on_primary') : $r('app.color.xq_font_primary'))
+            .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
           Image($r('app.media.lucide_chevron_down1')).width(18).height(18)
             .fillColor(this.headerScrolled ? $r('app.color.xq_icon_on_primary') : $r('app.color.xq_icon_primary'))
         }
       }.id('ledger-book-selector').backgroundColor(Color.Transparent).padding(0).height(48)
+        .constraintSize({ maxWidth: 'calc(100% - 48vp)' })
       .accessibilityText('选择账本，当前日常账本').onClick(() => { this.selectionKind = 0; this.showSelection = true; })
-    }.width('100%').padding({ left: this.viewportWidth >= 600 ? 32 : 16, right: 56 })
+      Blank()
+      this.searchAction()
+    }.width('100%').padding({ left: this.viewportWidth >= 600 ? 32 : 16, right: this.viewportWidth >= 600 ? 32 : 16 })
+      .opacity(this.navigationTitleOpacity).id('ledger-title-content')
+      .hitTestBehavior(this.navigationTitleOpacity > 0 ? HitTestMode.Default : HitTestMode.None)
   }
 
   @Builder
@@ -639,8 +673,7 @@ struct Index {
   @Builder
   private filterGlyph() {
     Image($r('app.media.lucide_funnel1')).width(22).height(22)
-      .fillColor(this.filtersInNavigation && this.headerScrolled ? $r('app.color.xq_icon_on_primary') :
-        this.account.length > 0 ? $r('app.color.xq_icon_emphasize') : $r('app.color.xq_icon_primary'))
+      .fillColor(this.account.length > 0 ? $r('app.color.xq_icon_emphasize') : $r('app.color.xq_icon_primary'))
       .id('ledger-filter-glyph')
   }
 
@@ -705,8 +738,7 @@ struct Index {
           { label: { text: '收入' }, allowClose: false }],
         multiple: false, selectedIndexes: [this.kind],
         itemStyle: { size: ChipSize.NORMAL, backgroundColor: $r('app.color.xq_app_filter_unselected'),
-          fontColor: this.filtersInNavigation && this.headerScrolled ? $r('app.color.xq_font_on_primary') :
-            $r('app.color.xq_font_secondary'), selectedBackgroundColor: $r('app.color.xq_brand'),
+          fontColor: $r('app.color.xq_font_primary'), selectedBackgroundColor: $r('app.color.xq_brand'),
           selectedFontColor: $r('app.color.xq_font_on_primary') },
         backgroundSystemMaterial: this.filterMaterials?.chip,
         chipGroupSpace: { startSpace: 0, endSpace: 0, itemSpace: 8 },
@@ -725,8 +757,7 @@ struct Index {
         itemStyle: {
           size: ChipSize.NORMAL,
           backgroundColor: $r('app.color.xq_app_filter_unselected'),
-          fontColor: this.filtersInNavigation && this.headerScrolled ? $r('app.color.xq_font_on_primary') :
-            $r('app.color.xq_font_secondary'),
+          fontColor: $r('app.color.xq_font_primary'),
           selectedBackgroundColor: $r('app.color.xq_brand'),
           selectedFontColor: $r('app.color.xq_font_on_primary')
         },
@@ -765,6 +796,7 @@ struct Index {
   private navigationFilters() {
     Column() { this.filterSurface() }.width('100%').height(56).justifyContent(FlexAlign.Center)
       .padding({ left: this.viewportWidth >= 600 ? 32 : 16, right: this.viewportWidth >= 600 ? 32 : 16 })
+      .translate({ y: this.navigationFilterOffset })
       .id('ledger-navigation-filters')
   }
 
@@ -772,7 +804,7 @@ struct Index {
   private navigationTitle() {
     Row() {
       if (this.filtersInNavigation) { this.navigationFilters() } else { this.bookTitle() }
-    }.width('100%').height(56).id('ledger-navigation-title')
+    }.width('100%').height(56).clip(false).id('ledger-navigation-title')
   }
 
   private updateFilterPlacement(): void {
@@ -783,8 +815,10 @@ struct Index {
     const opacity = Math.max(0, Math.min(1, 1 - Math.max(0, offset) / 12));
     if (this.periodOpacity !== opacity) { this.periodOpacity = opacity; }
     // The first ListItem is before the filter placeholder. Do not use the moving toolbar's bounds.
-    const docked = offset >= this.filterStartOffset;
-    if (docked !== this.filtersInNavigation) { this.filtersInNavigation = docked; }
+    const handoff = navigationHandoff(offset, this.filterStartOffset, 56);
+    this.navigationTitleOpacity = handoff.titleOpacity;
+    this.navigationFilterOffset = handoff.filterOffset;
+    if (handoff.inNavigation !== this.filtersInNavigation) { this.filtersInNavigation = handoff.inNavigation; }
   }
 
   @Builder
@@ -863,8 +897,8 @@ struct Index {
       }
     }.width('100%')
       // Fill the remaining viewport so a shorter filter result cannot clamp the list above the docking threshold.
-      // Subtract the end inset and persistent filter placeholder; keep 2vp for rounding.
-      .constraintSize({ minHeight: Math.max(0, this.bodyViewportHeight - this.filterHeight - 112 + 2) })
+      // Include the 56vp handoff travel so empty results can retain the fully docked position.
+      .constraintSize({ minHeight: Math.max(0, this.bodyViewportHeight - this.filterHeight - 112 + 56 + 2) })
       .onAreaChange((_previous: Area, current: Area) => {
       const available = Number(current.width);
       if (available > 0 && available !== this.recordWidth) { this.recordWidth = available; }
@@ -878,7 +912,7 @@ struct Index {
         Column({ space: 0 }) {
         this.header()
           if (this.viewportWidth < 720 && !this.upgradeRequired) { this.summary() }
-        }.width('100%').padding({ top: 12, bottom: 12 })
+        }.width('100%').padding({ top: 12, bottom: 24 })
           .onAreaChange((_previous: Area, current: Area) => {
             this.filterStartOffset = Number(current.height);
             this.updateFilterPlacement();
@@ -1035,15 +1069,7 @@ struct Index {
       content: {
         title: { mainTitle: '' },
         divider: { showType: DividerShowType.OFF },
-        stackBuilder: this.navigationTitle.bind(this),
-        menu: { value: this.filtersInNavigation ? [] : [{ content: {
-          icon: $r('app.media.lucide_search1'), componentId: '搜索账目', label: '搜索账目',
-          action: () => {
-            if (this.showSearch) { this.keyword = ''; }
-            this.showSearch = !this.showSearch;
-            this.bodyScroller.scrollTo({ xOffset: 0, yOffset: 0 });
-          }
-        } }] }
+        stackBuilder: this.navigationTitle.bind(this)
       },
       style: {
         systemMaterialEffect: {
