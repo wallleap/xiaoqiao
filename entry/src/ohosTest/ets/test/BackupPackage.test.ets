@@ -13,6 +13,7 @@ import { DEFAULT_BOOK_ID } from '../../../main/ets/data/rdb/LedgerDatabase';
 import { REVIEW_SCHEMA_SHA256, REVIEW_SCHEMA_STATEMENTS } from '../../../main/ets/data/rdb/ReviewSchema';
 import { RdbSession } from '../../../main/ets/data/rdb/RdbSession';
 import { SpendingNatureMigration } from '../../../main/ets/data/rdb/SpendingNatureMigration';
+import { BudgetNatureMigration } from '../../../main/ets/data/rdb/BudgetNatureMigration';
 import { TransferMigration } from '../../../main/ets/data/rdb/TransferMigration';
 
 async function context(): Promise<common.UIAbilityContext> {
@@ -189,7 +190,10 @@ export default function backupPackageTest() {
         expect((await workspace.snapshot('2027-01')).bookName).assertEqual('V2 旧账本');
         await LedgerWorkspace.close(name);
         const restored = await database(host, name);
-        try { expect(await SpendingNatureMigration.status(restored)).assertEqual(3); }
+        try {
+          expect(await SpendingNatureMigration.status(restored)).assertEqual(4);
+          expect(await BudgetNatureMigration.status(restored)).assertEqual(4);
+        }
         finally { await restored.close(); }
       } finally {
         await clean(host, name, [archive, stage]);

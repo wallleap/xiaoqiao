@@ -18,7 +18,7 @@ import { UpdateExpense } from '../../domain/services/UpdateExpense';
 import { EntryDetail } from '../../domain/model/EntryDetail';
 import { MonthlyBudget, DEFAULT_MONTHLY_BUDGET_MINOR } from '../../domain/model/MonthlyBudget';
 import { LedgerBook, ValidatedLedgerBook } from '../../domain/model/LedgerBook';
-import { SpendingNatureCommand, SpendingNatureProfile, ValidatedSpendingNature } from '../../domain/model/SpendingNature';
+import { BudgetNatureLine, SpendingNatureCommand, SpendingNatureProfile, ValidatedSpendingNature } from '../../domain/model/SpendingNature';
 import { LedgerDatabase, DEFAULT_BOOK_ID } from './LedgerDatabase';
 import { RdbLedgerRepository } from './RdbLedgerRepository';
 import { RdbSession } from './RdbSession';
@@ -256,6 +256,59 @@ export class LedgerWorkspace {
     });
   }
 
+  async setBudgetNatureAmount(month: string, natureId: string, decimal: string): Promise<void> {
+    const period = MonthlyBudget.period(month);
+    const amount = MonthlyBudget.parse(decimal, this.currency);
+    await this.session.write(async (db: relationalStore.RdbStore): Promise<void> => {
+      this.activeBookId = await this.activeBookFromMeta(db);
+      const nature = await db.querySql('SELECT id FROM spending_natures WHERE id=? AND deleted_at_ms IS NULL', [natureId]);
+      try { if (!nature.goToFirstRow()) { throw new Error('SPENDING_NATURE_UNAVAILABLE'); } } finally { nature.close(); }
+      const rows = await db.querySql('SELECT id,currency_id,CAST(total_minor AS TEXT) FROM budgets WHERE book_id=? AND period_start_date=? AND period_end_date_exclusive=? AND deleted_at_ms IS NULL',
+        [this.activeBookId, period.start, period.endExclusive]);
+      let budgetId: string = '';
+      let totalMinor: string = DEFAULT_MONTHLY_BUDGET_MINOR;
+      try {
+        if (rows.goToFirstRow()) {
+          if (rows.getString(1) !== this.currency.id) { throw new Error('CURRENCY_MISMATCH'); }
+          budgetId = rows.getString(0); totalMinor = rows.getString(2);
+        }
+      } finally { rows.close(); }
+      const now = Date.now();
+      if (budgetId.length === 0) {
+        budgetId = util.generateRandomUUID();
+        await db.insert('budgets', { id: budgetId, book_id: this.activeBookId, currency_id: this.currency.id,
+          period_start_date: period.start, period_end_date_exclusive: period.endExclusive,
+          total_minor: Number(totalMinor), created_at_ms: now, updated_at_ms: now });
+      }
+      const existing = await db.querySql('SELECT id,revision FROM budget_nature_lines WHERE budget_id=? AND spending_nature_id=?',
+        [budgetId, natureId]);
+      let lineId: string = '';
+      let revision: number = 0;
+      try {
+        if (existing.goToFirstRow()) { lineId = existing.getString(0); revision = existing.getLong(1); }
+      } finally { existing.close(); }
+      if (amount.minor === BigInt(0)) {
+        if (lineId.length > 0) {
+          await db.delete(new relationalStore.RdbPredicates('budget_nature_lines').equalTo('id', lineId));
+        }
+        return;
+      }
+      const allocated = await db.querySql('SELECT COALESCE(SUM(amount_minor),0) FROM budget_nature_lines WHERE budget_id=? AND id<>?',
+        [budgetId, lineId]);
+      let otherAllocated: number = 0;
+      try { if (allocated.goToFirstRow()) { otherAllocated = allocated.getLong(0); } } finally { allocated.close(); }
+      if (BigInt(otherAllocated) + amount.minor > BigInt(totalMinor)) { throw new Error('BUDGET_ALLOCATION_EXCEEDS_TOTAL'); }
+      if (lineId.length > 0) {
+        const changed = await db.update({ amount_minor: amount.toSafeMinorNumber(), updated_at_ms: now, revision: revision + 1 },
+          new relationalStore.RdbPredicates('budget_nature_lines').equalTo('id', lineId).equalTo('revision', revision));
+        if (changed !== 1) { throw new Error('BUDGET_LINE_CHANGED'); }
+      } else {
+        await db.insert('budget_nature_lines', { id: util.generateRandomUUID(), budget_id: budgetId, book_id: this.activeBookId,
+          spending_nature_id: natureId, amount_minor: amount.toSafeMinorNumber(), created_at_ms: now, updated_at_ms: now });
+      }
+    });
+  }
+
   async updateExpense(command: ExpenseCommand, expectedRevision: number): Promise<void> {
     await this.updater.execute(command, expectedRevision);
   }
@@ -415,16 +468,29 @@ export class LedgerWorkspace {
         }
       } finally { rows.close(); }
       let budgetTotal: string = DEFAULT_MONTHLY_BUDGET_MINOR;
-      const budget = await db.querySql('SELECT CAST(total_minor AS TEXT),currency_id FROM budgets WHERE book_id=? AND period_start_date=? AND period_end_date_exclusive=? AND deleted_at_ms IS NULL',
+      let budgetId: string = '';
+      const budget = await db.querySql('SELECT id,CAST(total_minor AS TEXT),currency_id FROM budgets WHERE book_id=? AND period_start_date=? AND period_end_date_exclusive=? AND deleted_at_ms IS NULL',
         [this.activeBookId, period.start, period.endExclusive]);
       try {
         if (budget.goToFirstRow()) {
-          if (budget.getString(1) !== this.currency.id) { throw new Error('CURRENCY_MISMATCH'); }
-          budgetTotal = budget.getString(0);
+          if (budget.getString(2) !== this.currency.id) { throw new Error('CURRENCY_MISMATCH'); }
+          budgetId = budget.getString(0); budgetTotal = budget.getString(1);
         }
       } finally { budget.close(); }
+      const budgetNatureLines: BudgetNatureLine[] = [];
+      const lines = await db.querySql('SELECT n.id,n.name,n.color_token,CAST(COALESCE(l.amount_minor,0) AS TEXT),' +
+        "CAST(COALESCE((SELECT SUM(t.book_minor) FROM v_posted_transactions t JOIN transactions raw ON raw.id=t.id WHERE raw.spending_nature_id=n.id AND t.book_id=? AND t.kind='expense' AND t.include_in_budget=1 AND substr(t.occurred_local_date,1,7)=?),0) AS TEXT)," +
+        'n.archived_at_ms FROM spending_natures n LEFT JOIN budget_nature_lines l ON l.spending_nature_id=n.id AND l.budget_id=? ' +
+        'WHERE n.deleted_at_ms IS NULL AND (n.archived_at_ms IS NULL OR l.id IS NOT NULL) ORDER BY n.sort_order,n.created_at_ms,n.id',
+        [this.activeBookId, month, budgetId]);
+      try {
+        while (lines.goToNextRow()) {
+          budgetNatureLines.push({ natureId: lines.getString(0), name: lines.getString(1), colorKey: lines.getString(2),
+            amountMinor: lines.getString(3), usedMinor: lines.getString(4), archived: !lines.isColumnNull(5) });
+        }
+      } finally { lines.close(); }
       return { bookId: this.activeBookId, bookName: bookName, categories: categories, incomeCategories: incomeCategories,
-        spendingNatures: spendingNatures, accounts: accounts,
+        spendingNatures: spendingNatures, budgetNatureLines: budgetNatureLines, accounts: accounts,
         entries: entries, incomeMinor: income.toString(), expenseMinor: expense.toString(),
         budgetTotalMinor: budgetTotal, budgetUsedMinor: budgetUsed.toString() };
     });

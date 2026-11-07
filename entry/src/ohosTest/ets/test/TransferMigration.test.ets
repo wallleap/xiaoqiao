@@ -9,6 +9,7 @@ import { LedgerDatabase, DEFAULT_BOOK_ID } from '../../../main/ets/data/rdb/Ledg
 import { LedgerWorkspace } from '../../../main/ets/data/rdb/LedgerWorkspace';
 import { RdbSession } from '../../../main/ets/data/rdb/RdbSession';
 import { SpendingNatureMigration } from '../../../main/ets/data/rdb/SpendingNatureMigration';
+import { BudgetNatureMigration } from '../../../main/ets/data/rdb/BudgetNatureMigration';
 
 let cachedMigrationContext: common.UIAbilityContext | undefined = undefined;
 
@@ -59,8 +60,9 @@ export default function transferMigrationTest() {
         const original = await legacy(host, name, false); await original.close();
         const db = await LedgerDatabase.open(host, name);
         try {
-          expect(await TransferMigration.status(db)).assertEqual(3);
-          expect(await SpendingNatureMigration.status(db)).assertEqual(3); await verifyLegacy(db);
+          expect(await TransferMigration.status(db)).assertEqual(4);
+          expect(await SpendingNatureMigration.status(db)).assertEqual(4);
+          expect(await BudgetNatureMigration.status(db)).assertEqual(4); await verifyLegacy(db);
           const details = await db.querySql('SELECT COUNT(*) FROM transfer_details');
           try { details.goToFirstRow(); expect(details.getLong(0)).assertEqual(0); } finally { details.close(); }
           await db.restore(TransferMigration.backupName(name));
@@ -70,6 +72,7 @@ export default function transferMigrationTest() {
         await LedgerWorkspace.close(name); await relationalStore.deleteRdbStore(host, name);
         await relationalStore.deleteRdbStore(host, TransferMigration.backupName(name));
         await relationalStore.deleteRdbStore(host, SpendingNatureMigration.backupName(name));
+        await relationalStore.deleteRdbStore(host, BudgetNatureMigration.backupName(name));
       }
     });
     it('late_upgrade_failure_rolls_back_schema_marker_trigger_and_money', 0, async () => {

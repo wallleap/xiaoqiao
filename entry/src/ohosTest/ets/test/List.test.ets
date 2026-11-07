@@ -16,6 +16,8 @@ import localLedgerBackupTest from './LocalLedgerBackup.test';
 import booksTest from './Books.test';
 import spendingNatureTest from './SpendingNature.test';
 import spendingNatureFlowTest from './SpendingNatureFlow';
+import budgetNatureTest from './BudgetNature.test';
+import budgetNatureFlowTest from './BudgetNatureFlow';
 
 export default function testsuite() {
   abilityTest();
@@ -34,5 +36,7 @@ export default function testsuite() {
   booksTest();
   spendingNatureTest();
   spendingNatureFlowTest();
+  budgetNatureTest();
+  budgetNatureFlowTest();
   if (abilityDelegatorRegistry.getArguments().parameters['-s class'] === 'WebDavHttp') { webDavHttpTest(); }
 }

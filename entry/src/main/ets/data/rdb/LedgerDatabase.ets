@@ -4,6 +4,7 @@ import { relationalStore } from '@kit.ArkData';
 import { REVIEW_SCHEMA_SHA256, REVIEW_SCHEMA_STATEMENTS } from './ReviewSchema';
 import { TransferMigration } from './TransferMigration';
 import { SpendingNatureMigration } from './SpendingNatureMigration';
+import { BudgetNatureMigration } from './BudgetNatureMigration';
 import { RdbSession } from './RdbSession';
 import { LocalLedgerBackup } from './LocalLedgerBackup';
 
@@ -47,10 +48,11 @@ export class LedgerDatabase {
           await LedgerDatabase.seed(db);
           await TransferMigration.apply(db, '', false);
           await SpendingNatureMigration.apply(db, '', false);
+          await BudgetNatureMigration.apply(db, '', false);
           await LedgerDatabase.ensureIncomeCategories(db);
         });
       } else {
-        let version = await session.read(async (db: relationalStore.RdbStore): Promise<number> => SpendingNatureMigration.status(db));
+        let version = await session.read(async (db: relationalStore.RdbStore): Promise<number> => BudgetNatureMigration.status(db));
         if (version === 1) {
           if (!allowUpgrade) { throw new Error('LEDGER_UPGRADE_REQUIRED'); }
           await TransferMigration.upgrade(store, name);
@@ -58,6 +60,10 @@ export class LedgerDatabase {
         }
         if (version === 2) {
           await SpendingNatureMigration.upgrade(store, name);
+          version = 3;
+        }
+        if (version === 3) {
+          await BudgetNatureMigration.upgrade(store, name);
         }
         await session.write(async (db: relationalStore.RdbStore): Promise<void> => { await LedgerDatabase.ensureIncomeCategories(db); });
       }

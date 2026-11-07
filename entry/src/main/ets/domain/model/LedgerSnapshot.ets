@@ -1,3 +1,5 @@
+import { BudgetNatureLine } from './SpendingNature';
+
 export interface ExpenseCategory {
   id: string;
   name: string;
@@ -44,6 +46,7 @@ export interface LedgerSnapshot {
   categories: ExpenseCategory[];
   incomeCategories: ExpenseCategory[];
   spendingNatures: SpendingNatureChoice[];
+  budgetNatureLines: BudgetNatureLine[];
   accounts: LedgerAccount[];
   entries: SavedLedgerEntry[];
   incomeMinor: string;

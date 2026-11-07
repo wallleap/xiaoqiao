@@ -4,6 +4,7 @@ import { fileIo as fs } from '@kit.CoreFileKit';
 import { RdbSession } from './RdbSession';
 import { TransferMigration } from './TransferMigration';
 import { SpendingNatureMigration } from './SpendingNatureMigration';
+import { BudgetNatureMigration } from './BudgetNatureMigration';
 
 const MAX_BACKUP_BYTES: number = 128 * 1024 * 1024;
 
@@ -76,7 +77,7 @@ export class LocalLedgerBackup {
   }
 
   private static async check(db: relationalStore.RdbStore): Promise<void> {
-    if (await SpendingNatureMigration.status(db) !== 3) { throw new Error('BACKUP_VERSION_UNSUPPORTED'); }
+    if (await BudgetNatureMigration.status(db) !== 4) { throw new Error('BACKUP_VERSION_UNSUPPORTED'); }
     const integrity = await db.querySql('PRAGMA integrity_check(1)');
     try {
       if (integrity.rowCount !== 1 || !integrity.goToFirstRow() || integrity.getString(0) !== 'ok') {
@@ -102,9 +103,16 @@ export class LocalLedgerBackup {
     const candidate = await relationalStore.getRdbStore(this.context, { name: this.candidateName,
       securityLevel: relationalStore.SecurityLevel.S1 });
     try {
-      const version = await SpendingNatureMigration.status(candidate);
-      if (version === 2) { await SpendingNatureMigration.upgradeCandidate(candidate); }
-      else if (version !== 3) { throw new Error('BACKUP_VERSION_UNSUPPORTED'); }
+      let version = await BudgetNatureMigration.status(candidate);
+      if (version === 2) {
+        await SpendingNatureMigration.upgradeCandidate(candidate);
+        version = 3;
+      }
+      if (version === 3) {
+        await BudgetNatureMigration.upgradeCandidate(candidate);
+        version = 4;
+      }
+      if (version !== 4) { throw new Error('BACKUP_VERSION_UNSUPPORTED'); }
       if (await LocalLedgerBackup.schema(candidate) !== schema) { throw new Error('BACKUP_SCHEMA_MISMATCH'); }
       await LocalLedgerBackup.check(candidate);
       return await LocalLedgerBackup.preview(candidate, (await fs.stat(this.candidate)).size);

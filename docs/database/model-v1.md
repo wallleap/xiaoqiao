@@ -136,6 +136,7 @@ SQL SUM仅对整数列使用；不得用TOTAL或转REAL绕过溢出。SQL 64位�
 
 - budgets：id、book_id、period_start_date、period_end_date_exclusive、currency_id、total_minor、revision、deleted_at_ms。首版支持已有月预算，区间避免月末时间边界。
 - budget_lines：id、budget_id、category_id、amount_minor。分类与预算同账本；分类额度是否允许超总额需业务校验，不能默默重新分配。
+- budget_nature_lines：V4 按预算分类记录每月额度；budget_id + spending_nature_id 唯一，分类额度合计不能超过总预算。
 - 使用额来自有效支出、业务日期落在区间且include_in_budget=1的book_minor；收入、转账本金、余额调整排除。
 - 子分类消费可向祖先汇总，但同一笔支出在一个预算额度内只计一次。总预算不能通过“父预算已用+子预算已用”求和。
 - 预算币种首版等于账本基准币种，直接使用历史book_minor；参考汇率更新不重算已发生预算。历史import preserve仍可按原日期和预算标记计入历史预算。

@@ -5,6 +5,7 @@ import { HdsTabs, hdsMaterial, HdsNavigation, HdsNavigationTitleMode, HdsListIte
 import { AccountsPage } from '../components/AccountsPage';
 import { LocalBackupPage } from '../components/LocalBackupPage';
 import { SpendingNaturePage } from '../components/SpendingNaturePage';
+import { BudgetPage } from '../components/BudgetPage';
 import { MoneyAmountField } from '../components/MoneyAmountField';
 import { AccountEditor } from '../components/AccountEditor';
 import { AccountProfile, AccountOverview } from '../domain/model/AccountProfile';
@@ -37,6 +38,7 @@ struct Index {
   @State private selectedTab: number = 0;
   @State private backupBusy: boolean = false;
   @State private showSpendingNatures: boolean = false;
+  @State private showBudgetPage: boolean = false;
   @State private accountOverview: AccountOverview | undefined = undefined;
   @State private accountError: string = '';
   @State private showAccountEditor: boolean = false;
@@ -341,6 +343,20 @@ struct Index {
   }
 
   @Builder
+  private budgetPage() {
+    BudgetPage({
+      workspace: this.workspace,
+      monthKey: this.selectedMonth,
+      monthLabel: this.month(),
+      sheetMaterial: this.materialReady && !this.forceLegacyMaterials ? this.filterMaterials?.menu : undefined,
+      onClose: () => {
+        this.showBudgetPage = false;
+        this.loadLedger();
+      }
+    })
+  }
+
+  @Builder
   private accountEditorPage() {
     AccountEditor({ workspace: this.workspace, original: this.editingAccount, operationBusy: this.accountSaving,
       sheetMaterial: this.materialReady && !this.forceLegacyMaterials ? this.filterMaterials?.menu : undefined,
@@ -486,8 +502,7 @@ struct Index {
     if (workspace === undefined || this.ledger === undefined || this.loading || this.loadError.length > 0) {
       this.notify('请先等待账本读取完成，或重试读取'); return;
     }
-    this.budgetInput = Money.fromMinorText(this.ledger.budgetTotalMinor, workspace.currency).toDecimalString();
-    this.budgetError = ''; this.selectionKind = 2; this.showSelection = true;
+    this.showBudgetPage = true;
   }
 
   private async saveBudget(): Promise<void> {
@@ -545,6 +560,7 @@ struct Index {
   }
 
   onBackPress(): boolean {
+    if (this.showBudgetPage) { this.showBudgetPage = false; this.loadLedger(); return true; }
     if (this.showSpendingNatures) { this.showSpendingNatures = false; this.loadLedger(); return true; }
     if (this.showAccountEditor) { if (!this.accountSaving) { this.showAccountEditor = false; this.editingAccount = undefined; } return true; }
     if (this.showExpense) { if (!this.savingExpense) { this.closeEditor(); } return true; }
@@ -1346,7 +1362,8 @@ struct Index {
   }
 
   build() {
-    if (this.showSpendingNatures) { this.spendingNaturePage() }
+    if (this.showBudgetPage) { this.budgetPage() }
+    else if (this.showSpendingNatures) { this.spendingNaturePage() }
     else if (this.showAccountEditor) { this.accountEditorPage() }
     else if (this.showExpense) { this.expensePage() }
     else if (this.showDetail) { this.detailPage() }

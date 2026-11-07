@@ -14,6 +14,15 @@ export interface SpendingNatureCommand {
   colorKey: string;
 }
 
+export interface BudgetNatureLine {
+  natureId: string;
+  name: string;
+  colorKey: string;
+  amountMinor: string;
+  usedMinor: string;
+  archived: boolean;
+}
+
 export const SPENDING_NATURE_COLORS: string[] = ['survival', 'experience', 'growth', 'emergency', 'calm', 'creative', 'social', 'neutral'];
 
 export class ValidatedSpendingNature {
