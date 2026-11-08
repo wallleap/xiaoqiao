@@ -337,6 +337,8 @@ export class LedgerWorkspace {
     }
     const validRows = rows.filter((row: CsvPreviewRow) => row.valid && row.selected);
     if (validRows.length === 0) { throw new Error('CSV_NO_VALID_ROWS'); }
+    const provider = /微信|wechat|weixin/i.test(fileName) ? 'wechat' :
+      /支付宝|alipay/i.test(fileName) ? 'alipay' : /\.xlsx$/i.test(fileName) ? 'xlsx' : 'csv';
     return this.session.write(async (db: relationalStore.RdbStore): Promise<number> => {
       this.activeBookId = await this.activeBookFromMeta(db);
       const batchId = util.generateRandomUUID();
@@ -410,7 +412,7 @@ export class LedgerWorkspace {
           merchant_name_snapshot: row.merchant.length > 0 ? row.merchant : null,
           address_text: row.address.length > 0 ? row.address : null, note: row.note,
           import_batch_id: batchId, import_row_id: importRowIds.get(row.rowNumber),
-          source_provider: 'csv', source_namespace: fileSha256, source_record_id: row.sourceId || String(row.rowNumber),
+          source_provider: provider, source_namespace: fileSha256, source_record_id: row.sourceId || String(row.rowNumber),
           duplicate_override: row.duplicate ? 1 : 0,
           occurred_at_ms: occurred.getTime(), occurred_local_date: row.date,
           occurred_timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
