@@ -24,6 +24,8 @@ import { LedgerDatabase, DEFAULT_BOOK_ID } from './LedgerDatabase';
 import { RdbLedgerRepository } from './RdbLedgerRepository';
 import { RdbSession } from './RdbSession';
 import { LocalLedgerBackup } from './LocalLedgerBackup';
+import { RdbStatisticsRepository } from './RdbStatisticsRepository';
+import { LedgerStatistics, StatisticsBucketUnit, StatisticsEntry, StatisticsKind } from '../../domain/model/LedgerStatistics';
 
 /** Owns the store for the foreground ledger. All runtime SQL goes through its shared serial session. */
 export class LedgerWorkspace {
@@ -39,6 +41,7 @@ export class LedgerWorkspace {
   private readonly income: IncomeService;
   private readonly transfer: TransferService;
   private readonly accountRepository: RdbAccountRepository;
+  private readonly statisticsRepository: RdbStatisticsRepository;
   private activeBookId: string = DEFAULT_BOOK_ID;
 
   private constructor(context: common.Context, name: string, store: relationalStore.RdbStore) {
@@ -47,6 +50,7 @@ export class LedgerWorkspace {
     this.localBackup = new LocalLedgerBackup(context, name, this.session);
     this.backup = new LedgerBackupPackage(context, name, this.localBackup);
     this.accountRepository = new RdbAccountRepository(store);
+    this.statisticsRepository = new RdbStatisticsRepository(store);
     this.transfer = new TransferService(new RdbTransferRepository(store));
     this.income = new IncomeService(new RdbLedgerRepository(store));
     this.writer = new RecordExpense(new RdbLedgerRepository(store));
@@ -470,6 +474,22 @@ export class LedgerWorkspace {
 
   async saveIncome(command: IncomeCommand): Promise<void> { await this.income.save(command); }
   async updateIncome(command: IncomeCommand, revision: number): Promise<void> { await this.income.update(command, revision); }
+
+  async statistics(startDate: string, endDateExclusive: string, kind: StatisticsKind,
+    unit: StatisticsBucketUnit): Promise<LedgerStatistics> {
+    return this.session.read(async (db: relationalStore.RdbStore): Promise<LedgerStatistics> => {
+      this.activeBookId = await this.activeBookFromMeta(db);
+      return this.statisticsRepository.snapshot(this.activeBookId, startDate, endDateExclusive, kind, unit);
+    });
+  }
+
+  async statisticsEntries(startDate: string, endDateExclusive: string, kind: StatisticsKind,
+    categoryKey: string): Promise<StatisticsEntry[]> {
+    return this.session.read(async (db: relationalStore.RdbStore): Promise<StatisticsEntry[]> => {
+      this.activeBookId = await this.activeBookFromMeta(db);
+      return this.statisticsRepository.entries(this.activeBookId, startDate, endDateExclusive, kind, categoryKey);
+    });
+  }
 
   async entryDetail(id: string): Promise<EntryDetail> {
     if (id.trim().length === 0) { throw new Error('INVALID_TRANSACTION_ID'); }

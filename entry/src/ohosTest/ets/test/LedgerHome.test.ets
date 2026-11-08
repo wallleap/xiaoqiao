@@ -52,10 +52,11 @@ export default function ledgerHomeTest() {
         expect((await emptyTab.getBounds()).top).assertEqual(emptyTabBefore.top);
         const statistics = await driver.findComponent(ON.id('ledger-tab-1'));
         await statistics.click();
-        await driver.waitForComponent(ON.text('统计页面尚未接入'), 5000);
-        expect(await driver.screenCap(ability.context.filesDir + '/xiaoqiao-home-hds-snackbar.png')).assertTrue();
-        await driver.delayMs(3200); // Verify the HDS feedback's configured three-second lifetime.
-        await waitForAbsence(driver, ON.text('统计页面尚未接入'));
+        await driver.waitForComponent(ON.id('statistics-page'), 5000);
+        await driver.waitForComponent(ON.text('暂无支出数据'), 5000);
+        expect(await driver.screenCap(ability.context.filesDir + '/xiaoqiao-statistics-empty.png')).assertTrue();
+        await (await driver.findComponent(ON.id('ledger-tab-0'))).click();
+        await driver.waitForComponent(ON.text('日常账本'), 5000);
         AppStorage.setOrCreate('ledgerPreview', true);
         const lunchCard = await driver.waitForComponent(ON.id('preview-lunch'), 5000);
         await driver.waitForComponent(ON.text('午餐'), 5000);

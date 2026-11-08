@@ -7,6 +7,7 @@ import { LocalBackupPage } from '../components/LocalBackupPage';
 import { SpendingNaturePage } from '../components/SpendingNaturePage';
 import { BudgetPage } from '../components/BudgetPage';
 import { CategoryManagementPage } from '../components/CategoryManagementPage';
+import { StatisticsPage } from '../components/StatisticsPage';
 import { MoneyAmountField } from '../components/MoneyAmountField';
 import { AccountEditor } from '../components/AccountEditor';
 import { AccountProfile, AccountOverview } from '../domain/model/AccountProfile';
@@ -67,6 +68,7 @@ struct Index {
   @State private headerScrolled: boolean = false;
   @State private periodOpacity: number = 1;
   @State private ledger: LedgerSnapshot | undefined = undefined;
+  @State private ledgerVersion: number = 0;
   @State private loadError: string = '';
   @State private upgradeRequired: boolean = false;
   @State private loading: boolean = true;
@@ -146,6 +148,7 @@ struct Index {
       const name = AppStorage.get<string>('ledgerDatabaseName') || 'xiaoqiao.db';
       this.workspace = await LedgerWorkspace.open(context, name);
       this.ledger = await this.workspace.snapshot(this.selectedMonth);
+      this.ledgerVersion++;
       await this.refreshAccountOverview(this.workspace);
     } catch (error) {
       const code = (error as Error).message;
@@ -271,6 +274,7 @@ struct Index {
   private async refreshAfterDeletion(workspace: LedgerWorkspace): Promise<void> {
     try {
       this.ledger = await workspace.snapshot(this.selectedMonth);
+      this.ledgerVersion++;
       this.loadError = '';
     } catch (_) { this.loadError = '账目已删除，但列表刷新失败，请重试读取'; }
   }
@@ -1340,7 +1344,17 @@ struct Index {
   private homeTabs() {
     HdsTabs({ barPosition: BarPosition.End, index: this.selectedTab }) {
       TabContent() { this.homeNavigation() }.tabBar(this.tabItem(0))
-      TabContent() {}.tabBar(this.tabItem(1))
+      TabContent() {
+        StatisticsPage({
+          workspace: this.workspace,
+          active: this.selectedTab === 1,
+          bookId: this.ledger?.bookId || '',
+          bookName: this.ledger?.bookName || '',
+          refreshToken: this.ledgerVersion,
+          sheetMaterial: this.materialReady && !this.forceLegacyMaterials ? this.filterMaterials?.menu : undefined,
+          onOpenEntry: (id: string) => { this.openDetail(id); }
+        })
+      }.tabBar(this.tabItem(1))
       TabContent() {}.tabBar(this.tabItem(2))
       TabContent() { this.accountsPage() }.tabBar(this.tabItem(3))
       TabContent() {
@@ -1369,7 +1383,7 @@ struct Index {
       .ignoreLayoutSafeArea([LayoutSafeAreaType.SYSTEM], [LayoutSafeAreaEdge.TOP, LayoutSafeAreaEdge.BOTTOM])
       .onContentWillChange((_current: number, next: number): boolean => {
         if (this.backupBusy) { return false; }
-        if (next === 0 || next === 3 || next === 4) { this.selectedTab = next; return true; }
+        if (next === 0 || next === 1 || next === 3 || next === 4) { this.selectedTab = next; return true; }
         if (next === 2) { this.openExpense(); } else { this.notify(`${this.labels[next]}页面尚未接入`); }
         return false;
       })

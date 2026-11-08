@@ -20,6 +20,8 @@ import budgetNatureTest from './BudgetNature.test';
 import budgetNatureFlowTest from './BudgetNatureFlow';
 import categoriesTest from './Categories.test';
 import categoryFlowTest from './CategoryFlow';
+import statisticsTest from './Statistics.test';
+import statisticsFlowTest from './StatisticsFlow';
 
 export default function testsuite() {
   abilityTest();
@@ -42,5 +44,7 @@ export default function testsuite() {
   budgetNatureFlowTest();
   categoriesTest();
   categoryFlowTest();
+  statisticsTest();
+  statisticsFlowTest();
   if (abilityDelegatorRegistry.getArguments().parameters['-s class'] === 'WebDavHttp') { webDavHttpTest(); }
 }
