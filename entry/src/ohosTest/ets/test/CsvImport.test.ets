@@ -1,0 +1,85 @@
+import { common } from '@kit.AbilityKit';
+import { relationalStore } from '@kit.ArkData';
+import { util } from '@kit.ArkTS';
+import { abilityDelegatorRegistry } from '@kit.TestKit';
+import { describe, expect, it } from '@ohos/hypium';
+import { Money } from '../../../main/ets/core/money/Money';
+import { LedgerWorkspace } from '../../../main/ets/data/rdb/LedgerWorkspace';
+import { detectCsvMapping, parseCsv, previewCsv } from '../../../main/ets/data/exchange/LedgerCsvImport';
+
+async function testContext(): Promise<common.UIAbilityContext> {
+  const delegator = abilityDelegatorRegistry.getAbilityDelegator();
+  try { return (await delegator.getCurrentTopAbility()).context; }
+  catch (_) { /* Class-only execution can start before EntryAbility is on top. */ }
+  const monitor: abilityDelegatorRegistry.AbilityMonitor = { abilityName: 'EntryAbility', moduleName: 'entry' };
+  await delegator.addAbilityMonitor(monitor);
+  try {
+    await delegator.startAbility({ bundleName: 'cn.oicode.xiaoqiao', abilityName: 'EntryAbility' });
+    return (await delegator.waitAbilityMonitor(monitor, 10000)).context;
+  } finally { await delegator.removeAbilityMonitor(monitor); }
+}
+
+export default function csvImportTest() {
+  describe('CsvImport', () => {
+    it('maps_previews_and_imports_with_preserved_balance_atomically', 0, async () => {
+      const host = await testContext();
+      const name = 'xiaoqiao_app_test_csv_import_' + util.generateRandomUUID() + '.db';
+      try {
+        const workspace = await LedgerWorkspace.open(host, name);
+        await workspace.createAccount({ id: 'csv-account', name: '导入账户', kind: 'asset', styleKey: 'cash',
+          includeInNetAssets: true, opening: Money.parse('100', workspace.currency) });
+        await workspace.createCategory({ id: 'csv-expense-shared', kind: 'expense', name: '同名分类', iconKey: 'other' });
+        await workspace.createCategory({ id: 'csv-income-shared', kind: 'income', name: '同名分类', iconKey: 'other' });
+        const snapshot = await workspace.snapshot('2027-05');
+        const table = parseCsv('\uFEFF日期,类型,金额,分类,账户,备注\r\n' +
+          '2027.05.01 18:21:44,,-12.00,餐饮 / 午餐,导入账户,点号日期带时间\r\n' +
+          '2027-05-02,,"5,000.00",工资,导入账户,正数为收入\r\n' +
+          '2027-05-03,支出,8.00,宠物 / 猫粮,宠物钱包,新建分类账户\r\n' +
+          '2027-05-04,收入,100.00,副业收入,兼职钱包,明确类型\r\n' +
+          '2027-05-05,,-3.00,宠物/猫粮,宠物钱包,复用同批新建项\r\n' +
+          '2027-05-06,交易支出,1.00,同名分类,导入账户,同名支出分类\r\n' +
+          '2027-05-07,交易收入,2.00,同名分类,导入账户,同名收入分类\r\n' +
+          '不是日期,支出,8.00,餐饮,导入账户,问题行\r\n');
+        const mapping = detectCsvMapping(table.headers);
+        const preview = previewCsv(table, mapping, snapshot);
+        expect(preview.length).assertEqual(8);
+        expect(preview.filter((row) => row.valid).length).assertEqual(7);
+        expect(preview.filter((row) => !row.valid).length).assertEqual(1);
+        expect(preview[0].type).assertEqual('expense');
+        expect(preview[0].date).assertEqual('2027-05-01');
+        expect(preview[0].time).assertEqual('18:21');
+        expect(preview[0].timeKnown).assertTrue();
+        expect(preview[1].type).assertEqual('income');
+        expect(preview[2].createCategory).assertTrue();
+        expect(preview[2].createAccount).assertTrue();
+        expect(preview[5].categoryId).assertEqual('csv-expense-shared');
+        expect(preview[6].categoryId).assertEqual('csv-income-shared');
+        const progress: number[] = [];
+        const count = await workspace.importCsvBatch('fixture.csv', 'fixture-sha', preview, table.delimiter,
+          (completed: number, total: number) => { progress.push(completed); expect(total).assertEqual(7); });
+        expect(count).assertEqual(7);
+        expect(progress.length).assertEqual(8);
+        expect(progress[0]).assertEqual(0);
+        expect(progress[progress.length - 1]).assertEqual(7);
+        const imported = await workspace.snapshot('2027-05');
+        expect(imported.entries.length).assertEqual(7);
+        expect(imported.expenseMinor).assertEqual('2400');
+        expect(imported.incomeMinor).assertEqual('510200');
+        expect(imported.budgetUsedMinor).assertEqual('0');
+        expect((await workspace.accountOverview()).netMinor).assertEqual('10000');
+        expect(imported.categories.some((category) => category.name === '猫粮')).assertTrue();
+        expect((await workspace.accountOverview()).accounts.some((account) => account.name === '宠物钱包')).assertTrue();
+        const timeEntry = imported.entries.find((entry) => entry.note === '点号日期带时间');
+        expect(timeEntry !== undefined).assertTrue();
+        const detail = await workspace.entryDetail(timeEntry?.id || '');
+        expect(detail.balanceMode).assertEqual('preserve');
+        const local = new Date(detail.occurredAtMs + detail.offsetMinutes * 60000);
+        expect(local.getUTCHours()).assertEqual(18);
+        expect(local.getUTCMinutes()).assertEqual(21);
+      } finally {
+        await LedgerWorkspace.close(name);
+        await relationalStore.deleteRdbStore(host, name);
+      }
+    });
+  });
+}

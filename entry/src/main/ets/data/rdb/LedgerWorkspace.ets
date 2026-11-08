@@ -4,6 +4,7 @@ import { common } from '@kit.AbilityKit';
 import { relationalStore } from '@kit.ArkData';
 import { util } from '@kit.ArkTS';
 import { CurrencyUnit } from '../../core/money/CurrencyUnit';
+import { Money } from '../../core/money/Money';
 import { TransferCommand } from '../../domain/model/TransferRecord';
 import { TransferService } from '../../domain/services/TransferService';
 import { RdbTransferRepository } from './RdbTransferRepository';
@@ -28,6 +29,7 @@ import { RdbSession } from './RdbSession';
 import { LocalLedgerBackup } from './LocalLedgerBackup';
 import { RdbStatisticsRepository } from './RdbStatisticsRepository';
 import { LedgerStatistics, StatisticsBucketUnit, StatisticsEntry, StatisticsKind } from '../../domain/model/LedgerStatistics';
+import { CsvPreviewRow } from '../exchange/LedgerCsvImport';
 
 /** Owns the store for the foreground ledger. All runtime SQL goes through its shared serial session. */
 export class LedgerWorkspace {
@@ -325,6 +327,172 @@ export class LedgerWorkspace {
           .equalTo('revision', revision).isNull('deleted_at_ms'));
       if (changed !== 1) { throw new Error('TAG_CHANGED'); }
     });
+  }
+
+  async importCsvBatch(fileName: string, fileSha256: string, rows: CsvPreviewRow[],
+    delimiter: string, onProgress: (completed: number, total: number) => void = () => {}): Promise<number> {
+    if (fileName.trim().length === 0 || fileSha256.trim().length === 0 || rows.length === 0) {
+      throw new Error('INVALID_CSV_BATCH');
+    }
+    const validRows = rows.filter((row: CsvPreviewRow) => row.valid);
+    if (validRows.length === 0) { throw new Error('CSV_NO_VALID_ROWS'); }
+    return this.session.write(async (db: relationalStore.RdbStore): Promise<number> => {
+      this.activeBookId = await this.activeBookFromMeta(db);
+      const batchId = util.generateRandomUUID();
+      const now = Date.now();
+      const createdCategories: Map<string, string> = new Map();
+      const createdAccounts: Map<string, string> = new Map();
+      await db.insert('import_batches', { id: batchId, book_id: this.activeBookId, file_sha256: fileSha256,
+        file_name: fileName, sheet_name: '', header_row: 1, encoding: 'utf-8', delimiter: delimiter,
+        profile_snapshot_json: '{"source":"csv","version":1}', balance_mode: 'preserve', status: 'committing',
+        total_count: rows.length, selected_count: validRows.length, skipped_count: rows.length - validRows.length,
+        confirmed_at_ms: now, created_at_ms: now });
+      onProgress(0, validRows.length);
+      const importRowIds: Map<number, string> = new Map();
+      for (const row of rows) {
+        const rowId = util.generateRandomUUID();
+        importRowIds.set(row.rowNumber, rowId);
+        await db.insert('import_rows', { id: rowId, batch_id: batchId, sheet_name: '', row_number: row.rowNumber,
+          raw_json: JSON.stringify(row.raw), normalized_json: JSON.stringify(row),
+          validation_status: row.valid ? 'valid' : 'invalid', issue_codes_json: JSON.stringify(row.issues),
+          duplicate_candidate_ids_json: '[]', selected: row.valid ? 1 : 0 });
+      }
+      let processed = 0;
+      for (const row of validRows) {
+        let categoryId = row.categoryId;
+        let createdCategory = false;
+        if (categoryId.length === 0 && row.createCategory) {
+          const key = row.type + ':' + row.categoryName.trim().toLowerCase().replace(/\s+/g, '');
+          categoryId = createdCategories.get(key) || '';
+          if (categoryId.length === 0) {
+            categoryId = await this.ensureCsvCategory(db, this.activeBookId, row.type, row.categoryName);
+            createdCategories.set(key, categoryId);
+          }
+          createdCategory = true;
+        }
+        if (categoryId.length === 0) { throw new Error('CSV_CATEGORY_INVALID'); }
+        if (!createdCategory) {
+          const category = await db.querySql('SELECT kind FROM categories WHERE id=? AND book_id=? AND deleted_at_ms IS NULL',
+            [categoryId, this.activeBookId]);
+          try {
+            const actualKind = category.goToFirstRow() ? category.getString(0) : 'missing';
+            if (actualKind !== row.type) { throw new Error('CSV_CATEGORY_INVALID'); }
+          } finally { category.close(); }
+        }
+        let accountId = row.accountId;
+        let createdAccount = false;
+        if (accountId.length === 0 && row.createAccount) {
+          const key = row.accountName.trim().toLowerCase();
+          accountId = createdAccounts.get(key) || '';
+          if (accountId.length === 0) {
+            accountId = await this.ensureCsvAccount(db, row.accountName);
+            createdAccounts.set(key, accountId);
+          }
+          createdAccount = true;
+        }
+        if (accountId.length > 0 && !createdAccount) {
+          const account = await db.querySql("SELECT id FROM accounts WHERE id=? AND currency_id='CNY' AND deleted_at_ms IS NULL",
+            [accountId]);
+          try { if (!account.goToFirstRow()) { throw new Error('CSV_ACCOUNT_INVALID'); } } finally { account.close(); }
+        }
+        const occurred = new Date(row.date + 'T' + (row.timeKnown ? (row.time + ':00') : '12:00:00'));
+        const transactionId = util.generateRandomUUID();
+        const amount = Money.parse(row.amount, this.currency).toSafeMinorNumber();
+        await db.insert('transactions', { id: transactionId, book_id: this.activeBookId, kind: row.type,
+          category_id: categoryId, currency_id: 'CNY', gross_minor: amount, discount_minor: 0,
+          paid_minor: amount, book_currency_id: 'CNY', book_minor: amount, include_in_budget: 0,
+          include_in_assets: accountId.length > 0 ? 1 : 0, balance_mode: 'preserve', note: row.note,
+          import_batch_id: batchId, import_row_id: importRowIds.get(row.rowNumber),
+          source_provider: 'csv', source_namespace: fileSha256, source_record_id: String(row.rowNumber),
+          occurred_at_ms: occurred.getTime(), occurred_local_date: row.date,
+          occurred_timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+          occurred_offset_minutes: -occurred.getTimezoneOffset(), created_at_ms: now, updated_at_ms: now });
+        if (accountId.length > 0) {
+          await db.insert('account_movements', { id: util.generateRandomUUID(), transaction_id: transactionId,
+            account_id: accountId, currency_id: 'CNY', leg: row.type,
+            delta_minor: (row.type === 'income' ? 1 : -1) * amount, occurred_at_ms: occurred.getTime() });
+        }
+        await db.executeSql("UPDATE transactions SET posting_state='posted' WHERE id=?", [transactionId]);
+        processed++;
+        onProgress(processed, validRows.length);
+      }
+      const committed = await db.update({ status: 'committed', committed_at_ms: Date.now() },
+        new relationalStore.RdbPredicates('import_batches').equalTo('id', batchId).equalTo('status', 'committing'));
+      if (committed !== 1) { throw new Error('CSV_BATCH_COMMIT_FAILED'); }
+      return validRows.length;
+    });
+  }
+
+  private async ensureCsvCategory(db: relationalStore.RdbStore, bookId: string, kind: string,
+    path: string): Promise<string> {
+    const parts = path.split(/\s*[\/>]\s*/).map((part: string) => part.trim())
+      .filter((part: string) => part.length > 0);
+    const names = parts.length > 0 ? parts : ['未分类'];
+    let parentId: string | null = null;
+    for (const name of names) {
+      let id = '';
+      let revision = 0;
+      let archived = false;
+      const existing = await db.querySql('SELECT id,revision,archived_at_ms FROM categories ' +
+        'WHERE book_id=? AND kind=? AND COALESCE(parent_id,\'\')=? AND name_key=? AND deleted_at_ms IS NULL LIMIT 1',
+        [bookId, kind, parentId || '', name]);
+      try {
+        if (existing.goToFirstRow()) {
+          id = existing.getString(0); revision = existing.getLong(1); archived = !existing.isColumnNull(2);
+        }
+      } finally { existing.close(); }
+      if (id.length > 0) {
+        if (archived) {
+          await db.update({ archived_at_ms: null, revision: revision + 1, updated_at_ms: Date.now() },
+            new relationalStore.RdbPredicates('categories').equalTo('id', id).equalTo('revision', revision));
+        }
+        parentId = id;
+        continue;
+      }
+      const order = await db.querySql('SELECT COALESCE(MAX(sort_order),-1)+1 FROM categories ' +
+        'WHERE book_id=? AND kind=? AND COALESCE(parent_id,\'\')=? AND deleted_at_ms IS NULL',
+        [bookId, kind, parentId || '']);
+      let sortOrder = 0;
+      try { if (order.goToFirstRow()) { sortOrder = order.getLong(0); } } finally { order.close(); }
+      const now = Date.now();
+      id = util.generateRandomUUID();
+      await db.insert('categories', { id: id, book_id: bookId, kind: kind, parent_id: parentId,
+        name: name, name_key: name, icon_key: 'other', sort_order: sortOrder, created_at_ms: now, updated_at_ms: now });
+      parentId = id;
+    }
+    return parentId || '';
+  }
+
+  private async ensureCsvAccount(db: relationalStore.RdbStore, name: string): Promise<string> {
+    const accountName = name.trim();
+    if (accountName.length === 0) { return ''; }
+    let id = '';
+    let revision = 0;
+    let archived = false;
+    const existing = await db.querySql("SELECT id,revision,archived_at_ms FROM accounts WHERE name=? AND currency_id='CNY' " +
+      'AND deleted_at_ms IS NULL LIMIT 1', [accountName]);
+    try {
+      if (existing.goToFirstRow()) {
+        id = existing.getString(0); revision = existing.getLong(1); archived = !existing.isColumnNull(2);
+      }
+    } finally { existing.close(); }
+    if (id.length > 0) {
+      if (archived) {
+        await db.update({ archived_at_ms: null, revision: revision + 1, updated_at_ms: Date.now() },
+          new relationalStore.RdbPredicates('accounts').equalTo('id', id).equalTo('revision', revision));
+      }
+      return id;
+    }
+    const liability = /信用卡|花呗|借呗|贷款|待还/.test(accountName);
+    const order = await db.querySql('SELECT COALESCE(MAX(sort_order),-1)+1 FROM accounts WHERE deleted_at_ms IS NULL');
+    let sortOrder = 0;
+    try { if (order.goToFirstRow()) { sortOrder = order.getLong(0); } } finally { order.close(); }
+    const now = Date.now();
+    id = util.generateRandomUUID();
+    await db.insert('accounts', { id: id, name: accountName, kind: liability ? 'liability' : 'asset',
+      currency_id: 'CNY', brand: 'cash', icon_key: 'cash', icon_variant: 'monochrome',
+      brand_color: '#D49A38', include_in_net_assets: 1, sort_order: sortOrder, created_at_ms: now, updated_at_ms: now });
+    return id;
   }
 
   async categories(): Promise<CategoryProfile[]> {

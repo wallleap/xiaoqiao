@@ -5,6 +5,7 @@ import { Money } from '../../../main/ets/core/money/Money';
 import { DEFAULT_BOOK_ID } from '../../../main/ets/data/rdb/LedgerDatabase';
 import { LedgerWorkspace } from '../../../main/ets/data/rdb/LedgerWorkspace';
 import { ExpenseCommand } from '../../../main/ets/domain/model/ExpenseRecord';
+import { CsvPreviewRow } from '../../../main/ets/data/exchange/LedgerCsvImport';
 
 async function uiContext(): Promise<common.UIAbilityContext> {
   const delegator = abilityDelegatorRegistry.getAbilityDelegator();
@@ -18,6 +19,15 @@ async function uiContext(): Promise<common.UIAbilityContext> {
   } finally { await delegator.removeAbilityMonitor(monitor); }
 }
 
+function currentDate(): string {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+}
+
+function monthKey(): string {
+  return currentDate().substring(0, 7);
+}
+
 function csvExpense(workspace: LedgerWorkspace): ExpenseCommand {
   const now = new Date();
   const money = Money.parse('12', workspace.currency);
@@ -25,7 +35,7 @@ function csvExpense(workspace: LedgerWorkspace): ExpenseCommand {
     gross: money, discount: Money.parse('0', workspace.currency), bookPaid: money,
     includeInAssets: false, includeInBudget: false, note: 'CSV 导出账目',
     occurredAtMs: now.getTime(),
-    localDate: `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`,
+    localDate: currentDate(),
     timezone: Intl.DateTimeFormat().resolvedOptions().timeZone, offsetMinutes: -now.getTimezoneOffset() };
 }
 
@@ -45,8 +55,21 @@ export default function dataExchangeFlowTest() {
       await driver.waitForComponent(ON.text('共 1 笔账目'), 5000);
       await driver.waitForComponent(ON.id('data-export-csv').enabled(true), 5000);
       expect(await driver.screenCap(context.filesDir + '/xiaoqiao-csv-export.png')).assertTrue();
+      const pageScroll = await driver.waitForComponent(ON.id('data-exchange-scroll'), 5000);
+      const importButton = await pageScroll.scrollSearch(ON.id('data-import-csv'));
+      expect(importButton !== null).assertTrue();
+      expect(await driver.screenCap(context.filesDir + '/xiaoqiao-csv-import-section.png')).assertTrue();
+      const current = await workspace.snapshot(monthKey());
+      const category = current.categories.find((item) => item.name === '餐饮');
+      const importedRow: CsvPreviewRow = { rowNumber: 2, raw: [], date: currentDate(), time: '18:21',
+        timeKnown: true, type: 'expense', amount: '9.00', categoryId: category?.id || '',
+        categoryName: '餐饮', createCategory: false, accountId: '', accountName: '',
+        createAccount: false, note: 'CSV 新导入', valid: true, issues: [] };
+      await workspace.importCsvBatch('ui.csv', 'ui-sha', [importedRow], ',');
       await (await driver.findComponent(ON.id('data-exchange-close'))).click();
       await driver.waitForComponent(ON.id('settings-data-exchange'), 5000);
+      await (await driver.findComponent(ON.id('ledger-tab-0'))).click();
+      await driver.waitForComponent(ON.text('CSV 新导入'), 5000);
     });
   });
 }

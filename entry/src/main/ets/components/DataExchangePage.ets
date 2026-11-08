@@ -4,6 +4,8 @@ import { HdsNavigation, HdsNavigationTitleMode, hdsMaterial, DividerShowType, Sc
 import { LedgerWorkspace } from '../data/rdb/LedgerWorkspace';
 import { BackupFiles } from '../data/backup/BackupFiles';
 import { exportLedgerCsv } from '../data/exchange/LedgerCsvExport';
+import { CsvColumnMapping, CsvPreviewRow, CsvTable, detectCsvMapping, parseCsv,
+  previewCsv } from '../data/exchange/LedgerCsvImport';
 import { LedgerSnapshot } from '../domain/model/LedgerSnapshot';
 
 @Component
@@ -12,11 +14,26 @@ export struct DataExchangePage {
   monthKey: string = '';
   monthLabel: string = '';
   onClose: () => void = () => {};
+  onImported: () => Promise<void> = async () => {};
   @State private snapshot: LedgerSnapshot | undefined = undefined;
   @State private loading: boolean = true;
   @State private busy: boolean = false;
   @State private message: string = '';
   @State private error: boolean = false;
+  @State private importBusy: boolean = false;
+  @State private importMessage: string = '';
+  @State private importError: boolean = false;
+  @State private importHeaders: string[] = [];
+  @State private importRows: string[][] = [];
+  @State private importPreview: CsvPreviewRow[] = [];
+  @State private importMapping: CsvColumnMapping = { date: -1, type: -1, amount: -1, category: -1, account: -1, note: -1 };
+  @State private importFileName: string = '';
+  @State private importSha256: string = '';
+  @State private importDelimiter: string = ',';
+  @State private createMissingCategories: boolean = true;
+  @State private createMissingAccounts: boolean = true;
+  @State private importCompleted: number = 0;
+  @State private importTotal: number = 0;
   private readonly scroller: Scroller = new Scroller();
 
   aboutToAppear(): void { this.load(); }
@@ -57,6 +74,244 @@ export struct DataExchangePage {
     } finally { this.busy = false; }
   }
 
+  private async chooseImportCsv(): Promise<void> {
+    if (this.busy || this.importBusy || this.snapshot === undefined) { return; }
+    this.importBusy = true;
+    this.importMessage = '';
+    this.importError = false;
+    try {
+      const options = new picker.DocumentSelectOptions();
+      options.maxSelectNumber = 1;
+      options.fileSuffixFilters = ['CSV 表格|.csv'];
+      const pickerInstance = new picker.DocumentViewPicker(this.getUIContext().getHostContext() as common.UIAbilityContext);
+      const sources = await pickerInstance.select(options);
+      if (sources.length === 0) { return; }
+      const text = await BackupFiles.text(sources[0]);
+      const table: CsvTable = parseCsv(text);
+      const info = await BackupFiles.info(sources[0], 'import.csv');
+      this.importFileName = sources[0].split('/').pop() || 'import.csv';
+      this.importSha256 = info.sha256;
+      this.importHeaders = table.headers;
+      this.importRows = table.rows;
+      this.importDelimiter = table.delimiter;
+      this.importMapping = detectCsvMapping(table.headers);
+      this.refreshImportPreview();
+      this.importMessage = `已读取 ${table.rows.length} 行，请检查字段映射`;
+    } catch (_) {
+      this.importMessage = 'CSV 无法读取，请检查文件编码、引号和表头';
+      this.importError = true;
+    } finally { this.importBusy = false; }
+  }
+
+  private refreshImportPreview(): void {
+    if (this.snapshot === undefined || this.importHeaders.length === 0) { return; }
+    this.importPreview = previewCsv({ headers: this.importHeaders, rows: this.importRows,
+      delimiter: this.importDelimiter }, this.importMapping, this.snapshot,
+      { createMissingCategories: this.createMissingCategories,
+        createMissingAccounts: this.createMissingAccounts });
+  }
+
+  private mappingLabel(index: number): string {
+    return index >= 0 && index < this.importHeaders.length ? this.importHeaders[index] : '不映射';
+  }
+
+  private mappingOptions(): SelectOption[] {
+    const values: SelectOption[] = [{ value: '不映射' }];
+    for (const header of this.importHeaders) { values.push({ value: header }); }
+    return values;
+  }
+
+  private updateMapping(field: string, selected: number): void {
+    const index = selected - 1;
+    this.importMapping = {
+      date: field === 'date' ? index : this.importMapping.date,
+      type: field === 'type' ? index : this.importMapping.type,
+      amount: field === 'amount' ? index : this.importMapping.amount,
+      category: field === 'category' ? index : this.importMapping.category,
+      account: field === 'account' ? index : this.importMapping.account,
+      note: field === 'note' ? index : this.importMapping.note
+    };
+    this.refreshImportPreview();
+    this.importMessage = '';
+  }
+
+  private clearImport(): void {
+    this.importHeaders = [];
+    this.importRows = [];
+    this.importPreview = [];
+    this.importFileName = '';
+    this.importSha256 = '';
+    this.importMessage = '';
+    this.importError = false;
+  }
+
+  private async confirmImportCsv(): Promise<void> {
+    if (this.importBusy || this.workspace === undefined || this.snapshot === undefined ||
+      this.importPreview.filter((row: CsvPreviewRow) => row.valid).length === 0) { return; }
+    this.importBusy = true;
+    this.importCompleted = 0;
+    this.importTotal = this.importPreview.filter((row: CsvPreviewRow) => row.valid).length;
+    this.importMessage = '';
+    this.importError = false;
+    try {
+      const count = await this.workspace.importCsvBatch(this.importFileName, this.importSha256,
+        this.importPreview, this.importDelimiter, (completed: number, total: number) => {
+          this.importCompleted = completed;
+          this.importTotal = total;
+        });
+      this.clearImport();
+      this.importMessage = `已导入 ${count} 笔账目，当前账户余额未改变`;
+      await this.onImported();
+      await this.load();
+    } catch (error) {
+      const code = (error as Error).message;
+      this.importMessage = code.startsWith('CSV_CATEGORY_INVALID') ? '导入未完成：分类与收支类型不匹配' :
+        code === 'CSV_ACCOUNT_INVALID' ? '导入未完成：账户不可用' :
+        code === 'CSV_NO_VALID_ROWS' ? '没有可导入的有效行' :
+        `导入未完成，账目未写入（${code || '未知错误'}）`;
+      this.importError = true;
+    } finally { this.importBusy = false; }
+  }
+
+  private categoryName(id: string): string {
+    if (id.length === 0) { return '—'; }
+    return this.snapshot?.categories.find((item) => item.id === id)?.name ||
+      this.snapshot?.incomeCategories.find((item) => item.id === id)?.name || '未匹配';
+  }
+
+  private accountName(id: string): string {
+    if (id.length === 0) { return '不使用账户'; }
+    return this.snapshot?.accounts.find((item) => item.id === id)?.name || '未匹配';
+  }
+
+  @Builder
+  private mappingRow(label: string, field: string, selected: number) {
+    Row({ space: 12 }) {
+      Text(label).fontSize('14fp').fontColor($r('app.color.xq_font_primary')).width(72)
+      Select(this.mappingOptions()).selected(selected + 1).value(this.mappingLabel(selected))
+        .font({ size: '13fp' }).fontColor($r('app.color.xq_font_primary'))
+        .optionFontColor($r('app.color.xq_font_primary'))
+        .selectedOptionFontColor($r('app.color.xq_font_emphasize'))
+        .selectedOptionBgColor($r('app.color.xq_comp_emphasize_tertiary'))
+        .backgroundColor($r('app.color.xq_app_surface_page')).height(40).layoutWeight(1)
+        .id('csv-map-' + field).onSelect((index: number) => { this.updateMapping(field, index); })
+    }.width('100%')
+  }
+
+  @Builder
+  private importSection() {
+    Column({ space: 16 }) {
+      Column({ space: 10 }) {
+        Text('导入 CSV').fontSize('20fp').fontWeight(FontWeight.Bold)
+          .fontColor($r('app.color.xq_font_primary')).width('100%')
+        Text('默认只补历史账目，不改变当前账户余额。日期、类型、金额和分类必须匹配；账户可选。')
+          .fontSize('12fp').lineHeight('18fp').fontColor($r('app.color.xq_font_secondary')).width('100%')
+        Button(this.importBusy ? '正在读取' : '选择 CSV 文件', { type: ButtonType.Capsule }).width('100%').height(46)
+          .fontSize('15fp').fontColor($r('app.color.xq_font_emphasize')).backgroundColor($r('app.color.xq_app_surface_page'))
+          .enabled(!this.loading && !this.busy && !this.importBusy)
+          .id('data-import-csv').onClick(() => { this.chooseImportCsv(); })
+      }.padding(16).width('100%').borderRadius(16).backgroundColor($r('app.color.xq_app_surface_card'))
+      if (this.importHeaders.length > 0) {
+        Column({ space: 10 }) {
+          Row() {
+            Text('字段映射').fontSize('16fp').fontWeight(FontWeight.Medium)
+              .fontColor($r('app.color.xq_font_primary'))
+            Blank()
+            Text(this.importFileName).fontSize('12fp').fontColor($r('app.color.xq_font_secondary'))
+              .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis }).constraintSize({ maxWidth: '52%' })
+          }.width('100%')
+          this.mappingRow('日期', 'date', this.importMapping.date)
+          this.mappingRow('类型', 'type', this.importMapping.type)
+          this.mappingRow('金额', 'amount', this.importMapping.amount)
+          this.mappingRow('分类', 'category', this.importMapping.category)
+          this.mappingRow('账户', 'account', this.importMapping.account)
+          this.mappingRow('备注', 'note', this.importMapping.note)
+          Row() {
+            Text('自动创建缺失分类').fontSize('14fp').fontColor($r('app.color.xq_font_primary'))
+            Blank()
+            Toggle({ type: ToggleType.Switch, isOn: this.createMissingCategories })
+              .selectedColor($r('app.color.xq_brand')).id('csv-create-categories')
+              .onChange((value: boolean) => { this.createMissingCategories = value; this.refreshImportPreview(); })
+          }.width('100%')
+          Row() {
+            Text('自动创建缺失账户').fontSize('14fp').fontColor($r('app.color.xq_font_primary'))
+            Blank()
+            Toggle({ type: ToggleType.Switch, isOn: this.createMissingAccounts })
+              .selectedColor($r('app.color.xq_brand')).id('csv-create-accounts')
+              .onChange((value: boolean) => { this.createMissingAccounts = value; this.refreshImportPreview(); })
+          }.width('100%')
+          Text('新账户默认创建为资产账户；名称包含“信用卡、花呗、借呗、贷款、待还”时按负债账户创建。')
+            .fontSize('12fp').lineHeight('18fp').fontColor($r('app.color.xq_font_tertiary')).width('100%')
+        }.padding(16).width('100%').borderRadius(16).backgroundColor($r('app.color.xq_app_surface_card'))
+        Row() {
+          Text(`可导入 ${this.importPreview.filter((row: CsvPreviewRow) => row.valid).length} 笔`).fontSize('14fp')
+            .fontWeight(FontWeight.Medium).fontColor($r('app.color.xq_confirm'))
+          Blank()
+          Text(`问题 ${this.importPreview.filter((row: CsvPreviewRow) => !row.valid).length} 笔`).fontSize('14fp')
+            .fontColor($r('app.color.xq_warning'))
+        }.width('100%')
+        ForEach(this.importPreview.slice(0, 20), (row: CsvPreviewRow) => {
+          Column({ space: 5 }) {
+            Row() {
+              Text(`第 ${row.rowNumber} 行`).fontSize('13fp').fontWeight(FontWeight.Medium)
+                .fontColor(row.valid ? $r('app.color.xq_font_primary') : $r('app.color.xq_warning'))
+              Blank()
+              Text(row.valid ? '可导入' : row.issues.join('、')).fontSize('12fp')
+                .fontColor(row.valid ? $r('app.color.xq_confirm') : $r('app.color.xq_warning'))
+                .maxLines(2)
+            }.width('100%')
+            if (row.valid) {
+              Text(`${row.date}${row.timeKnown ? ' ' + row.time : ''} · ${row.type === 'income' ? '收入' : '支出'} · ${row.createCategory ?
+                row.categoryName : this.categoryName(row.categoryId)} · ${row.createAccount ?
+                row.accountName : this.accountName(row.accountId)} · ¥${row.amount}`)
+                .fontSize('12fp').fontColor($r('app.color.xq_font_secondary')).width('100%')
+              if (row.createCategory || row.createAccount) {
+                Text([
+                  row.createCategory ? `将新建分类“${row.categoryName}”` : '',
+                  row.createAccount ? `将新建账户“${row.accountName}”` : ''
+                ].filter((value: string) => value.length > 0).join('；'))
+                  .fontSize('11fp').fontColor($r('app.color.xq_font_emphasize')).width('100%')
+              }
+            }
+          }.padding(12).width('100%').borderRadius(12).backgroundColor($r('app.color.xq_app_surface_card'))
+        }, (row: CsvPreviewRow) => `${row.rowNumber}:${row.valid}:${row.date}:${row.amount}`)
+        if (this.importPreview.length > 20) {
+          Text(`预览前 20 行，另有 ${this.importPreview.length - 20} 行将在确认时一并处理`).fontSize('12fp')
+            .fontColor($r('app.color.xq_font_tertiary')).width('100%')
+        }
+        Row({ space: 12 }) {
+          Button('取消导入', { type: ButtonType.Capsule }).layoutWeight(1).height(44)
+            .fontColor($r('app.color.xq_font_primary')).backgroundColor($r('app.color.xq_app_surface_card'))
+            .enabled(!this.importBusy).onClick(() => { this.clearImport(); })
+          Button(this.importBusy ? '导入中' : '确认导入', { type: ButtonType.Capsule }).layoutWeight(1).height(44)
+            .fontColor(Color.White).backgroundColor($r('app.color.xq_brand'))
+            .enabled(!this.importBusy && this.importPreview.some((row: CsvPreviewRow) => row.valid))
+            .id('data-import-confirm').onClick(() => { this.confirmImportCsv(); })
+        }.width('100%')
+      }
+      if (this.importMessage.length > 0) {
+        Text(this.importMessage).fontSize('13fp').width('100%')
+          .fontColor(this.importError ? $r('app.color.xq_warning') : $r('app.color.xq_confirm'))
+          .id('data-import-message')
+      }
+      if (this.importBusy && this.importTotal > 0) {
+        Column({ space: 8 }) {
+          Row() {
+            Text('正在写入账目').fontSize('13fp').fontColor($r('app.color.xq_font_secondary'))
+            Blank()
+            Text(`${this.importCompleted} / ${this.importTotal}`).fontSize('13fp')
+              .fontFamily('XiaoQiaoDINMedium').fontColor($r('app.color.xq_font_primary'))
+              .id('data-import-progress-text')
+          }.width('100%')
+          Progress({ value: this.importCompleted, total: this.importTotal, type: ProgressType.Linear })
+            .width('100%').height(5).color($r('app.color.xq_brand'))
+            .backgroundColor($r('app.color.xq_comp_background_tertiary'))
+            .id('data-import-progress')
+        }.width('100%').padding(12).borderRadius(12).backgroundColor($r('app.color.xq_app_surface_card'))
+      }
+    }.width('100%')
+  }
+
   build() {
     HdsNavigation() {
       Scroll(this.scroller) {
@@ -86,8 +341,9 @@ export struct DataExchangePage {
               .fontColor(this.error ? $r('app.color.xq_warning') : $r('app.color.xq_confirm'))
               .id('data-exchange-message')
           }
+          this.importSection()
         }.width('100%').constraintSize({ maxWidth: 640 }).padding({ left: 16, right: 16, top: 12, bottom: 32 })
-      }.width('100%').height('100%').align(Alignment.Top).scrollBar(BarState.Off)
+      }.id('data-exchange-scroll').width('100%').height('100%').align(Alignment.Top).scrollBar(BarState.Off)
         .edgeEffect(EdgeEffect.Spring, { alwaysEnabled: true })
     }.mode(NavigationMode.Stack).titleMode(HdsNavigationTitleMode.MINI)
       .titleBar({ enableComponentSafeArea: true,
