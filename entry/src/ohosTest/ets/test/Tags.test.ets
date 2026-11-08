@@ -83,6 +83,13 @@ export default function tagsTest() {
         expect(filterEntries(presented, LedgerKind.All, '旅行', '').length).assertEqual(2);
         expect(filterEntries(presented, LedgerKind.All, '', '', ['tag-travel']).length).assertEqual(2);
         expect(filterEntries(presented, LedgerKind.All, '', '', ['tag-travel', 'tag-work']).length).assertEqual(1);
+        const tagStatistics = await workspace.statistics('2027-03-01', '2027-04-01', 'expense', 'day');
+        expect(tagStatistics.tagCategories.find((tag) => tag.key === 'tag-travel')?.amountMinor).assertEqual('1200');
+        expect(tagStatistics.tagCategories.find((tag) => tag.key === 'tag-work')?.amountMinor).assertEqual('1200');
+        expect(tagStatistics.tagCategories.find((tag) => tag.key === 'tag-work')?.entryCount).assertEqual(1);
+        const workTagEntries = await workspace.statisticsEntries('2027-03-01', '2027-04-01', 'expense', '', 'tag-work');
+        expect(workTagEntries.length).assertEqual(1);
+        expect(workTagEntries[0].id).assertEqual('tag-expense');
 
         const detail = await workspace.entryDetail('tag-expense');
         expect(detail.tags?.length).assertEqual(2);

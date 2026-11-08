@@ -1,6 +1,6 @@
 import { relationalStore } from '@kit.ArkData';
 import { LedgerStatistics, StatisticsBucket, StatisticsBucketUnit, StatisticsBudgetCategory,
-  StatisticsCategory, StatisticsEntry, StatisticsKind } from '../../domain/model/LedgerStatistics';
+  StatisticsCategory, StatisticsEntry, StatisticsKind, StatisticsTagCategory } from '../../domain/model/LedgerStatistics';
 
 interface CategoryMeta {
   id: string;
@@ -43,6 +43,18 @@ interface BudgetCategoryTotal {
   name: string;
   colorKey: string;
   amount: bigint;
+}
+
+interface TagMeta {
+  id: string;
+  name: string;
+  colorKey: string;
+}
+
+interface TagTotal {
+  tag: TagMeta;
+  amount: bigint;
+  entryCount: number;
 }
 
 const TRANSFER_FEE_KEY: string = 'transfer_fee';
@@ -127,6 +139,24 @@ export class RdbStatisticsRepository {
     return values;
   }
 
+  private async tagLinks(bookId: string, startDate: string, endDateExclusive: string): Promise<Map<string, TagMeta[]>> {
+    const links: Map<string, TagMeta[]> = new Map();
+    const rows = await this.store.querySql('SELECT tt.transaction_id,g.id,g.name,COALESCE(g.color_token,\'neutral\') ' +
+      'FROM transaction_tags tt JOIN tags g ON g.id=tt.tag_id JOIN v_posted_transactions tx ON tx.id=tt.transaction_id ' +
+      'WHERE tt.book_id=? AND tx.occurred_local_date>=? AND tx.occurred_local_date<? ' +
+      'ORDER BY g.sort_order,g.created_at_ms,g.id',
+      [bookId, startDate, endDateExclusive]);
+    try {
+      while (rows.goToNextRow()) {
+        const transactionId = rows.getString(0);
+        const values = links.get(transactionId) || [];
+        values.push({ id: rows.getString(1), name: rows.getString(2), colorKey: rows.getString(3) });
+        links.set(transactionId, values);
+      }
+    } finally { rows.close(); }
+    return links;
+  }
+
   private async rawEntries(bookId: string, startDate: string, endDateExclusive: string): Promise<StatisticsRawEntry[]> {
     const values: StatisticsRawEntry[] = [];
     const rows = await this.store.querySql(
@@ -189,9 +219,11 @@ export class RdbStatisticsRepository {
     const records = await this.rawEntries(bookId, startDate, endDateExclusive);
     const categories = await this.categories(bookId);
     const natures = await this.natures();
+    const tagsByTransaction = await this.tagLinks(bookId, startDate, endDateExclusive);
     const categoryTotals: Map<string, CategoryTotal> = new Map();
     const budgetTotals: Map<string, BudgetCategoryTotal> = new Map();
     const bucketTotals: Map<string, bigint> = new Map();
+    const tagTotals: Map<string, TagTotal> = new Map();
     let total = BigInt(0);
     for (const entry of records) {
       const amount = this.effectiveAmount(entry, kind);
@@ -199,6 +231,11 @@ export class RdbStatisticsRepository {
       total += amount;
       const key = bucketKey(entry.date, unit);
       bucketTotals.set(key, (bucketTotals.get(key) || BigInt(0)) + amount);
+      for (const tag of tagsByTransaction.get(entry.id) || []) {
+        const current = tagTotals.get(tag.id);
+        tagTotals.set(tag.id, { tag: tag, amount: (current?.amount || BigInt(0)) + amount,
+          entryCount: (current?.entryCount || 0) + 1 });
+      }
       if (entry.kind === 'transfer') {
         const current = categoryTotals.get(TRANSFER_FEE_KEY);
         categoryTotals.set(TRANSFER_FEE_KEY, { key: TRANSFER_FEE_KEY, name: '转账手续费', iconKey: 'transfer',
@@ -246,16 +283,28 @@ export class RdbStatisticsRepository {
       if (leftAmount === rightAmount) { return left.name.localeCompare(right.name, 'zh-CN'); }
       return leftAmount > rightAmount ? -1 : 1;
     });
+    const tagValues: StatisticsTagCategory[] = [];
+    tagTotals.forEach((value: TagTotal) => {
+      tagValues.push({ key: value.tag.id, name: value.tag.name, colorKey: value.tag.colorKey,
+        amountMinor: value.amount.toString(), share: shareOf(value.amount, total), entryCount: value.entryCount });
+    });
+    tagValues.sort((left: StatisticsTagCategory, right: StatisticsTagCategory): number => {
+      const leftAmount = BigInt(left.amountMinor);
+      const rightAmount = BigInt(right.amountMinor);
+      if (leftAmount === rightAmount) { return left.name.localeCompare(right.name, 'zh-CN'); }
+      return leftAmount > rightAmount ? -1 : 1;
+    });
     return { bookId: bookId, startDate: startDate, endDateExclusive: endDateExclusive, kind: kind,
       totalMinor: total.toString(), buckets: this.buildBuckets(startDate, endDateExclusive, unit, bucketTotals),
-      categories: categoryValues, budgetCategories: kind === 'expense' ? budgetValues : [] };
+      categories: categoryValues, budgetCategories: kind === 'expense' ? budgetValues : [], tagCategories: tagValues };
   }
 
   async entries(bookId: string, startDate: string, endDateExclusive: string, kind: StatisticsKind,
-    categoryKey: string): Promise<StatisticsEntry[]> {
+    categoryKey: string, tagId: string = ''): Promise<StatisticsEntry[]> {
     this.validateRange(startDate, endDateExclusive);
     const records = await this.rawEntries(bookId, startDate, endDateExclusive);
     const categories = await this.categories(bookId);
+    const tagsByTransaction = await this.tagLinks(bookId, startDate, endDateExclusive);
     const values: StatisticsEntry[] = [];
     for (const entry of records) {
       const amount = this.effectiveAmount(entry, kind);
@@ -269,7 +318,10 @@ export class RdbStatisticsRepository {
         entryName = category?.name || '未知分类';
         iconKey = category?.iconKey || 'other';
       }
-      if (categoryKey !== entryKey) { continue; }
+      if (categoryKey.length > 0 && categoryKey !== entryKey) { continue; }
+      if (tagId.length > 0 && !(tagsByTransaction.get(entry.id) || []).some((tag: TagMeta) => tag.id === tagId)) {
+        continue;
+      }
       values.push({ id: entry.id, title: entry.note.length > 0 ? entry.note : entryName, categoryKey: entryKey,
         categoryName: entryName, iconKey: iconKey, date: entry.date, amountMinor: amount.toString() });
     }

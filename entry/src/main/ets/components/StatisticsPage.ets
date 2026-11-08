@@ -2,10 +2,11 @@ import { ChipGroup, ChipSize } from '@kit.ArkUI';
 import { DividerShowType, HdsNavigation, HdsNavigationTitleMode, hdsMaterial, ScrollEffectType } from '@kit.UIDesignKit';
 import { LedgerWorkspace } from '../data/rdb/LedgerWorkspace';
 import { LedgerStatistics, StatisticsBucket, StatisticsBudgetCategory, StatisticsCategory,
-  StatisticsEntry, StatisticsKind } from '../domain/model/LedgerStatistics';
+  StatisticsEntry, StatisticsKind, StatisticsTagCategory } from '../domain/model/LedgerStatistics';
 import { categoryIcon } from '../presentation/ledger/CategoryIcons';
 import { displayAmount } from '../presentation/ledger/LedgerOverview';
 import { spendingNatureBackground, spendingNatureText } from '../presentation/ledger/SpendingNatureStyles';
+import { tagBackground, tagTextColor } from '../presentation/ledger/TagStyles';
 import { currentRange, localDate, parseLocalDate, rangeTitle, shiftedRange,
   StatisticsDateRange, StatisticsRange } from '../presentation/statistics/StatisticsPeriod';
 
@@ -30,6 +31,9 @@ export struct StatisticsPage {
   @State private showSheet: boolean = false;
   @State private sheetMode: number = 0;
   @State private selectedCategory: StatisticsCategory | undefined = undefined;
+  @State private selectedTagId: string = '';
+  @State private selectedSheetTitle: string = '';
+  @State private selectedSheetAmount: string = '0';
   @State private entries: StatisticsEntry[] = [];
   @State private entriesLoading: boolean = false;
   @State private entriesError: string = '';
@@ -160,6 +164,21 @@ export struct StatisticsPage {
 
   private openEntries(category: StatisticsCategory): void {
     this.selectedCategory = category;
+    this.selectedTagId = '';
+    this.selectedSheetTitle = category.name;
+    this.selectedSheetAmount = category.amountMinor;
+    this.sheetMode = 1;
+    this.entries = [];
+    this.entriesError = '';
+    this.showSheet = true;
+    this.loadEntries();
+  }
+
+  private openTagEntries(tag: StatisticsTagCategory): void {
+    this.selectedCategory = undefined;
+    this.selectedTagId = tag.key;
+    this.selectedSheetTitle = '#' + tag.name;
+    this.selectedSheetAmount = tag.amountMinor;
     this.sheetMode = 1;
     this.entries = [];
     this.entriesError = '';
@@ -169,14 +188,13 @@ export struct StatisticsPage {
 
   private async loadEntries(): Promise<void> {
     const workspace = this.workspace;
-    const category = this.selectedCategory;
-    if (workspace === undefined || category === undefined) { return; }
+    if (workspace === undefined || (this.selectedCategory === undefined && this.selectedTagId.length === 0)) { return; }
     this.entriesLoading = true;
     this.entriesError = '';
     try {
       this.entries = await workspace.statisticsEntries(this.dateRange.startDate, this.dateRange.endDateExclusive,
-        this.kindValue(), category.key);
-    } catch (_) { this.entriesError = '分类明细暂时无法读取，请稍后重试'; }
+        this.kindValue(), this.selectedCategory?.key || '', this.selectedTagId);
+    } catch (_) { this.entriesError = '账目明细暂时无法读取，请稍后重试'; }
     finally { this.entriesLoading = false; }
   }
 
@@ -398,6 +416,40 @@ export struct StatisticsPage {
   }
 
   @Builder
+  private tagRow(tag: StatisticsTagCategory) {
+    Row({ space: 12 }) {
+      Column({ space: 4 }) {
+        Text('#' + tag.name).fontSize('16fp').fontWeight(FontWeight.Medium)
+          .fontColor(tagTextColor(tag.colorKey)).maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
+        Text(`${tag.entryCount} 笔 · ${this.percent(tag.share)}`).fontSize('12fp')
+          .fontColor($r('app.color.xq_font_secondary'))
+      }.layoutWeight(1).alignItems(HorizontalAlign.Start)
+      Text('¥' + this.amount(tag.amountMinor)).fontSize('16fp').fontFamily('XiaoQiaoDINMedium')
+        .fontColor($r('app.color.xq_font_primary')).maxLines(1).minFontSize('12fp').maxFontSize('16fp')
+      Image($r('app.media.lucide_chevron_right1')).width(16).height(16)
+        .fillColor($r('app.color.xq_icon_tertiary'))
+    }.padding(16).width('100%').borderRadius(16).backgroundColor(tagBackground(tag.colorKey))
+      .id('statistics-tag-' + tag.key).onClick(() => { this.openTagEntries(tag); })
+  }
+
+  @Builder
+  private tagRanking() {
+    if ((this.statistics?.tagCategories || []).length > 0) {
+      Column({ space: 10 }) {
+        Row() {
+          Text('标签排行').fontSize('18fp').fontWeight(FontWeight.Medium)
+            .fontColor($r('app.color.xq_font_primary'))
+          Blank()
+          Text('多标签账目分别计入').fontSize('12fp').fontColor($r('app.color.xq_font_secondary'))
+        }.width('100%')
+        ForEach((this.statistics?.tagCategories || []).slice(0, 5), (tag: StatisticsTagCategory) => {
+          this.tagRow(tag)
+        }, (tag: StatisticsTagCategory) => tag.key + ':' + tag.amountMinor + ':' + tag.entryCount)
+      }.width('100%').id('statistics-tag-ranking')
+    }
+  }
+
+  @Builder
   private customSheet() {
     Column({ space: 18 }) {
       Text('自定义统计范围').fontSize('20fp').fontWeight(FontWeight.Bold)
@@ -468,12 +520,12 @@ export struct StatisticsPage {
     Column({ space: 12 }) {
       Row() {
         Column({ space: 4 }) {
-          Text(this.selectedCategory?.name || '分类明细').fontSize('20fp').fontWeight(FontWeight.Bold)
+          Text(this.selectedSheetTitle || '账目明细').fontSize('20fp').fontWeight(FontWeight.Bold)
             .fontColor($r('app.color.xq_font_primary'))
           Text(rangeTitle(this.rangeValue(), this.dateRange) + ' · ' + (this.kind === 1 ? '收入' : '支出'))
             .fontSize('12fp').fontColor($r('app.color.xq_font_secondary'))
         }.layoutWeight(1).alignItems(HorizontalAlign.Start)
-        Text('¥' + this.amount(this.selectedCategory?.amountMinor || '0')).fontSize('18fp')
+        Text('¥' + this.amount(this.selectedSheetAmount)).fontSize('18fp')
           .fontFamily('XiaoQiaoDINMedium').fontColor($r('app.color.xq_font_primary'))
       }.width('100%').padding({ right: 40 })
       Divider().strokeWidth(0.5).color($r('app.color.xq_app_divider_subtle'))
@@ -490,7 +542,7 @@ export struct StatisticsPage {
           }, (entry: StatisticsEntry) => entry.id)
         }.layoutWeight(1).width('100%').scrollBar(BarState.Off).edgeEffect(EdgeEffect.Spring)
         if (this.entries.length === 0) {
-          Text('这个分类在当前统计范围内没有明细').fontSize('14fp')
+          Text('当前条件下没有明细').fontSize('14fp')
             .fontColor($r('app.color.xq_font_secondary')).width('100%').textAlign(TextAlign.Center).padding(24)
         }
       }
@@ -529,14 +581,15 @@ export struct StatisticsPage {
         } else {
           this.trendCard()
           this.categoryRanking()
+          this.tagRanking()
           this.budgetRanking()
-          Text('转账本金不计入收支；手续费按记账时的“计入支出、计入预算”设置统计。')
+          Text('标签排行中，多标签账目会在每个标签分别计入；转账本金不计入收支和标签金额。')
             .fontSize('12fp').fontColor($r('app.color.xq_font_tertiary')).lineHeight('18fp')
             .width('100%').padding({ left: 4, right: 4 })
         }
       }.width('100%').constraintSize({ maxWidth: 720 })
         .padding({ left: 16, right: 16, top: 8, bottom: 128 })
-    }.width('100%').height('100%').align(Alignment.Top).scrollBar(BarState.Off).clip(false)
+    }.id('statistics-scroll').width('100%').height('100%').align(Alignment.Top).scrollBar(BarState.Off).clip(false)
       .edgeEffect(EdgeEffect.Spring, { alwaysEnabled: true })
   }
 

@@ -25,13 +25,14 @@ function today(): Date {
 }
 
 function expense(workspace: LedgerWorkspace, id: string, categoryId: string, amount: string,
-  budget: boolean): ExpenseCommand {
+  budget: boolean, tagIds: string[] = []): ExpenseCommand {
   const date = today();
   const money = Money.parse(amount, workspace.currency);
   return { id: id, bookId: DEFAULT_BOOK_ID, categoryId: categoryId, gross: money,
     discount: Money.parse('0', workspace.currency), bookPaid: money,
     includeInAssets: false, includeInBudget: budget,
     spendingNatureId: budget ? 'nature-survival' : undefined,
+    tagIds: tagIds,
     note: id, occurredAtMs: date.getTime(),
     localDate: `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`,
     timezone: Intl.DateTimeFormat().resolvedOptions().timeZone, offsetMinutes: -date.getTimezoneOffset() };
@@ -54,7 +55,9 @@ export default function statisticsFlowTest() {
       const driver = Driver.create();
       const databaseName = AppStorage.get<string>('ledgerDatabaseName') || 'xiaoqiao_app_test_statistics_ui.db';
       const workspace = await LedgerWorkspace.open(context, databaseName);
-      await workspace.saveExpense(expense(workspace, 'statistics-ui-food', 'expense-food-0', '12', true));
+      await workspace.createTag({ id: 'statistics-tag-travel', name: '旅行', colorKey: 'brand' });
+      await workspace.saveExpense(expense(workspace, 'statistics-ui-food', 'expense-food-0', '12', true,
+        ['statistics-tag-travel']));
       await workspace.saveExpense(expense(workspace, 'statistics-ui-transport', 'expense-transport', '8', false));
       await workspace.saveIncome(income(workspace));
 
@@ -66,7 +69,11 @@ export default function statisticsFlowTest() {
       await driver.waitForComponent(ON.id('statistics-budget-nature-survival'), 5000);
       expect(await driver.screenCap(context.filesDir + '/xiaoqiao-statistics-populated.png')).assertTrue();
 
-      await (await driver.findComponent(ON.id('statistics-category-expense-food'))).click();
+      const pageScroll = await driver.waitForComponent(ON.id('statistics-scroll'), 5000);
+      const categoryCard = await pageScroll.scrollSearch(ON.id('statistics-category-expense-food'));
+      expect(categoryCard !== null).assertTrue();
+      if (categoryCard === null) { throw new Error('STATISTICS_CATEGORY_NOT_FOUND'); }
+      await categoryCard.click();
       await driver.waitForComponent(ON.id('statistics-entries-sheet'), 5000);
       await driver.waitForComponent(ON.id('statistics-entry-statistics-ui-food'), 5000);
       expect(await driver.screenCap(context.filesDir + '/xiaoqiao-statistics-entry-sheet.png')).assertTrue();
@@ -78,6 +85,24 @@ export default function statisticsFlowTest() {
       await driver.delayMs(600);
       await driver.waitForComponent(ON.id('statistics-page'), 5000);
 
+      const pageBounds = await pageScroll.getBounds();
+      const pageCenter = Math.round((pageBounds.left + pageBounds.right) / 2);
+      let tagCard = await driver.findComponent(ON.id('statistics-tag-statistics-tag-travel'));
+      for (let attempt = 0; attempt < 4 && tagCard === null; attempt++) {
+        await driver.swipe(pageCenter, pageBounds.bottom - 650, pageCenter, pageBounds.top + 650, 1200);
+        await driver.delayMs(300);
+        tagCard = await driver.findComponent(ON.id('statistics-tag-statistics-tag-travel'));
+      }
+      expect(tagCard !== null).assertTrue();
+      if (tagCard === null) { throw new Error('STATISTICS_TAG_NOT_FOUND'); }
+      await tagCard.click();
+      await driver.waitForComponent(ON.id('statistics-entries-sheet'), 5000);
+      await driver.waitForComponent(ON.id('statistics-entry-statistics-ui-food'), 5000);
+      expect(await driver.screenCap(context.filesDir + '/xiaoqiao-statistics-tag-sheet.png')).assertTrue();
+      await driver.pressBack();
+      await driver.delayMs(700);
+
+      await pageScroll.scrollToTop(1200);
       await (await driver.findComponent(ON.id('statistics-range-3'))).click();
       await driver.waitForComponent(ON.id('statistics-custom-start'), 5000);
       await driver.delayMs(900);

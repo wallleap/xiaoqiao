@@ -23,6 +23,15 @@ export interface StatisticsBudgetCategory {
   share: number;
 }
 
+export interface StatisticsTagCategory {
+  key: string;
+  name: string;
+  colorKey: string;
+  amountMinor: string;
+  share: number;
+  entryCount: number;
+}
+
 export interface StatisticsEntry {
   id: string;
   title: string;
@@ -42,4 +51,5 @@ export interface LedgerStatistics {
   buckets: StatisticsBucket[];
   categories: StatisticsCategory[];
   budgetCategories: StatisticsBudgetCategory[];
+  tagCategories: StatisticsTagCategory[];
 }

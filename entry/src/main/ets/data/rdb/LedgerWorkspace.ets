@@ -550,10 +550,10 @@ export class LedgerWorkspace {
   }
 
   async statisticsEntries(startDate: string, endDateExclusive: string, kind: StatisticsKind,
-    categoryKey: string): Promise<StatisticsEntry[]> {
+    categoryKey: string, tagId: string = ''): Promise<StatisticsEntry[]> {
     return this.session.read(async (db: relationalStore.RdbStore): Promise<StatisticsEntry[]> => {
       this.activeBookId = await this.activeBookFromMeta(db);
-      return this.statisticsRepository.entries(this.activeBookId, startDate, endDateExclusive, kind, categoryKey);
+      return this.statisticsRepository.entries(this.activeBookId, startDate, endDateExclusive, kind, categoryKey, tagId);
     });
   }
 
