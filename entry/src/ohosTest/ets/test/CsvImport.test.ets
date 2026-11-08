@@ -91,6 +91,10 @@ export default function csvImportTest() {
         expect(duplicatePreview[1].duplicateReason).assertEqual('文件内重复');
         expect(duplicatePreview[2].duplicate).assertTrue();
         expect(duplicatePreview[2].duplicateReason).assertEqual('历史账目已有');
+        const splitTable = parseCsv('日期,时间,类型,金额,分类\r\n2027-05-15,19:08:30,支出,1.00,餐饮\r\n');
+        const splitPreview = previewCsv(splitTable, detectCsvMapping(splitTable.headers), imported);
+        expect(splitPreview[0].time).assertEqual('19:08');
+        expect(splitPreview[0].timeKnown).assertTrue();
         duplicatePreview[1].selected = true;
         duplicatePreview[2].selected = true;
         expect(await workspace.importCsvBatch('duplicate.csv', 'duplicate-sha', duplicatePreview, ',')).assertEqual(3);

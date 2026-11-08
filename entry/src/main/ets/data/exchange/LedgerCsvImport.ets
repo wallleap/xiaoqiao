@@ -10,6 +10,7 @@ export interface CsvTable {
 
 export interface CsvColumnMapping {
   date: number;
+  time: number;
   type: number;
   amount: number;
   category: number;
@@ -79,6 +80,7 @@ function column(headers: string[], aliases: string[]): number {
 export function detectCsvMapping(headers: string[]): CsvColumnMapping {
   return {
     date: column(headers, ['日期', '交易时间', '交易日期', 'date', 'time']),
+    time: column(headers, ['时间', '交易时刻', 'clock', 'timeonly']),
     type: column(headers, ['类型', '收支类型', '方向', 'type']),
     amount: column(headers, ['金额', '实付金额', '交易金额', 'amount']),
     category: column(headers, ['分类', '收支分类', 'category']),
@@ -223,7 +225,11 @@ export function previewCsv(table: CsvTable, mapping: CsvColumnMapping, snapshot:
     const sourceId = mapping.sourceId >= 0 ? (raw[mapping.sourceId] || '').trim() : '';
     const merchant = mapping.merchant >= 0 ? (raw[mapping.merchant] || '').trim() : '';
     const address = mapping.address >= 0 ? (raw[mapping.address] || '').trim() : '';
-    const parsedDate = parseDateTime(rawDate);
+    let parsedDate = parseDateTime(rawDate);
+    const rawTime = mapping.time >= 0 ? raw[mapping.time] || '' : '';
+    if (!parsedDate.timeKnown && parsedDate.localDate.length > 0 && /^[0-9]{1,2}:[0-9]{2}(?::[0-9]{2})?$/.test(rawTime.trim())) {
+      parsedDate = parseDateTime(parsedDate.localDate + ' ' + rawTime.trim());
+    }
     let kind = type(rawType);
     let paid = '';
     let negative = false;

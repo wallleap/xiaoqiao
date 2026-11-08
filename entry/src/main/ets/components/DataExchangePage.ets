@@ -28,7 +28,7 @@ export struct DataExchangePage {
   @State private importHeaders: string[] = [];
   @State private importRows: string[][] = [];
   @State private importPreview: CsvPreviewRow[] = [];
-  @State private importMapping: CsvColumnMapping = { date: -1, type: -1, amount: -1, category: -1,
+  @State private importMapping: CsvColumnMapping = { date: -1, time: -1, type: -1, amount: -1, category: -1,
     account: -1, note: -1, sourceId: -1, merchant: -1, address: -1 };
   @State private importFileName: string = '';
   @State private importSha256: string = '';
@@ -192,6 +192,7 @@ export struct DataExchangePage {
     const index = selected - 1;
     this.importMapping = {
       date: field === 'date' ? index : this.importMapping.date,
+      time: field === 'time' ? index : this.importMapping.time,
       type: field === 'type' ? index : this.importMapping.type,
       amount: field === 'amount' ? index : this.importMapping.amount,
       category: field === 'category' ? index : this.importMapping.category,
@@ -359,6 +360,7 @@ export struct DataExchangePage {
             }.width('100%')
           }
           this.mappingRow('日期', 'date', this.importMapping.date)
+          this.mappingRow('时间', 'time', this.importMapping.time)
           this.mappingRow('类型', 'type', this.importMapping.type)
           this.mappingRow('金额', 'amount', this.importMapping.amount)
           this.mappingRow('分类', 'category', this.importMapping.category)
