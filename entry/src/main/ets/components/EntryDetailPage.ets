@@ -119,6 +119,8 @@ export struct EntryDetailPage {
         if ((this.entry.tags || []).length > 0) {
           this.field('标签', (this.entry.tags || []).map((tag: TagChoice) => '#' + tag.name).join('  '))
         }
+        if ((this.entry.merchantName || '').length > 0) { this.field('商户', this.entry.merchantName || '') }
+        if ((this.entry.addressText || '').length > 0) { this.field('地址', this.entry.addressText || '') }
         if (this.entry.balanceMode === 'preserve') {
           Text('历史导入账目，不改变账户余额').fontSize('12fp').fontColor($r('app.color.xq_font_secondary'))
             .width('100%').padding({ top: 8, bottom: 12 })

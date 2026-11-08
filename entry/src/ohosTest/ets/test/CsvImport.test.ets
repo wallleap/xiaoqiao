@@ -31,15 +31,15 @@ export default function csvImportTest() {
         await workspace.createCategory({ id: 'csv-expense-shared', kind: 'expense', name: '同名分类', iconKey: 'other' });
         await workspace.createCategory({ id: 'csv-income-shared', kind: 'income', name: '同名分类', iconKey: 'other' });
         const snapshot = await workspace.snapshot('2027-05');
-        const table = parseCsv('\uFEFF日期,类型,金额,分类,账户,备注\r\n' +
-          '2027.05.01 18:21:44,,-12.00,餐饮 / 午餐,导入账户,点号日期带时间\r\n' +
-          '2027-05-02,,"5,000.00",工资,导入账户,正数为收入\r\n' +
-          '2027-05-03,支出,8.00,宠物 / 猫粮,宠物钱包,新建分类账户\r\n' +
-          '2027-05-04,收入,100.00,副业收入,兼职钱包,明确类型\r\n' +
-          '2027-05-05,,-3.00,宠物/猫粮,宠物钱包,复用同批新建项\r\n' +
-          '2027-05-06,交易支出,1.00,同名分类,导入账户,同名支出分类\r\n' +
-          '2027-05-07,交易收入,2.00,同名分类,导入账户,同名收入分类\r\n' +
-          '不是日期,支出,8.00,餐饮,导入账户,问题行\r\n');
+        const table = parseCsv('\uFEFF日期,类型,金额,分类,账户,备注,商户,地址\r\n' +
+          '2027.05.01 18:21:44,,-12.00,餐饮 / 午餐,导入账户,点号日期带时间,午餐商户,人民路 1 号\r\n' +
+          '2027-05-02,,"5,000.00",工资,导入账户,正数为收入,公司,\r\n' +
+          '2027-05-03,支出,8.00,宠物 / 猫粮,宠物钱包,新建分类账户,宠物店,\r\n' +
+          '2027-05-04,收入,100.00,副业收入,兼职钱包,明确类型,客户,\r\n' +
+          '2027-05-05,,-3.00,宠物/猫粮,宠物钱包,复用同批新建项,宠物店,\r\n' +
+          '2027-05-06,交易支出,1.00,同名分类,导入账户,同名支出分类,,\r\n' +
+          '2027-05-07,交易收入,2.00,同名分类,导入账户,同名收入分类,,\r\n' +
+          '不是日期,支出,8.00,餐饮,导入账户,问题行,,\r\n');
         const mapping = detectCsvMapping(table.headers);
         const preview = previewCsv(table, mapping, snapshot);
         expect(preview.length).assertEqual(8);
@@ -56,6 +56,7 @@ export default function csvImportTest() {
         expect(preview[6].categoryId).assertEqual('csv-income-shared');
         const progress: number[] = [];
         const count = await workspace.importCsvBatch('fixture.csv', 'fixture-sha', preview, table.delimiter,
+          false,
           (completed: number, total: number) => { progress.push(completed); expect(total).assertEqual(7); });
         expect(count).assertEqual(7);
         expect(progress.length).assertEqual(8);
@@ -73,9 +74,28 @@ export default function csvImportTest() {
         expect(timeEntry !== undefined).assertTrue();
         const detail = await workspace.entryDetail(timeEntry?.id || '');
         expect(detail.balanceMode).assertEqual('preserve');
+        expect(detail.merchantName).assertEqual('午餐商户');
+        expect(detail.addressText).assertEqual('人民路 1 号');
         const local = new Date(detail.occurredAtMs + detail.offsetMinutes * 60000);
         expect(local.getUTCHours()).assertEqual(18);
         expect(local.getUTCMinutes()).assertEqual(21);
+
+        const duplicateTable = parseCsv('日期,类型,金额,分类,交易单号\r\n' +
+          '2027-05-10,支出,1.00,餐饮,file-duplicate\r\n' +
+          '2027-05-11,支出,2.00,餐饮,file-duplicate\r\n' +
+          '2027-05-12,收入,3.00,工资,existing-source\r\n');
+        const duplicatePreview = previewCsv(duplicateTable, detectCsvMapping(duplicateTable.headers), imported,
+          { createMissingCategories: true, createMissingAccounts: true, existingIds: ['existing-source'] });
+        expect(duplicatePreview[0].duplicate).assertFalse();
+        expect(duplicatePreview[1].duplicate).assertTrue();
+        expect(duplicatePreview[1].duplicateReason).assertEqual('文件内重复');
+        expect(duplicatePreview[2].duplicate).assertTrue();
+        expect(duplicatePreview[2].duplicateReason).assertEqual('历史账目已有');
+        duplicatePreview[1].selected = true;
+        duplicatePreview[2].selected = true;
+        expect(await workspace.importCsvBatch('duplicate.csv', 'duplicate-sha', duplicatePreview, ',')).assertEqual(3);
+        expect(await workspace.importCsvBatch('apply.csv', 'apply-sha', [preview[0]], ',', true)).assertEqual(1);
+        expect((await workspace.accountOverview()).netMinor).assertEqual('8800');
       } finally {
         await LedgerWorkspace.close(name);
         await relationalStore.deleteRdbStore(host, name);

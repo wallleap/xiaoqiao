@@ -330,11 +330,12 @@ export class LedgerWorkspace {
   }
 
   async importCsvBatch(fileName: string, fileSha256: string, rows: CsvPreviewRow[],
-    delimiter: string, onProgress: (completed: number, total: number) => void = () => {}): Promise<number> {
+    delimiter: string, applyBalance: boolean = false,
+    onProgress: (completed: number, total: number) => void = () => {}): Promise<number> {
     if (fileName.trim().length === 0 || fileSha256.trim().length === 0 || rows.length === 0) {
       throw new Error('INVALID_CSV_BATCH');
     }
-    const validRows = rows.filter((row: CsvPreviewRow) => row.valid);
+    const validRows = rows.filter((row: CsvPreviewRow) => row.valid && row.selected);
     if (validRows.length === 0) { throw new Error('CSV_NO_VALID_ROWS'); }
     return this.session.write(async (db: relationalStore.RdbStore): Promise<number> => {
       this.activeBookId = await this.activeBookFromMeta(db);
@@ -344,7 +345,8 @@ export class LedgerWorkspace {
       const createdAccounts: Map<string, string> = new Map();
       await db.insert('import_batches', { id: batchId, book_id: this.activeBookId, file_sha256: fileSha256,
         file_name: fileName, sheet_name: '', header_row: 1, encoding: 'utf-8', delimiter: delimiter,
-        profile_snapshot_json: '{"source":"csv","version":1}', balance_mode: 'preserve', status: 'committing',
+        profile_snapshot_json: '{"source":"csv","version":1}', balance_mode: applyBalance ? 'apply' : 'preserve',
+        status: 'committing',
         total_count: rows.length, selected_count: validRows.length, skipped_count: rows.length - validRows.length,
         confirmed_at_ms: now, created_at_ms: now });
       onProgress(0, validRows.length);
@@ -354,8 +356,11 @@ export class LedgerWorkspace {
         importRowIds.set(row.rowNumber, rowId);
         await db.insert('import_rows', { id: rowId, batch_id: batchId, sheet_name: '', row_number: row.rowNumber,
           raw_json: JSON.stringify(row.raw), normalized_json: JSON.stringify(row),
-          validation_status: row.valid ? 'valid' : 'invalid', issue_codes_json: JSON.stringify(row.issues),
-          duplicate_candidate_ids_json: '[]', selected: row.valid ? 1 : 0 });
+          validation_status: !row.valid ? 'invalid' : row.duplicate ? 'duplicate' : 'valid',
+          issue_codes_json: JSON.stringify(row.issues),
+          duplicate_candidate_ids_json: row.duplicate && row.sourceId.length > 0 ?
+            JSON.stringify([row.sourceId]) : '[]',
+          selected: row.selected ? 1 : 0 });
       }
       let processed = 0;
       for (const row of validRows) {
@@ -401,9 +406,12 @@ export class LedgerWorkspace {
         await db.insert('transactions', { id: transactionId, book_id: this.activeBookId, kind: row.type,
           category_id: categoryId, currency_id: 'CNY', gross_minor: amount, discount_minor: 0,
           paid_minor: amount, book_currency_id: 'CNY', book_minor: amount, include_in_budget: 0,
-          include_in_assets: accountId.length > 0 ? 1 : 0, balance_mode: 'preserve', note: row.note,
+          include_in_assets: accountId.length > 0 ? 1 : 0, balance_mode: applyBalance ? 'apply' : 'preserve',
+          merchant_name_snapshot: row.merchant.length > 0 ? row.merchant : null,
+          address_text: row.address.length > 0 ? row.address : null, note: row.note,
           import_batch_id: batchId, import_row_id: importRowIds.get(row.rowNumber),
-          source_provider: 'csv', source_namespace: fileSha256, source_record_id: String(row.rowNumber),
+          source_provider: 'csv', source_namespace: fileSha256, source_record_id: row.sourceId || String(row.rowNumber),
+          duplicate_override: row.duplicate ? 1 : 0,
           occurred_at_ms: occurred.getTime(), occurred_local_date: row.date,
           occurred_timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
           occurred_offset_minutes: -occurred.getTimezoneOffset(), created_at_ms: now, updated_at_ms: now });
@@ -420,6 +428,23 @@ export class LedgerWorkspace {
         new relationalStore.RdbPredicates('import_batches').equalTo('id', batchId).equalTo('status', 'committing'));
       if (committed !== 1) { throw new Error('CSV_BATCH_COMMIT_FAILED'); }
       return validRows.length;
+    });
+  }
+
+  async existingImportIds(): Promise<string[]> {
+    return this.session.read(async (db: relationalStore.RdbStore): Promise<string[]> => {
+      this.activeBookId = await this.activeBookFromMeta(db);
+      const values: string[] = [];
+      const rows = await db.querySql("SELECT id,COALESCE(source_record_id,''),COALESCE(import_row_id,'') " +
+        'FROM transactions WHERE book_id=?', [this.activeBookId]);
+      try {
+        while (rows.goToNextRow()) {
+          values.push(rows.getString(0));
+          if (rows.getString(1).length > 0) { values.push(rows.getString(1)); }
+          if (rows.getString(2).length > 0) { values.push(rows.getString(2)); }
+        }
+      } finally { rows.close(); }
+      return values;
     });
   }
 
@@ -769,6 +794,14 @@ export class LedgerWorkspace {
         }
       } finally { tagRows.close(); }
       detail.tags = tags;
+      const extras = await db.querySql("SELECT COALESCE(merchant_name_snapshot,''),COALESCE(address_text,'') " +
+        'FROM transactions WHERE id=?', [detail.id]);
+      try {
+        if (extras.goToFirstRow()) {
+          detail.merchantName = extras.getString(0);
+          detail.addressText = extras.getString(1);
+        }
+      } finally { extras.close(); }
       return detail;
     });
   }

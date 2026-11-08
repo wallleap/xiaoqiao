@@ -3,6 +3,11 @@ import { BackupFiles } from '../backup/BackupFiles';
 import { BackupZip, ZipFile } from '../backup/BackupZip';
 import { CsvTable } from './LedgerCsvImport';
 
+export interface XlsxSheetInfo {
+  name: string;
+  path: string;
+}
+
 function decode(data: ArrayBuffer): string {
   return util.TextDecoder.create('utf-8', { fatal: true }).decodeToString(new Uint8Array(data));
 }
@@ -36,8 +41,8 @@ function columnIndex(reference: string): number {
   return value - 1;
 }
 
-function worksheet(files: ZipFile[], shared: string[]): string[][] {
-  const file = files.find((item: ZipFile) => item.path === 'xl/worksheets/sheet1.xml') ||
+function worksheet(files: ZipFile[], shared: string[], sheetPath: string = ''): string[][] {
+  const file = files.find((item: ZipFile) => item.path === (sheetPath || 'xl/worksheets/sheet1.xml')) ||
     files.find((item: ZipFile) => item.path.startsWith('xl/worksheets/') && item.path.endsWith('.xml'));
   if (file === undefined) { throw new Error('XLSX_WORKSHEET_MISSING'); }
   const xml = decode(file.data);
@@ -76,8 +81,41 @@ function worksheet(files: ZipFile[], shared: string[]): string[][] {
   return rows;
 }
 
-export async function readXlsxTable(uri: string): Promise<CsvTable> {
+function sheetInfo(files: ZipFile[]): XlsxSheetInfo[] {
+  const workbook = files.find((item: ZipFile) => item.path === 'xl/workbook.xml');
+  const rels = files.find((item: ZipFile) => item.path === 'xl/_rels/workbook.xml.rels');
+  if (workbook === undefined || rels === undefined) { return []; }
+  const relMap: Map<string, string> = new Map();
+  const relXml = decode(rels.data);
+  const relRegex = /<Relationship\b([^>]*)\/?>/g;
+  let rel: RegExpExecArray | null;
+  while ((rel = relRegex.exec(relXml)) !== null) {
+    const id = /\bId="([^"]+)"/.exec(rel[1])?.[1] || '';
+    let target = /\bTarget="([^"]+)"/.exec(rel[1])?.[1] || '';
+    if (id.length === 0 || target.length === 0 || !target.includes('worksheets/')) { continue; }
+    if (!target.startsWith('/')) { target = 'xl/' + target; } else { target = target.substring(1); }
+    relMap.set(id, target.replace('/worksheets/', '/worksheets/'));
+  }
+  const values: XlsxSheetInfo[] = [];
+  const workbookXml = decode(workbook.data);
+  const sheetRegex = /<sheet\b([^>]*)\/?>/g;
+  let sheet: RegExpExecArray | null;
+  while ((sheet = sheetRegex.exec(workbookXml)) !== null) {
+    const name = /\bname="([^"]+)"/.exec(sheet[1])?.[1] || '';
+    const id = /\br:id="([^"]+)"/.exec(sheet[1])?.[1] || '';
+    const path = relMap.get(id) || '';
+    if (name.length > 0 && path.length > 0) { values.push({ name: text(name), path: path }); }
+  }
+  return values;
+}
+
+export async function listXlsxSheets(uri: string): Promise<XlsxSheetInfo[]> {
   const files = BackupZip.decodeOffice(await BackupFiles.read(uri));
-  const rows = worksheet(files, sharedStrings(files));
+  return sheetInfo(files);
+}
+
+export async function readXlsxTable(uri: string, sheetPath: string = ''): Promise<CsvTable> {
+  const files = BackupZip.decodeOffice(await BackupFiles.read(uri));
+  const rows = worksheet(files, sharedStrings(files), sheetPath);
   return { headers: rows[0].map((value: string) => value.trim()), rows: rows.slice(1), delimiter: ',' };
 }

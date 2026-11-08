@@ -6,7 +6,7 @@ import { describe, expect, it } from '@ohos/hypium';
 import { BackupFiles } from '../../../main/ets/data/backup/BackupFiles';
 import { BackupZip } from '../../../main/ets/data/backup/BackupZip';
 import { LedgerXlsxExport } from '../../../main/ets/data/exchange/LedgerXlsxExport';
-import { readXlsxTable } from '../../../main/ets/data/exchange/LedgerXlsxImport';
+import { listXlsxSheets, readXlsxTable } from '../../../main/ets/data/exchange/LedgerXlsxImport';
 import { LedgerSnapshot } from '../../../main/ets/domain/model/LedgerSnapshot';
 
 async function testContext(): Promise<common.UIAbilityContext> {
@@ -46,6 +46,9 @@ export default function xlsxExportTest() {
         expect(xml.includes('午餐 &amp; 咖啡')).assertTrue();
         expect(xml.includes('<v>28.00</v>')).assertTrue();
         expect(xml.includes('旅行')).assertTrue();
+        const sheets = await listXlsxSheets(path);
+        expect(sheets.length).assertEqual(1);
+        expect(sheets[0].name).assertEqual('账目');
         const table = await readXlsxTable(path);
         expect(table.headers[0]).assertEqual('日期');
         expect(table.rows.length).assertEqual(1);

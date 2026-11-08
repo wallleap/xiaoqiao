@@ -15,6 +15,8 @@ export interface EntryDetail {
   spendingNatureName?: string;
   spendingNatureColor?: string;
   tags?: TagChoice[];
+  merchantName?: string;
+  addressText?: string;
   accountId: string;
   accountName: string;
   toAccountId?: string;

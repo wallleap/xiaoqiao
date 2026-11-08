@@ -15,6 +15,9 @@ export interface CsvColumnMapping {
   category: number;
   account: number;
   note: number;
+  sourceId: number;
+  merchant: number;
+  address: number;
 }
 
 export interface CsvPreviewRow {
@@ -31,6 +34,12 @@ export interface CsvPreviewRow {
   accountId: string;
   accountName: string;
   createAccount: boolean;
+  sourceId: string;
+  duplicate: boolean;
+  duplicateReason: string;
+  selected: boolean;
+  merchant: string;
+  address: string;
   note: string;
   valid: boolean;
   issues: string[];
@@ -39,6 +48,7 @@ export interface CsvPreviewRow {
 export interface CsvImportOptions {
   createMissingCategories: boolean;
   createMissingAccounts: boolean;
+  existingIds: string[];
 }
 
 interface ParsedAmount {
@@ -73,7 +83,10 @@ export function detectCsvMapping(headers: string[]): CsvColumnMapping {
     amount: column(headers, ['金额', '实付金额', '交易金额', 'amount']),
     category: column(headers, ['分类', '收支分类', 'category']),
     account: column(headers, ['账户', '付款账户', '收款账户', 'account']),
-    note: column(headers, ['备注', '商品', '说明', 'note', 'memo'])
+    note: column(headers, ['备注', '商品', '说明', 'note', 'memo']),
+    sourceId: column(headers, ['账目ID', '交易单号', '交易订单号', '来源记录编号', 'sourceid', 'transactionid']),
+    merchant: column(headers, ['商户', '交易对方', '商家', 'merchant']),
+    address: column(headers, ['地址', '商户地址', 'address'])
   };
 }
 
@@ -192,12 +205,14 @@ function categoryPathMap(categories: ExpenseCategory[]): Map<string, string> {
 }
 
 export function previewCsv(table: CsvTable, mapping: CsvColumnMapping, snapshot: LedgerSnapshot,
-  options: CsvImportOptions = { createMissingCategories: true, createMissingAccounts: true }): CsvPreviewRow[] {
+  options: CsvImportOptions = { createMissingCategories: true, createMissingAccounts: true, existingIds: [] }): CsvPreviewRow[] {
   const expenseCategoryIds = categoryPathMap(snapshot.categories);
   const incomeCategoryIds = categoryPathMap(snapshot.incomeCategories);
   const accountIds: Map<string, string> = new Map();
   snapshot.accounts.forEach((account) => { accountIds.set(normalizeHeader(account.name), account.id); });
   const result: CsvPreviewRow[] = [];
+  const seenIds: Set<string> = new Set();
+  const existingIds: Set<string> = new Set(options.existingIds);
   table.rows.forEach((raw: string[], index: number) => {
     const issues: string[] = [];
     const rawDate = mapping.date >= 0 ? raw[mapping.date] || '' : '';
@@ -205,6 +220,9 @@ export function previewCsv(table: CsvTable, mapping: CsvColumnMapping, snapshot:
     const rawAmount = mapping.amount >= 0 ? raw[mapping.amount] || '' : '';
     const rawCategory = mapping.category >= 0 ? raw[mapping.category] || '' : '';
     const rawAccount = mapping.account >= 0 ? raw[mapping.account] || '' : '';
+    const sourceId = mapping.sourceId >= 0 ? (raw[mapping.sourceId] || '').trim() : '';
+    const merchant = mapping.merchant >= 0 ? (raw[mapping.merchant] || '').trim() : '';
+    const address = mapping.address >= 0 ? (raw[mapping.address] || '').trim() : '';
     const parsedDate = parseDateTime(rawDate);
     let kind = type(rawType);
     let paid = '';
@@ -228,10 +246,20 @@ export function previewCsv(table: CsvTable, mapping: CsvColumnMapping, snapshot:
     if (paid.length === 0) { issues.push('金额无效'); }
     if (categoryId.length === 0 && !createCategory) { issues.push('分类未匹配'); }
     if (rawAccount.trim().length > 0 && accountId.length === 0 && !createAccount) { issues.push('账户未匹配'); }
+    let duplicate = false;
+    let duplicateReason = '';
+    if (sourceId.length > 0 && (seenIds.has(sourceId) || existingIds.has(sourceId))) {
+      duplicate = true;
+      duplicateReason = seenIds.has(sourceId) ? '文件内重复' : '历史账目已有';
+    }
+    if (sourceId.length > 0) { seenIds.add(sourceId); }
     result.push({ rowNumber: index + 2, raw: raw, date: parsedDate.localDate, time: parsedDate.time,
       timeKnown: parsedDate.timeKnown, type: kind, amount: paid,
       categoryId: categoryId, categoryName: categoryName, createCategory: createCategory,
       accountId: accountId, accountName: rawAccount.trim(), createAccount: createAccount,
+      sourceId: sourceId, duplicate: duplicate, duplicateReason: duplicateReason,
+      selected: issues.length === 0 && !duplicate,
+      merchant: merchant, address: address,
       note: mapping.note >= 0 ? raw[mapping.note] || '' : '', valid: issues.length === 0, issues: issues });
   });
   return result;
