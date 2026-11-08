@@ -10,6 +10,27 @@ export class RdbTransferRepository implements TransferRepository {
   async saveTransfer(record: TransferRecord): Promise<void> { await this.write(record); }
   async updateTransfer(record: TransferRecord, revision: number): Promise<void> { await this.write(record, revision); }
 
+  private async replaceTags(db: relationalStore.RdbStore, transactionId: string, bookId: string,
+    tagIds: string[] | undefined): Promise<void> {
+    if (tagIds === undefined) { return; }
+    const values = Array.from(new Set(tagIds));
+    if (values.length > 0) {
+      const placeholders = Array.from({ length: values.length }, (_value: number, _index: number) => '?').join(',');
+      const args: relationalStore.ValueType[] = [bookId];
+      values.forEach((id: string) => { args.push(id); });
+      const rows = await db.querySql(`SELECT id FROM tags WHERE book_id=? AND id IN (${placeholders}) AND ` +
+        '(deleted_at_ms IS NULL OR EXISTS(SELECT 1 FROM transaction_tags linked WHERE linked.transaction_id=? AND linked.tag_id=tags.id))',
+        [...args, transactionId]);
+      let found = 0;
+      try { while (rows.goToNextRow()) { found++; } } finally { rows.close(); }
+      if (found !== values.length) { throw new Error('TAG_UNAVAILABLE'); }
+    }
+    await db.delete(new relationalStore.RdbPredicates('transaction_tags').equalTo('transaction_id', transactionId));
+    for (const tagId of values) {
+      await db.insert('transaction_tags', { transaction_id: transactionId, tag_id: tagId, book_id: bookId });
+    }
+  }
+
   private async write(record: TransferRecord, revision: number | undefined = undefined): Promise<void> {
     const command = record.command;
     await this.session.write(async (db: relationalStore.RdbStore): Promise<void> => {
@@ -61,6 +82,7 @@ export class RdbTransferRepository implements TransferRepository {
       }
       await db.insert('account_movements', { id: util.generateRandomUUID(), transaction_id: command.id,
         account_id: command.toAccountId, currency_id: 'CNY', leg: 'transfer_in', delta_minor: minor, occurred_at_ms: command.occurredAtMs });
+      await this.replaceTags(db, command.id, command.bookId, command.tagIds);
       const published = await db.update({ posting_state: 'posted' }, new relationalStore.RdbPredicates('transactions')
         .equalTo('id', command.id).equalTo('posting_state', 'draft'));
       if (published !== 1) { throw new Error('TRANSACTION_CHANGED'); }

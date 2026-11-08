@@ -1,6 +1,7 @@
 import { HdsNavigation, HdsNavigationTitleMode, hdsMaterial, DividerShowType, ScrollEffectType } from '@kit.UIDesignKit';
 import { transferPurposeLabel } from '../domain/model/TransferRecord';
 import { EntryDetail } from '../domain/model/EntryDetail';
+import { TagChoice } from '../domain/model/LedgerSnapshot';
 import { Money } from '../core/money/Money';
 import { CurrencyUnit } from '../core/money/CurrencyUnit';
 import { categoryIcon } from '../presentation/ledger/CategoryIcons';
@@ -115,6 +116,9 @@ export struct EntryDetailPage {
           this.field('计入预算', this.entry.includeInBudget ? '计入' : '不计入')
         }
         this.field('计入资产', this.entry.includeInAssets ? '计入' : '不计入')
+        if ((this.entry.tags || []).length > 0) {
+          this.field('标签', (this.entry.tags || []).map((tag: TagChoice) => '#' + tag.name).join('  '))
+        }
         if (this.entry.balanceMode === 'preserve') {
           Text('历史导入账目，不改变账户余额').fontSize('12fp').fontColor($r('app.color.xq_font_secondary'))
             .width('100%').padding({ top: 8, bottom: 12 })

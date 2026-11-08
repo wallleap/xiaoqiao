@@ -8,6 +8,7 @@ import { SpendingNaturePage } from '../components/SpendingNaturePage';
 import { BudgetPage } from '../components/BudgetPage';
 import { CategoryManagementPage } from '../components/CategoryManagementPage';
 import { StatisticsPage } from '../components/StatisticsPage';
+import { TagManagementPage } from '../components/TagManagementPage';
 import { MoneyAmountField } from '../components/MoneyAmountField';
 import { AccountEditor } from '../components/AccountEditor';
 import { AccountProfile, AccountOverview } from '../domain/model/AccountProfile';
@@ -21,7 +22,7 @@ import { util } from '@kit.ArkTS';
 import { FilterMaterials } from '../presentation/materials/FilterMaterials';
 import { LedgerDatabase } from '../data/rdb/LedgerDatabase';
 import { LedgerWorkspace } from '../data/rdb/LedgerWorkspace';
-import { LedgerSnapshot, ExpenseCategory, LedgerAccount, SpendingNatureChoice } from '../domain/model/LedgerSnapshot';
+import { LedgerSnapshot, ExpenseCategory, LedgerAccount, SpendingNatureChoice, TagChoice } from '../domain/model/LedgerSnapshot';
 import { LedgerBook } from '../domain/model/LedgerBook';
 import { EntryDetail } from '../domain/model/EntryDetail';
 import { MonthlyBudget, BudgetProgress, DEFAULT_MONTHLY_BUDGET_MINOR } from '../domain/model/MonthlyBudget';
@@ -42,6 +43,7 @@ struct Index {
   @State private showSpendingNatures: boolean = false;
   @State private showBudgetPage: boolean = false;
   @State private showCategories: boolean = false;
+  @State private showTags: boolean = false;
   @State private accountOverview: AccountOverview | undefined = undefined;
   @State private accountError: string = '';
   @State private showAccountEditor: boolean = false;
@@ -375,6 +377,18 @@ struct Index {
   }
 
   @Builder
+  private tagManagementPage() {
+    TagManagementPage({
+      workspace: this.workspace,
+      sheetMaterial: this.materialReady && !this.forceLegacyMaterials ? this.filterMaterials?.menu : undefined,
+      onClose: () => {
+        this.showTags = false;
+        this.loadLedger();
+      }
+    })
+  }
+
+  @Builder
   private accountEditorPage() {
     AccountEditor({ workspace: this.workspace, original: this.editingAccount, operationBusy: this.accountSaving,
       sheetMaterial: this.materialReady && !this.forceLegacyMaterials ? this.filterMaterials?.menu : undefined,
@@ -464,6 +478,14 @@ struct Index {
       !values.some((item: SpendingNatureChoice) => item.id === entry.spendingNatureId)) {
       values.push({ id: entry.spendingNatureId, name: entry.spendingNatureName || '已归档性质',
         colorKey: entry.spendingNatureColor || 'neutral' });
+    }
+    return values;
+  }
+
+  private editTags(): TagChoice[] {
+    const values = this.ledger?.tags.slice() || [];
+    for (const tag of this.editingEntry?.tags || []) {
+      if (!values.some((item: TagChoice) => item.id === tag.id)) { values.push(tag); }
     }
     return values;
   }
@@ -572,6 +594,7 @@ struct Index {
         sheetMaterial: this.materialReady && !this.forceLegacyMaterials ? this.filterMaterials?.menu : undefined,
         editingEntry: this.editingEntry, categories: this.editCategories(), incomeCategories: this.editCategories(true), accounts: this.editAccounts(),
         spendingNatures: this.editSpendingNatures(),
+        tags: this.editTags(),
         onSavingChange: (saving: boolean) => { this.savingExpense = saving; },
         onClose: () => { this.closeEditor(); }, onSaved: (date: string) => { this.expenseSaved(date); } })
     }
@@ -580,6 +603,7 @@ struct Index {
   onBackPress(): boolean {
     if (this.showBudgetPage) { this.showBudgetPage = false; this.loadLedger(); return true; }
     if (this.showCategories) { this.showCategories = false; this.loadLedger(); return true; }
+    if (this.showTags) { this.showTags = false; this.loadLedger(); return true; }
     if (this.showSpendingNatures) { this.showSpendingNatures = false; this.loadLedger(); return true; }
     if (this.showAccountEditor) { if (!this.accountSaving) { this.showAccountEditor = false; this.editingAccount = undefined; } return true; }
     if (this.showExpense) { if (!this.savingExpense) { this.closeEditor(); } return true; }
@@ -659,7 +683,7 @@ struct Index {
     }.id('ledger-period').width('100%').margin({ top: 2, bottom: 16 })
       .opacity(this.periodOpacity).visibility(this.periodOpacity > 0 ? Visibility.Visible : Visibility.Hidden)
     if (this.showSearch) {
-      Search({ value: this.keyword, placeholder: '搜索备注、收支分类或账户' })
+      Search({ value: this.keyword, placeholder: '搜索备注、收支分类、账户或标签' })
         .id('ledger-search').onChange((value: string) => { this.keyword = value; })
         .height(48).margin({ bottom: 16 })
     }
@@ -1365,6 +1389,7 @@ struct Index {
           onRecoveryRequired: () => { this.showRecoveryError(); },
           onOpenSpendingNatures: () => { this.showSpendingNatures = true; },
           onOpenCategories: () => { this.showCategories = true; },
+          onOpenTags: () => { this.showTags = true; },
           onRestored: async (): Promise<boolean> => {
             this.kind = LedgerKind.All; this.displayedKind = LedgerKind.All;
             this.account = ''; this.keyword = ''; this.showSearch = false;
@@ -1394,6 +1419,7 @@ struct Index {
   build() {
     if (this.showBudgetPage) { this.budgetPage() }
     else if (this.showCategories) { this.categoryManagementPage() }
+    else if (this.showTags) { this.tagManagementPage() }
     else if (this.showSpendingNatures) { this.spendingNaturePage() }
     else if (this.showAccountEditor) { this.accountEditorPage() }
     else if (this.showExpense) { this.expensePage() }

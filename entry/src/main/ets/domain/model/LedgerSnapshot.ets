@@ -13,6 +13,12 @@ export interface SpendingNatureChoice {
   colorKey: string;
 }
 
+export interface TagChoice {
+  id: string;
+  name: string;
+  colorKey: string;
+}
+
 export interface LedgerAccount {
   id: string;
   name: string;
@@ -38,6 +44,8 @@ export interface SavedLedgerEntry {
   minor: string;
   grossMinor: string;
   discountMinor: string;
+  tagIds?: string[];
+  tagNames?: string[];
 }
 
 export interface LedgerSnapshot {
@@ -46,6 +54,7 @@ export interface LedgerSnapshot {
   categories: ExpenseCategory[];
   incomeCategories: ExpenseCategory[];
   spendingNatures: SpendingNatureChoice[];
+  tags: TagChoice[];
   budgetNatureLines: BudgetNatureLine[];
   accounts: LedgerAccount[];
   entries: SavedLedgerEntry[];

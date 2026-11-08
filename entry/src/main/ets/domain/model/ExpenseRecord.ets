@@ -13,11 +13,26 @@ export interface ExpenseCommand {
   readonly includeInAssets: boolean;
   readonly includeInBudget: boolean;
   readonly spendingNatureId?: string;
+  readonly tagIds?: string[];
   readonly note: string;
   readonly occurredAtMs: number;
   readonly localDate: string;
   readonly timezone: string;
   readonly offsetMinutes: number;
+}
+
+export function validateTagIds(tagIds?: string[]): string[] | undefined {
+  if (tagIds === undefined) { return undefined; }
+  const values: string[] = [];
+  const seen: Set<string> = new Set();
+  for (const id of tagIds) {
+    const value = id.trim();
+    if (value.length === 0 || seen.has(value)) { throw new Error('INVALID_TAG'); }
+    seen.add(value);
+    values.push(value);
+  }
+  if (values.length > 20) { throw new Error('INVALID_TAG'); }
+  return values;
 }
 
 export class ExpenseRecord {
@@ -46,6 +61,7 @@ export class ExpenseRecord {
     if (command.spendingNatureId !== undefined && command.spendingNatureId.trim().length === 0) {
       throw new Error('INVALID_SPENDING_NATURE');
     }
+    const tagIds = validateTagIds(command.tagIds);
     // P0 manual command intentionally handles only same-currency settlement.
     // Foreign-currency persistence requires explicit FX snapshot commands first.
     if (!this.paid.currency.matches(command.bookPaid.currency) || this.paid.minor !== command.bookPaid.minor ||
@@ -69,6 +85,7 @@ export class ExpenseRecord {
       accountId: command.accountId, accountPaid: command.accountPaid,
       includeInAssets: command.includeInAssets, includeInBudget: command.includeInBudget,
       spendingNatureId: command.spendingNatureId,
+      tagIds: tagIds,
       note: command.note, occurredAtMs: command.occurredAtMs, localDate: command.localDate,
       timezone: command.timezone, offsetMinutes: command.offsetMinutes
     };

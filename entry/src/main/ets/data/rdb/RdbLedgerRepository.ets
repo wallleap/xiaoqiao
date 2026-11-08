@@ -19,6 +19,27 @@ export class RdbLedgerRepository implements LedgerRepository, ExpenseUpdateRepos
   async saveExpense(record: ExpenseRecord): Promise<void> { await this.saveRecord(record, 'expense'); }
   async saveIncome(record: IncomeRecord): Promise<void> { await this.saveRecord(record.settlement, 'income'); }
 
+  private async replaceTags(store: relationalStore.RdbStore, transactionId: string, bookId: string,
+    tagIds: string[] | undefined): Promise<void> {
+    if (tagIds === undefined) { return; }
+    const values = Array.from(new Set(tagIds));
+    if (values.length > 0) {
+      const placeholders = Array.from({ length: values.length }, (_value: number, _index: number) => '?').join(',');
+      const args: relationalStore.ValueType[] = [bookId];
+      values.forEach((id: string) => { args.push(id); });
+      const rows = await store.querySql(`SELECT id FROM tags WHERE book_id=? AND id IN (${placeholders}) AND ` +
+        '(deleted_at_ms IS NULL OR EXISTS(SELECT 1 FROM transaction_tags linked WHERE linked.transaction_id=? AND linked.tag_id=tags.id))',
+        [...args, transactionId]);
+      let found = 0;
+      try { while (rows.goToNextRow()) { found++; } } finally { rows.close(); }
+      if (found !== values.length) { throw new Error('TAG_UNAVAILABLE'); }
+    }
+    await store.delete(new relationalStore.RdbPredicates('transaction_tags').equalTo('transaction_id', transactionId));
+    for (const tagId of values) {
+      await store.insert('transaction_tags', { transaction_id: transactionId, tag_id: tagId, book_id: bookId });
+    }
+  }
+
   private async saveRecord(record: ExpenseRecord, kind: string): Promise<void> {
     const command = record.command;
     await this.session.write(async (store: relationalStore.RdbStore): Promise<void> => {
@@ -50,6 +71,7 @@ export class RdbLedgerRepository implements LedgerRepository, ExpenseUpdateRepos
         };
         await store.insert('account_movements', movement);
       }
+      await this.replaceTags(store, command.id, command.bookId, command.tagIds);
       await store.executeSql("UPDATE transactions SET posting_state='posted' WHERE id=?", [command.id]);
     });
   }
@@ -128,6 +150,7 @@ export class RdbLedgerRepository implements LedgerRepository, ExpenseUpdateRepos
           account_id: command.accountId, currency_id: command.accountPaid.currency.id, leg: kind,
           delta_minor: (kind === 'income' ? 1 : -1) * command.accountPaid.toSafeMinorNumber(), occurred_at_ms: command.occurredAtMs });
       }
+      await this.replaceTags(db, command.id, command.bookId, command.tagIds);
       const published = await db.update({ posting_state: 'posted' }, new relationalStore.RdbPredicates('transactions')
         .equalTo('id', command.id).equalTo('revision', expectedRevision + 1).equalTo('posting_state', 'draft'));
       if (published !== 1) { throw new Error('TRANSACTION_CHANGED'); }

@@ -12,7 +12,8 @@ import { RdbAccountRepository } from './RdbAccountRepository';
 import { IncomeCommand } from '../../domain/model/IncomeRecord';
 import { IncomeService } from '../../domain/services/IncomeService';
 import { ExpenseCommand } from '../../domain/model/ExpenseRecord';
-import { ExpenseCategory, LedgerAccount, LedgerSnapshot, SavedLedgerEntry, SpendingNatureChoice } from '../../domain/model/LedgerSnapshot';
+import { ExpenseCategory, LedgerAccount, LedgerSnapshot, SavedLedgerEntry, SpendingNatureChoice,
+  TagChoice } from '../../domain/model/LedgerSnapshot';
 import { RecordExpense } from '../../domain/services/RecordExpense';
 import { UpdateExpense } from '../../domain/services/UpdateExpense';
 import { EntryDetail } from '../../domain/model/EntryDetail';
@@ -20,6 +21,7 @@ import { MonthlyBudget, DEFAULT_MONTHLY_BUDGET_MINOR } from '../../domain/model/
 import { LedgerBook, ValidatedLedgerBook } from '../../domain/model/LedgerBook';
 import { BudgetNatureLine, SpendingNatureCommand, SpendingNatureProfile, ValidatedSpendingNature } from '../../domain/model/SpendingNature';
 import { CategoryCommand, CategoryProfile, ValidatedCategory } from '../../domain/model/CategoryProfile';
+import { TagCommand, TagProfile, ValidatedTag } from '../../domain/model/TagProfile';
 import { LedgerDatabase, DEFAULT_BOOK_ID } from './LedgerDatabase';
 import { RdbLedgerRepository } from './RdbLedgerRepository';
 import { RdbSession } from './RdbSession';
@@ -258,6 +260,70 @@ export class LedgerWorkspace {
       const changed = await db.update({ archived_at_ms: archived ? Date.now() : null, updated_at_ms: Date.now(), revision: revision + 1 },
         new relationalStore.RdbPredicates('spending_natures').equalTo('id', id).equalTo('revision', revision).isNull('deleted_at_ms'));
       if (changed !== 1) { throw new Error('SPENDING_NATURE_CHANGED'); }
+    });
+  }
+
+  async tags(): Promise<TagProfile[]> {
+    return this.session.read(async (db: relationalStore.RdbStore): Promise<TagProfile[]> => {
+      this.activeBookId = await this.activeBookFromMeta(db);
+      const values: TagProfile[] = [];
+      const rows = await db.querySql("SELECT id,name,COALESCE(color_token,'neutral'),sort_order,revision FROM tags " +
+        "WHERE book_id=? AND deleted_at_ms IS NULL ORDER BY sort_order,created_at_ms,id", [this.activeBookId]);
+      try {
+        while (rows.goToNextRow()) {
+          values.push({ id: rows.getString(0), name: rows.getString(1), colorKey: rows.getString(2),
+            sortOrder: rows.getLong(3), revision: rows.getLong(4) });
+        }
+      } finally { rows.close(); }
+      return values;
+    });
+  }
+
+  async createTag(command: TagCommand): Promise<void> {
+    const draft = new ValidatedTag(command).command;
+    await this.session.write(async (db: relationalStore.RdbStore): Promise<void> => {
+      this.activeBookId = await this.activeBookFromMeta(db);
+      const duplicate = await db.querySql('SELECT id FROM tags WHERE book_id=? AND name_key=? AND deleted_at_ms IS NULL',
+        [this.activeBookId, draft.name]);
+      try { if (duplicate.goToFirstRow()) { throw new Error('TAG_NAME_EXISTS'); } } finally { duplicate.close(); }
+      const order = await db.querySql('SELECT COALESCE(MAX(sort_order),-1)+1 FROM tags WHERE book_id=?',
+        [this.activeBookId]);
+      let sortOrder: number = 0;
+      try { if (order.goToFirstRow()) { sortOrder = order.getLong(0); } } finally { order.close(); }
+      const now = Date.now();
+      await db.insert('tags', { id: draft.id, book_id: this.activeBookId, name: draft.name, name_key: draft.name,
+        color_token: draft.colorKey, sort_order: sortOrder, created_at_ms: now, updated_at_ms: now });
+    });
+  }
+
+  async updateTag(command: TagCommand, revision: number): Promise<void> {
+    const draft = new ValidatedTag(command).command;
+    if (!Number.isSafeInteger(revision) || revision < 1 || revision >= Number.MAX_SAFE_INTEGER) {
+      throw new Error('INVALID_EXPECTED_REVISION');
+    }
+    await this.session.write(async (db: relationalStore.RdbStore): Promise<void> => {
+      this.activeBookId = await this.activeBookFromMeta(db);
+      const duplicate = await db.querySql('SELECT id FROM tags WHERE book_id=? AND id<>? AND name_key=? AND deleted_at_ms IS NULL',
+        [this.activeBookId, draft.id, draft.name]);
+      try { if (duplicate.goToFirstRow()) { throw new Error('TAG_NAME_EXISTS'); } } finally { duplicate.close(); }
+      const changed = await db.update({ name: draft.name, name_key: draft.name, color_token: draft.colorKey,
+        updated_at_ms: Date.now(), revision: revision + 1 }, new relationalStore.RdbPredicates('tags')
+        .equalTo('id', draft.id).equalTo('book_id', this.activeBookId).equalTo('revision', revision)
+        .isNull('deleted_at_ms'));
+      if (changed !== 1) { throw new Error('TAG_CHANGED'); }
+    });
+  }
+
+  async deleteTag(id: string, revision: number): Promise<void> {
+    if (!Number.isSafeInteger(revision) || revision < 1 || revision >= Number.MAX_SAFE_INTEGER) {
+      throw new Error('INVALID_EXPECTED_REVISION');
+    }
+    await this.session.write(async (db: relationalStore.RdbStore): Promise<void> => {
+      this.activeBookId = await this.activeBookFromMeta(db);
+      const changed = await db.update({ deleted_at_ms: Date.now(), updated_at_ms: Date.now(), revision: revision + 1 },
+        new relationalStore.RdbPredicates('tags').equalTo('id', id).equalTo('book_id', this.activeBookId)
+          .equalTo('revision', revision).isNull('deleted_at_ms'));
+      if (changed !== 1) { throw new Error('TAG_CHANGED'); }
     });
   }
 
@@ -526,6 +592,15 @@ export class LedgerWorkspace {
         } finally { category.close(); }
       }
       detail.categoryPath = path.length > 0 ? path.join(' / ') : detail.categoryName;
+      const tags: TagChoice[] = [];
+      const tagRows = await db.querySql('SELECT g.id,g.name,COALESCE(g.color_token,\'neutral\') FROM transaction_tags tt ' +
+        'JOIN tags g ON g.id=tt.tag_id WHERE tt.transaction_id=? ORDER BY g.sort_order,g.created_at_ms,g.id', [detail.id]);
+      try {
+        while (tagRows.goToNextRow()) {
+          tags.push({ id: tagRows.getString(0), name: tagRows.getString(1), colorKey: tagRows.getString(2) });
+        }
+      } finally { tagRows.close(); }
+      detail.tags = tags;
       return detail;
     });
   }
@@ -604,6 +679,14 @@ export class LedgerWorkspace {
           spendingNatures.push({ id: natureRows.getString(0), name: natureRows.getString(1), colorKey: natureRows.getString(2) });
         }
       } finally { natureRows.close(); }
+      const tags: TagChoice[] = [];
+      const tagRows = await db.querySql("SELECT id,name,COALESCE(color_token,'neutral') FROM tags " +
+        'WHERE book_id=? AND deleted_at_ms IS NULL ORDER BY sort_order,created_at_ms,id', [this.activeBookId]);
+      try {
+        while (tagRows.goToNextRow()) {
+          tags.push({ id: tagRows.getString(0), name: tagRows.getString(1), colorKey: tagRows.getString(2) });
+        }
+      } finally { tagRows.close(); }
       const accounts: LedgerAccount[] = [];
       const accountRows = await db.querySql("SELECT id,name,currency_id,kind FROM accounts WHERE deleted_at_ms IS NULL AND archived_at_ms IS NULL ORDER BY sort_order,id");
       try {
@@ -632,6 +715,27 @@ export class LedgerWorkspace {
             grossMinor: rows.getString(11), discountMinor: rows.getString(12) });
         }
       } finally { rows.close(); }
+      const tagNames: Map<string, string[]> = new Map();
+      const tagIds: Map<string, string[]> = new Map();
+      const entryTagRows = await db.querySql('SELECT tt.transaction_id,g.id,g.name FROM transaction_tags tt ' +
+        'JOIN tags g ON g.id=tt.tag_id JOIN v_posted_transactions tx ON tx.id=tt.transaction_id ' +
+        'WHERE tt.book_id=? AND substr(tx.occurred_local_date,1,7)=? ORDER BY g.sort_order,g.created_at_ms,g.id',
+        [this.activeBookId, month]);
+      try {
+        while (entryTagRows.goToNextRow()) {
+          const transactionId = entryTagRows.getString(0);
+          const ids = tagIds.get(transactionId) || [];
+          const names = tagNames.get(transactionId) || [];
+          ids.push(entryTagRows.getString(1));
+          names.push(entryTagRows.getString(2));
+          tagIds.set(transactionId, ids);
+          tagNames.set(transactionId, names);
+        }
+      } finally { entryTagRows.close(); }
+      for (const entry of entries) {
+        entry.tagIds = tagIds.get(entry.id) || [];
+        entry.tagNames = tagNames.get(entry.id) || [];
+      }
       let budgetTotal: string = DEFAULT_MONTHLY_BUDGET_MINOR;
       let budgetId: string = '';
       const budget = await db.querySql('SELECT id,CAST(total_minor AS TEXT),currency_id FROM budgets WHERE book_id=? AND period_start_date=? AND period_end_date_exclusive=? AND deleted_at_ms IS NULL',
@@ -655,7 +759,7 @@ export class LedgerWorkspace {
         }
       } finally { lines.close(); }
       return { bookId: this.activeBookId, bookName: bookName, categories: categories, incomeCategories: incomeCategories,
-        spendingNatures: spendingNatures, budgetNatureLines: budgetNatureLines, accounts: accounts,
+        spendingNatures: spendingNatures, tags: tags, budgetNatureLines: budgetNatureLines, accounts: accounts,
         entries: entries, incomeMinor: income.toString(), expenseMinor: expense.toString(),
         budgetTotalMinor: budgetTotal, budgetUsedMinor: budgetUsed.toString() };
     });

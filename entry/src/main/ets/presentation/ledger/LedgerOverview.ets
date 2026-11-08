@@ -38,6 +38,7 @@ export interface LedgerEntry {
   minor: string;
   grossMinor: string;
   discountMinor: string;
+  tags?: string[];
   icon: Resource;
 }
 
@@ -52,7 +53,9 @@ export function presentEntry(entry: SavedLedgerEntry): LedgerEntry {
   return { id: entry.id, title: entry.note.length > 0 ? entry.note : entry.category, category: entry.category,
     account: entry.account, date: entry.date, time: String(local.getUTCHours()).padStart(2, '0') + ':' +
       String(local.getUTCMinutes()).padStart(2, '0'), income: entry.income, transfer: entry.transfer, toAccount: entry.toAccount, minor: entry.minor,
-      expenseMinor: entry.expenseMinor, transferFeeMinor: entry.transferFeeMinor, transferCouponMinor: entry.transferCouponMinor, grossMinor: entry.grossMinor, discountMinor: entry.discountMinor, icon: entry.transfer ? $r('app.media.lucide_arrow_left_right1') : categoryIcon(entry.iconKey) };
+    expenseMinor: entry.expenseMinor, transferFeeMinor: entry.transferFeeMinor, transferCouponMinor: entry.transferCouponMinor,
+    grossMinor: entry.grossMinor, discountMinor: entry.discountMinor, tags: entry.tagNames || [],
+    icon: entry.transfer ? $r('app.media.lucide_arrow_left_right1') : categoryIcon(entry.iconKey) };
 }
 
 export function filterEntries(entries: LedgerEntry[], kind: LedgerKind, query: string,
@@ -61,7 +64,8 @@ export function filterEntries(entries: LedgerEntry[], kind: LedgerKind, query: s
   return entries.filter((entry: LedgerEntry) =>
     (kind === LedgerKind.All || (entry.transfer ? kind === LedgerKind.Expense && BigInt(entry.expenseMinor || '0') > BigInt(0) : entry.income === (kind === LedgerKind.Income))) &&
     (account.length === 0 || entry.account === account || entry.toAccount === account) &&
-    (keyword.length === 0 || (entry.title + entry.category + entry.account + (entry.toAccount || '')).toLowerCase().includes(keyword)));
+    (keyword.length === 0 || (entry.title + entry.category + entry.account + (entry.toAccount || '') +
+      (entry.tags || []).join(' ')).toLowerCase().includes(keyword)));
 }
 
 /** Explicit UI test fixture only. Normal launch has no example transactions. Never persisted. */

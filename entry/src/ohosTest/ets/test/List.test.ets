@@ -22,6 +22,8 @@ import categoriesTest from './Categories.test';
 import categoryFlowTest from './CategoryFlow';
 import statisticsTest from './Statistics.test';
 import statisticsFlowTest from './StatisticsFlow';
+import tagsTest from './Tags.test';
+import tagFlowTest from './TagFlow';
 
 export default function testsuite() {
   abilityTest();
@@ -46,5 +48,7 @@ export default function testsuite() {
   categoryFlowTest();
   statisticsTest();
   statisticsFlowTest();
+  tagsTest();
+  tagFlowTest();
   if (abilityDelegatorRegistry.getArguments().parameters['-s class'] === 'WebDavHttp') { webDavHttpTest(); }
 }

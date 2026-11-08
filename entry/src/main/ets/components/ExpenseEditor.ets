@@ -7,12 +7,13 @@ import { IncomeCommand } from '../domain/model/IncomeRecord';
 import { ExpenseCommand } from '../domain/model/ExpenseRecord';
 import { EntryDetail } from '../domain/model/EntryDetail';
 import { Money } from '../core/money/Money';
-import { ExpenseCategory, LedgerAccount, SpendingNatureChoice } from '../domain/model/LedgerSnapshot';
+import { ExpenseCategory, LedgerAccount, SpendingNatureChoice, TagChoice } from '../domain/model/LedgerSnapshot';
 import { LedgerWorkspace } from '../data/rdb/LedgerWorkspace';
 import { ExpenseAmountInput } from '../presentation/ledger/ExpenseAmountInput';
 import { AmountKeyboard } from './AmountKeyboard';
 import { categoryIcon } from '../presentation/ledger/CategoryIcons';
 import { spendingNatureBackground, spendingNatureText } from '../presentation/ledger/SpendingNatureStyles';
+import { tagBackground, tagTextColor } from '../presentation/ledger/TagStyles';
 
 class AmountFocusFrame extends FrameCallback {
   private readonly action: () => void;
@@ -36,6 +37,7 @@ export struct ExpenseEditor {
   categories: ExpenseCategory[] = [];
   incomeCategories: ExpenseCategory[] = [];
   spendingNatures: SpendingNatureChoice[] = [];
+  tags: TagChoice[] = [];
   @State private isIncome: boolean = false;
   @State private isTransfer: boolean = false;
   accounts: LedgerAccount[] = [];
@@ -55,6 +57,7 @@ export struct ExpenseEditor {
   @State private note: string = '';
   @State private selectedId: string = '';
   @State private selectedNatureId: string = '';
+  @State private selectedTagIds: string[] = [];
   @State private accountId: string = '';
   @State private toAccountId: string = '';
   @State private occurredAtMs: number = Date.now();
@@ -100,6 +103,7 @@ export struct ExpenseEditor {
       this.discount = Money.fromMinorText(entry.discountMinor, this.currency).toDecimalString();
       this.selectedId = entry.categoryId; this.accountId = entry.accountId; this.toAccountId = entry.toAccountId || '';
       this.selectedNatureId = entry.spendingNatureId || '';
+      this.selectedTagIds = (entry.tags || []).map((tag: TagChoice) => tag.id);
       this.includeAssets = entry.includeInAssets; this.includeBudget = entry.includeInBudget;
       this.occurredAtMs = entry.occurredAtMs; this.note = entry.note;
     }
@@ -163,6 +167,14 @@ export struct ExpenseEditor {
 
   private selected(): ExpenseCategory | undefined {
     return this.activeCategories().find((item: ExpenseCategory) => item.id === this.selectedId);
+  }
+
+  private toggleTag(id: string): void {
+    if (this.selectedTagIds.includes(id)) {
+      this.selectedTagIds = this.selectedTagIds.filter((value: string) => value !== id);
+    } else if (this.selectedTagIds.length < 20) {
+      this.selectedTagIds = [...this.selectedTagIds, id];
+    }
   }
 
   private roots(): ExpenseCategory[] { return this.activeCategories().filter((item: ExpenseCategory) => item.parentId.length === 0); }
@@ -348,6 +360,7 @@ export struct ExpenseEditor {
         discount: reduction, bookPaid: paid, accountId: account, accountPaid: account === undefined ? undefined : paid,
         includeInAssets: this.includeAssets, includeInBudget: !this.isIncome && !this.isTransfer && this.includeBudget,
         spendingNatureId: !this.isIncome && !this.isTransfer && this.selectedNatureId.length > 0 ? this.selectedNatureId : undefined,
+        tagIds: this.selectedTagIds,
         note: this.note.trim(),
         occurredAtMs: new Date(this.occurredAtMs).getTime(), localDate: this.localDate(),
         timezone: this.editingEntry !== undefined && !this.dateEdited ? this.editingEntry.timezone : Intl.DateTimeFormat().resolvedOptions().timeZone,
@@ -363,6 +376,7 @@ export struct ExpenseEditor {
           toAccountId: this.toAccountId, amount: command.gross, purpose: this.transferPurpose,
           fee: ExpenseAmountInput.evaluateDiscount(this.transferFee, this.currency),
           coupon: ExpenseAmountInput.evaluateDiscount(this.transferCoupon, this.currency), feeInBudget: this.feeBudget, includeInAssets: command.includeInAssets,
+          tagIds: this.selectedTagIds,
           note: command.note, occurredAtMs: command.occurredAtMs, localDate: command.localDate,
           timezone: command.timezone, offsetMinutes: command.offsetMinutes };
         if (this.editingEntry !== undefined) { await workspace.updateTransfer(transfer, this.editingEntry.revision); }
@@ -370,7 +384,7 @@ export struct ExpenseEditor {
       } else if (this.isIncome) {
         const income: IncomeCommand = { id: command.id, bookId: command.bookId, categoryId: command.categoryId,
           amount: command.gross, bookAmount: command.bookPaid, accountId: command.accountId, accountAmount: command.accountPaid,
-          includeInAssets: command.includeInAssets, note: command.note, occurredAtMs: command.occurredAtMs,
+          includeInAssets: command.includeInAssets, tagIds: this.selectedTagIds, note: command.note, occurredAtMs: command.occurredAtMs,
           localDate: command.localDate, timezone: command.timezone, offsetMinutes: command.offsetMinutes };
         if (this.editingEntry !== undefined) { await workspace.updateIncome(income, this.editingEntry.revision); }
         else { await workspace.saveIncome(income); }
@@ -495,6 +509,39 @@ export struct ExpenseEditor {
       }.width('100%')
     }.padding(16).width('100%').borderRadius(16).backgroundColor($r('app.color.xq_app_surface_card'))
       .id('expense-spending-nature')
+  }
+
+  @Builder
+  private tagSelector() {
+    Column({ space: 10 }) {
+      Row({ space: 6 }) {
+        Text('标签').fontSize('14fp').fontWeight(FontWeight.Medium)
+          .fontColor($r('app.color.xq_font_primary'))
+        Text('可多选').fontSize('12fp').fontColor($r('app.color.xq_font_tertiary'))
+        Blank()
+        if (this.selectedTagIds.length > 0) {
+          Button('清除', { type: ButtonType.Capsule }).height(28).fontSize('12fp')
+            .fontColor($r('app.color.xq_font_secondary')).backgroundColor(Color.Transparent)
+            .id('expense-tag-clear').onClick(() => { this.selectedTagIds = []; })
+        }
+      }.width('100%')
+      if (this.tags.length === 0) {
+        Text('尚未创建标签，可在设置中管理。').fontSize('12fp')
+          .fontColor($r('app.color.xq_font_secondary')).width('100%')
+      } else {
+        Flex({ wrap: FlexWrap.Wrap, justifyContent: FlexAlign.Start }) {
+          ForEach(this.tags, (tag: TagChoice) => {
+            Button('#' + tag.name, { type: ButtonType.Capsule }).height(36).fontSize('13fp')
+              .fontColor(tagTextColor(tag.colorKey)).backgroundColor(tagBackground(tag.colorKey))
+              .border({ width: this.selectedTagIds.includes(tag.id) ? 1.5 : 0,
+                color: this.selectedTagIds.includes(tag.id) ? tagTextColor(tag.colorKey) : Color.Transparent })
+              .margin({ right: 8, bottom: 8 }).id('expense-tag-' + tag.id)
+              .onClick(() => { this.toggleTag(tag.id); })
+          }, (tag: TagChoice) => tag.id)
+        }.width('100%')
+      }
+    }.padding(16).width('100%').borderRadius(16).backgroundColor($r('app.color.xq_app_surface_card'))
+      .id('expense-tags')
   }
 
   @Builder
@@ -668,6 +715,7 @@ export struct ExpenseEditor {
           .onChange((value: string) => { this.note = value; })
           .onSubmit(() => { this.focusAmountAfterFrame(); })
       }.padding({ left: 16, right: 16 }).width('100%').borderRadius(16).backgroundColor($r('app.color.xq_app_surface_card'))
+      this.tagSelector()
       if (!this.isIncome && !this.isTransfer) { this.spendingNatureSelector() }
       if (this.isTransfer) {
         Row() {

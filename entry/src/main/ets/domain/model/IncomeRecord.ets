@@ -11,6 +11,7 @@ export interface IncomeCommand {
   readonly accountId?: string;
   readonly accountAmount?: Money;
   readonly includeInAssets: boolean;
+  readonly tagIds?: string[];
   readonly note: string;
   readonly occurredAtMs: number;
   readonly localDate: string;
@@ -25,7 +26,7 @@ export class IncomeRecord {
     this.settlement = new ExpenseRecord({ id: command.id, bookId: command.bookId, categoryId: command.categoryId,
       gross: command.amount, discount: Money.fromMinorText('0', command.amount.currency), bookPaid: command.bookAmount,
       accountId: command.accountId, accountPaid: command.accountAmount, includeInAssets: command.includeInAssets,
-      includeInBudget: false, note: command.note, occurredAtMs: command.occurredAtMs, localDate: command.localDate,
+      includeInBudget: false, tagIds: command.tagIds, note: command.note, occurredAtMs: command.occurredAtMs, localDate: command.localDate,
       timezone: command.timezone, offsetMinutes: command.offsetMinutes });
   }
 }

@@ -23,6 +23,7 @@ export interface TransferCommand {
   coupon?: Money;
   feeInBudget?: boolean;
   includeInAssets: boolean;
+  tagIds?: string[];
   note: string;
   occurredAtMs: number;
   localDate: string;
@@ -45,7 +46,7 @@ export class TransferRecord {
     // Reuse exact positive amount, persistence-boundary and captured-local-date validation.
     const validated = new ExpenseRecord({ id: command.id, bookId: command.bookId, categoryId: 'transfer',
       gross: command.amount, discount: Money.fromMinorText('0', command.amount.currency), bookPaid: command.amount,
-      includeInAssets: command.includeInAssets, includeInBudget: false, note: command.note,
+      includeInAssets: command.includeInAssets, includeInBudget: false, tagIds: command.tagIds, note: command.note,
       occurredAtMs: command.occurredAtMs, localDate: command.localDate, timezone: command.timezone, offsetMinutes: command.offsetMinutes }).command;
     const purpose = TRANSFER_PURPOSES.find((value: TransferPurpose) => value.key === (command.purpose || 'transfer'));
     if (purpose === undefined) { throw new Error('INVALID_TRANSFER_PURPOSE'); }
@@ -61,6 +62,7 @@ export class TransferRecord {
     this.command = { id: validated.id, bookId: validated.bookId, fromAccountId: command.fromAccountId,
       toAccountId: command.toAccountId, amount: validated.gross, purpose: this.purpose, fee: this.fee, coupon: this.coupon,
       feeInBudget: this.feeInBudget, includeInAssets: validated.includeInAssets,
+      tagIds: validated.tagIds,
       note: validated.note, occurredAtMs: validated.occurredAtMs, localDate: validated.localDate,
       timezone: validated.timezone, offsetMinutes: validated.offsetMinutes };
   }
