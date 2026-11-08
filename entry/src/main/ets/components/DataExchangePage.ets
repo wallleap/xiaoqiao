@@ -8,7 +8,8 @@ import { LedgerXlsxExport } from '../data/exchange/LedgerXlsxExport';
 import { listXlsxSheets, readXlsxTable, XlsxSheetInfo } from '../data/exchange/LedgerXlsxImport';
 import { CsvColumnMapping, CsvPreviewRow, CsvTable, detectCsvMapping, parseCsv,
   previewCsv, readDelimitedText } from '../data/exchange/LedgerCsvImport';
-import { LedgerSnapshot } from '../domain/model/LedgerSnapshot';
+import { LedgerSnapshot, SavedLedgerEntry } from '../domain/model/LedgerSnapshot';
+import { localDate, parseLocalDate } from '../presentation/statistics/StatisticsPeriod';
 
 @Component
 export struct DataExchangePage {
@@ -18,6 +19,9 @@ export struct DataExchangePage {
   onClose: () => void = () => {};
   onImported: () => Promise<void> = async () => {};
   @State private snapshot: LedgerSnapshot | undefined = undefined;
+  @State private exportSnapshot: LedgerSnapshot | undefined = undefined;
+  @State private exportStartDate: string = '';
+  @State private exportEndDate: string = '';
   @State private loading: boolean = true;
   @State private busy: boolean = false;
   @State private message: string = '';
@@ -49,6 +53,15 @@ export struct DataExchangePage {
 
   aboutToAppear(): void { this.load(); }
 
+  private dateText(value: string): string {
+    return value.replace(/-/g, '.');
+  }
+
+  private monthEnd(year: number, month: number): string {
+    const date = new Date(year, month, 0);
+    return `${year}-${String(month).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+  }
+
   private statusBarColor(): string {
     const host = this.getUIContext().getHostContext();
     return host === undefined ? '#E5000000' :
@@ -63,25 +76,89 @@ export struct DataExchangePage {
     try {
       this.snapshot = await this.workspace.snapshot(this.monthKey);
       this.existingImportIds = await this.workspace.existingImportIds();
+      if (this.exportStartDate.length === 0) {
+        const monthParts = this.monthKey.split('-');
+        this.exportStartDate = this.monthKey + '-01';
+        this.exportEndDate = this.monthEnd(Number(monthParts[0]), Number(monthParts[1]));
+      }
+      await this.loadExportRange();
     }
     catch (_) { this.message = '账本暂时无法读取，请返回后重试'; this.error = true; }
     finally { this.loading = false; }
   }
 
+  private async loadExportRange(): Promise<void> {
+    const workspace = this.workspace;
+    if (workspace === undefined || this.exportStartDate.length === 0 || this.exportEndDate.length === 0) { return; }
+    this.exportSnapshot = undefined;
+    if (this.exportStartDate > this.exportEndDate) {
+      this.message = '导出结束日期不能早于开始日期';
+      this.error = true;
+      return;
+    }
+    try {
+      const startMonth = this.exportStartDate.substring(0, 7);
+      const endMonth = this.exportEndDate.substring(0, 7);
+      const entries: SavedLedgerEntry[] = [];
+      let cursor = startMonth;
+      let bookName = this.snapshot?.bookName || '';
+      while (cursor <= endMonth) {
+        const snapshot = await workspace.snapshot(cursor);
+        bookName = snapshot.bookName;
+        for (const entry of snapshot.entries) {
+          if (entry.date >= this.exportStartDate && entry.date <= this.exportEndDate) { entries.push(entry); }
+        }
+        const parts = cursor.split('-');
+        const next = new Date(Number(parts[0]), Number(parts[1]), 1);
+        cursor = `${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, '0')}`;
+      }
+      entries.sort((left: SavedLedgerEntry, right: SavedLedgerEntry) =>
+        right.occurredAtMs - left.occurredAtMs || right.id.localeCompare(left.id));
+      this.exportSnapshot = { bookId: this.snapshot?.bookId || '', bookName: bookName,
+        categories: this.snapshot?.categories || [], incomeCategories: this.snapshot?.incomeCategories || [],
+        spendingNatures: this.snapshot?.spendingNatures || [], tags: this.snapshot?.tags || [],
+        budgetNatureLines: [], accounts: this.snapshot?.accounts || [], entries: entries,
+        incomeMinor: '0', expenseMinor: '0', budgetTotalMinor: '0', budgetUsedMinor: '0' };
+      this.message = '';
+      this.error = false;
+    } catch (_) {
+      this.exportSnapshot = undefined;
+      this.message = '导出范围读取失败，请重试';
+      this.error = true;
+    }
+  }
+
+  private pickExportDate(start: boolean): void {
+    const value = parseLocalDate(start ? this.exportStartDate : this.exportEndDate);
+    this.getUIContext().showDatePickerDialog({ selected: value,
+      selectedTextStyle: { color: $r('app.color.xq_font_emphasize') },
+      acceptButtonStyle: { fontColor: $r('app.color.xq_font_emphasize') },
+      cancelButtonStyle: { fontColor: $r('app.color.xq_font_emphasize') },
+      onDateAccept: (date: Date) => {
+        const valueText = localDate(date);
+        if (start) { this.exportStartDate = valueText; } else { this.exportEndDate = valueText; }
+        this.message = '';
+        this.error = false;
+        this.loadExportRange();
+      }
+    });
+  }
+
   private async exportCsv(): Promise<void> {
-    if (this.busy || this.snapshot === undefined || this.workspace === undefined) { return; }
+    const exportSnapshot = this.exportSnapshot;
+    if (this.busy || exportSnapshot === undefined) { return; }
     this.busy = true;
     this.message = '';
     this.error = false;
     try {
       const options = new picker.DocumentSaveOptions();
-      const safeBook = (this.snapshot.bookName || '账本').replace(/[\\/:*?"<>|]/g, '_');
-      options.newFileNames = [`${safeBook}-${this.monthKey}.csv`];
+      const safeBook = (exportSnapshot.bookName || '账本').replace(/[\\/:*?"<>|]/g, '_');
+      options.newFileNames = [`${safeBook}-${this.exportStartDate}-${this.exportEndDate}.csv`];
       const pickerInstance = new picker.DocumentViewPicker(this.getUIContext().getHostContext() as common.UIAbilityContext);
       const destinations = await pickerInstance.save(options);
       if (destinations.length === 0) { return; }
-      await BackupFiles.writeText(destinations[0], exportLedgerCsv(this.snapshot, this.selectedExportKeys));
-      this.message = `已导出 ${this.snapshot.entries.length} 笔账目`;
+      await BackupFiles.writeText(destinations[0], exportLedgerCsv(exportSnapshot, this.selectedExportKeys));
+      this.message = `已导出 ${exportSnapshot.entries.length} 笔账目`;
     } catch (_) {
       this.message = 'CSV 未能保存，请检查存储空间后重试';
       this.error = true;
@@ -89,20 +166,21 @@ export struct DataExchangePage {
   }
 
   private async exportXlsx(): Promise<void> {
-    if (this.busy || this.snapshot === undefined || this.workspace === undefined) { return; }
+    const exportSnapshot = this.exportSnapshot;
+    if (this.busy || exportSnapshot === undefined) { return; }
     this.busy = true;
     this.message = '';
     this.error = false;
     try {
       const options = new picker.DocumentSaveOptions();
-      const safeBook = (this.snapshot.bookName || '账本').replace(/[\\/:*?"<>|]/g, '_');
-      options.newFileNames = [`${safeBook}-${this.monthKey}.xlsx`];
+      const safeBook = (exportSnapshot.bookName || '账本').replace(/[\\/:*?"<>|]/g, '_');
+      options.newFileNames = [`${safeBook}-${this.exportStartDate}-${this.exportEndDate}.xlsx`];
       const pickerInstance = new picker.DocumentViewPicker(this.getUIContext().getHostContext() as common.UIAbilityContext);
       const destinations = await pickerInstance.save(options);
       if (destinations.length === 0) { return; }
-      await LedgerXlsxExport.exportTo(destinations[0], this.snapshot,
+      await LedgerXlsxExport.exportTo(destinations[0], exportSnapshot,
         this.getUIContext().getHostContext() as common.Context, this.selectedExportKeys);
-      this.message = `已导出 ${this.snapshot.entries.length} 笔账目`;
+      this.message = `已导出 ${exportSnapshot.entries.length} 笔账目`;
     } catch (_) {
       this.message = 'Excel 文件未能保存，请检查存储空间后重试';
       this.error = true;
@@ -565,20 +643,39 @@ export struct DataExchangePage {
       Scroll(this.scroller) {
         Column({ space: 16 }) {
           Column({ space: 12 }) {
-            Text('导出本月账目').fontSize('20fp').fontWeight(FontWeight.Bold)
+            Text('导出账目').fontSize('20fp').fontWeight(FontWeight.Bold)
               .fontColor($r('app.color.xq_font_primary')).width('100%')
-            Text(`${this.monthLabel} · ${this.snapshot?.bookName || '当前账本'}`).fontSize('14fp')
+            Text(`${this.dateText(this.exportStartDate)} 至 ${this.dateText(this.exportEndDate)} · ` +
+              `${this.exportSnapshot?.bookName || this.snapshot?.bookName || '当前账本'}`).fontSize('14fp')
               .fontColor($r('app.color.xq_font_secondary')).width('100%')
-            Text(this.loading ? '正在统计可导出账目…' : `共 ${this.snapshot?.entries.length || 0} 笔账目`)
+            Row({ space: 12 }) {
+              Column({ space: 6 }) {
+                Text('开始日期').fontSize('12fp').fontColor($r('app.color.xq_font_secondary'))
+                Button(this.dateText(this.exportStartDate), { type: ButtonType.Normal }).width('100%').height(44)
+                  .fontSize('16fp').fontFamily('XiaoQiaoDINMedium').fontColor($r('app.color.xq_font_primary'))
+                  .backgroundColor($r('app.color.xq_app_surface_page')).id('data-export-start')
+                  .onClick(() => { this.pickExportDate(true); })
+              }.layoutWeight(1).alignItems(HorizontalAlign.Start)
+              Column({ space: 6 }) {
+                Text('结束日期').fontSize('12fp').fontColor($r('app.color.xq_font_secondary'))
+                Button(this.dateText(this.exportEndDate), { type: ButtonType.Normal }).width('100%').height(44)
+                  .fontSize('16fp').fontFamily('XiaoQiaoDINMedium').fontColor($r('app.color.xq_font_primary'))
+                  .backgroundColor($r('app.color.xq_app_surface_page')).id('data-export-end')
+                  .onClick(() => { this.pickExportDate(false); })
+              }.layoutWeight(1).alignItems(HorizontalAlign.Start)
+            }.width('100%')
+            Text('起止日期均包含，可跨月选择。').fontSize('12fp')
+              .fontColor($r('app.color.xq_font_tertiary')).width('100%')
+            Text(this.loading ? '正在统计可导出账目…' : `共 ${this.exportSnapshot?.entries.length || 0} 笔账目`)
               .fontSize('14fp').fontColor($r('app.color.xq_font_primary')).width('100%')
             Button(this.busy ? '正在导出' : '导出 CSV', { type: ButtonType.Capsule }).width('100%').height(48)
               .fontSize('16fp').fontColor(Color.White).backgroundColor($r('app.color.xq_brand'))
-              .enabled(!this.loading && !this.busy && (this.snapshot?.entries.length || 0) > 0 &&
+              .enabled(!this.loading && !this.busy && (this.exportSnapshot?.entries.length || 0) > 0 &&
                 this.selectedExportKeys.length > 0)
               .id('data-export-csv').onClick(() => { this.exportCsv(); })
             Button(this.busy ? '正在导出' : '导出 Excel', { type: ButtonType.Capsule }).width('100%').height(46)
               .fontSize('15fp').fontColor($r('app.color.xq_font_emphasize')).backgroundColor($r('app.color.xq_app_surface_page'))
-              .enabled(!this.loading && !this.busy && (this.snapshot?.entries.length || 0) > 0 &&
+              .enabled(!this.loading && !this.busy && (this.exportSnapshot?.entries.length || 0) > 0 &&
                 this.selectedExportKeys.length > 0)
               .id('data-export-xlsx').onClick(() => { this.exportXlsx(); })
           }.padding(20).width('100%').borderRadius(20).backgroundColor($r('app.color.xq_app_surface_card'))

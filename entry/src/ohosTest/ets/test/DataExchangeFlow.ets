@@ -52,6 +52,8 @@ export default function dataExchangeFlowTest() {
       const settingsScroll = await driver.waitForComponent(ON.id('settings-scroll'), 5000);
       await (await settingsScroll.scrollSearch(ON.id('settings-data-exchange'))).click();
       await driver.waitForComponent(ON.id('data-exchange-page'), 5000);
+      await driver.waitForComponent(ON.id('data-export-start'), 5000);
+      await driver.waitForComponent(ON.id('data-export-end'), 5000);
       await driver.waitForComponent(ON.text('共 1 笔账目'), 5000);
       await driver.waitForComponent(ON.id('data-export-csv').enabled(true), 5000);
       expect(await driver.screenCap(context.filesDir + '/xiaoqiao-csv-export.png')).assertTrue();
