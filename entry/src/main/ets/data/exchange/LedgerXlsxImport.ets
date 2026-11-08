@@ -147,3 +147,8 @@ export async function readXlsxTable(uri: string, cacheDir: string, sheetPath: st
   const rows = worksheet(files, sharedStrings(files), sheetPath);
   return tableFromRows(rows, ',');
 }
+
+export async function readXlsxRows(uri: string, cacheDir: string, sheetPath: string = ''): Promise<string[][]> {
+  const files = await extractXlsx(uri, cacheDir);
+  return worksheet(files, sharedStrings(files), sheetPath);
+}

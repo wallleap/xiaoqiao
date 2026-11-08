@@ -3,7 +3,7 @@ import { fileIo as fs } from '@kit.CoreFileKit';
 import { util } from '@kit.ArkTS';
 import { abilityDelegatorRegistry } from '@kit.TestKit';
 import { describe, expect, it } from '@ohos/hypium';
-import { BackupFiles } from '../../../main/ets/data/backup/BackupFiles';
+import { BackupFileInfo, BackupFiles } from '../../../main/ets/data/backup/BackupFiles';
 import { BackupZip } from '../../../main/ets/data/backup/BackupZip';
 import { LedgerXlsxExport } from '../../../main/ets/data/exchange/LedgerXlsxExport';
 import { listXlsxSheets, readXlsxTable } from '../../../main/ets/data/exchange/LedgerXlsxImport';
@@ -26,6 +26,8 @@ export default function xlsxExportTest() {
     it('writes_openxml_workbook_with_headers_rows_numbers_and_tags', 0, async () => {
       const context = await testContext();
       const path = context.cacheDir + '/xiaoqiao-test-' + util.generateRandomUUID() + '.xlsx';
+      const formulaDirectory = context.cacheDir + '/xiaoqiao-formula-' + util.generateRandomUUID();
+      const formulaPath = formulaDirectory + '.xlsx';
       try {
         const snapshot: LedgerSnapshot = {
           bookId: 'book', bookName: '账本', categories: [], incomeCategories: [], spendingNatures: [], tags: [],
@@ -51,11 +53,32 @@ export default function xlsxExportTest() {
         expect(sheets[0].name).assertEqual('账目');
         const table = await readXlsxTable(path, context.cacheDir);
         expect(table.headers[0]).assertEqual('日期');
+        expect(table.headers.includes('商户')).assertTrue();
+        expect(table.headers.includes('转账用途')).assertTrue();
         expect(table.rows.length).assertEqual(1);
         expect(table.rows[0][0]).assertEqual('2026-11-08');
-        expect(table.rows[0][10]).assertEqual('28.00');
+        expect(table.rows[0][12]).assertEqual('28.00');
+        const formulaParts = BackupZip.decodeOffice(await BackupFiles.read(path));
+        await BackupFiles.mkdir(formulaDirectory + '/_rels');
+        await BackupFiles.mkdir(formulaDirectory + '/xl/_rels');
+        await BackupFiles.mkdir(formulaDirectory + '/xl/worksheets');
+        const formulaInfos: BackupFileInfo[] = [];
+        for (const part of formulaParts) {
+          let text = util.TextDecoder.create('utf-8', { fatal: true }).decodeToString(new Uint8Array(part.data));
+          if (part.path === 'xl/worksheets/sheet1.xml') {
+            text = text.replace(/<c r="A2"[^>]*>[\s\S]*?<\/c>/,
+              '<c r="A2" t="str"><f>&quot;2026-11-08&quot;</f><v>2026-11-08</v></c>');
+          }
+          await BackupFiles.writeText(formulaDirectory + '/' + part.path, text);
+          formulaInfos.push(await BackupFiles.info(formulaDirectory + '/' + part.path, part.path));
+        }
+        await BackupZip.encodeOffice(formulaDirectory, formulaPath, formulaInfos);
+        const formulaTable = await readXlsxTable(formulaPath, context.cacheDir);
+        expect(formulaTable.rows[0][0]).assertEqual('2026-11-08');
       } finally {
         if (await fs.access(path)) { await fs.unlink(path); }
+        if (await fs.access(formulaPath)) { await fs.unlink(formulaPath); }
+        await BackupFiles.remove(formulaDirectory);
       }
     });
   });

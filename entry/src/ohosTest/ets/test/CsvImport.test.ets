@@ -117,12 +117,96 @@ export default function csvImportTest() {
         expect(statementPreview[0].issues.join(',')).assertEqual('');
         expect(statementPreview[1].valid).assertFalse();
         expect(statementPreview[1].selected).assertFalse();
-        expect(statementPreview[1].issues.includes('不计收支，已跳过')).assertTrue();
+        expect(statementPreview[1].issues.includes('转入账户未匹配')).assertTrue();
         duplicatePreview[1].selected = true;
         duplicatePreview[2].selected = true;
         expect(await workspace.importCsvBatch('duplicate.csv', 'duplicate-sha', duplicatePreview, ',')).assertEqual(3);
         expect(await workspace.importCsvBatch('apply.csv', 'apply-sha', [preview[0]], ',', true)).assertEqual(1);
         expect((await workspace.accountOverview()).netMinor).assertEqual('8800');
+      } finally {
+        await LedgerWorkspace.close(name);
+        await relationalStore.deleteRdbStore(host, name);
+      }
+    });
+
+    it('imports_transfers_templates_history_merchants_and_extended_dates', 0, async () => {
+      const host = await testContext();
+      const name = 'xiaoqiao_app_test_csv_exchange_full_' + util.generateRandomUUID() + '.db';
+      try {
+        const workspace = await LedgerWorkspace.open(host, name);
+        await workspace.createAccount({ id: 'exchange-source', name: '储蓄卡', kind: 'asset', styleKey: 'bank_card',
+          includeInNetAssets: true, opening: Money.parse('1000', workspace.currency) });
+        await workspace.createAccount({ id: 'exchange-card', name: '信用卡', kind: 'liability', styleKey: 'credit_card',
+          includeInNetAssets: true, opening: Money.parse('-500', workspace.currency) });
+        const snapshot = await workspace.snapshot('2027-11');
+        const table = parseCsv('导出说明;忽略\r\n用户;测试\r\n' +
+          '日期;交易类型;金额;付款账户;收款账户;手续费;还款优惠;手续费计入预算;备注;商户;地址;交易单号;交易状态\r\n' +
+          '2027-11-01 10:20:00;信用卡还款;100.00;储蓄卡;信用卡;2.00;5.00;是;还款;商店;人民路 1 号;transfer-full;交易成功\r\n' +
+          '11/08/2027;支出;1.00;储蓄卡;;;;;;商店;人民路 1 号;expense-full;交易成功\r\n' +
+          '20271109;支出;2.00;储蓄卡;;;;;;商店;人民路 1 号;compact-full;支付成功\r\n' +
+          '2027.11.11 下午6:21:44;支出;3.00;储蓄卡;;;;;;商店;人民路 1 号;afternoon-full;对方已收钱\r\n' +
+          '2027-11-12;支出;4.00;储蓄卡;;;;;;退款商店;;refund-full;退款成功\r\n', ';');
+        expect(table.headers[0]).assertEqual('日期');
+        expect(table.delimiter).assertEqual(';');
+        const mapping = detectCsvMapping(table.headers);
+        expect(mapping.toAccount >= 0).assertTrue();
+        expect(mapping.purpose >= 0).assertTrue();
+        expect(mapping.fee >= 0).assertTrue();
+        expect(mapping.coupon >= 0).assertTrue();
+        const preview = previewCsv(table, mapping, snapshot,
+          { createMissingCategories: false, createMissingAccounts: false, feeInBudget: false, existingIds: [] });
+        expect(preview.length).assertEqual(5);
+        expect(preview[0].rowNumber).assertEqual(4);
+        expect(preview[0].type).assertEqual('transfer');
+        expect(preview[0].valid).assertTrue();
+        expect(preview[0].transferPurpose).assertEqual('credit_repayment');
+        expect(preview[0].transferFee).assertEqual('2.00');
+        expect(preview[0].transferCoupon).assertEqual('5.00');
+        expect(preview[0].feeInBudget).assertTrue();
+        expect(preview[1].date).assertEqual('2027-11-08');
+        expect(preview[2].date).assertEqual('2027-11-09');
+        expect(preview[3].date).assertEqual('2027-11-11');
+        expect(preview[3].time).assertEqual('18:21');
+        expect(preview[4].valid).assertFalse();
+        expect(preview[4].issues.includes('交易状态跳过：退款成功')).assertTrue();
+        const count = await workspace.importCsvBatch('full-platform.csv', 'full-platform-sha', preview, ';', true,
+          () => {}, { headerRow: 3, sheetName: '', sourceKind: 'alipay', encoding: 'gb18030',
+            profileSnapshot: '{"source":"test","version":1}', feeInBudget: false });
+        expect(count).assertEqual(4);
+        const imported = await workspace.snapshot('2027-11');
+        expect(imported.entries.length).assertEqual(4);
+        const transfer = imported.entries.find((entry) => entry.note === '还款');
+        expect(transfer?.transfer).assertTrue();
+        expect(transfer?.toAccount).assertEqual('信用卡');
+        expect(transfer?.minor).assertEqual('9700');
+        expect(transfer?.expenseMinor).assertEqual('200');
+        expect(transfer?.feeInBudget).assertTrue();
+        expect((transfer?.merchantId || '').length > 0).assertTrue();
+        expect(transfer?.merchantId).assertEqual(imported.entries.find((entry) => entry.note === '')?.merchantId);
+        expect(imported.budgetUsedMinor).assertEqual('200');
+        const overview = await workspace.accountOverview();
+        expect(overview.accounts.find((account) => account.id === 'exchange-source')?.balanceMinor).assertEqual('89700');
+        expect(overview.accounts.find((account) => account.id === 'exchange-card')?.balanceMinor).assertEqual('-40000');
+        const batches = await workspace.recentImportBatches(10);
+        expect(batches.length).assertEqual(1);
+        expect(batches[0].selectedCount).assertEqual(4);
+        expect(batches[0].issueCount).assertEqual(1);
+        const batchRows = await workspace.importBatchRows(batches[0].id);
+        expect(batchRows.length).assertEqual(5);
+        expect(batchRows[0].rawPreview.includes('信用卡还款')).assertTrue();
+        const profileId = await workspace.saveImportProfile('', '支付宝模板', 'alipay', mapping,
+          { headerRow: 3, delimiter: ';', createMissingCategories: true,
+            createMissingAccounts: false, feeInBudget: true });
+        let profiles = await workspace.importProfiles();
+        expect(profiles.length).assertEqual(1);
+        expect(profiles[0].id).assertEqual(profileId);
+        expect(profiles[0].mapping.toAccount).assertEqual(mapping.toAccount);
+        expect(profiles[0].options.feeInBudget).assertTrue();
+        await workspace.saveImportProfile(profileId, '支付宝模板更新', 'alipay', mapping, profiles[0].options);
+        profiles = await workspace.importProfiles();
+        expect(profiles[0].name).assertEqual('支付宝模板更新');
+        await workspace.deleteImportProfile(profileId);
+        expect((await workspace.importProfiles()).length).assertEqual(0);
       } finally {
         await LedgerWorkspace.close(name);
         await relationalStore.deleteRdbStore(host, name);

@@ -32,6 +32,7 @@ export interface SavedLedgerEntry {
   category: string;
   iconKey: string;
   account: string;
+  accountId?: string;
   date: string;
   occurredAtMs: number;
   offsetMinutes: number;
@@ -46,6 +47,11 @@ export interface SavedLedgerEntry {
   discountMinor: string;
   tagIds?: string[];
   tagNames?: string[];
+  merchantId?: string;
+  merchant?: string;
+  address?: string;
+  transferPurpose?: string;
+  feeInBudget?: boolean;
 }
 
 export interface LedgerSnapshot {

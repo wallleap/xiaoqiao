@@ -1,5 +1,7 @@
 import { describe, expect, it } from '@ohos/hypium';
-import { exportLedgerCsv, LEDGER_CSV_HEADERS } from '../../../main/ets/data/exchange/LedgerCsvExport';
+import { exportLedgerCsv, filterLedgerEntries,
+  LEDGER_CSV_HEADERS } from '../../../main/ets/data/exchange/LedgerCsvExport';
+import { detectCsvMapping, parseCsv } from '../../../main/ets/data/exchange/LedgerCsvImport';
 import { LedgerSnapshot } from '../../../main/ets/domain/model/LedgerSnapshot';
 
 export default function csvExportTest() {
@@ -14,7 +16,7 @@ export default function csvExportTest() {
             account: '微信零钱', date: '2026-11-08', occurredAtMs: new Date(2026, 10, 8, 12, 30).getTime(),
             offsetMinutes: -new Date(2026, 10, 8, 12, 30).getTimezoneOffset(), income: false,
             minor: '2800', grossMinor: '3000', discountMinor: '200',
-            tagIds: ['tag-travel'], tagNames: ['旅行', '报销'] },
+            tagIds: ['tag-travel'], tagNames: ['旅行', '报销'], merchant: '咖啡店', address: '人民路 2 号' },
           { id: 'income-csv', note: '工资', category: '工资', iconKey: 'salary',
             account: '日常储蓄卡', date: '2026-11-05', occurredAtMs: new Date(2026, 10, 5, 9, 0).getTime(),
             offsetMinutes: -new Date(2026, 10, 5, 9, 0).getTimezoneOffset(), income: true,
@@ -24,7 +26,8 @@ export default function csvExportTest() {
             occurredAtMs: new Date(2026, 10, 4, 10, 0).getTime(),
             offsetMinutes: -new Date(2026, 10, 4, 10, 0).getTimezoneOffset(), income: false,
             transfer: true, minor: '9700', expenseMinor: '200', transferFeeMinor: '200',
-            transferCouponMinor: '500', grossMinor: '10000', discountMinor: '0' }
+            transferCouponMinor: '500', transferPurpose: 'credit_repayment', feeInBudget: false,
+            grossMinor: '10000', discountMinor: '0' }
         ]
       };
       const csv = exportLedgerCsv(snapshot);
@@ -36,7 +39,17 @@ export default function csvExportTest() {
       expect(csv.includes('"2.00"')).assertTrue();
       expect(csv.includes('"5.00"')).assertTrue();
       expect(csv.includes('"旅行|报销"')).assertTrue();
+      expect(csv.includes('"咖啡店"')).assertTrue();
+      expect(csv.includes('"信用卡还款"')).assertTrue();
+      expect(csv.includes('"否"')).assertTrue();
       expect(csv.split('\r\n').length).assertEqual(LEDGER_CSV_HEADERS.length === 0 ? 0 : 5);
+      expect(filterLedgerEntries(snapshot.entries, 'income').length).assertEqual(1);
+      expect(filterLedgerEntries(snapshot.entries, 'expense').length).assertEqual(1);
+      expect(filterLedgerEntries(snapshot.entries, 'all', '信用卡').length).assertEqual(1);
+      expect(filterLedgerEntries(snapshot.entries, 'all', '微信零钱').length).assertEqual(1);
+      const roundTrip = parseCsv(csv);
+      const mapping = detectCsvMapping(roundTrip.headers);
+      expect(mapping.transferAmount >= 0).assertTrue();
       const selectedCsv = exportLedgerCsv(snapshot, ['date', 'paid', 'tags']);
       expect(selectedCsv.startsWith('\uFEFF"日期","实付金额","标签"')).assertTrue();
       expect(selectedCsv.includes('"微信零钱"')).assertFalse();

@@ -1,15 +1,18 @@
 import { CurrencyUnit } from '../../core/money/CurrencyUnit';
 import { Money } from '../../core/money/Money';
 import { LedgerSnapshot, SavedLedgerEntry } from '../../domain/model/LedgerSnapshot';
+import { transferPurposeLabel } from '../../domain/model/TransferRecord';
 
 export interface LedgerExportColumn { key: string; label: string; }
 
 export const LEDGER_EXPORT_COLUMNS: LedgerExportColumn[] = [
   { key: 'date', label: '日期' }, { key: 'time', label: '时间' }, { key: 'kind', label: '类型' },
   { key: 'category', label: '收支分类' }, { key: 'account', label: '账户' }, { key: 'toAccount', label: '转入账户' },
-  { key: 'note', label: '备注' }, { key: 'currency', label: '币种' }, { key: 'gross', label: '原金额' },
+  { key: 'note', label: '备注' }, { key: 'merchant', label: '商户' }, { key: 'address', label: '地址' },
+  { key: 'currency', label: '币种' }, { key: 'gross', label: '原金额' },
   { key: 'discount', label: '优惠' }, { key: 'paid', label: '实付金额' }, { key: 'fee', label: '转账手续费' },
-  { key: 'coupon', label: '转账优惠' }, { key: 'tags', label: '标签' }, { key: 'id', label: '账目ID' }
+  { key: 'coupon', label: '转账优惠' }, { key: 'transferPurpose', label: '转账用途' },
+  { key: 'feeBudget', label: '手续费计入预算' }, { key: 'tags', label: '标签' }, { key: 'id', label: '账目ID' }
 ];
 export const LEDGER_CSV_HEADERS: string[] = LEDGER_EXPORT_COLUMNS.map((column) => column.label);
 
@@ -35,16 +38,31 @@ export function ledgerExportValue(entry: SavedLedgerEntry, key: string): string 
     case 'account': return entry.account;
     case 'toAccount': return entry.toAccount || '';
     case 'note': return entry.note;
+    case 'merchant': return entry.merchant || '';
+    case 'address': return entry.address || '';
     case 'currency': return 'CNY';
     case 'gross': return decimal(entry.grossMinor);
     case 'discount': return decimal(entry.discountMinor);
     case 'paid': return decimal(entry.minor);
     case 'fee': return decimal(entry.transferFeeMinor || '0');
     case 'coupon': return decimal(entry.transferCouponMinor || '0');
+    case 'transferPurpose': return entry.transfer ? transferPurposeLabel(entry.transferPurpose || 'transfer') : '';
+    case 'feeBudget': return entry.transfer ? (entry.feeInBudget === false ? '否' : '是') : '';
     case 'tags': return (entry.tagNames || []).join('|');
     case 'id': return entry.id;
     default: return '';
   }
+}
+
+export function filterLedgerEntries(entries: SavedLedgerEntry[], kind: string = 'all',
+  accountName: string = ''): SavedLedgerEntry[] {
+  return entries.filter((entry: SavedLedgerEntry) => {
+    if (kind === 'income' && (entry.transfer || !entry.income)) { return false; }
+    if (kind === 'expense' && (entry.transfer || entry.income)) { return false; }
+    if (accountName.length > 0 && entry.account !== accountName &&
+      (!entry.transfer || entry.toAccount !== accountName)) { return false; }
+    return true;
+  });
 }
 
 /** RFC 4180-style UTF-8 CSV with BOM for spreadsheet and Excel compatibility. */

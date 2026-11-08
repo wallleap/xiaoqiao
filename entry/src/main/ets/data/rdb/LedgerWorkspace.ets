@@ -30,6 +30,20 @@ import { LocalLedgerBackup } from './LocalLedgerBackup';
 import { RdbStatisticsRepository } from './RdbStatisticsRepository';
 import { LedgerStatistics, StatisticsBucketUnit, StatisticsEntry, StatisticsKind } from '../../domain/model/LedgerStatistics';
 import { CsvPreviewRow } from '../exchange/LedgerCsvImport';
+import { CsvColumnMapping } from '../exchange/LedgerCsvImport';
+import { CsvImportMetadata, ImportBatchRowDetail, ImportBatchSummary, ImportProfile,
+  ImportProfileOptions } from '../exchange/ImportProfile';
+
+interface StoredImportParseOptions {
+  headerRow: number;
+  delimiter: string;
+}
+
+interface StoredImportValueMapping {
+  createMissingCategories: boolean;
+  createMissingAccounts: boolean;
+  feeInBudget: boolean;
+}
 
 /** Owns the store for the foreground ledger. All runtime SQL goes through its shared serial session. */
 export class LedgerWorkspace {
@@ -331,13 +345,16 @@ export class LedgerWorkspace {
 
   async importCsvBatch(fileName: string, fileSha256: string, rows: CsvPreviewRow[],
     delimiter: string, applyBalance: boolean = false,
-    onProgress: (completed: number, total: number) => void = () => {}): Promise<number> {
+    onProgress: (completed: number, total: number) => void = () => {},
+    metadata: CsvImportMetadata = { headerRow: 1, sheetName: '', sourceKind: '', encoding: 'utf-8',
+      profileSnapshot: '{"source":"csv","version":1}', feeInBudget: false }): Promise<number> {
     if (fileName.trim().length === 0 || fileSha256.trim().length === 0 || rows.length === 0) {
       throw new Error('INVALID_CSV_BATCH');
     }
     const validRows = rows.filter((row: CsvPreviewRow) => row.valid && row.selected);
     if (validRows.length === 0) { throw new Error('CSV_NO_VALID_ROWS'); }
-    const provider = /微信|wechat|weixin/i.test(fileName) ? 'wechat' :
+    const provider = metadata.sourceKind.trim().length > 0 ? metadata.sourceKind :
+      /微信|wechat|weixin/i.test(fileName) ? 'wechat' :
       /支付宝|alipay/i.test(fileName) ? 'alipay' : /\.xlsx$/i.test(fileName) ? 'xlsx' : 'csv';
     return this.session.write(async (db: relationalStore.RdbStore): Promise<number> => {
       this.activeBookId = await this.activeBookFromMeta(db);
@@ -345,9 +362,13 @@ export class LedgerWorkspace {
       const now = Date.now();
       const createdCategories: Map<string, string> = new Map();
       const createdAccounts: Map<string, string> = new Map();
+      const createdMerchants: Map<string, string> = new Map();
       await db.insert('import_batches', { id: batchId, book_id: this.activeBookId, file_sha256: fileSha256,
-        file_name: fileName, sheet_name: '', header_row: 1, encoding: 'utf-8', delimiter: delimiter,
-        profile_snapshot_json: '{"source":"csv","version":1}', balance_mode: applyBalance ? 'apply' : 'preserve',
+        file_name: fileName, sheet_name: metadata.sheetName, header_row: Math.max(1, metadata.headerRow),
+        encoding: metadata.encoding, delimiter: delimiter,
+        profile_snapshot_json: metadata.profileSnapshot ||
+          JSON.stringify({ source: provider, version: 1, headerRow: metadata.headerRow, delimiter: delimiter }),
+        balance_mode: applyBalance ? 'apply' : 'preserve',
         status: 'committing',
         total_count: rows.length, selected_count: validRows.length, skipped_count: rows.length - validRows.length,
         confirmed_at_ms: now, created_at_ms: now });
@@ -356,7 +377,8 @@ export class LedgerWorkspace {
       for (const row of rows) {
         const rowId = util.generateRandomUUID();
         importRowIds.set(row.rowNumber, rowId);
-        await db.insert('import_rows', { id: rowId, batch_id: batchId, sheet_name: '', row_number: row.rowNumber,
+        await db.insert('import_rows', { id: rowId, batch_id: batchId, sheet_name: metadata.sheetName,
+          row_number: row.rowNumber,
           raw_json: JSON.stringify(row.raw), normalized_json: JSON.stringify(row),
           validation_status: !row.valid ? 'invalid' : row.duplicate ? 'duplicate' : 'valid',
           issue_codes_json: JSON.stringify(row.issues),
@@ -367,27 +389,7 @@ export class LedgerWorkspace {
       let processed = 0;
       for (const row of validRows) {
         let categoryId = row.categoryId;
-        let createdCategory = false;
-        if (categoryId.length === 0 && row.createCategory) {
-          const key = row.type + ':' + row.categoryName.trim().toLowerCase().replace(/\s+/g, '');
-          categoryId = createdCategories.get(key) || '';
-          if (categoryId.length === 0) {
-            categoryId = await this.ensureCsvCategory(db, this.activeBookId, row.type, row.categoryName);
-            createdCategories.set(key, categoryId);
-          }
-          createdCategory = true;
-        }
-        if (categoryId.length === 0) { throw new Error('CSV_CATEGORY_INVALID'); }
-        if (!createdCategory) {
-          const category = await db.querySql('SELECT kind FROM categories WHERE id=? AND book_id=? AND deleted_at_ms IS NULL',
-            [categoryId, this.activeBookId]);
-          try {
-            const actualKind = category.goToFirstRow() ? category.getString(0) : 'missing';
-            if (actualKind !== row.type) { throw new Error('CSV_CATEGORY_INVALID'); }
-          } finally { category.close(); }
-        }
         let accountId = row.accountId;
-        let createdAccount = false;
         if (accountId.length === 0 && row.createAccount) {
           const key = row.accountName.trim().toLowerCase();
           accountId = createdAccounts.get(key) || '';
@@ -395,20 +397,64 @@ export class LedgerWorkspace {
             accountId = await this.ensureCsvAccount(db, row.accountName);
             createdAccounts.set(key, accountId);
           }
-          createdAccount = true;
         }
-        if (accountId.length > 0 && !createdAccount) {
-          const account = await db.querySql("SELECT id FROM accounts WHERE id=? AND currency_id='CNY' AND deleted_at_ms IS NULL",
-            [accountId]);
-          try { if (!account.goToFirstRow()) { throw new Error('CSV_ACCOUNT_INVALID'); } } finally { account.close(); }
+        let toAccountId = row.toAccountId || '';
+        if (toAccountId.length === 0 && row.createToAccount === true && (row.toAccountName || '').trim().length > 0) {
+          const key = (row.toAccountName || '').trim().toLowerCase();
+          toAccountId = createdAccounts.get(key) || '';
+          if (toAccountId.length === 0) {
+            toAccountId = await this.ensureCsvAccount(db, row.toAccountName || '');
+            createdAccounts.set(key, toAccountId);
+          }
+        }
+        await this.validateCsvAccount(db, accountId, false, row.type === 'transfer');
+        await this.validateCsvAccount(db, toAccountId,
+          row.type === 'transfer' &&
+            (row.transferPurpose === 'credit_repayment' || row.transferPurpose === 'loan_repayment'),
+          row.type === 'transfer');
+        if (row.type === 'transfer') {
+          if (accountId.length === 0 || toAccountId.length === 0 || accountId === toAccountId) {
+            throw new Error('CSV_TRANSFER_ACCOUNT_INVALID');
+          }
+        } else {
+          let createdCategory = false;
+          if (categoryId.length === 0 && row.createCategory) {
+            const key = row.type + ':' + row.categoryName.trim().toLowerCase().replace(/\s+/g, '');
+            categoryId = createdCategories.get(key) || '';
+            if (categoryId.length === 0) {
+              categoryId = await this.ensureCsvCategory(db, this.activeBookId, row.type, row.categoryName);
+              createdCategories.set(key, categoryId);
+            }
+            createdCategory = true;
+          }
+          if (categoryId.length === 0) { throw new Error('CSV_CATEGORY_INVALID'); }
+          if (!createdCategory) {
+            const category = await db.querySql('SELECT kind FROM categories WHERE id=? AND book_id=? AND deleted_at_ms IS NULL',
+              [categoryId, this.activeBookId]);
+            try {
+              const actualKind = category.goToFirstRow() ? category.getString(0) : 'missing';
+              if (actualKind !== row.type) { throw new Error('CSV_CATEGORY_INVALID'); }
+            } finally { category.close(); }
+          }
         }
         const occurred = new Date(row.date + 'T' + (row.timeKnown ? (row.time + ':00') : '12:00:00'));
         const transactionId = util.generateRandomUUID();
         const amount = Money.parse(row.amount, this.currency).toSafeMinorNumber();
+        let merchantId: string | null = null;
+        if (row.merchant.trim().length > 0) {
+          const merchantKey = row.merchant.trim().toLowerCase().replace(/\s+/g, '');
+          merchantId = createdMerchants.get(merchantKey) || '';
+          if (merchantId.length === 0) {
+            merchantId = await this.ensureCsvMerchant(db, row.merchant, row.address);
+            createdMerchants.set(merchantKey, merchantId);
+          }
+        }
         await db.insert('transactions', { id: transactionId, book_id: this.activeBookId, kind: row.type,
-          category_id: categoryId, currency_id: 'CNY', gross_minor: amount, discount_minor: 0,
+          category_id: row.type === 'transfer' ? null : categoryId,
+          currency_id: 'CNY', gross_minor: amount, discount_minor: 0,
           paid_minor: amount, book_currency_id: 'CNY', book_minor: amount, include_in_budget: 0,
           include_in_assets: accountId.length > 0 ? 1 : 0, balance_mode: applyBalance ? 'apply' : 'preserve',
+          merchant_id: merchantId,
           merchant_name_snapshot: row.merchant.length > 0 ? row.merchant : null,
           address_text: row.address.length > 0 ? row.address : null, note: row.note,
           import_batch_id: batchId, import_row_id: importRowIds.get(row.rowNumber),
@@ -417,7 +463,25 @@ export class LedgerWorkspace {
           occurred_at_ms: occurred.getTime(), occurred_local_date: row.date,
           occurred_timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
           occurred_offset_minutes: -occurred.getTimezoneOffset(), created_at_ms: now, updated_at_ms: now });
-        if (accountId.length > 0) {
+        if (row.type === 'transfer') {
+          const fee = Money.parse(row.transferFee || '0', this.currency);
+          const coupon = Money.parse(row.transferCoupon || '0', this.currency);
+          const outgoing = Money.fromMinorText(String(amount), this.currency).add(fee).subtract(coupon);
+          await db.insert('transfer_details', { transaction_id: transactionId,
+            purpose: row.transferPurpose || 'transfer', currency_id: 'CNY',
+            from_account_id: accountId, to_account_id: toAccountId,
+            out_minor: outgoing.toSafeMinorNumber(), in_minor: amount,
+            fee_minor: fee.toSafeMinorNumber(), coupon_minor: coupon.toSafeMinorNumber(),
+            fee_in_expense: 1, fee_in_budget: row.feeInBudget === true || metadata.feeInBudget ? 1 : 0 });
+          if (outgoing.minor > BigInt(0)) {
+            await db.insert('account_movements', { id: util.generateRandomUUID(), transaction_id: transactionId,
+              account_id: accountId, currency_id: 'CNY', leg: 'transfer_out',
+              delta_minor: -outgoing.toSafeMinorNumber(), occurred_at_ms: occurred.getTime() });
+          }
+          await db.insert('account_movements', { id: util.generateRandomUUID(), transaction_id: transactionId,
+            account_id: toAccountId, currency_id: 'CNY', leg: 'transfer_in',
+            delta_minor: amount, occurred_at_ms: occurred.getTime() });
+        } else if (accountId.length > 0) {
           await db.insert('account_movements', { id: util.generateRandomUUID(), transaction_id: transactionId,
             account_id: accountId, currency_id: 'CNY', leg: row.type,
             delta_minor: (row.type === 'income' ? 1 : -1) * amount, occurred_at_ms: occurred.getTime() });
@@ -448,6 +512,137 @@ export class LedgerWorkspace {
       } finally { rows.close(); }
       return values;
     });
+  }
+
+  async importProfiles(): Promise<ImportProfile[]> {
+    return this.session.read(async (db: relationalStore.RdbStore): Promise<ImportProfile[]> => {
+      const profiles: ImportProfile[] = [];
+      const rows = await db.querySql('SELECT id,name,source_kind,profile_version,parse_options_json,' +
+        'column_mapping_json,value_mapping_json,updated_at_ms FROM import_profiles ORDER BY updated_at_ms DESC,id');
+      try {
+        while (rows.goToNextRow()) {
+          const parse = JSON.parse(rows.getString(4)) as StoredImportParseOptions;
+          const rawMapping = JSON.parse(rows.getString(5)) as CsvColumnMapping;
+          const values = JSON.parse(rows.getString(6)) as StoredImportValueMapping;
+          const options: ImportProfileOptions = {
+            headerRow: Number.isInteger(parse.headerRow) ? parse.headerRow : 1,
+            delimiter: parse.delimiter || ',',
+            createMissingCategories: values.createMissingCategories === true,
+            createMissingAccounts: values.createMissingAccounts === true,
+            feeInBudget: values.feeInBudget === true
+          };
+          profiles.push({ id: rows.getString(0), name: rows.getString(1), sourceKind: rows.getString(2),
+            profileVersion: rows.getLong(3), mapping: this.normalizeImportMapping(rawMapping),
+            options: options, updatedAtMs: rows.getLong(7) });
+        }
+      } finally { rows.close(); }
+      return profiles;
+    });
+  }
+
+  async saveImportProfile(id: string, name: string, sourceKind: string, mapping: CsvColumnMapping,
+    options: ImportProfileOptions): Promise<string> {
+    const profileName = name.trim();
+    if (profileName.length === 0) { throw new Error('IMPORT_PROFILE_NAME_REQUIRED'); }
+    return this.session.write(async (db: relationalStore.RdbStore): Promise<string> => {
+      const now = Date.now();
+      const profileId = id.trim().length > 0 ? id : util.generateRandomUUID();
+      const parse: StoredImportParseOptions = { headerRow: Math.max(1, options.headerRow),
+        delimiter: options.delimiter || ',' };
+      const values: StoredImportValueMapping = {
+        createMissingCategories: options.createMissingCategories,
+        createMissingAccounts: options.createMissingAccounts,
+        feeInBudget: options.feeInBudget
+      };
+      const changed = await db.update({ name: profileName, source_kind: sourceKind,
+        profile_version: 1, parse_options_json: JSON.stringify(parse),
+        column_mapping_json: JSON.stringify(this.normalizeImportMapping(mapping)),
+        value_mapping_json: JSON.stringify(values), updated_at_ms: now },
+        new relationalStore.RdbPredicates('import_profiles').equalTo('id', profileId));
+      if (changed === 0) {
+        await db.insert('import_profiles', { id: profileId, name: profileName, source_kind: sourceKind,
+          profile_version: 1, parse_options_json: JSON.stringify(parse),
+          column_mapping_json: JSON.stringify(this.normalizeImportMapping(mapping)),
+          value_mapping_json: JSON.stringify(values), created_at_ms: now, updated_at_ms: now });
+      }
+      return profileId;
+    });
+  }
+
+  async deleteImportProfile(id: string): Promise<void> {
+    if (id.trim().length === 0) { return; }
+    await this.session.write(async (db: relationalStore.RdbStore): Promise<void> => {
+      await db.delete(new relationalStore.RdbPredicates('import_profiles').equalTo('id', id));
+    });
+  }
+
+  async recentImportBatches(limit: number = 20): Promise<ImportBatchSummary[]> {
+    return this.session.read(async (db: relationalStore.RdbStore): Promise<ImportBatchSummary[]> => {
+      this.activeBookId = await this.activeBookFromMeta(db);
+      const batchLimit = Math.max(1, Math.min(100, Math.floor(limit)));
+      const batches: ImportBatchSummary[] = [];
+      const rows = await db.querySql('SELECT b.id,b.file_name,COALESCE(b.sheet_name,\'\'),b.status,b.balance_mode,' +
+        'b.total_count,b.selected_count,b.skipped_count,COALESCE(b.committed_at_ms,0),' +
+        "(SELECT COUNT(*) FROM import_rows r WHERE r.batch_id=b.id AND r.validation_status IN ('invalid','duplicate')) " +
+        'FROM import_batches b WHERE b.book_id=? ORDER BY b.created_at_ms DESC,b.id DESC LIMIT ' + batchLimit,
+        [this.activeBookId]);
+      try {
+        while (rows.goToNextRow()) {
+          batches.push({ id: rows.getString(0), fileName: rows.getString(1), sheetName: rows.getString(2),
+            status: rows.getString(3), balanceMode: rows.getString(4), totalCount: rows.getLong(5),
+            selectedCount: rows.getLong(6), skippedCount: rows.getLong(7), committedAtMs: rows.getLong(8),
+            issueCount: rows.getLong(9) });
+        }
+      } finally { rows.close(); }
+      return batches;
+    });
+  }
+
+  async importBatchRows(batchId: string): Promise<ImportBatchRowDetail[]> {
+    return this.session.read(async (db: relationalStore.RdbStore): Promise<ImportBatchRowDetail[]> => {
+      this.activeBookId = await this.activeBookFromMeta(db);
+      const details: ImportBatchRowDetail[] = [];
+      const rows = await db.querySql('SELECT r.row_number,r.validation_status,r.selected,r.issue_codes_json,' +
+        'r.raw_json,COALESCE(r.normalized_json,\'{}\') FROM import_rows r JOIN import_batches b ON b.id=r.batch_id ' +
+        'WHERE b.id=? AND b.book_id=? ORDER BY r.row_number', [batchId, this.activeBookId]);
+      try {
+        while (rows.goToNextRow()) {
+          let rawPreview = '';
+          let normalizedType = '';
+          let normalizedDate = '';
+          let normalizedAmount = '';
+          try {
+            const raw = JSON.parse(rows.getString(4)) as string[];
+            rawPreview = raw.filter((value: string) => value.trim().length > 0).slice(0, 8).join(' | ');
+          } catch (_) { rawPreview = ''; }
+          try {
+            const normalized = JSON.parse(rows.getString(5)) as CsvPreviewRow;
+            normalizedType = normalized.type || '';
+            normalizedDate = normalized.date || '';
+            normalizedAmount = normalized.amount || '';
+          } catch (_) { /* Keep partial history readable for older batches. */ }
+          let issues: string[] = [];
+          try { issues = JSON.parse(rows.getString(3)) as string[]; } catch (_) { issues = []; }
+          details.push({ rowNumber: rows.getLong(0), validationStatus: rows.getString(1),
+            selected: rows.getLong(2) === 1, issues: issues, rawPreview: rawPreview,
+            normalizedType: normalizedType, normalizedDate: normalizedDate, normalizedAmount: normalizedAmount });
+        }
+      } finally { rows.close(); }
+      return details;
+    });
+  }
+
+  private normalizeImportMapping(mapping: CsvColumnMapping): CsvColumnMapping {
+    const index = (value: number): number => Number.isInteger(value) && value >= 0 ? value : -1;
+    return {
+      date: index(mapping.date), time: index(mapping.time), type: index(mapping.type),
+      amount: index(mapping.amount), transferAmount: index(mapping.transferAmount),
+      category: index(mapping.category), account: index(mapping.account),
+      toAccount: index(mapping.toAccount), purpose: index(mapping.purpose), fee: index(mapping.fee),
+      coupon: index(mapping.coupon), feeBudget: index(mapping.feeBudget), note: index(mapping.note),
+      sourceId: index(mapping.sourceId), merchant: index(mapping.merchant),
+      address: index(mapping.address), status: index(mapping.status)
+    };
   }
 
   private async ensureCsvCategory(db: relationalStore.RdbStore, bookId: string, kind: string,
@@ -519,6 +714,50 @@ export class LedgerWorkspace {
     await db.insert('accounts', { id: id, name: accountName, kind: liability ? 'liability' : 'asset',
       currency_id: 'CNY', brand: 'cash', icon_key: 'cash', icon_variant: 'monochrome',
       brand_color: '#D49A38', include_in_net_assets: 1, sort_order: sortOrder, created_at_ms: now, updated_at_ms: now });
+    return id;
+  }
+
+  private async validateCsvAccount(db: relationalStore.RdbStore, id: string, requireLiability: boolean,
+    required: boolean): Promise<void> {
+    if (id.length === 0) {
+      if (required) { throw new Error('CSV_ACCOUNT_INVALID'); }
+      return;
+    }
+    const account = await db.querySql("SELECT kind FROM accounts WHERE id=? AND currency_id='CNY' AND deleted_at_ms IS NULL",
+      [id]);
+    try {
+      if (!account.goToFirstRow() || (requireLiability && account.getString(0) !== 'liability')) {
+        throw new Error(requireLiability ? 'CSV_TRANSFER_REPAYMENT_ACCOUNT_INVALID' : 'CSV_ACCOUNT_INVALID');
+      }
+    } finally { account.close(); }
+  }
+
+  private async ensureCsvMerchant(db: relationalStore.RdbStore, name: string, address: string): Promise<string> {
+    const merchantName = name.trim();
+    const normalized = merchantName.toLowerCase().replace(/\s+/g, '');
+    if (normalized.length === 0) { return ''; }
+    let id = '';
+    let revision = 0;
+    let existingAddress = '';
+    const existing = await db.querySql("SELECT id,revision,COALESCE(default_address,'') FROM merchants " +
+      'WHERE normalized_name=? AND deleted_at_ms IS NULL LIMIT 1', [normalized]);
+    try {
+      if (existing.goToFirstRow()) {
+        id = existing.getString(0); revision = existing.getLong(1); existingAddress = existing.getString(2);
+      }
+    } finally { existing.close(); }
+    const now = Date.now();
+    if (id.length > 0) {
+      if (existingAddress.length === 0 && address.trim().length > 0) {
+        await db.update({ default_address: address.trim(), updated_at_ms: now, revision: revision + 1 },
+          new relationalStore.RdbPredicates('merchants').equalTo('id', id).equalTo('revision', revision));
+      }
+      return id;
+    }
+    id = util.generateRandomUUID();
+    await db.insert('merchants', { id: id, name: merchantName, normalized_name: normalized,
+      default_address: address.trim().length > 0 ? address.trim() : null,
+      created_at_ms: now, updated_at_ms: now });
     return id;
   }
 
@@ -796,8 +1035,9 @@ export class LedgerWorkspace {
         }
       } finally { tagRows.close(); }
       detail.tags = tags;
-      const extras = await db.querySql("SELECT COALESCE(merchant_name_snapshot,''),COALESCE(address_text,'') " +
-        'FROM transactions WHERE id=?', [detail.id]);
+      const extras = await db.querySql("SELECT COALESCE(m.name,t.merchant_name_snapshot,'')," +
+        "COALESCE(t.address_text,'') FROM transactions t LEFT JOIN merchants m ON m.id=t.merchant_id WHERE t.id=?",
+      [detail.id]);
       try {
         if (extras.goToFirstRow()) {
           detail.merchantName = extras.getString(0);
@@ -901,7 +1141,7 @@ export class LedgerWorkspace {
       let income: bigint = BigInt(0);
       let expense: bigint = BigInt(0);
       let budgetUsed: bigint = BigInt(0);
-      const rows = await db.querySql("SELECT t.id,t.note,CASE WHEN t.kind='transfer' THEN CASE d.purpose WHEN 'credit_repayment' THEN '信用卡还款' WHEN 'loan_repayment' THEN '借款还款' WHEN 'topup' THEN '充值' WHEN 'withdrawal' THEN '提现' ELSE '转账' END ELSE c.name END,COALESCE(c.icon_key,'transfer'),COALESCE(a.name,'不使用账户'),t.occurred_local_date,t.occurred_at_ms,t.occurred_offset_minutes,t.kind,CAST(COALESCE(t.book_minor,t.paid_minor) AS TEXT),t.include_in_budget,CAST(t.gross_minor AS TEXT),CAST(t.discount_minor AS TEXT),COALESCE(ai.name,''),CAST(COALESCE(d.out_minor,t.paid_minor) AS TEXT),CAST(COALESCE(d.fee_minor,0) AS TEXT),CAST(COALESCE(d.coupon_minor,0) AS TEXT),COALESCE(d.purpose,'transfer'),COALESCE(d.fee_in_expense,1),COALESCE(d.fee_in_budget,1) FROM transactions t LEFT JOIN categories c ON c.id=t.category_id LEFT JOIN transfer_details d ON d.transaction_id=t.id LEFT JOIN account_movements m ON m.transaction_id=t.id AND m.leg<>'transfer_in' LEFT JOIN accounts a ON a.id=COALESCE(m.account_id,d.from_account_id) LEFT JOIN account_movements mi ON mi.transaction_id=t.id AND mi.leg='transfer_in' LEFT JOIN accounts ai ON ai.id=mi.account_id WHERE t.book_id=? AND t.posting_state='posted' AND t.deleted_at_ms IS NULL AND (t.import_batch_id IS NULL OR EXISTS(SELECT 1 FROM import_batches b WHERE b.id=t.import_batch_id AND b.status='committed')) AND (t.kind IN ('expense','income') OR (t.kind='transfer' AND t.currency_id='CNY' AND NOT EXISTS(SELECT 1 FROM account_movements x WHERE x.transaction_id=t.id AND x.currency_id<>'CNY'))) AND substr(t.occurred_local_date,1,7)=? ORDER BY t.occurred_at_ms DESC,t.created_at_ms DESC,t.id DESC", [this.activeBookId, month]);
+      const rows = await db.querySql("SELECT t.id,t.note,CASE WHEN t.kind='transfer' THEN CASE d.purpose WHEN 'credit_repayment' THEN '信用卡还款' WHEN 'loan_repayment' THEN '借款还款' WHEN 'topup' THEN '充值' WHEN 'withdrawal' THEN '提现' ELSE '转账' END ELSE c.name END,COALESCE(c.icon_key,'transfer'),COALESCE(a.name,'不使用账户'),t.occurred_local_date,t.occurred_at_ms,t.occurred_offset_minutes,t.kind,CAST(COALESCE(t.book_minor,t.paid_minor) AS TEXT),t.include_in_budget,CAST(t.gross_minor AS TEXT),CAST(t.discount_minor AS TEXT),COALESCE(ai.name,''),CAST(COALESCE(d.out_minor,t.paid_minor) AS TEXT),CAST(COALESCE(d.fee_minor,0) AS TEXT),CAST(COALESCE(d.coupon_minor,0) AS TEXT),COALESCE(d.purpose,'transfer'),COALESCE(d.fee_in_expense,1),COALESCE(d.fee_in_budget,1),COALESCE(mc.name,t.merchant_name_snapshot,''),COALESCE(t.address_text,''),COALESCE(m.account_id,d.from_account_id,''),COALESCE(t.merchant_id,'') FROM transactions t LEFT JOIN categories c ON c.id=t.category_id LEFT JOIN transfer_details d ON d.transaction_id=t.id LEFT JOIN account_movements m ON m.transaction_id=t.id AND m.leg<>'transfer_in' LEFT JOIN accounts a ON a.id=COALESCE(m.account_id,d.from_account_id) LEFT JOIN account_movements mi ON mi.transaction_id=t.id AND mi.leg='transfer_in' LEFT JOIN accounts ai ON ai.id=mi.account_id LEFT JOIN merchants mc ON mc.id=t.merchant_id WHERE t.book_id=? AND t.posting_state='posted' AND t.deleted_at_ms IS NULL AND (t.import_batch_id IS NULL OR EXISTS(SELECT 1 FROM import_batches b WHERE b.id=t.import_batch_id AND b.status='committed')) AND (t.kind IN ('expense','income') OR (t.kind='transfer' AND t.currency_id='CNY' AND NOT EXISTS(SELECT 1 FROM account_movements x WHERE x.transaction_id=t.id AND x.currency_id<>'CNY'))) AND substr(t.occurred_local_date,1,7)=? ORDER BY t.occurred_at_ms DESC,t.created_at_ms DESC,t.id DESC", [this.activeBookId, month]);
       try {
         while (rows.goToNextRow()) {
           const isIncome = rows.getString(8) === 'income';
@@ -912,10 +1152,13 @@ export class LedgerWorkspace {
           if (isIncome) { income += BigInt(minor); } else if (!isTransfer) { expense += BigInt(minor); }
           if (!isIncome && !isTransfer && rows.getLong(10) === 1) { budgetUsed += BigInt(minor); }
           entries.push({ id: rows.getString(0), note: rows.getString(1), category: rows.getString(2),
-            iconKey: rows.getString(3), account: rows.getString(4), date: rows.getString(5), occurredAtMs: rows.getLong(6),
+            iconKey: rows.getString(3), account: rows.getString(4), accountId: rows.getString(22),
+            date: rows.getString(5), occurredAtMs: rows.getLong(6),
             offsetMinutes: rows.getLong(7), income: isIncome, transfer: isTransfer, toAccount: rows.getString(13), minor: isTransfer ? rows.getString(14) : minor, expenseMinor: feeExpense,
             transferFeeMinor: rows.getString(15), transferCouponMinor: rows.getString(16),
-            grossMinor: rows.getString(11), discountMinor: rows.getString(12) });
+            transferPurpose: isTransfer ? rows.getString(17) : '', feeInBudget: rows.getLong(19) === 1,
+            grossMinor: rows.getString(11), discountMinor: rows.getString(12),
+            merchant: rows.getString(20), address: rows.getString(21), merchantId: rows.getString(23) });
         }
       } finally { rows.close(); }
       const tagNames: Map<string, string[]> = new Map();

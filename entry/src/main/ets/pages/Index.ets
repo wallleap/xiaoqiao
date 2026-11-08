@@ -401,7 +401,6 @@ struct Index {
     DataExchangePage({
       workspace: this.workspace,
       monthKey: this.selectedMonth,
-      monthLabel: this.month(),
       onImported: async () => { await this.loadLedger(); },
       onClose: () => { this.showDataExchange = false; this.loadLedger(); }
     })
