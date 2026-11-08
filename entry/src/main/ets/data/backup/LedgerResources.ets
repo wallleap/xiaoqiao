@@ -1,8 +1,10 @@
 import { common } from '@kit.AbilityKit';
 import { fileIo as fs } from '@kit.CoreFileKit';
 import { util } from '@kit.ArkTS';
+import { image } from '@kit.ImageKit';
 import { BackupFileInfo, BackupFiles } from './BackupFiles';
 import { BackupZip } from './BackupZip';
+import { ImageCompressionPreset, imageCompressionPreset } from '../../domain/model/ImageCompression';
 
 export interface StoredLedgerResource { relativePath: string; sha256: string; bytes: number; mimeType: string; }
 export class LedgerResources {
@@ -56,6 +58,39 @@ export class LedgerResources {
       return { relativePath: relative, sha256: info.sha256, bytes: info.bytes,
         mimeType: extension === 'svg' ? 'image/svg+xml' : extension === 'jpg' ? 'image/jpeg' : 'image/' + extension };
     } finally { await BackupFiles.remove(temporary); }
+  }
+
+  async putImage(source: string, qualityKey: string): Promise<StoredLedgerResource> {
+    const preset = imageCompressionPreset(qualityKey);
+    if (preset.key === 'original' || preset.maxEdge <= 0) { return this.put('images', source); }
+    const original = await BackupFiles.read(source, 32 * 1024 * 1024);
+    let sourceImage: image.ImageSource | undefined = undefined;
+    let pixelMap: image.PixelMap | undefined = undefined;
+    let packer: image.ImagePacker | undefined = undefined;
+    const temporary = this.context.cacheDir + '/xiaoqiao-image-' + util.generateRandomUUID();
+    try {
+      sourceImage = image.createImageSource(source);
+      const info = await sourceImage.getImageInfo();
+      const longest = Math.max(info.size.width, info.size.height);
+      const ratio = longest > preset.maxEdge ? preset.maxEdge / longest : 1;
+      const width = Math.max(1, Math.round(info.size.width * ratio));
+      const height = Math.max(1, Math.round(info.size.height * ratio));
+      const desiredSize: image.Size = { width: width, height: height };
+      const decoding: image.DecodingOptions = { desiredSize: desiredSize, editable: false };
+      pixelMap = await sourceImage.createPixelMap(decoding);
+      const format = info.alphaType === image.AlphaType.OPAQUE ? 'image/jpeg' : 'image/png';
+      packer = image.createImagePacker();
+      const packing: image.PackingOption = { format: format, quality: preset.quality };
+      const encoded = await packer.packToData(pixelMap, packing);
+      if (ratio === 1 && encoded.byteLength >= original.byteLength) { return this.put('images', source); }
+      await BackupFiles.write(temporary, encoded);
+      return await this.put('images', temporary);
+    } finally {
+      if (packer !== undefined) { try { await packer.release(); } catch (_) { /* Native cleanup is best effort. */ } }
+      if (pixelMap !== undefined) { try { await pixelMap.release(); } catch (_) { /* Native cleanup is best effort. */ } }
+      if (sourceImage !== undefined) { try { await sourceImage.release(); } catch (_) { /* Native cleanup is best effort. */ } }
+      await BackupFiles.remove(temporary);
+    }
   }
   static async catalog(root: string): Promise<BackupFileInfo[]> {
     const result: BackupFileInfo[] = [];

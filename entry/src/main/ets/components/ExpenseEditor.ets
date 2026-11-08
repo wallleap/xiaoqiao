@@ -1,6 +1,5 @@
 import { HdsNavigation, HdsNavigationTitleMode, DividerShowType, hdsMaterial } from '@kit.UIDesignKit';
-import { common } from '@kit.AbilityKit';
-import { picker } from '@kit.CoreFileKit';
+import { photoAccessHelper } from '@kit.MediaLibraryKit';
 import { FrameCallback, KeyboardAvoidMode, ChipGroup, ChipSize, curves } from '@kit.ArkUI';
 import { util } from '@kit.ArkTS';
 import { CurrencyUnit } from '../core/money/CurrencyUnit';
@@ -17,6 +16,7 @@ import { categoryIcon } from '../presentation/ledger/CategoryIcons';
 import { spendingNatureBackground, spendingNatureText } from '../presentation/ledger/SpendingNatureStyles';
 import { tagBackground, tagTextColor } from '../presentation/ledger/TagStyles';
 import { LedgerAttachment, LedgerAttachmentDraft } from '../domain/model/LedgerAttachment';
+import { ImageCompressionPreset, IMAGE_COMPRESSION_PRESETS } from '../domain/model/ImageCompression';
 
 class AmountFocusFrame extends FrameCallback {
   private readonly action: () => void;
@@ -65,6 +65,7 @@ export struct ExpenseEditor {
   @State private note: string = '';
   @State private attachments: ExpenseImageAttachment[] = [];
   @State private attachmentBusy: boolean = false;
+  @State private attachmentQuality: string = 'standard';
   @State private selectedId: string = '';
   @State private selectedNatureId: string = '';
   @State private selectedTagIds: string[] = [];
@@ -98,6 +99,7 @@ export struct ExpenseEditor {
   private saveId: string = util.generateRandomUUID();
 
   aboutToAppear(): void {
+    this.attachmentQuality = AppStorage.get<string>('attachmentImageQuality') || 'standard';
     const entry = this.editingEntry;
     this.isIncome = entry?.kind === 'income';
     this.isTransfer = entry?.kind === 'transfer';
@@ -205,14 +207,15 @@ export struct ExpenseEditor {
     this.attachmentBusy = true;
     this.clearFieldError(ExpenseErrorField.Attachments);
     try {
-      const options = new picker.DocumentSelectOptions();
+      const options = new photoAccessHelper.PhotoSelectOptions();
       options.maxSelectNumber = 9 - this.attachments.length;
-      options.fileSuffixFilters = ['图片|.png,.jpg,.jpeg,.webp'];
-      const view = new picker.DocumentViewPicker(this.getUIContext().getHostContext() as common.UIAbilityContext);
-      const sources = await view.select(options);
+      options.MIMEType = photoAccessHelper.PhotoViewMIMETypes.IMAGE_TYPE;
+      options.isSearchSupported = true;
+      const view = new photoAccessHelper.PhotoViewPicker();
+      const selected = await view.select(options);
       let next = [...this.attachments];
-      for (const source of sources) {
-        const draft = await workspace.saveImageAttachment(source);
+      for (const source of selected.photoUris) {
+        const draft = await workspace.saveImageAttachment(source, this.attachmentQuality);
         if (next.some((attachment: ExpenseImageAttachment) => attachment.sha256 === draft.sha256)) { continue; }
         next.push({ relativePath: draft.relativePath, sha256: draft.sha256, bytes: draft.bytes,
           mimeType: draft.mimeType, filePath: workspace.backup.resources.root + '/' + draft.relativePath,
@@ -233,6 +236,26 @@ export struct ExpenseEditor {
       this.workspace.discardUnpersistedImage(removed).catch(() => {});
     }
     this.clearFieldError(ExpenseErrorField.Attachments);
+  }
+
+  private compressionOptions(): SelectOption[] {
+    return IMAGE_COMPRESSION_PRESETS.map((preset: ImageCompressionPreset): SelectOption => ({ value: preset.label }));
+  }
+
+  private selectedCompressionIndex(): number {
+    return Math.max(0, IMAGE_COMPRESSION_PRESETS.findIndex((preset: ImageCompressionPreset) =>
+      preset.key === this.attachmentQuality));
+  }
+
+  private selectCompression(index: number): void {
+    const preset = IMAGE_COMPRESSION_PRESETS[index] || IMAGE_COMPRESSION_PRESETS[2];
+    this.attachmentQuality = preset.key;
+    AppStorage.setOrCreate('attachmentImageQuality', preset.key);
+  }
+
+  private compressionLabel(): string {
+    return IMAGE_COMPRESSION_PRESETS.find((preset: ImageCompressionPreset) =>
+      preset.key === this.attachmentQuality)?.label || IMAGE_COMPRESSION_PRESETS[2].label;
   }
 
   private async discardPendingAttachments(): Promise<void> {
@@ -740,6 +763,25 @@ export struct ExpenseEditor {
           .enabled(!this.attachmentBusy && !this.saving && !this.saved && !this.conflicted && this.attachments.length < 9)
           .id('expense-attachment-add').onClick(() => { this.chooseImages(); })
       }.width('100%')
+      Row({ space: 12 }) {
+        Text('保存质量').fontSize('13fp').fontColor($r('app.color.xq_font_secondary'))
+        Blank()
+        Select(this.compressionOptions()).selected(this.selectedCompressionIndex())
+          .value(this.compressionLabel())
+          .font({ size: '12fp' }).fontColor($r('app.color.xq_font_primary'))
+          .optionFontColor($r('app.color.xq_font_primary'))
+          .selectedOptionFontColor($r('app.color.xq_font_emphasize'))
+          .backgroundColor($r('app.color.xq_app_surface_page')).height(38)
+          .id('expense-attachment-quality')
+          .onSelect((index: number) => { this.selectCompression(index); })
+      }.width('100%')
+      if (this.attachmentQuality === 'original') {
+        Text('原图不会压缩，可能占用较多空间，并影响 WebDAV 备份大小。').fontSize('11fp')
+          .fontColor($r('app.color.xq_warning')).width('100%')
+      } else {
+        Text('仅在添加新图片时应用，已有附件不会自动改变。').fontSize('11fp')
+          .fontColor($r('app.color.xq_font_tertiary')).width('100%')
+      }
       if (this.attachments.length > 0) {
         Scroll() {
           Row({ space: 10 }) {

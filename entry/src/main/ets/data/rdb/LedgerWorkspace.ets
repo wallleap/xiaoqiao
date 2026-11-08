@@ -521,8 +521,8 @@ export class LedgerWorkspace {
     });
   }
 
-  async saveImageAttachment(uri: string): Promise<LedgerAttachmentDraft> {
-    const stored = await this.backup.resources.put('images', uri);
+  async saveImageAttachment(uri: string, qualityKey: string = 'standard'): Promise<LedgerAttachmentDraft> {
+    const stored = await this.backup.resources.putImage(uri, qualityKey);
     return { relativePath: stored.relativePath, sha256: stored.sha256, bytes: stored.bytes,
       mimeType: stored.mimeType };
   }

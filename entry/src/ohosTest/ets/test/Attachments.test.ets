@@ -124,6 +124,7 @@ export default function attachmentsTest() {
       const card = await formScroll.scrollSearch(ON.id('expense-attachment-card'));
       expect(card !== null).assertTrue();
       expect(await driver.waitForComponent(ON.id('expense-attachment-add').enabled(true), 5000) !== null).assertTrue();
+      expect(await driver.waitForComponent(ON.id('expense-attachment-quality'), 5000) !== null).assertTrue();
       expect(await driver.findComponent(ON.id('expense-attachment-list'))).assertNull();
       expect(await driver.screenCap(host.filesDir + '/xiaoqiao-expense-attachments.png')).assertTrue();
       await (await driver.findComponent(ON.id('expense-close'))).click();
