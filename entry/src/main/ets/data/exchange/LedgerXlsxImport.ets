@@ -1,7 +1,9 @@
 import { util } from '@kit.ArkTS';
+import { zlib } from '@kit.BasicServicesKit';
+import { fileIo as fs } from '@kit.CoreFileKit';
 import { BackupFiles } from '../backup/BackupFiles';
-import { BackupZip, ZipFile } from '../backup/BackupZip';
-import { CsvTable } from './LedgerCsvImport';
+import { ZipFile } from '../backup/BackupZip';
+import { CsvTable, tableFromRows } from './LedgerCsvImport';
 
 export interface XlsxSheetInfo {
   name: string;
@@ -10,6 +12,32 @@ export interface XlsxSheetInfo {
 
 function decode(data: ArrayBuffer): string {
   return util.TextDecoder.create('utf-8', { fatal: true }).decodeToString(new Uint8Array(data));
+}
+
+async function extractXlsx(uri: string, cacheDir: string): Promise<ZipFile[]> {
+  const directory = cacheDir + '/xiaoqiao-xlsx-import-' + util.generateRandomUUID();
+  const zipFile = directory + '.zip';
+  try {
+    await fs.mkdir(directory);
+    await BackupFiles.copy(uri, zipFile);
+    await zlib.decompressFile(zipFile, directory);
+    const paths: string[] = ['[Content_Types].xml', 'xl/workbook.xml', 'xl/_rels/workbook.xml.rels',
+      'xl/sharedStrings.xml', 'xl/styles.xml'];
+    const worksheets = await fs.listFile(directory + '/xl/worksheets');
+    for (const name of worksheets) {
+      if (name.endsWith('.xml')) { paths.push('xl/worksheets/' + name); }
+    }
+    const files: ZipFile[] = [];
+    for (const path of paths) {
+      if (await fs.access(directory + '/' + path)) {
+        files.push({ path: path, data: await BackupFiles.read(directory + '/' + path) });
+      }
+    }
+    return files;
+  } finally {
+    try { await BackupFiles.remove(zipFile); } catch (_) { /* Temporary copy cleanup is best effort. */ }
+    try { await BackupFiles.remove(directory); } catch (_) { /* Cache cleanup is best effort. */ }
+  }
 }
 
 function text(value: string): string {
@@ -109,13 +137,13 @@ function sheetInfo(files: ZipFile[]): XlsxSheetInfo[] {
   return values;
 }
 
-export async function listXlsxSheets(uri: string): Promise<XlsxSheetInfo[]> {
-  const files = BackupZip.decodeOffice(await BackupFiles.read(uri));
+export async function listXlsxSheets(uri: string, cacheDir: string): Promise<XlsxSheetInfo[]> {
+  const files = await extractXlsx(uri, cacheDir);
   return sheetInfo(files);
 }
 
-export async function readXlsxTable(uri: string, sheetPath: string = ''): Promise<CsvTable> {
-  const files = BackupZip.decodeOffice(await BackupFiles.read(uri));
+export async function readXlsxTable(uri: string, cacheDir: string, sheetPath: string = ''): Promise<CsvTable> {
+  const files = await extractXlsx(uri, cacheDir);
   const rows = worksheet(files, sharedStrings(files), sheetPath);
-  return { headers: rows[0].map((value: string) => value.trim()), rows: rows.slice(1), delimiter: ',' };
+  return tableFromRows(rows, ',');
 }

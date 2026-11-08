@@ -7,7 +7,7 @@ import { exportLedgerCsv } from '../data/exchange/LedgerCsvExport';
 import { LedgerXlsxExport } from '../data/exchange/LedgerXlsxExport';
 import { listXlsxSheets, readXlsxTable, XlsxSheetInfo } from '../data/exchange/LedgerXlsxImport';
 import { CsvColumnMapping, CsvPreviewRow, CsvTable, detectCsvMapping, parseCsv,
-  previewCsv } from '../data/exchange/LedgerCsvImport';
+  previewCsv, readDelimitedText } from '../data/exchange/LedgerCsvImport';
 import { LedgerSnapshot } from '../domain/model/LedgerSnapshot';
 
 @Component
@@ -29,19 +29,21 @@ export struct DataExchangePage {
   @State private importRows: string[][] = [];
   @State private importPreview: CsvPreviewRow[] = [];
   @State private importMapping: CsvColumnMapping = { date: -1, time: -1, type: -1, amount: -1, category: -1,
-    account: -1, note: -1, sourceId: -1, merchant: -1, address: -1 };
+    account: -1, note: -1, sourceId: -1, merchant: -1, address: -1, status: -1 };
   @State private importFileName: string = '';
   @State private importSha256: string = '';
   @State private importDelimiter: string = ',';
-  @State private createMissingCategories: boolean = true;
-  @State private createMissingAccounts: boolean = true;
   @State private importCompleted: number = 0;
   @State private importTotal: number = 0;
+  @State private importPreviewMode: number = 0;
+  @State private importPreviewLimit: number = 20;
   @State private xlsxUri: string = '';
   @State private xlsxSheets: XlsxSheetInfo[] = [];
   @State private xlsxSheetPath: string = '';
   @State private existingImportIds: string[] = [];
   @State private importApplyBalance: boolean = false;
+  @State private createMissingAccounts: boolean = false;
+  @State private createMissingCategories: boolean = false;
   private readonly scroller: Scroller = new Scroller();
 
   aboutToAppear(): void { this.load(); }
@@ -118,12 +120,14 @@ export struct DataExchangePage {
       const pickerInstance = new picker.DocumentViewPicker(this.getUIContext().getHostContext() as common.UIAbilityContext);
       const sources = await pickerInstance.select(options);
       if (sources.length === 0) { return; }
-      const text = await BackupFiles.text(sources[0]);
+      const text = await readDelimitedText(sources[0]);
       const table: CsvTable = parseCsv(text);
       const info = await BackupFiles.info(sources[0], 'import.csv');
       this.importFileName = sources[0].split('/').pop() || 'import.csv';
       this.importSha256 = info.sha256;
       this.importApplyBalance = false;
+      this.createMissingAccounts = false;
+      this.createMissingCategories = false;
       this.importHeaders = table.headers;
       this.importRows = table.rows;
       this.importDelimiter = table.delimiter;
@@ -148,9 +152,10 @@ export struct DataExchangePage {
       const pickerInstance = new picker.DocumentViewPicker(this.getUIContext().getHostContext() as common.UIAbilityContext);
       const sources = await pickerInstance.select(options);
       if (sources.length === 0) { return; }
-      const sheets = await listXlsxSheets(sources[0]);
+      const host = this.getUIContext().getHostContext() as common.UIAbilityContext;
+      const sheets = await listXlsxSheets(sources[0], host.cacheDir);
       const path = sheets.length > 0 ? sheets[0].path : '';
-      const table = await readXlsxTable(sources[0], path);
+      const table = await readXlsxTable(sources[0], host.cacheDir, path);
       const info = await BackupFiles.info(sources[0], 'import.xlsx');
       this.xlsxUri = sources[0];
       this.xlsxSheets = sheets;
@@ -158,6 +163,8 @@ export struct DataExchangePage {
       this.importFileName = sources[0].split('/').pop() || 'import.xlsx';
       this.importSha256 = info.sha256;
       this.importApplyBalance = false;
+      this.createMissingAccounts = false;
+      this.createMissingCategories = false;
       this.importHeaders = table.headers;
       this.importRows = table.rows;
       this.importDelimiter = ',';
@@ -176,6 +183,18 @@ export struct DataExchangePage {
       delimiter: this.importDelimiter }, this.importMapping, this.snapshot,
       { createMissingCategories: this.createMissingCategories,
         createMissingAccounts: this.createMissingAccounts, existingIds: this.existingImportIds });
+    this.importPreviewMode = 0;
+    this.importPreviewLimit = 20;
+  }
+
+  private filteredImportPreview(): CsvPreviewRow[] {
+    if (this.importPreviewMode === 1) {
+      return this.importPreview.filter((row: CsvPreviewRow) => row.duplicate);
+    }
+    if (this.importPreviewMode === 2) {
+      return this.importPreview.filter((row: CsvPreviewRow) => !row.valid);
+    }
+    return this.importPreview;
   }
 
   private mappingLabel(index: number): string {
@@ -206,7 +225,8 @@ export struct DataExchangePage {
       note: field === 'note' ? index : this.importMapping.note,
       sourceId: field === 'sourceId' ? index : this.importMapping.sourceId,
       merchant: field === 'merchant' ? index : this.importMapping.merchant,
-      address: field === 'address' ? index : this.importMapping.address
+      address: field === 'address' ? index : this.importMapping.address,
+      status: field === 'status' ? index : this.importMapping.status
     };
     this.refreshImportPreview();
     this.importMessage = '';
@@ -224,6 +244,8 @@ export struct DataExchangePage {
     this.xlsxSheets = [];
     this.xlsxSheetPath = '';
     this.importApplyBalance = false;
+    this.createMissingAccounts = false;
+    this.createMissingCategories = false;
   }
 
   private async selectXlsxSheet(index: number): Promise<void> {
@@ -231,7 +253,8 @@ export struct DataExchangePage {
     if (sheet === undefined || this.xlsxUri.length === 0 || this.importBusy) { return; }
     this.importBusy = true;
     try {
-      const table = await readXlsxTable(this.xlsxUri, sheet.path);
+      const host = this.getUIContext().getHostContext() as common.UIAbilityContext;
+      const table = await readXlsxTable(this.xlsxUri, host.cacheDir, sheet.path);
       this.xlsxSheetPath = sheet.path;
       this.importHeaders = table.headers;
       this.importRows = table.rows;
@@ -252,6 +275,27 @@ export struct DataExchangePage {
 
   private selectedSheetIndex(): number {
     return Math.max(0, this.xlsxSheets.findIndex((sheet: XlsxSheetInfo) => sheet.path === this.xlsxSheetPath));
+  }
+
+  private rawCell(row: CsvPreviewRow, column: number): string {
+    return column >= 0 ? (row.raw[column] || '').trim() || '空' : '未映射';
+  }
+
+  private rawPreview(row: CsvPreviewRow): string {
+    return `日期 ${this.rawCell(row, this.importMapping.date)}；类型 ${this.rawCell(row, this.importMapping.type)}；` +
+      `金额 ${this.rawCell(row, this.importMapping.amount)}；分类 ${this.rawCell(row, this.importMapping.category)}；` +
+      `账户 ${this.rawCell(row, this.importMapping.account)}；状态 ${this.rawCell(row, this.importMapping.status)}`;
+  }
+
+  private mappedPreview(row: CsvPreviewRow): string {
+    const kind = row.type === 'income' ? '收入' : row.type === 'expense' ? '支出' : '类型未识别';
+    const date = row.date.length > 0 ? row.date + (row.timeKnown ? ' ' + row.time : '') : '日期无效';
+    const category = row.createCategory ? `新建 ${row.categoryName}` :
+      row.categoryName || this.categoryName(row.categoryId);
+    const account = row.createAccount ? `新建 ${row.accountName}` : row.accountId.length > 0 ?
+      this.accountName(row.accountId) : '不使用账户';
+    return `映射 ${date}；${kind}；${row.amount || '金额无效'}；${category}；${account}；` +
+      `状态 ${row.sourceStatus || '未映射'}`;
   }
 
   private async confirmImportCsv(): Promise<void> {
@@ -300,7 +344,7 @@ export struct DataExchangePage {
         createCategory: row.createCategory, accountId: row.accountId, accountName: row.accountName,
         createAccount: row.createAccount, sourceId: row.sourceId, duplicate: row.duplicate,
         duplicateReason: row.duplicateReason, selected: !row.selected, merchant: row.merchant,
-        address: row.address, note: row.note,
+        address: row.address, sourceStatus: row.sourceStatus, note: row.note,
         valid: row.valid, issues: row.issues };
     });
   }
@@ -330,7 +374,7 @@ export struct DataExchangePage {
       Column({ space: 10 }) {
         Text('导入 CSV').fontSize('20fp').fontWeight(FontWeight.Bold)
           .fontColor($r('app.color.xq_font_primary')).width('100%')
-        Text('默认只补历史账目，不改变当前账户余额。日期、类型、金额和分类必须匹配；账户可选。')
+        Text('默认只补历史账目，不改变当前账户余额。未匹配分类归入“其它”；未匹配账户按不使用账户导入。')
           .fontSize('12fp').lineHeight('18fp').fontColor($r('app.color.xq_font_secondary')).width('100%')
         Row({ space: 10 }) {
           Button(this.importBusy ? '正在读取' : '选择 CSV', { type: ButtonType.Capsule }).layoutWeight(1).height(46)
@@ -377,22 +421,31 @@ export struct DataExchangePage {
           this.mappingRow('来源编号', 'sourceId', this.importMapping.sourceId)
           this.mappingRow('商户', 'merchant', this.importMapping.merchant)
           this.mappingRow('地址', 'address', this.importMapping.address)
+          this.mappingRow('交易状态', 'status', this.importMapping.status)
+          Text('分类和账户默认使用兜底或不使用账户；需要保留原始名称时可开启自动创建。')
+            .fontSize('12fp').lineHeight('18fp').fontColor($r('app.color.xq_font_tertiary')).width('100%')
           Row() {
-            Text('自动创建缺失分类').fontSize('14fp').fontColor($r('app.color.xq_font_primary'))
+            Column({ space: 3 }) {
+              Text('自动创建缺失分类').fontSize('14fp').fontColor($r('app.color.xq_font_primary'))
+              Text(this.createMissingCategories ? '未匹配分类会按文件原名称创建' : '未匹配分类归入“其它/其他”')
+                .fontSize('11fp').fontColor($r('app.color.xq_font_secondary'))
+            }.alignItems(HorizontalAlign.Start)
             Blank()
             Toggle({ type: ToggleType.Switch, isOn: this.createMissingCategories })
               .selectedColor($r('app.color.xq_brand')).id('csv-create-categories')
               .onChange((value: boolean) => { this.createMissingCategories = value; this.refreshImportPreview(); })
           }.width('100%')
           Row() {
-            Text('自动创建缺失账户').fontSize('14fp').fontColor($r('app.color.xq_font_primary'))
+            Column({ space: 3 }) {
+              Text('自动创建缺失账户').fontSize('14fp').fontColor($r('app.color.xq_font_primary'))
+              Text(this.createMissingAccounts ? '未匹配账户会按名称创建' : '未匹配账户按不使用账户导入')
+                .fontSize('11fp').fontColor($r('app.color.xq_font_secondary'))
+            }.alignItems(HorizontalAlign.Start)
             Blank()
             Toggle({ type: ToggleType.Switch, isOn: this.createMissingAccounts })
               .selectedColor($r('app.color.xq_brand')).id('csv-create-accounts')
               .onChange((value: boolean) => { this.createMissingAccounts = value; this.refreshImportPreview(); })
           }.width('100%')
-          Text('新账户默认创建为资产账户；名称包含“信用卡、花呗、借呗、贷款、待还”时按负债账户创建。')
-            .fontSize('12fp').lineHeight('18fp').fontColor($r('app.color.xq_font_tertiary')).width('100%')
           Row() {
             Column({ space: 3 }) {
               Text('按记录更新余额').fontSize('14fp').fontColor($r('app.color.xq_font_primary'))
@@ -413,7 +466,25 @@ export struct DataExchangePage {
           Text(`问题 ${this.importPreview.filter((row: CsvPreviewRow) => !row.valid).length} 笔 · 重复 ${this.importPreview.filter((row: CsvPreviewRow) => row.duplicate).length} 笔`).fontSize('14fp')
             .fontColor($r('app.color.xq_warning'))
         }.width('100%')
-        ForEach(this.importPreview.slice(0, 20), (row: CsvPreviewRow) => {
+        Row({ space: 8 }) {
+          Button('全部', { type: ButtonType.Capsule }).height(32).fontSize('12fp')
+            .fontColor(this.importPreviewMode === 0 ? Color.White : $r('app.color.xq_font_primary'))
+            .backgroundColor(this.importPreviewMode === 0 ? $r('app.color.xq_brand') : $r('app.color.xq_app_surface_page'))
+            .onClick(() => { this.importPreviewMode = 0; this.importPreviewLimit = 20; })
+          Button(`重复 ${this.importPreview.filter((row: CsvPreviewRow) => row.duplicate).length}`,
+            { type: ButtonType.Capsule }).height(32).fontSize('12fp')
+            .fontColor(this.importPreviewMode === 1 ? Color.White : $r('app.color.xq_font_primary'))
+            .backgroundColor(this.importPreviewMode === 1 ? $r('app.color.xq_warning') : $r('app.color.xq_app_surface_page'))
+            .id('data-import-preview-duplicates')
+            .onClick(() => { this.importPreviewMode = 1; this.importPreviewLimit = 20; })
+          Button(`问题 ${this.importPreview.filter((row: CsvPreviewRow) => !row.valid).length}`,
+            { type: ButtonType.Capsule }).height(32).fontSize('12fp')
+            .fontColor(this.importPreviewMode === 2 ? Color.White : $r('app.color.xq_font_primary'))
+            .backgroundColor(this.importPreviewMode === 2 ? $r('app.color.xq_warning') : $r('app.color.xq_app_surface_page'))
+            .id('data-import-preview-issues')
+            .onClick(() => { this.importPreviewMode = 2; this.importPreviewLimit = 20; })
+        }.width('100%')
+        ForEach(this.filteredImportPreview().slice(0, this.importPreviewLimit), (row: CsvPreviewRow) => {
           Column({ space: 5 }) {
             Row() {
               Text(`第 ${row.rowNumber} 行`).fontSize('13fp').fontWeight(FontWeight.Medium)
@@ -423,18 +494,17 @@ export struct DataExchangePage {
                 .fontColor(row.valid && !row.duplicate ? $r('app.color.xq_confirm') : $r('app.color.xq_warning'))
                 .maxLines(2)
             }.width('100%')
-            if (row.valid) {
-              Text(`${row.date}${row.timeKnown ? ' ' + row.time : ''} · ${row.type === 'income' ? '收入' : '支出'} · ${row.createCategory ?
-                row.categoryName : this.categoryName(row.categoryId)} · ${row.createAccount ?
-                row.accountName : this.accountName(row.accountId)} · ¥${row.amount}`)
-                .fontSize('12fp').fontColor($r('app.color.xq_font_secondary')).width('100%')
-              if (row.createCategory || row.createAccount) {
-                Text([
-                  row.createCategory ? `将新建分类“${row.categoryName}”` : '',
-                  row.createAccount ? `将新建账户“${row.accountName}”` : ''
-                ].filter((value: string) => value.length > 0).join('；'))
-                  .fontSize('11fp').fontColor($r('app.color.xq_font_emphasize')).width('100%')
-              }
+            Text('原始：' + this.rawPreview(row)).fontSize('11fp').lineHeight('17fp')
+              .fontColor($r('app.color.xq_font_tertiary')).width('100%').maxLines(4)
+            Text(this.mappedPreview(row)).fontSize('11fp').lineHeight('17fp')
+              .fontColor($r('app.color.xq_font_primary')).width('100%').maxLines(4)
+            if (row.valid && (row.createCategory || row.createAccount)) {
+              Text([
+                row.createCategory ? `将新建分类“${row.categoryName}”` : '',
+                row.createAccount ? `将新建账户“${row.accountName}”` : ''
+              ].filter((value: string) => value.length > 0).join('；'))
+                .fontSize('11fp').fontColor($r('app.color.xq_font_emphasize')).width('100%')
+            }
             if (row.duplicate) {
               Button(row.selected ? '取消导入此重复项' : '仍然导入此重复项', { type: ButtonType.Capsule })
                 .height(32).fontSize('12fp').fontColor($r('app.color.xq_font_emphasize'))
@@ -442,12 +512,14 @@ export struct DataExchangePage {
                 .id('csv-duplicate-toggle-' + row.rowNumber)
                 .onClick(() => { this.togglePreviewSelection(row.rowNumber); })
             }
-            }
           }.padding(12).width('100%').borderRadius(12).backgroundColor($r('app.color.xq_app_surface_card'))
         }, (row: CsvPreviewRow) => `${row.rowNumber}:${row.valid}:${row.date}:${row.amount}`)
-        if (this.importPreview.length > 20) {
-          Text(`预览前 20 行，另有 ${this.importPreview.length - 20} 行将在确认时一并处理`).fontSize('12fp')
-            .fontColor($r('app.color.xq_font_tertiary')).width('100%')
+        if (this.filteredImportPreview().length > this.importPreviewLimit) {
+          Button(`再显示 50 行（剩余 ${this.filteredImportPreview().length - this.importPreviewLimit}）`,
+            { type: ButtonType.Capsule }).width('100%').height(38).fontSize('13fp')
+            .fontColor($r('app.color.xq_font_emphasize')).backgroundColor($r('app.color.xq_app_surface_page'))
+            .id('data-import-more-preview')
+            .onClick(() => { this.importPreviewLimit += 50; })
         }
         Row({ space: 12 }) {
           Button('取消导入', { type: ButtonType.Capsule }).layoutWeight(1).height(44)

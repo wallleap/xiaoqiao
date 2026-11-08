@@ -65,7 +65,8 @@ export default function dataExchangeFlowTest() {
         timeKnown: true, type: 'expense', amount: '9.00', categoryId: category?.id || '',
         categoryName: '餐饮', createCategory: false, accountId: '', accountName: '',
         createAccount: false, sourceId: 'ui-source', duplicate: false, duplicateReason: '',
-        selected: true, merchant: '', address: '', note: 'CSV 新导入', valid: true, issues: [] };
+        selected: true, merchant: '', address: '', sourceStatus: '交易成功',
+        note: 'CSV 新导入', valid: true, issues: [] };
       await workspace.importCsvBatch('ui.csv', 'ui-sha', [importedRow], ',');
       await (await driver.findComponent(ON.id('data-exchange-close'))).click();
       await driver.waitForComponent(ON.id('settings-data-exchange'), 5000);

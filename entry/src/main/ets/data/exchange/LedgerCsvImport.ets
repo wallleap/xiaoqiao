@@ -1,6 +1,8 @@
 import { CurrencyUnit } from '../../core/money/CurrencyUnit';
 import { Money } from '../../core/money/Money';
 import { ExpenseCategory, LedgerSnapshot } from '../../domain/model/LedgerSnapshot';
+import { BackupFiles } from '../backup/BackupFiles';
+import { util } from '@kit.ArkTS';
 
 export interface CsvTable {
   headers: string[];
@@ -19,6 +21,7 @@ export interface CsvColumnMapping {
   sourceId: number;
   merchant: number;
   address: number;
+  status: number;
 }
 
 export interface CsvPreviewRow {
@@ -41,6 +44,7 @@ export interface CsvPreviewRow {
   selected: boolean;
   merchant: string;
   address: string;
+  sourceStatus: string;
   note: string;
   valid: boolean;
   issues: string[];
@@ -50,6 +54,12 @@ export interface CsvImportOptions {
   createMissingCategories: boolean;
   createMissingAccounts: boolean;
   existingIds: string[];
+}
+
+export async function readDelimitedText(uri: string): Promise<string> {
+  const bytes = new Uint8Array(await BackupFiles.read(uri, 8 * 1024 * 1024));
+  try { return util.TextDecoder.create('utf-8', { fatal: true }).decodeToString(bytes); }
+  catch (_) { return util.TextDecoder.create('gb18030').decodeToString(bytes); }
 }
 
 interface ParsedAmount {
@@ -81,15 +91,35 @@ export function detectCsvMapping(headers: string[]): CsvColumnMapping {
   return {
     date: column(headers, ['日期', '交易时间', '交易日期', 'date', 'time']),
     time: column(headers, ['时间', '交易时刻', 'clock', 'timeonly']),
-    type: column(headers, ['类型', '收支类型', '方向', 'type']),
-    amount: column(headers, ['金额', '实付金额', '交易金额', 'amount']),
-    category: column(headers, ['分类', '收支分类', 'category']),
-    account: column(headers, ['账户', '付款账户', '收款账户', 'account']),
+    type: column(headers, ['类型', '收支类型', '收/支', '方向', 'type']),
+    amount: column(headers, ['金额', '金额(元)', '金额（元）', '实付金额', '交易金额', 'amount']),
+    category: column(headers, ['分类', '收支分类', '交易分类', '交易类型', 'category']),
+    account: column(headers, ['账户', '付款账户', '收款账户', '支付方式', '收/付款方式', 'account']),
     note: column(headers, ['备注', '商品', '说明', 'note', 'memo']),
     sourceId: column(headers, ['账目ID', '交易单号', '交易订单号', '来源记录编号', 'sourceid', 'transactionid']),
     merchant: column(headers, ['商户', '交易对方', '商家', 'merchant']),
-    address: column(headers, ['地址', '商户地址', 'address'])
+    address: column(headers, ['地址', '商户地址', 'address']),
+    status: column(headers, ['交易状态', '当前状态', '状态', 'status'])
   };
+}
+
+export function tableFromRows(rows: string[][], delimiter: string = ','): CsvTable {
+  let headerIndex = -1;
+  for (let index = 0; index < rows.length && index < 50; index++) {
+    const values = rows[index].map((value: string) => normalizeHeader(value));
+    if (values.includes('交易时间') && (values.includes('收/支') || values.includes('交易类型')) &&
+      (values.includes('金额') || values.includes('金额(元)'))) {
+      headerIndex = index;
+      break;
+    }
+  }
+  if (headerIndex < 0) {
+    headerIndex = rows.findIndex((row: string[]) => row.some((value: string) => value.trim().length > 0));
+  }
+  if (headerIndex < 0) { throw new Error('CSV_EMPTY'); }
+  const body = rows.slice(headerIndex + 1).filter((row: string[]) =>
+    row.some((value: string) => value.trim().length > 0));
+  return { headers: rows[headerIndex].map((value: string) => value.trim()), rows: body, delimiter: delimiter };
 }
 
 function delimiterOf(text: string): string {
@@ -126,19 +156,26 @@ export function parseCsv(text: string): CsvTable {
   if (quoted) { throw new Error('CSV_UNCLOSED_QUOTE'); }
   if (cell.length > 0 || row.length > 0) { row.push(cell); rows.push(row); }
   while (rows.length > 0 && rows[rows.length - 1].every((value: string) => value.trim().length === 0)) { rows.pop(); }
-  if (rows.length === 0) { throw new Error('CSV_EMPTY'); }
-  return { headers: rows[0].map((value: string) => value.trim()), rows: rows.slice(1), delimiter: delimiter };
+  return tableFromRows(rows, delimiter);
 }
 
 function parseDateTime(value: string): ParsedDateTime {
   if (/^[0-9]+(?:\.[0-9]+)?$/.test(value.trim())) {
     const serial = Number(value.trim());
     if (serial > 20000 && serial < 80000) {
-      const utc = new Date(Date.UTC(1899, 11, 30) + Math.floor(serial) * 86400000);
+      const whole = Math.floor(serial);
+      const fraction = serial - whole;
+      const utc = new Date(Date.UTC(1899, 11, 30) + whole * 86400000);
       const localDate = `${utc.getUTCFullYear()}-${String(utc.getUTCMonth() + 1).padStart(2, '0')}-` +
         String(utc.getUTCDate()).padStart(2, '0');
-      const date = new Date(utc.getUTCFullYear(), utc.getUTCMonth(), utc.getUTCDate(), 12, 0, 0, 0);
-      return { localDate: localDate, time: '', timeKnown: false,
+      const totalSeconds = Math.round(fraction * 86400);
+      const hour = Math.floor(totalSeconds / 3600);
+      const minute = Math.floor((totalSeconds % 3600) / 60);
+      const second = totalSeconds % 60;
+      const date = new Date(utc.getUTCFullYear(), utc.getUTCMonth(), utc.getUTCDate(), hour, minute, second, 0);
+      return { localDate: localDate,
+        time: `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`,
+        timeKnown: fraction > 0,
         occurredAtMs: date.getTime(), offsetMinutes: -date.getTimezoneOffset() };
     }
   }
@@ -207,7 +244,7 @@ function categoryPathMap(categories: ExpenseCategory[]): Map<string, string> {
 }
 
 export function previewCsv(table: CsvTable, mapping: CsvColumnMapping, snapshot: LedgerSnapshot,
-  options: CsvImportOptions = { createMissingCategories: true, createMissingAccounts: true, existingIds: [] }): CsvPreviewRow[] {
+  options: CsvImportOptions = { createMissingCategories: false, createMissingAccounts: false, existingIds: [] }): CsvPreviewRow[] {
   const expenseCategoryIds = categoryPathMap(snapshot.categories);
   const incomeCategoryIds = categoryPathMap(snapshot.incomeCategories);
   const accountIds: Map<string, string> = new Map();
@@ -225,6 +262,7 @@ export function previewCsv(table: CsvTable, mapping: CsvColumnMapping, snapshot:
     const sourceId = mapping.sourceId >= 0 ? (raw[mapping.sourceId] || '').trim() : '';
     const merchant = mapping.merchant >= 0 ? (raw[mapping.merchant] || '').trim() : '';
     const address = mapping.address >= 0 ? (raw[mapping.address] || '').trim() : '';
+    const status = mapping.status >= 0 ? (raw[mapping.status] || '').trim() : '';
     let parsedDate = parseDateTime(rawDate);
     const rawTime = mapping.time >= 0 ? raw[mapping.time] || '' : '';
     if (!parsedDate.timeKnown && parsedDate.localDate.length > 0 && /^[0-9]{1,2}:[0-9]{2}(?::[0-9]{2})?$/.test(rawTime.trim())) {
@@ -239,19 +277,38 @@ export function previewCsv(table: CsvTable, mapping: CsvColumnMapping, snapshot:
       negative = parsed.negative;
       if (kind.length === 0) { kind = negative ? 'expense' : 'income'; }
     } catch (_) { issues.push('金额无效'); }
-    const categoryId = (kind === 'income' ?
+    let categoryId = (kind === 'income' ?
       incomeCategoryIds.get(normalizeHeader(rawCategory)) :
       expenseCategoryIds.get(normalizeHeader(rawCategory))) || '';
-    const categoryName = rawCategory.trim().length > 0 ? rawCategory.trim() : '未分类';
-    const createCategory = categoryId.length === 0 && options.createMissingCategories;
+    let categoryName = rawCategory.trim();
+    let createCategory = false;
+    if (categoryId.length === 0) {
+      if (options.createMissingCategories) {
+        categoryName = categoryName || (kind === 'income' ? '其他收入' : '其它');
+        createCategory = true;
+      } else {
+        const candidates = kind === 'income' ? snapshot.incomeCategories : snapshot.categories;
+        const fallback = candidates.find((category: ExpenseCategory) =>
+          ['其它', '其他', '其他收入'].includes(category.name)) ||
+          candidates.find((category: ExpenseCategory) => category.name.includes('其他'));
+        categoryId = fallback?.id || '';
+        categoryName = fallback?.name || (kind === 'income' ? '其他收入' : '其它');
+        createCategory = categoryId.length === 0;
+      }
+    }
     const accountId = rawAccount.trim().length === 0 ? '' :
       accountIds.get(normalizeHeader(rawAccount)) || '';
     const createAccount = rawAccount.trim().length > 0 && accountId.length === 0 && options.createMissingAccounts;
     if (parsedDate.localDate.length === 0) { issues.push('日期无效'); }
     if (kind.length === 0) { issues.push('类型无法判断'); }
+    if (rawType.trim() === '/' || rawType.trim() === '不计收支') { issues.push('不计收支，已跳过'); }
+    if (status.length > 0 && !['交易成功', '支付成功', '已存入零钱', '对方已收钱', '已到账',
+      '已转账', '提现已到账', '已收款'].includes(status)) {
+      issues.push(`状态不导入：${status}`);
+    }
     if (paid.length === 0) { issues.push('金额无效'); }
     if (categoryId.length === 0 && !createCategory) { issues.push('分类未匹配'); }
-    if (rawAccount.trim().length > 0 && accountId.length === 0 && !createAccount) { issues.push('账户未匹配'); }
+    // Unmatched accounts intentionally leave the entry without an account and never affect balances.
     let duplicate = false;
     let duplicateReason = '';
     if (sourceId.length > 0 && (seenIds.has(sourceId) || existingIds.has(sourceId))) {
@@ -262,10 +319,12 @@ export function previewCsv(table: CsvTable, mapping: CsvColumnMapping, snapshot:
     result.push({ rowNumber: index + 2, raw: raw, date: parsedDate.localDate, time: parsedDate.time,
       timeKnown: parsedDate.timeKnown, type: kind, amount: paid,
       categoryId: categoryId, categoryName: categoryName, createCategory: createCategory,
-      accountId: accountId, accountName: rawAccount.trim(), createAccount: createAccount,
+      accountId: accountId, accountName: accountId.length > 0 || createAccount ? rawAccount.trim() : '',
+      createAccount: createAccount,
       sourceId: sourceId, duplicate: duplicate, duplicateReason: duplicateReason,
       selected: issues.length === 0 && !duplicate,
       merchant: merchant, address: address,
+      sourceStatus: status,
       note: mapping.note >= 0 ? raw[mapping.note] || '' : '', valid: issues.length === 0, issues: issues });
   });
   return result;
