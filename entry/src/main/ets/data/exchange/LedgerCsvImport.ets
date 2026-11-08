@@ -116,6 +116,17 @@ export function parseCsv(text: string): CsvTable {
 }
 
 function parseDateTime(value: string): ParsedDateTime {
+  if (/^[0-9]+(?:\.[0-9]+)?$/.test(value.trim())) {
+    const serial = Number(value.trim());
+    if (serial > 20000 && serial < 80000) {
+      const utc = new Date(Date.UTC(1899, 11, 30) + Math.floor(serial) * 86400000);
+      const localDate = `${utc.getUTCFullYear()}-${String(utc.getUTCMonth() + 1).padStart(2, '0')}-` +
+        String(utc.getUTCDate()).padStart(2, '0');
+      const date = new Date(utc.getUTCFullYear(), utc.getUTCMonth(), utc.getUTCDate(), 12, 0, 0, 0);
+      return { localDate: localDate, time: '', timeKnown: false,
+        occurredAtMs: date.getTime(), offsetMinutes: -date.getTimezoneOffset() };
+    }
+  }
   const normalized = value.trim().replace(/[年/.]/g, '-').replace(/月/g, '-').replace(/日/g, '');
   const match = normalized.match(/^([0-9]{4})-([0-9]{1,2})-([0-9]{1,2})(?:[T\s]+([0-9]{1,2}):([0-9]{2})(?::([0-9]{2}))?)?/);
   if (match === null) { return { localDate: '', time: '', timeKnown: false, occurredAtMs: 0, offsetMinutes: 0 }; }

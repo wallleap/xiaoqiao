@@ -4,6 +4,8 @@ import { HdsNavigation, HdsNavigationTitleMode, hdsMaterial, DividerShowType, Sc
 import { LedgerWorkspace } from '../data/rdb/LedgerWorkspace';
 import { BackupFiles } from '../data/backup/BackupFiles';
 import { exportLedgerCsv } from '../data/exchange/LedgerCsvExport';
+import { LedgerXlsxExport } from '../data/exchange/LedgerXlsxExport';
+import { readXlsxTable } from '../data/exchange/LedgerXlsxImport';
 import { CsvColumnMapping, CsvPreviewRow, CsvTable, detectCsvMapping, parseCsv,
   previewCsv } from '../data/exchange/LedgerCsvImport';
 import { LedgerSnapshot } from '../domain/model/LedgerSnapshot';
@@ -74,6 +76,27 @@ export struct DataExchangePage {
     } finally { this.busy = false; }
   }
 
+  private async exportXlsx(): Promise<void> {
+    if (this.busy || this.snapshot === undefined || this.workspace === undefined) { return; }
+    this.busy = true;
+    this.message = '';
+    this.error = false;
+    try {
+      const options = new picker.DocumentSaveOptions();
+      const safeBook = (this.snapshot.bookName || '账本').replace(/[\\/:*?"<>|]/g, '_');
+      options.newFileNames = [`${safeBook}-${this.monthKey}.xlsx`];
+      const pickerInstance = new picker.DocumentViewPicker(this.getUIContext().getHostContext() as common.UIAbilityContext);
+      const destinations = await pickerInstance.save(options);
+      if (destinations.length === 0) { return; }
+      await LedgerXlsxExport.exportTo(destinations[0], this.snapshot,
+        this.getUIContext().getHostContext() as common.Context);
+      this.message = `已导出 ${this.snapshot.entries.length} 笔账目`;
+    } catch (_) {
+      this.message = 'Excel 文件未能保存，请检查存储空间后重试';
+      this.error = true;
+    } finally { this.busy = false; }
+  }
+
   private async chooseImportCsv(): Promise<void> {
     if (this.busy || this.importBusy || this.snapshot === undefined) { return; }
     this.importBusy = true;
@@ -99,6 +122,34 @@ export struct DataExchangePage {
       this.importMessage = `已读取 ${table.rows.length} 行，请检查字段映射`;
     } catch (_) {
       this.importMessage = 'CSV 无法读取，请检查文件编码、引号和表头';
+      this.importError = true;
+    } finally { this.importBusy = false; }
+  }
+
+  private async chooseImportXlsx(): Promise<void> {
+    if (this.busy || this.importBusy || this.snapshot === undefined) { return; }
+    this.importBusy = true;
+    this.importMessage = '';
+    this.importError = false;
+    try {
+      const options = new picker.DocumentSelectOptions();
+      options.maxSelectNumber = 1;
+      options.fileSuffixFilters = ['Excel 工作簿|.xlsx'];
+      const pickerInstance = new picker.DocumentViewPicker(this.getUIContext().getHostContext() as common.UIAbilityContext);
+      const sources = await pickerInstance.select(options);
+      if (sources.length === 0) { return; }
+      const table = await readXlsxTable(sources[0]);
+      const info = await BackupFiles.info(sources[0], 'import.xlsx');
+      this.importFileName = sources[0].split('/').pop() || 'import.xlsx';
+      this.importSha256 = info.sha256;
+      this.importHeaders = table.headers;
+      this.importRows = table.rows;
+      this.importDelimiter = ',';
+      this.importMapping = detectCsvMapping(table.headers);
+      this.refreshImportPreview();
+      this.importMessage = `已读取 ${table.rows.length} 行，请检查字段映射`;
+    } catch (_) {
+      this.importMessage = 'Excel 文件无法读取，请检查工作簿和工作表';
       this.importError = true;
     } finally { this.importBusy = false; }
   }
@@ -206,10 +257,16 @@ export struct DataExchangePage {
           .fontColor($r('app.color.xq_font_primary')).width('100%')
         Text('默认只补历史账目，不改变当前账户余额。日期、类型、金额和分类必须匹配；账户可选。')
           .fontSize('12fp').lineHeight('18fp').fontColor($r('app.color.xq_font_secondary')).width('100%')
-        Button(this.importBusy ? '正在读取' : '选择 CSV 文件', { type: ButtonType.Capsule }).width('100%').height(46)
-          .fontSize('15fp').fontColor($r('app.color.xq_font_emphasize')).backgroundColor($r('app.color.xq_app_surface_page'))
-          .enabled(!this.loading && !this.busy && !this.importBusy)
-          .id('data-import-csv').onClick(() => { this.chooseImportCsv(); })
+        Row({ space: 10 }) {
+          Button(this.importBusy ? '正在读取' : '选择 CSV', { type: ButtonType.Capsule }).layoutWeight(1).height(46)
+            .fontSize('14fp').fontColor($r('app.color.xq_font_emphasize')).backgroundColor($r('app.color.xq_app_surface_page'))
+            .enabled(!this.loading && !this.busy && !this.importBusy)
+            .id('data-import-csv').onClick(() => { this.chooseImportCsv(); })
+          Button(this.importBusy ? '正在读取' : '选择 Excel', { type: ButtonType.Capsule }).layoutWeight(1).height(46)
+            .fontSize('14fp').fontColor($r('app.color.xq_font_emphasize')).backgroundColor($r('app.color.xq_app_surface_page'))
+            .enabled(!this.loading && !this.busy && !this.importBusy)
+            .id('data-import-xlsx').onClick(() => { this.chooseImportXlsx(); })
+        }.width('100%')
       }.padding(16).width('100%').borderRadius(16).backgroundColor($r('app.color.xq_app_surface_card'))
       if (this.importHeaders.length > 0) {
         Column({ space: 10 }) {
@@ -327,6 +384,10 @@ export struct DataExchangePage {
               .fontSize('16fp').fontColor(Color.White).backgroundColor($r('app.color.xq_brand'))
               .enabled(!this.loading && !this.busy && (this.snapshot?.entries.length || 0) > 0)
               .id('data-export-csv').onClick(() => { this.exportCsv(); })
+            Button(this.busy ? '正在导出' : '导出 Excel', { type: ButtonType.Capsule }).width('100%').height(46)
+              .fontSize('15fp').fontColor($r('app.color.xq_font_emphasize')).backgroundColor($r('app.color.xq_app_surface_page'))
+              .enabled(!this.loading && !this.busy && (this.snapshot?.entries.length || 0) > 0)
+              .id('data-export-xlsx').onClick(() => { this.exportXlsx(); })
           }.padding(20).width('100%').borderRadius(20).backgroundColor($r('app.color.xq_app_surface_card'))
           Column({ space: 8 }) {
             Text('导出字段').fontSize('16fp').fontWeight(FontWeight.Medium)

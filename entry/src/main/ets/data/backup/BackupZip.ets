@@ -10,7 +10,14 @@ export class BackupZip {
   static validPath(path: string): boolean {
     return path === 'manifest.json' || path === 'ledger.db' || /^assets\/(images|icons)\/[a-f0-9]{64}\.(png|jpg|webp|svg)$/.test(path);
   }
-  static decode(data: ArrayBuffer): ZipFile[] {
+  static validOfficePath(path: string): boolean {
+    return path.length > 0 && path.length <= 240 && !path.startsWith('/') && !path.includes('..') &&
+      !path.includes('\\') && (path === '[Content_Types].xml' || path.startsWith('_rels/') ||
+      path.startsWith('xl/') || path.startsWith('docProps/'));
+  }
+  static decode(data: ArrayBuffer): ZipFile[] { return BackupZip.decodeInternal(data, false); }
+  static decodeOffice(data: ArrayBuffer): ZipFile[] { return BackupZip.decodeInternal(data, true); }
+  private static decodeInternal(data: ArrayBuffer, office: boolean): ZipFile[] {
     if (data.byteLength < 22 || data.byteLength > PACKAGE_MAX_BYTES) { throw new Error('PACKAGE_SIZE'); }
     const view = new DataView(data); const bytes = new Uint8Array(data); const end = data.byteLength - 22;
     if (view.getUint32(end, true) !== 0x06054b50 || view.getUint16(end + 20, true) !== 0 ||
@@ -31,7 +38,8 @@ export class BackupZip {
         cursor + 46 + length + extra + comment > end || extra !== 0 || comment !== 0 ||
         view.getUint16(cursor + 34, true) !== 0 || (mode !== 0 && mode !== 0x8000) || local !== localEnd || local + 30 > central) { throw new Error('PACKAGE_ZIP'); }
       const path = decoder.decodeToString(bytes.slice(cursor + 46, cursor + 46 + length));
-      if (!BackupZip.validPath(path) || paths.has(path) || view.getUint32(local, true) !== 0x04034b50 ||
+      if (!(office ? BackupZip.validOfficePath(path) : BackupZip.validPath(path)) || paths.has(path) ||
+        view.getUint32(local, true) !== 0x04034b50 ||
         view.getUint16(local + 6, true) !== flags || view.getUint16(local + 8, true) !== method ||
         view.getUint32(local + 14, true) !== crc || view.getUint32(local + 18, true) !== size ||
         view.getUint32(local + 22, true) !== size || view.getUint16(local + 26, true) !== length || view.getUint16(local + 28, true) !== 0) { throw new Error('PACKAGE_ZIP'); }
@@ -42,15 +50,22 @@ export class BackupZip {
       files.push({ path: path, data: content }); paths.add(path); localEnd = start + size;
       cursor += 46 + length;
     }
-    if (cursor !== end || localEnd !== central || !paths.has('manifest.json') || !paths.has('ledger.db')) { throw new Error('PACKAGE_ZIP'); }
+    if (cursor !== end || localEnd !== central) { throw new Error('PACKAGE_ZIP'); }
+    if (!office && (!paths.has('manifest.json') || !paths.has('ledger.db'))) { throw new Error('PACKAGE_ZIP'); }
     return files;
   }
   static async encode(directory: string, target: string, files: BackupFileInfo[]): Promise<void> {
+    await BackupZip.encodeInternal(directory, target, files, false);
+  }
+  static async encodeOffice(directory: string, target: string, files: BackupFileInfo[]): Promise<void> {
+    await BackupZip.encodeInternal(directory, target, files, true);
+  }
+  private static async encodeInternal(directory: string, target: string, files: BackupFileInfo[], office: boolean): Promise<void> {
     const output = await fs.open(target, fs.OpenMode.CREATE | fs.OpenMode.TRUNC | fs.OpenMode.WRITE_ONLY);
     const offsets: number[] = []; let offset = 0;
     try {
       for (const file of files) {
-        if (!BackupZip.validPath(file.path)) { throw new Error('PACKAGE_PATH'); }
+        if (!(office ? BackupZip.validOfficePath(file.path) : BackupZip.validPath(file.path))) { throw new Error('PACKAGE_PATH'); }
         const name = new util.TextEncoder().encodeInto(file.path);
         const header = new ArrayBuffer(30 + name.length); const view = new DataView(header);
         view.setUint32(0, 0x04034b50, true); view.setUint16(4, 20, true); view.setUint16(6, 0x800, true); view.setUint16(12, 33, true);
