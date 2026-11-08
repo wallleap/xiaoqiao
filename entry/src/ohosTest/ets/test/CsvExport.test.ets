@@ -37,6 +37,9 @@ export default function csvExportTest() {
       expect(csv.includes('"5.00"')).assertTrue();
       expect(csv.includes('"旅行|报销"')).assertTrue();
       expect(csv.split('\r\n').length).assertEqual(LEDGER_CSV_HEADERS.length === 0 ? 0 : 5);
+      const selectedCsv = exportLedgerCsv(snapshot, ['date', 'paid', 'tags']);
+      expect(selectedCsv.startsWith('\uFEFF"日期","实付金额","标签"')).assertTrue();
+      expect(selectedCsv.includes('"微信零钱"')).assertFalse();
     });
   });
 }

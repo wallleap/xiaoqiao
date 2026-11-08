@@ -3,7 +3,7 @@ import { picker } from '@kit.CoreFileKit';
 import { HdsNavigation, HdsNavigationTitleMode, hdsMaterial, DividerShowType, ScrollEffectType } from '@kit.UIDesignKit';
 import { LedgerWorkspace } from '../data/rdb/LedgerWorkspace';
 import { BackupFiles } from '../data/backup/BackupFiles';
-import { exportLedgerCsv } from '../data/exchange/LedgerCsvExport';
+import { exportLedgerCsv, LEDGER_EXPORT_COLUMNS, LedgerExportColumn } from '../data/exchange/LedgerCsvExport';
 import { LedgerXlsxExport } from '../data/exchange/LedgerXlsxExport';
 import { listXlsxSheets, readXlsxTable, XlsxSheetInfo } from '../data/exchange/LedgerXlsxImport';
 import { CsvColumnMapping, CsvPreviewRow, CsvTable, detectCsvMapping, parseCsv,
@@ -22,6 +22,7 @@ export struct DataExchangePage {
   @State private busy: boolean = false;
   @State private message: string = '';
   @State private error: boolean = false;
+  @State private selectedExportKeys: string[] = LEDGER_EXPORT_COLUMNS.map((column) => column.key);
   @State private importBusy: boolean = false;
   @State private importMessage: string = '';
   @State private importError: boolean = false;
@@ -79,7 +80,7 @@ export struct DataExchangePage {
       const pickerInstance = new picker.DocumentViewPicker(this.getUIContext().getHostContext() as common.UIAbilityContext);
       const destinations = await pickerInstance.save(options);
       if (destinations.length === 0) { return; }
-      await BackupFiles.writeText(destinations[0], exportLedgerCsv(this.snapshot));
+      await BackupFiles.writeText(destinations[0], exportLedgerCsv(this.snapshot, this.selectedExportKeys));
       this.message = `已导出 ${this.snapshot.entries.length} 笔账目`;
     } catch (_) {
       this.message = 'CSV 未能保存，请检查存储空间后重试';
@@ -100,7 +101,7 @@ export struct DataExchangePage {
       const destinations = await pickerInstance.save(options);
       if (destinations.length === 0) { return; }
       await LedgerXlsxExport.exportTo(destinations[0], this.snapshot,
-        this.getUIContext().getHostContext() as common.Context);
+        this.getUIContext().getHostContext() as common.Context, this.selectedExportKeys);
       this.message = `已导出 ${this.snapshot.entries.length} 笔账目`;
     } catch (_) {
       this.message = 'Excel 文件未能保存，请检查存储空间后重试';
@@ -138,6 +139,11 @@ export struct DataExchangePage {
       this.importMessage = 'CSV 无法读取，请检查文件编码、引号和表头';
       this.importError = true;
     } finally { this.importBusy = false; }
+  }
+
+  private toggleExportKey(key: string): void {
+    this.selectedExportKeys = this.selectedExportKeys.includes(key) ?
+      this.selectedExportKeys.filter((value: string) => value !== key) : [...this.selectedExportKeys, key];
   }
 
   private async chooseImportXlsx(): Promise<void> {
@@ -567,11 +573,13 @@ export struct DataExchangePage {
               .fontSize('14fp').fontColor($r('app.color.xq_font_primary')).width('100%')
             Button(this.busy ? '正在导出' : '导出 CSV', { type: ButtonType.Capsule }).width('100%').height(48)
               .fontSize('16fp').fontColor(Color.White).backgroundColor($r('app.color.xq_brand'))
-              .enabled(!this.loading && !this.busy && (this.snapshot?.entries.length || 0) > 0)
+              .enabled(!this.loading && !this.busy && (this.snapshot?.entries.length || 0) > 0 &&
+                this.selectedExportKeys.length > 0)
               .id('data-export-csv').onClick(() => { this.exportCsv(); })
             Button(this.busy ? '正在导出' : '导出 Excel', { type: ButtonType.Capsule }).width('100%').height(46)
               .fontSize('15fp').fontColor($r('app.color.xq_font_emphasize')).backgroundColor($r('app.color.xq_app_surface_page'))
-              .enabled(!this.loading && !this.busy && (this.snapshot?.entries.length || 0) > 0)
+              .enabled(!this.loading && !this.busy && (this.snapshot?.entries.length || 0) > 0 &&
+                this.selectedExportKeys.length > 0)
               .id('data-export-xlsx').onClick(() => { this.exportXlsx(); })
           }.padding(20).width('100%').borderRadius(20).backgroundColor($r('app.color.xq_app_surface_card'))
           Column({ space: 8 }) {
@@ -581,6 +589,17 @@ export struct DataExchangePage {
               .fontSize('13fp').lineHeight('20fp').fontColor($r('app.color.xq_font_secondary')).width('100%')
             Text('CSV 使用 UTF-8 BOM 和标准引号转义，可直接用常见表格软件打开。完整备份与图片资源仍使用“本地备份与恢复”。')
               .fontSize('12fp').lineHeight('18fp').fontColor($r('app.color.xq_font_tertiary')).width('100%')
+            Flex({ wrap: FlexWrap.Wrap }) {
+              ForEach(LEDGER_EXPORT_COLUMNS, (column: LedgerExportColumn) => {
+                Button(column.label, { type: ButtonType.Capsule }).height(32).fontSize('12fp')
+                  .fontColor(this.selectedExportKeys.includes(column.key) ?
+                    Color.White : $r('app.color.xq_font_primary'))
+                  .backgroundColor(this.selectedExportKeys.includes(column.key) ?
+                    $r('app.color.xq_brand') : $r('app.color.xq_app_surface_page'))
+                  .margin({ right: 6, bottom: 6 }).id('data-export-field-' + column.key)
+                  .onClick(() => { this.toggleExportKey(column.key); })
+              }, (column: LedgerExportColumn) => column.key)
+            }.width('100%')
           }.padding(16).width('100%').borderRadius(16).backgroundColor($r('app.color.xq_app_surface_card'))
           if (this.message.length > 0) {
             Text(this.message).fontSize('13fp').width('100%')

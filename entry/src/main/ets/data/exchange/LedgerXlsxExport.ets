@@ -3,7 +3,7 @@ import { util } from '@kit.ArkTS';
 import { LedgerSnapshot, SavedLedgerEntry } from '../../domain/model/LedgerSnapshot';
 import { BackupFileInfo, BackupFiles } from '../backup/BackupFiles';
 import { BackupZip } from '../backup/BackupZip';
-import { LEDGER_CSV_HEADERS } from './LedgerCsvExport';
+import { LEDGER_EXPORT_COLUMNS, ledgerExportValue } from './LedgerCsvExport';
 import { CurrencyUnit } from '../../core/money/CurrencyUnit';
 import { Money } from '../../core/money/Money';
 
@@ -21,30 +21,26 @@ function time(entry: SavedLedgerEntry): string {
   return String(local.getUTCHours()).padStart(2, '0') + ':' + String(local.getUTCMinutes()).padStart(2, '0');
 }
 
-function values(entry: SavedLedgerEntry): string[] {
-  return [entry.date, time(entry), entry.transfer ? '转账' : entry.income ? '收入' : '支出', entry.category,
-    entry.account, entry.toAccount || '', entry.note, 'CNY', decimal(entry.grossMinor), decimal(entry.discountMinor),
-    decimal(entry.minor), decimal(entry.transferFeeMinor || '0'), decimal(entry.transferCouponMinor || '0'),
-    (entry.tagNames || []).join('|'), entry.id];
-}
-
-function cell(value: string, column: number, row: number): string {
+function cell(value: string, column: number, row: number, numeric: boolean): string {
   const reference = String.fromCharCode(65 + column) + row;
-  if (column >= 8 && column <= 12) { return `<c r="${reference}"><v>${xml(value)}</v></c>`; }
+  if (numeric) { return `<c r="${reference}"><v>${xml(value)}</v></c>`; }
   return `<c r="${reference}" t="inlineStr"><is><t>${xml(value)}</t></is></c>`;
 }
 
-export function ledgerWorksheetXml(snapshot: LedgerSnapshot): string {
+export function ledgerWorksheetXml(snapshot: LedgerSnapshot,
+  selectedKeys: string[] = LEDGER_EXPORT_COLUMNS.map((column) => column.key)): string {
+  const columns = LEDGER_EXPORT_COLUMNS.filter((column) => selectedKeys.includes(column.key));
   const rows: string[] = [];
-  rows.push('<row r="1">' + LEDGER_CSV_HEADERS.map((value: string, index: number) =>
-    `<c r="${String.fromCharCode(65 + index)}1" t="inlineStr" s="1"><is><t>${xml(value)}</t></is></c>`).join('') + '</row>');
+  rows.push('<row r="1">' + columns.map((column, index: number) =>
+    `<c r="${String.fromCharCode(65 + index)}1" t="inlineStr" s="1"><is><t>${xml(column.label)}</t></is></c>`).join('') + '</row>');
   snapshot.entries.forEach((entry: SavedLedgerEntry, rowIndex: number) => {
-    rows.push(`<row r="${rowIndex + 2}">` + values(entry).map((value: string, column: number) =>
-      cell(value, column, rowIndex + 2)).join('') + '</row>');
+    rows.push(`<row r="${rowIndex + 2}">` + columns.map((column, index: number) =>
+      cell(ledgerExportValue(entry, column.key), index, rowIndex + 2,
+        ['gross', 'discount', 'paid', 'fee', 'coupon'].includes(column.key))).join('') + '</row>');
   });
   return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
     '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">' +
-    `<dimension ref="A1:O${snapshot.entries.length + 1}"/>` +
+    `<dimension ref="A1:${String.fromCharCode(64 + columns.length)}${snapshot.entries.length + 1}"/>` +
     '<sheetViews><sheetView workbookViewId="0"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews>' +
     '<cols><col min="1" max="15" width="18" customWidth="1"/><col min="7" max="7" width="32" customWidth="1"/></cols>' +
     '<sheetData>' + rows.join('') + '</sheetData></worksheet>';
@@ -82,7 +78,8 @@ const STYLES = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
   '</styleSheet>';
 
 export class LedgerXlsxExport {
-  static async exportTo(uri: string, snapshot: LedgerSnapshot, context: common.Context): Promise<void> {
+  static async exportTo(uri: string, snapshot: LedgerSnapshot, context: common.Context,
+    selectedKeys: string[] = LEDGER_EXPORT_COLUMNS.map((column) => column.key)): Promise<void> {
     const directory = context.cacheDir + '/xiaoqiao-xlsx-' + util.generateRandomUUID();
     const archive = directory + '.xlsx';
     try {
@@ -96,7 +93,7 @@ export class LedgerXlsxExport {
       await BackupFiles.writeText(directory + '/xl/workbook.xml', WORKBOOK);
       await BackupFiles.writeText(directory + '/xl/_rels/workbook.xml.rels', WORKBOOK_RELS);
       await BackupFiles.writeText(directory + '/xl/styles.xml', STYLES);
-      await BackupFiles.writeText(directory + '/xl/worksheets/sheet1.xml', ledgerWorksheetXml(snapshot));
+      await BackupFiles.writeText(directory + '/xl/worksheets/sheet1.xml', ledgerWorksheetXml(snapshot, selectedKeys));
       const infos: BackupFileInfo[] = [];
       for (const path of files) { infos.push(await BackupFiles.info(directory + '/' + path, path)); }
       await BackupZip.encodeOffice(directory, archive, infos);
