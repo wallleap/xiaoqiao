@@ -8,6 +8,7 @@ import { ExpenseUpdateRepository } from '../../domain/ports/ExpenseUpdateReposit
 import { IncomeRecord } from '../../domain/model/IncomeRecord';
 import { IncomeRepository } from '../../domain/ports/IncomeRepository';
 import { RdbSession } from './RdbSession';
+import { RdbAttachmentLinks } from './RdbAttachmentLinks';
 
 export class RdbLedgerRepository implements LedgerRepository, ExpenseUpdateRepository, IncomeRepository {
   private readonly session: RdbSession;
@@ -72,6 +73,7 @@ export class RdbLedgerRepository implements LedgerRepository, ExpenseUpdateRepos
         await store.insert('account_movements', movement);
       }
       await this.replaceTags(store, command.id, command.bookId, command.tagIds);
+      await RdbAttachmentLinks.replace(store, command.id, command.attachments);
       await store.executeSql("UPDATE transactions SET posting_state='posted' WHERE id=?", [command.id]);
     });
   }
@@ -151,6 +153,7 @@ export class RdbLedgerRepository implements LedgerRepository, ExpenseUpdateRepos
           delta_minor: (kind === 'income' ? 1 : -1) * command.accountPaid.toSafeMinorNumber(), occurred_at_ms: command.occurredAtMs });
       }
       await this.replaceTags(db, command.id, command.bookId, command.tagIds);
+      await RdbAttachmentLinks.replace(db, command.id, command.attachments);
       const published = await db.update({ posting_state: 'posted' }, new relationalStore.RdbPredicates('transactions')
         .equalTo('id', command.id).equalTo('revision', expectedRevision + 1).equalTo('posting_state', 'draft'));
       if (published !== 1) { throw new Error('TRANSACTION_CHANGED'); }

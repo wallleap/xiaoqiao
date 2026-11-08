@@ -30,6 +30,12 @@ export class LedgerResources {
     const data = new Uint8Array(await BackupFiles.read(file));
     if (LedgerResources.format(data) !== path.split('.').pop()) { throw new Error('RESOURCE_FORMAT'); }
   }
+  async remove(kind: string, relativePath: string): Promise<void> {
+    if ((kind !== 'images' && kind !== 'icons') || !relativePath.startsWith(kind + '/') ||
+      !LedgerResources.safe(relativePath)) { throw new Error('RESOURCE_PATH'); }
+    const path = this.root + '/' + relativePath;
+    if (await fs.access(path)) { await fs.unlink(path); }
+  }
   async put(kind: string, source: string): Promise<StoredLedgerResource> {
     if (kind !== 'images' && kind !== 'icons') { throw new Error('RESOURCE_KIND'); }
     const data = await BackupFiles.read(source);

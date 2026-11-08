@@ -1,4 +1,5 @@
 import { Money } from '../../core/money/Money';
+import { LedgerAttachmentDraft, validateAttachmentDrafts } from './LedgerAttachment';
 
 /** New manual expense. Imports use a separate batch command, not this entry point. */
 export interface ExpenseCommand {
@@ -14,6 +15,7 @@ export interface ExpenseCommand {
   readonly includeInBudget: boolean;
   readonly spendingNatureId?: string;
   readonly tagIds?: string[];
+  readonly attachments?: LedgerAttachmentDraft[];
   readonly note: string;
   readonly occurredAtMs: number;
   readonly localDate: string;
@@ -62,6 +64,7 @@ export class ExpenseRecord {
       throw new Error('INVALID_SPENDING_NATURE');
     }
     const tagIds = validateTagIds(command.tagIds);
+    const attachments = validateAttachmentDrafts(command.attachments);
     // P0 manual command intentionally handles only same-currency settlement.
     // Foreign-currency persistence requires explicit FX snapshot commands first.
     if (!this.paid.currency.matches(command.bookPaid.currency) || this.paid.minor !== command.bookPaid.minor ||
@@ -86,6 +89,7 @@ export class ExpenseRecord {
       includeInAssets: command.includeInAssets, includeInBudget: command.includeInBudget,
       spendingNatureId: command.spendingNatureId,
       tagIds: tagIds,
+      attachments: attachments,
       note: command.note, occurredAtMs: command.occurredAtMs, localDate: command.localDate,
       timezone: command.timezone, offsetMinutes: command.offsetMinutes
     };

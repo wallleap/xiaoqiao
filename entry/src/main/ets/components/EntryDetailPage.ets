@@ -5,6 +5,7 @@ import { TagChoice } from '../domain/model/LedgerSnapshot';
 import { Money } from '../core/money/Money';
 import { CurrencyUnit } from '../core/money/CurrencyUnit';
 import { categoryIcon } from '../presentation/ledger/CategoryIcons';
+import { LedgerAttachment } from '../domain/model/LedgerAttachment';
 
 @Component
 export struct EntryDetailPage {
@@ -16,6 +17,8 @@ export struct EntryDetailPage {
   onEdit: () => void = () => {};
   onDelete: () => void = () => {};
   onRetry: () => void = () => {};
+  @State private showAttachmentPreview: boolean = false;
+  @State private previewAttachment: LedgerAttachment | undefined = undefined;
   private readonly scroller: Scroller = new Scroller();
 
   private amount(minor: string): string {
@@ -51,6 +54,55 @@ export struct EntryDetailPage {
         .fontColor($r('app.color.xq_font_primary')).textAlign(TextAlign.End).maxLines(3).constraintSize({ maxWidth: '68%' })
         .id(outgoing ? 'entry-detail-from-account' : 'entry-detail-to-account')
     }.width('100%').padding({ top: 9, bottom: 9 })
+  }
+
+  @Builder
+  private attachmentGallery() {
+    if ((this.entry?.attachments || []).length > 0) {
+      Column({ space: 10 }) {
+        Row() {
+          Text('图片附件').fontSize('14fp').fontColor($r('app.color.xq_font_secondary'))
+          Blank()
+          Text(`${(this.entry?.attachments || []).length} 张`).fontSize('12fp')
+            .fontColor($r('app.color.xq_font_tertiary'))
+        }.width('100%')
+        Scroll() {
+          Row({ space: 10 }) {
+            ForEach(this.entry?.attachments || [], (attachment: LedgerAttachment) => {
+              Image('file://' + attachment.filePath).width(88).height(88).borderRadius(12).objectFit(ImageFit.Cover)
+                .backgroundColor($r('app.color.xq_app_surface_page'))
+                .id('entry-attachment-' + attachment.id)
+                .onClick(() => {
+                  this.previewAttachment = attachment;
+                  this.showAttachmentPreview = true;
+                })
+            }, (attachment: LedgerAttachment) => attachment.id)
+          }
+        }.width('100%').scrollable(ScrollDirection.Horizontal).scrollBar(BarState.Off)
+          .edgeEffect(EdgeEffect.Spring).id('entry-detail-attachments')
+      }.width('100%').padding({ top: 12, bottom: 12 })
+    }
+  }
+
+  @Builder
+  private attachmentPreview() {
+    Column({ space: 16 }) {
+      Row() {
+        Text('图片附件').fontSize('20fp').fontWeight(FontWeight.Bold)
+          .fontColor($r('app.color.xq_font_primary'))
+        Blank()
+        Button({ type: ButtonType.Circle }) {
+          Image($r('app.media.lucide_x1')).width(20).height(20)
+            .fillColor($r('app.color.xq_icon_primary'))
+        }.width(40).height(40).padding(0).backgroundColor($r('app.color.xq_app_surface_page'))
+          .onClick(() => { this.showAttachmentPreview = false; })
+      }.width('100%')
+      if (this.previewAttachment !== undefined) {
+        Image('file://' + this.previewAttachment.filePath).width('100%').layoutWeight(1)
+          .objectFit(ImageFit.Contain).backgroundColor($r('app.color.xq_app_surface_page'))
+          .borderRadius(16).id('entry-attachment-preview-image')
+      }
+    }.width('100%').height('100%').padding(24)
   }
 
   @Builder
@@ -121,6 +173,7 @@ export struct EntryDetailPage {
         }
         if ((this.entry.merchantName || '').length > 0) { this.field('商户', this.entry.merchantName || '') }
         if ((this.entry.addressText || '').length > 0) { this.field('地址', this.entry.addressText || '') }
+        this.attachmentGallery()
         if (this.entry.balanceMode === 'preserve') {
           Text('历史导入账目，不改变账户余额').fontSize('12fp').fontColor($r('app.color.xq_font_secondary'))
             .width('100%').padding({ top: 8, bottom: 12 })
@@ -175,6 +228,8 @@ export struct EntryDetailPage {
           originalStyle: { contentStyle: { titleStyle: { mainTitleColor: $r('app.color.xq_font_primary') }, backIconStyle: { iconColor: $r('app.color.xq_icon_primary') } } },
           scrollEffectStyle: { contentStyle: { titleStyle: { mainTitleColor: $r('app.color.xq_font_primary') }, backIconStyle: { iconColor: $r('app.color.xq_icon_primary') } } } } })
       .bindToScrollable([this.scroller]).backgroundColor($r('app.color.xq_app_surface_page'))
+      .bindSheet($$this.showAttachmentPreview, this.attachmentPreview(),
+        { height: '88%', showClose: false, backgroundColor: $r('app.color.xq_app_surface_card') })
       .ignoreLayoutSafeArea([LayoutSafeAreaType.SYSTEM], [LayoutSafeAreaEdge.TOP])
       .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM]).id('entry-detail-page')
   }

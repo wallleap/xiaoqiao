@@ -6,6 +6,7 @@ import { BackupFiles } from '../data/backup/BackupFiles';
 import { exportLedgerCsv, filterLedgerEntries, LEDGER_EXPORT_COLUMNS,
   LedgerExportColumn } from '../data/exchange/LedgerCsvExport';
 import { LedgerXlsxExport } from '../data/exchange/LedgerXlsxExport';
+import { LedgerAttachmentZipExport } from '../data/exchange/LedgerAttachmentZipExport';
 import { listXlsxSheets, readXlsxRows, XlsxSheetInfo } from '../data/exchange/LedgerXlsxImport';
 import { CsvColumnMapping, CsvPreviewRow, detectCsvDelimiter, detectCsvMapping,
   detectHeaderRowIndex, parseCsvRows, previewCsv, readDelimitedText, tableFromRows } from '../data/exchange/LedgerCsvImport';
@@ -237,6 +238,35 @@ export struct DataExchangePage {
       this.message = 'Excel 文件未能保存，请检查存储空间后重试';
       this.error = true;
     } finally { this.busy = false; }
+  }
+
+  private async exportAttachmentZip(): Promise<void> {
+    const exportSnapshot = this.exportSnapshot;
+    const workspace = this.workspace;
+    if (this.busy || exportSnapshot === undefined || workspace === undefined) { return; }
+    this.busy = true;
+    this.message = '';
+    this.error = false;
+    try {
+      const options = new picker.DocumentSaveOptions();
+      const safeBook = (exportSnapshot.bookName || '账本').replace(/[\\/:*?"<>|]/g, '_');
+      options.newFileNames = [`${safeBook}-${this.exportStartDate}-${this.exportEndDate}-含图片.zip`];
+      const pickerInstance = new picker.DocumentViewPicker(this.getUIContext().getHostContext() as common.UIAbilityContext);
+      const destinations = await pickerInstance.save(options);
+      if (destinations.length === 0) { return; }
+      await LedgerAttachmentZipExport.exportTo(destinations[0], exportSnapshot,
+        exportLedgerCsv(exportSnapshot, this.selectedExportKeys), workspace.backup.resources.root,
+        this.getUIContext().getHostContext() as common.Context);
+      this.message = `已导出 ${exportSnapshot.entries.length} 笔账目及 ${this.exportAttachmentCount()} 张图片`;
+    } catch (_) {
+      this.message = '附件 ZIP 未能保存，请检查图片资源后重试';
+      this.error = true;
+    } finally { this.busy = false; }
+  }
+
+  private exportAttachmentCount(): number {
+    return (this.exportSnapshot?.entries || []).reduce((count: number, entry: SavedLedgerEntry) =>
+      count + (entry.attachments || []).length, 0);
   }
 
   private applyImportRows(rawRows: string[][], headerIndex: number, delimiter: string,
@@ -1113,13 +1143,19 @@ export struct DataExchangePage {
               .enabled(!this.loading && !this.busy && (this.exportSnapshot?.entries.length || 0) > 0 &&
                 this.selectedExportKeys.length > 0)
               .id('data-export-xlsx').onClick(() => { this.exportXlsx(); })
+            Button(this.busy ? '正在导出' : `导出含图片 ZIP（${this.exportAttachmentCount()}）`,
+              { type: ButtonType.Capsule }).width('100%').height(46)
+              .fontSize('15fp').fontColor($r('app.color.xq_font_emphasize')).backgroundColor($r('app.color.xq_app_surface_page'))
+              .enabled(!this.loading && !this.busy && this.exportAttachmentCount() > 0 &&
+                this.selectedExportKeys.length > 0)
+              .id('data-export-attachment-zip').onClick(() => { this.exportAttachmentZip(); })
           }.padding(20).width('100%').borderRadius(20).backgroundColor($r('app.color.xq_app_surface_card'))
           Column({ space: 8 }) {
             Text('导出字段').fontSize('16fp').fontWeight(FontWeight.Medium)
               .fontColor($r('app.color.xq_font_primary')).width('100%')
             Text('日期、时间、类型、分类、账户、转入账户、备注、商户、地址、币种、金额、转账、标签和账目 ID。')
               .fontSize('13fp').lineHeight('20fp').fontColor($r('app.color.xq_font_secondary')).width('100%')
-            Text('CSV 使用 UTF-8 BOM 和标准引号转义，可直接用常见表格软件打开。完整备份与图片资源仍使用“本地备份与恢复”。')
+            Text('CSV 使用 UTF-8 BOM 和标准引号转义。“导出含图片 ZIP”会附带当前筛选范围的图片；完整恢复仍使用本地或 WebDAV 备份。')
               .fontSize('12fp').lineHeight('18fp').fontColor($r('app.color.xq_font_tertiary')).width('100%')
             Flex({ wrap: FlexWrap.Wrap }) {
               ForEach(LEDGER_EXPORT_COLUMNS, (column: LedgerExportColumn) => {

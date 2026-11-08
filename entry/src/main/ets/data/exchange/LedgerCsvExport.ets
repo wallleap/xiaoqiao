@@ -12,7 +12,8 @@ export const LEDGER_EXPORT_COLUMNS: LedgerExportColumn[] = [
   { key: 'currency', label: '币种' }, { key: 'gross', label: '原金额' },
   { key: 'discount', label: '优惠' }, { key: 'paid', label: '实付金额' }, { key: 'fee', label: '转账手续费' },
   { key: 'coupon', label: '转账优惠' }, { key: 'transferPurpose', label: '转账用途' },
-  { key: 'feeBudget', label: '手续费计入预算' }, { key: 'tags', label: '标签' }, { key: 'id', label: '账目ID' }
+  { key: 'feeBudget', label: '手续费计入预算' }, { key: 'tags', label: '标签' },
+  { key: 'attachments', label: '附件数' }, { key: 'id', label: '账目ID' }
 ];
 export const LEDGER_CSV_HEADERS: string[] = LEDGER_EXPORT_COLUMNS.map((column) => column.label);
 
@@ -49,6 +50,7 @@ export function ledgerExportValue(entry: SavedLedgerEntry, key: string): string 
     case 'transferPurpose': return entry.transfer ? transferPurposeLabel(entry.transferPurpose || 'transfer') : '';
     case 'feeBudget': return entry.transfer ? (entry.feeInBudget === false ? '否' : '是') : '';
     case 'tags': return (entry.tagNames || []).join('|');
+    case 'attachments': return String((entry.attachments || []).length);
     case 'id': return entry.id;
     default: return '';
   }

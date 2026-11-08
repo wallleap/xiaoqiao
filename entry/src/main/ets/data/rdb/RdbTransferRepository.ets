@@ -3,6 +3,7 @@ import { util } from '@kit.ArkTS';
 import { TransferRecord } from '../../domain/model/TransferRecord';
 import { TransferRepository } from '../../domain/ports/TransferRepository';
 import { RdbSession } from './RdbSession';
+import { RdbAttachmentLinks } from './RdbAttachmentLinks';
 
 export class RdbTransferRepository implements TransferRepository {
   private readonly session: RdbSession;
@@ -83,6 +84,7 @@ export class RdbTransferRepository implements TransferRepository {
       await db.insert('account_movements', { id: util.generateRandomUUID(), transaction_id: command.id,
         account_id: command.toAccountId, currency_id: 'CNY', leg: 'transfer_in', delta_minor: minor, occurred_at_ms: command.occurredAtMs });
       await this.replaceTags(db, command.id, command.bookId, command.tagIds);
+      await RdbAttachmentLinks.replace(db, command.id, command.attachments);
       const published = await db.update({ posting_state: 'posted' }, new relationalStore.RdbPredicates('transactions')
         .equalTo('id', command.id).equalTo('posting_state', 'draft'));
       if (published !== 1) { throw new Error('TRANSACTION_CHANGED'); }

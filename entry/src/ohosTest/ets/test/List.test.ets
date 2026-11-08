@@ -28,6 +28,7 @@ import csvExportTest from './CsvExport.test';
 import dataExchangeFlowTest from './DataExchangeFlow';
 import csvImportTest from './CsvImport.test';
 import xlsxExportTest from './XlsxExport.test';
+import attachmentsTest from './Attachments.test';
 
 export default function testsuite() {
   abilityTest();
@@ -58,5 +59,6 @@ export default function testsuite() {
   dataExchangeFlowTest();
   csvImportTest();
   xlsxExportTest();
+  attachmentsTest();
   if (abilityDelegatorRegistry.getArguments().parameters['-s class'] === 'WebDavHttp') { webDavHttpTest(); }
 }

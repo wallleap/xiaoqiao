@@ -1,4 +1,6 @@
 import { HdsNavigation, HdsNavigationTitleMode, DividerShowType, hdsMaterial } from '@kit.UIDesignKit';
+import { common } from '@kit.AbilityKit';
+import { picker } from '@kit.CoreFileKit';
 import { FrameCallback, KeyboardAvoidMode, ChipGroup, ChipSize, curves } from '@kit.ArkUI';
 import { util } from '@kit.ArkTS';
 import { CurrencyUnit } from '../core/money/CurrencyUnit';
@@ -14,6 +16,7 @@ import { AmountKeyboard } from './AmountKeyboard';
 import { categoryIcon } from '../presentation/ledger/CategoryIcons';
 import { spendingNatureBackground, spendingNatureText } from '../presentation/ledger/SpendingNatureStyles';
 import { tagBackground, tagTextColor } from '../presentation/ledger/TagStyles';
+import { LedgerAttachment, LedgerAttachmentDraft } from '../domain/model/LedgerAttachment';
 
 class AmountFocusFrame extends FrameCallback {
   private readonly action: () => void;
@@ -22,7 +25,12 @@ class AmountFocusFrame extends FrameCallback {
   onIdle(_time: number): void {}
 }
 
-enum ExpenseErrorField { Amount, Discount, Fee, Coupon, Category, Accounts, Save }
+interface ExpenseImageAttachment extends LedgerAttachmentDraft {
+  filePath: string;
+  persisted: boolean;
+}
+
+enum ExpenseErrorField { Amount, Discount, Fee, Coupon, Category, Accounts, Attachments, Save }
 
 @Component
 export struct ExpenseEditor {
@@ -55,6 +63,8 @@ export struct ExpenseEditor {
   @State private amountFocusHighlight: boolean = false;
   private amountFocusTimer: number = -1;
   @State private note: string = '';
+  @State private attachments: ExpenseImageAttachment[] = [];
+  @State private attachmentBusy: boolean = false;
   @State private selectedId: string = '';
   @State private selectedNatureId: string = '';
   @State private selectedTagIds: string[] = [];
@@ -106,6 +116,9 @@ export struct ExpenseEditor {
       this.selectedTagIds = (entry.tags || []).map((tag: TagChoice) => tag.id);
       this.includeAssets = entry.includeInAssets; this.includeBudget = entry.includeInBudget;
       this.occurredAtMs = entry.occurredAtMs; this.note = entry.note;
+      this.attachments = (entry.attachments || []).map((attachment: LedgerAttachment): ExpenseImageAttachment => ({
+        relativePath: attachment.relativePath, sha256: attachment.sha256, bytes: attachment.bytes,
+        mimeType: attachment.mimeType, filePath: attachment.filePath, persisted: true }));
     }
     this.occurredAtLabel = this.dateLabel();
     this.active = true;
@@ -119,6 +132,7 @@ export struct ExpenseEditor {
     clearTimeout(this.amountFocusTimer);
     this.amountController.stopEditing();
     this.getUIContext().setKeyboardAvoidMode(this.previousAvoidMode);
+    if (!this.saved) { this.discardPendingAttachments(); }
   }
 
   private focusAmount(): void {
@@ -174,6 +188,59 @@ export struct ExpenseEditor {
       this.selectedTagIds = this.selectedTagIds.filter((value: string) => value !== id);
     } else if (this.selectedTagIds.length < 20) {
       this.selectedTagIds = [...this.selectedTagIds, id];
+    }
+  }
+
+  private attachmentDrafts(): LedgerAttachmentDraft[] {
+    return this.attachments.map((attachment: ExpenseImageAttachment): LedgerAttachmentDraft => ({
+      relativePath: attachment.relativePath, sha256: attachment.sha256,
+      bytes: attachment.bytes, mimeType: attachment.mimeType }));
+  }
+
+  private async chooseImages(): Promise<void> {
+    const workspace = this.workspace;
+    if (workspace === undefined || this.attachmentBusy || this.saving || this.saved || this.conflicted ||
+      this.attachments.length >= 9) { return; }
+    this.amountController.stopEditing();
+    this.attachmentBusy = true;
+    this.clearFieldError(ExpenseErrorField.Attachments);
+    try {
+      const options = new picker.DocumentSelectOptions();
+      options.maxSelectNumber = 9 - this.attachments.length;
+      options.fileSuffixFilters = ['图片|.png,.jpg,.jpeg,.webp'];
+      const view = new picker.DocumentViewPicker(this.getUIContext().getHostContext() as common.UIAbilityContext);
+      const sources = await view.select(options);
+      let next = [...this.attachments];
+      for (const source of sources) {
+        const draft = await workspace.saveImageAttachment(source);
+        if (next.some((attachment: ExpenseImageAttachment) => attachment.sha256 === draft.sha256)) { continue; }
+        next.push({ relativePath: draft.relativePath, sha256: draft.sha256, bytes: draft.bytes,
+          mimeType: draft.mimeType, filePath: workspace.backup.resources.root + '/' + draft.relativePath,
+          persisted: false });
+        if (next.length >= 9) { break; }
+      }
+      this.attachments = next;
+    } catch (_) {
+      this.showError(ExpenseErrorField.Attachments, '图片无法读取，请选择 PNG、JPG 或 WebP 图片');
+    } finally { this.attachmentBusy = false; }
+  }
+
+  private removeAttachment(sha256: string): void {
+    if (this.saving || this.saved || this.conflicted) { return; }
+    const removed = this.attachments.find((attachment: ExpenseImageAttachment) => attachment.sha256 === sha256);
+    this.attachments = this.attachments.filter((attachment: ExpenseImageAttachment) => attachment.sha256 !== sha256);
+    if (removed !== undefined && !removed.persisted && this.workspace !== undefined) {
+      this.workspace.discardUnpersistedImage(removed).catch(() => {});
+    }
+    this.clearFieldError(ExpenseErrorField.Attachments);
+  }
+
+  private async discardPendingAttachments(): Promise<void> {
+    const workspace = this.workspace;
+    if (workspace === undefined) { return; }
+    for (const attachment of this.attachments) {
+      if (attachment.persisted) { continue; }
+      try { await workspace.discardUnpersistedImage(attachment); } catch (_) { /* Best-effort orphan cleanup. */ }
     }
   }
 
@@ -361,6 +428,7 @@ export struct ExpenseEditor {
         includeInAssets: this.includeAssets, includeInBudget: !this.isIncome && !this.isTransfer && this.includeBudget,
         spendingNatureId: !this.isIncome && !this.isTransfer && this.selectedNatureId.length > 0 ? this.selectedNatureId : undefined,
         tagIds: this.selectedTagIds,
+        attachments: this.attachmentDrafts(),
         note: this.note.trim(),
         occurredAtMs: new Date(this.occurredAtMs).getTime(), localDate: this.localDate(),
         timezone: this.editingEntry !== undefined && !this.dateEdited ? this.editingEntry.timezone : Intl.DateTimeFormat().resolvedOptions().timeZone,
@@ -376,7 +444,7 @@ export struct ExpenseEditor {
           toAccountId: this.toAccountId, amount: command.gross, purpose: this.transferPurpose,
           fee: ExpenseAmountInput.evaluateDiscount(this.transferFee, this.currency),
           coupon: ExpenseAmountInput.evaluateDiscount(this.transferCoupon, this.currency), feeInBudget: this.feeBudget, includeInAssets: command.includeInAssets,
-          tagIds: this.selectedTagIds,
+          tagIds: this.selectedTagIds, attachments: command.attachments,
           note: command.note, occurredAtMs: command.occurredAtMs, localDate: command.localDate,
           timezone: command.timezone, offsetMinutes: command.offsetMinutes };
         if (this.editingEntry !== undefined) { await workspace.updateTransfer(transfer, this.editingEntry.revision); }
@@ -384,7 +452,8 @@ export struct ExpenseEditor {
       } else if (this.isIncome) {
         const income: IncomeCommand = { id: command.id, bookId: command.bookId, categoryId: command.categoryId,
           amount: command.gross, bookAmount: command.bookPaid, accountId: command.accountId, accountAmount: command.accountPaid,
-          includeInAssets: command.includeInAssets, tagIds: this.selectedTagIds, note: command.note, occurredAtMs: command.occurredAtMs,
+          includeInAssets: command.includeInAssets, tagIds: this.selectedTagIds,
+          attachments: command.attachments, note: command.note, occurredAtMs: command.occurredAtMs,
           localDate: command.localDate, timezone: command.timezone, offsetMinutes: command.offsetMinutes };
         if (this.editingEntry !== undefined) { await workspace.updateIncome(income, this.editingEntry.revision); }
         else { await workspace.saveIncome(income); }
@@ -649,6 +718,51 @@ export struct ExpenseEditor {
   }
 
   @Builder
+  private attachmentSection() {
+    Column({ space: 10 }) {
+      Row() {
+        Column({ space: 2 }) {
+          Text('图片附件').fontSize('14fp').fontWeight(FontWeight.Medium)
+            .fontColor($r('app.color.xq_font_primary'))
+          Text(`${this.attachments.length} / 9 · 会随完整备份一起保留`).fontSize('11fp')
+            .fontColor($r('app.color.xq_font_secondary'))
+        }.alignItems(HorizontalAlign.Start)
+        Blank()
+        Button({ type: ButtonType.Capsule }) {
+          Row({ space: 6 }) {
+            Image($r('app.media.lucide_image_plus1')).width(16).height(16)
+              .fillColor($r('app.color.xq_font_emphasize'))
+            Text(this.attachmentBusy ? '读取中' : '添加图片').fontSize('12fp')
+              .fontColor($r('app.color.xq_font_emphasize'))
+          }
+        }.height(34).padding({ left: 12, right: 12 })
+          .backgroundColor($r('app.color.xq_comp_emphasize_tertiary'))
+          .enabled(!this.attachmentBusy && !this.saving && !this.saved && !this.conflicted && this.attachments.length < 9)
+          .id('expense-attachment-add').onClick(() => { this.chooseImages(); })
+      }.width('100%')
+      if (this.attachments.length > 0) {
+        Scroll() {
+          Row({ space: 10 }) {
+            ForEach(this.attachments, (attachment: ExpenseImageAttachment) => {
+              Stack({ alignContent: Alignment.TopEnd }) {
+                Image('file://' + attachment.filePath).width(76).height(76).borderRadius(12)
+                  .objectFit(ImageFit.Cover).backgroundColor($r('app.color.xq_app_surface_page'))
+                Button({ type: ButtonType.Circle }) {
+                  Image($r('app.media.lucide_x1')).width(13).height(13).fillColor(Color.White)
+                }.width(24).height(24).padding(0).backgroundColor('#99000000')
+                  .onClick(() => { this.removeAttachment(attachment.sha256); })
+              }.width(76).height(76)
+            }, (attachment: ExpenseImageAttachment) => attachment.sha256)
+          }.padding({ right: 8 })
+        }.width('100%').scrollable(ScrollDirection.Horizontal).scrollBar(BarState.Off)
+          .edgeEffect(EdgeEffect.Spring).id('expense-attachment-list')
+      }
+      if (this.errorText.length > 0 && this.errorField === ExpenseErrorField.Attachments) { this.errorMessage() }
+    }.padding(16).width('100%').borderRadius(16).backgroundColor($r('app.color.xq_app_surface_card'))
+      .id('expense-attachment-card')
+  }
+
+  @Builder
   private form() {
     Column({ space: 12 }) {
       if (this.isTransfer) {
@@ -715,6 +829,7 @@ export struct ExpenseEditor {
           .onChange((value: string) => { this.note = value; })
           .onSubmit(() => { this.focusAmountAfterFrame(); })
       }.padding({ left: 16, right: 16 }).width('100%').borderRadius(16).backgroundColor($r('app.color.xq_app_surface_card'))
+      this.attachmentSection()
       this.tagSelector()
       if (!this.isIncome && !this.isTransfer) { this.spendingNatureSelector() }
       if (this.isTransfer) {

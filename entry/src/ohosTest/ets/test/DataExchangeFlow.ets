@@ -58,6 +58,7 @@ export default function dataExchangeFlowTest() {
       await driver.waitForComponent(ON.id('data-export-account'), 5000);
       await driver.waitForComponent(ON.text('共 1 笔账目'), 5000);
       await driver.waitForComponent(ON.id('data-export-csv').enabled(true), 5000);
+      await driver.waitForComponent(ON.id('data-export-attachment-zip').enabled(false), 5000);
       await (await driver.findComponent(ON.id('data-export-kind-income'))).click();
       await driver.waitForComponent(ON.text('共 0 笔账目'), 5000);
       await driver.waitForComponent(ON.id('data-export-csv').enabled(false), 5000);

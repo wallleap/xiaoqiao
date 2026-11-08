@@ -1,4 +1,5 @@
 import { TagChoice } from './LedgerSnapshot';
+import { LedgerAttachment } from './LedgerAttachment';
 
 /** Saved record snapshot used by receipt and edit screens; all money remains integer text. */
 export interface EntryDetail {
@@ -15,6 +16,7 @@ export interface EntryDetail {
   spendingNatureName?: string;
   spendingNatureColor?: string;
   tags?: TagChoice[];
+  attachments?: LedgerAttachment[];
   merchantName?: string;
   addressText?: string;
   accountId: string;

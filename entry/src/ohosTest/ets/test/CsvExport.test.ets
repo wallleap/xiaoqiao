@@ -16,7 +16,9 @@ export default function csvExportTest() {
             account: '微信零钱', date: '2026-11-08', occurredAtMs: new Date(2026, 10, 8, 12, 30).getTime(),
             offsetMinutes: -new Date(2026, 10, 8, 12, 30).getTimezoneOffset(), income: false,
             minor: '2800', grossMinor: '3000', discountMinor: '200',
-            tagIds: ['tag-travel'], tagNames: ['旅行', '报销'], merchant: '咖啡店', address: '人民路 2 号' },
+            tagIds: ['tag-travel'], tagNames: ['旅行', '报销'], merchant: '咖啡店', address: '人民路 2 号',
+            attachments: [{ relativePath: 'images/' + 'a'.repeat(64) + '.png',
+              sha256: 'a'.repeat(64), bytes: 68, mimeType: 'image/png' }] },
           { id: 'income-csv', note: '工资', category: '工资', iconKey: 'salary',
             account: '日常储蓄卡', date: '2026-11-05', occurredAtMs: new Date(2026, 10, 5, 9, 0).getTime(),
             offsetMinutes: -new Date(2026, 10, 5, 9, 0).getTimezoneOffset(), income: true,
@@ -40,6 +42,8 @@ export default function csvExportTest() {
       expect(csv.includes('"5.00"')).assertTrue();
       expect(csv.includes('"旅行|报销"')).assertTrue();
       expect(csv.includes('"咖啡店"')).assertTrue();
+      expect(LEDGER_CSV_HEADERS.includes('附件数')).assertTrue();
+      expect(csv.includes('"1"')).assertTrue();
       expect(csv.includes('"信用卡还款"')).assertTrue();
       expect(csv.includes('"否"')).assertTrue();
       expect(csv.split('\r\n').length).assertEqual(LEDGER_CSV_HEADERS.length === 0 ? 0 : 5);

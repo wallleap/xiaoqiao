@@ -1,4 +1,5 @@
 import { LedgerBackupPackage } from '../backup/LedgerBackupPackage';
+import { LedgerResources } from '../backup/LedgerResources';
 import { AccountCalibrationCommand, AdjustmentCursor, AdjustmentPage } from '../../domain/model/AccountCalibration';
 import { common } from '@kit.AbilityKit';
 import { relationalStore } from '@kit.ArkData';
@@ -33,6 +34,9 @@ import { CsvPreviewRow } from '../exchange/LedgerCsvImport';
 import { CsvColumnMapping } from '../exchange/LedgerCsvImport';
 import { CsvImportMetadata, ImportBatchRowDetail, ImportBatchSummary, ImportProfile,
   ImportProfileOptions } from '../exchange/ImportProfile';
+import { LedgerAttachment, LedgerAttachmentDraft } from '../../domain/model/LedgerAttachment';
+import { RdbAttachmentLinks } from './RdbAttachmentLinks';
+import { BackupFiles } from '../backup/BackupFiles';
 
 interface StoredImportParseOptions {
   headerRow: number;
@@ -100,7 +104,10 @@ export class LedgerWorkspace {
     }
   }
 
-  async saveExpense(command: ExpenseCommand): Promise<void> { await this.writer.execute(command); }
+  async saveExpense(command: ExpenseCommand): Promise<void> {
+    await this.validateAttachmentFiles(command.attachments);
+    await this.writer.execute(command);
+  }
 
   bookId(): string { return this.activeBookId; }
 
@@ -512,6 +519,32 @@ export class LedgerWorkspace {
       } finally { rows.close(); }
       return values;
     });
+  }
+
+  async saveImageAttachment(uri: string): Promise<LedgerAttachmentDraft> {
+    const stored = await this.backup.resources.put('images', uri);
+    return { relativePath: stored.relativePath, sha256: stored.sha256, bytes: stored.bytes,
+      mimeType: stored.mimeType };
+  }
+
+  async discardUnpersistedImage(attachment: LedgerAttachmentDraft): Promise<void> {
+    const referenced = await this.session.read(async (db: relationalStore.RdbStore): Promise<boolean> => {
+      const rows = await db.querySql("SELECT COUNT(*) FROM attachments WHERE content_sha256=? AND state='ready' AND deleted_at_ms IS NULL",
+        [attachment.sha256]);
+      try { return rows.goToFirstRow() && rows.getLong(0) > 0; } finally { rows.close(); }
+    });
+    if (!referenced) { await this.backup.resources.remove('images', attachment.relativePath); }
+  }
+
+  private async validateAttachmentFiles(attachments: LedgerAttachmentDraft[] | undefined): Promise<void> {
+    for (const attachment of attachments || []) {
+      const path = this.backup.resources.root + '/' + attachment.relativePath;
+      await LedgerResources.validate(attachment.relativePath, path);
+      const info = await BackupFiles.info(path, attachment.relativePath);
+      if (info.sha256 !== attachment.sha256 || info.bytes !== attachment.bytes) {
+        throw new Error('ATTACHMENT_RESOURCE_MISMATCH');
+      }
+    }
   }
 
   async importProfiles(): Promise<ImportProfile[]> {
@@ -959,6 +992,7 @@ export class LedgerWorkspace {
   }
 
   async updateExpense(command: ExpenseCommand, expectedRevision: number): Promise<void> {
+    await this.validateAttachmentFiles(command.attachments);
     await this.updater.execute(command, expectedRevision);
   }
 
@@ -969,11 +1003,23 @@ export class LedgerWorkspace {
   async updateAccount(command: AccountCommand, revision: number): Promise<void> { await this.accountRepository.update(command, revision); }
   async archiveAccount(id: string, revision: number, archived: boolean): Promise<void> { await this.accountRepository.archive(id, revision, archived); }
 
-  async saveTransfer(command: TransferCommand): Promise<void> { await this.transfer.save(command); }
-  async updateTransfer(command: TransferCommand, revision: number): Promise<void> { await this.transfer.update(command, revision); }
+  async saveTransfer(command: TransferCommand): Promise<void> {
+    await this.validateAttachmentFiles(command.attachments);
+    await this.transfer.save(command);
+  }
+  async updateTransfer(command: TransferCommand, revision: number): Promise<void> {
+    await this.validateAttachmentFiles(command.attachments);
+    await this.transfer.update(command, revision);
+  }
 
-  async saveIncome(command: IncomeCommand): Promise<void> { await this.income.save(command); }
-  async updateIncome(command: IncomeCommand, revision: number): Promise<void> { await this.income.update(command, revision); }
+  async saveIncome(command: IncomeCommand): Promise<void> {
+    await this.validateAttachmentFiles(command.attachments);
+    await this.income.save(command);
+  }
+  async updateIncome(command: IncomeCommand, revision: number): Promise<void> {
+    await this.validateAttachmentFiles(command.attachments);
+    await this.income.update(command, revision);
+  }
 
   async statistics(startDate: string, endDateExclusive: string, kind: StatisticsKind,
     unit: StatisticsBucketUnit): Promise<LedgerStatistics> {
@@ -1035,6 +1081,13 @@ export class LedgerWorkspace {
         }
       } finally { tagRows.close(); }
       detail.tags = tags;
+      const attachments: LedgerAttachment[] = [];
+      for (const attachment of await RdbAttachmentLinks.load(db, detail.id)) {
+        attachments.push({ id: attachment.id, relativePath: attachment.relativePath,
+          sha256: attachment.sha256, bytes: attachment.bytes, mimeType: attachment.mimeType,
+          filePath: this.backup.resources.root + '/' + attachment.relativePath });
+      }
+      detail.attachments = attachments;
       const extras = await db.querySql("SELECT COALESCE(m.name,t.merchant_name_snapshot,'')," +
         "COALESCE(t.address_text,'') FROM transactions t LEFT JOIN merchants m ON m.id=t.merchant_id WHERE t.id=?",
       [detail.id]);
@@ -1181,6 +1234,25 @@ export class LedgerWorkspace {
       for (const entry of entries) {
         entry.tagIds = tagIds.get(entry.id) || [];
         entry.tagNames = tagNames.get(entry.id) || [];
+        entry.attachments = [];
+      }
+      const entryAttachments: Map<string, LedgerAttachmentDraft[]> = new Map();
+      const attachmentRows = await db.querySql('SELECT ta.transaction_id,a.relative_path,a.content_sha256,' +
+        'a.byte_size,a.mime_type FROM transaction_attachments ta JOIN attachments a ON a.id=ta.attachment_id ' +
+        'JOIN v_posted_transactions tx ON tx.id=ta.transaction_id WHERE tx.book_id=? ' +
+        'AND substr(tx.occurred_local_date,1,7)=? AND a.state=\'ready\' AND a.deleted_at_ms IS NULL ' +
+        'ORDER BY ta.transaction_id,ta.sort_order', [this.activeBookId, month]);
+      try {
+        while (attachmentRows.goToNextRow()) {
+          const transactionId = attachmentRows.getString(0);
+          const values = entryAttachments.get(transactionId) || [];
+          values.push({ relativePath: attachmentRows.getString(1), sha256: attachmentRows.getString(2),
+            bytes: attachmentRows.getLong(3), mimeType: attachmentRows.getString(4) });
+          entryAttachments.set(transactionId, values);
+        }
+      } finally { attachmentRows.close(); }
+      for (const entry of entries) {
+        entry.attachments = entryAttachments.get(entry.id) || [];
       }
       let budgetTotal: string = DEFAULT_MONTHLY_BUDGET_MINOR;
       let budgetId: string = '';
