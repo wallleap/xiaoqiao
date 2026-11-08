@@ -253,6 +253,8 @@ export struct DataExchangePage {
     this.importBusy = true;
     this.importCompleted = 0;
     this.importTotal = this.importPreview.filter((row: CsvPreviewRow) => row.valid && row.selected).length;
+    const skippedCount = this.importPreview.length - this.importTotal;
+    const duplicateCount = this.importPreview.filter((row: CsvPreviewRow) => row.duplicate).length;
     this.importMessage = '';
     this.importError = false;
     try {
@@ -262,7 +264,8 @@ export struct DataExchangePage {
           this.importTotal = total;
         });
       this.clearImport();
-      this.importMessage = `已导入 ${count} 笔账目，` +
+      this.importMessage = `已导入 ${count} 笔，跳过 ${skippedCount} 笔` +
+        (duplicateCount > 0 ? `（重复 ${duplicateCount} 笔）` : '') + '；' +
         (this.importApplyBalance ? '账户余额已按记录更新' : '当前账户余额未改变');
       await this.onImported();
       await this.load();
