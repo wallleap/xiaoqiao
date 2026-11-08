@@ -182,6 +182,12 @@ export struct DataExchangePage {
     return index >= 0 && index < this.importHeaders.length ? this.importHeaders[index] : '不映射';
   }
 
+  private importSourceLabel(): string {
+    if (/微信|wechat|weixin/i.test(this.importFileName)) { return '微信账单'; }
+    if (/支付宝|alipay/i.test(this.importFileName)) { return '支付宝账单'; }
+    return /\.xlsx$/i.test(this.importFileName) ? 'Excel 工作簿' : 'CSV 文件';
+  }
+
   private mappingOptions(): SelectOption[] {
     const values: SelectOption[] = [{ value: '不映射' }];
     for (const header of this.importHeaders) { values.push({ value: header }); }
@@ -343,6 +349,8 @@ export struct DataExchangePage {
             Text('字段映射').fontSize('16fp').fontWeight(FontWeight.Medium)
               .fontColor($r('app.color.xq_font_primary'))
             Blank()
+            Text(this.importSourceLabel()).fontSize('12fp').fontColor($r('app.color.xq_font_emphasize'))
+              .margin({ right: 8 })
             Text(this.importFileName).fontSize('12fp').fontColor($r('app.color.xq_font_secondary'))
               .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis }).constraintSize({ maxWidth: '52%' })
           }.width('100%')
