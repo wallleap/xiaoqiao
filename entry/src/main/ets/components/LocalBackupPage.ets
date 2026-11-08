@@ -22,6 +22,7 @@ export struct LocalBackupPage {
   onOpenSpendingNatures: () => void = () => {};
   onOpenCategories: () => void = () => {};
   onOpenTags: () => void = () => {};
+  onOpenDataExchange: () => void = () => {};
   private readonly scroller: Scroller = new Scroller();
 
   aboutToAppear(): void { this.refreshPrevious(); }
@@ -149,6 +150,10 @@ export struct LocalBackupPage {
               .fontColor($r('app.color.xq_font_primary')).backgroundColor($r('app.color.xq_app_surface_page'))
               .enabled(this.ready && !this.busy).id('settings-tags')
               .onClick(() => { this.onOpenTags(); })
+            Button('导入与导出', { type: ButtonType.Capsule }).width('100%').height(44).fontSize('14fp')
+              .fontColor($r('app.color.xq_font_primary')).backgroundColor($r('app.color.xq_app_surface_page'))
+              .enabled(this.ready && !this.busy).id('settings-data-exchange')
+              .onClick(() => { this.onOpenDataExchange(); })
           }.padding(16).width('100%').borderRadius(20).backgroundColor($r('app.color.xq_app_surface_card'))
           Column({ space: 12 }) {
             Text('本地备份与恢复').fontSize('20fp').fontWeight(FontWeight.Bold).fontColor($r('app.color.xq_font_primary'))

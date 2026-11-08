@@ -9,6 +9,7 @@ import { BudgetPage } from '../components/BudgetPage';
 import { CategoryManagementPage } from '../components/CategoryManagementPage';
 import { StatisticsPage } from '../components/StatisticsPage';
 import { TagManagementPage } from '../components/TagManagementPage';
+import { DataExchangePage } from '../components/DataExchangePage';
 import { MoneyAmountField } from '../components/MoneyAmountField';
 import { AccountEditor } from '../components/AccountEditor';
 import { AccountProfile, AccountOverview } from '../domain/model/AccountProfile';
@@ -45,6 +46,7 @@ struct Index {
   @State private showBudgetPage: boolean = false;
   @State private showCategories: boolean = false;
   @State private showTags: boolean = false;
+  @State private showDataExchange: boolean = false;
   @State private accountOverview: AccountOverview | undefined = undefined;
   @State private accountError: string = '';
   @State private showAccountEditor: boolean = false;
@@ -395,6 +397,16 @@ struct Index {
   }
 
   @Builder
+  private dataExchangePage() {
+    DataExchangePage({
+      workspace: this.workspace,
+      monthKey: this.selectedMonth,
+      monthLabel: this.month(),
+      onClose: () => { this.showDataExchange = false; }
+    })
+  }
+
+  @Builder
   private accountEditorPage() {
     AccountEditor({ workspace: this.workspace, original: this.editingAccount, operationBusy: this.accountSaving,
       sheetMaterial: this.materialReady && !this.forceLegacyMaterials ? this.filterMaterials?.menu : undefined,
@@ -610,6 +622,7 @@ struct Index {
     if (this.showBudgetPage) { this.showBudgetPage = false; this.loadLedger(); return true; }
     if (this.showCategories) { this.showCategories = false; this.loadLedger(); return true; }
     if (this.showTags) { this.showTags = false; this.loadLedger(); return true; }
+    if (this.showDataExchange) { this.showDataExchange = false; return true; }
     if (this.showSpendingNatures) { this.showSpendingNatures = false; this.loadLedger(); return true; }
     if (this.showAccountEditor) { if (!this.accountSaving) { this.showAccountEditor = false; this.editingAccount = undefined; } return true; }
     if (this.showExpense) { if (!this.savingExpense) { this.closeEditor(); } return true; }
@@ -1443,6 +1456,7 @@ struct Index {
           onOpenSpendingNatures: () => { this.showSpendingNatures = true; },
           onOpenCategories: () => { this.showCategories = true; },
           onOpenTags: () => { this.showTags = true; },
+          onOpenDataExchange: () => { this.showDataExchange = true; },
           onRestored: async (): Promise<boolean> => {
             this.kind = LedgerKind.All; this.displayedKind = LedgerKind.All;
             this.account = ''; this.selectedTagIds = []; this.keyword = ''; this.showSearch = false;
@@ -1473,6 +1487,7 @@ struct Index {
     if (this.showBudgetPage) { this.budgetPage() }
     else if (this.showCategories) { this.categoryManagementPage() }
     else if (this.showTags) { this.tagManagementPage() }
+    else if (this.showDataExchange) { this.dataExchangePage() }
     else if (this.showSpendingNatures) { this.spendingNaturePage() }
     else if (this.showAccountEditor) { this.accountEditorPage() }
     else if (this.showExpense) { this.expensePage() }
