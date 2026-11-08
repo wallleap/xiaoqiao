@@ -23,12 +23,12 @@ function monthKey(): string {
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
 }
 
-function taggedExpense(workspace: LedgerWorkspace, tagId: string): ExpenseCommand {
+function taggedExpense(workspace: LedgerWorkspace, id: string, note: string, tagIds: string[]): ExpenseCommand {
   const now = new Date();
   const money = Money.parse('12', workspace.currency);
-  return { id: 'tag-ui-expense', bookId: DEFAULT_BOOK_ID, categoryId: 'expense-food-0',
+  return { id: id, bookId: DEFAULT_BOOK_ID, categoryId: 'expense-food-0',
     gross: money, discount: Money.parse('0', workspace.currency), bookPaid: money,
-    includeInAssets: false, includeInBudget: false, tagIds: [tagId], note: 'UI旅行账目',
+    includeInAssets: false, includeInBudget: false, tagIds: tagIds, note: note,
     occurredAtMs: now.getTime(),
     localDate: `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`,
     timezone: Intl.DateTimeFormat().resolvedOptions().timeZone, offsetMinutes: -now.getTimezoneOffset() };
@@ -36,7 +36,7 @@ function taggedExpense(workspace: LedgerWorkspace, tagId: string): ExpenseComman
 
 export default function tagFlowTest() {
   describe('TagUI', () => {
-    it('creates_tag_and_selects_it_in_expense_editor', 0, async () => {
+    it('creates_filters_and_selects_tag_in_expense_editor', 0, async () => {
       const context = await uiContext();
       const driver = Driver.create();
       await driver.waitForComponent(ON.id('ledger-tab-4'), 10000);
@@ -58,7 +58,7 @@ export default function tagFlowTest() {
         if (await driver.findComponent(ON.id('tag-name')) === null) { break; }
         await driver.delayMs(100);
       }
-      await driver.delayMs(500);
+      await driver.delayMs(1500);
       expect(await driver.screenCap(context.filesDir + '/xiaoqiao-tags-management.png')).assertTrue();
       await (await driver.findComponent(ON.id('tag-close'))).click();
       await driver.waitForComponent(ON.id('settings-tags'), 5000);
@@ -67,7 +67,8 @@ export default function tagFlowTest() {
       const createdTag = (await workspace.tags()).find((item) => item.name === '旅行');
       expect(createdTag !== undefined).assertTrue();
       if (createdTag === undefined) { throw new Error('TAG_NOT_PERSISTED'); }
-      await workspace.saveExpense(taggedExpense(workspace, createdTag.id));
+      await workspace.saveExpense(taggedExpense(workspace, 'tag-ui-expense', 'UI旅行账目', [createdTag.id]));
+      await workspace.saveExpense(taggedExpense(workspace, 'tag-ui-untagged', 'UI普通账目', []));
       await (await driver.findComponent(ON.id('settings-tags'))).click();
       await driver.waitForComponent(ON.id('tag-page'), 5000);
       await (await driver.findComponent(ON.id('tag-close'))).click();
@@ -76,6 +77,18 @@ export default function tagFlowTest() {
       expect((await workspace.snapshot(monthKey())).tags.some((item) => item.name === '旅行')).assertTrue();
 
       await (await driver.findComponent(ON.id('ledger-tab-0'))).click();
+      await (await driver.waitForComponent(ON.id('ledger-filter-action'), 5000)).click();
+      await (await driver.waitForComponent(ON.id('ledger-tag-filter-' + createdTag.id), 5000)).click();
+      await (await driver.findComponent(ON.text('完成'))).click();
+      for (let attempt = 0; attempt < 20; attempt++) {
+        if (await driver.findComponent(ON.id('ledger-filter-sheet')) === null) { break; }
+        await driver.delayMs(100);
+      }
+      await driver.delayMs(1500);
+      await driver.waitForComponent(ON.id('tag-ui-expense'), 5000);
+      expect(await driver.findComponent(ON.id('tag-ui-untagged'))).assertNull();
+      expect(await driver.screenCap(context.filesDir + '/xiaoqiao-tag-filter.png')).assertTrue();
+
       await (await driver.waitForComponent(ON.id('ledger-add-expense'), 5000)).click();
       await driver.waitForComponent(ON.id('expense-tags'), 5000);
       const form = await driver.waitForComponent(ON.id('expense-form-scroll'), 5000);

@@ -29,6 +29,7 @@ import { MonthlyBudget, BudgetProgress, DEFAULT_MONTHLY_BUDGET_MINOR } from '../
 import { Money } from '../core/money/Money';
 import { ExpenseAmountInput } from '../presentation/ledger/ExpenseAmountInput';
 import { LedgerEntry, LedgerKind, displayAmount, filterEntries, previewEntries, presentEntry, dailyTotals, isToday, navigationHandoff } from '../presentation/ledger/LedgerOverview';
+import { tagBackground, tagTextColor } from '../presentation/ledger/TagStyles';
 
 interface EntryDeleteTarget { id: string; category: string; minor: string; }
 
@@ -58,6 +59,8 @@ struct Index {
   @State private selectionKind: number = 0;
   @State private account: string = '';
   @State private pendingAccount: string = '';
+  @State private selectedTagIds: string[] = [];
+  @State private pendingTagIds: string[] = [];
   @State private books: LedgerBook[] = [];
   @State private bookName: string = '';
   @State private editingBook: LedgerBook | undefined = undefined;
@@ -108,7 +111,8 @@ struct Index {
 
   private entries(kind: LedgerKind = this.kind): LedgerEntry[] {
     const saved = this.ledger?.entries.map(presentEntry) || [];
-    return filterEntries(this.preview ? previewEntries(this.scrollPreview) : saved, kind, this.keyword, this.account);
+    return filterEntries(this.preview ? previewEntries(this.scrollPreview) : saved, kind, this.keyword, this.account,
+      this.selectedTagIds);
   }
 
   private month(): string {
@@ -150,6 +154,8 @@ struct Index {
       const name = AppStorage.get<string>('ledgerDatabaseName') || 'xiaoqiao.db';
       this.workspace = await LedgerWorkspace.open(context, name);
       this.ledger = await this.workspace.snapshot(this.selectedMonth);
+      const availableTags = new Set(this.ledger.tags.map((tag: TagChoice) => tag.id));
+      this.selectedTagIds = this.selectedTagIds.filter((id: string) => availableTags.has(id));
       this.ledgerVersion++;
       await this.refreshAccountOverview(this.workspace);
     } catch (error) {
@@ -204,7 +210,7 @@ struct Index {
     try {
       await this.workspace.selectBook(book.id);
       this.kind = LedgerKind.All; this.displayedKind = LedgerKind.All;
-      this.account = ''; this.keyword = ''; this.showSearch = false;
+      this.account = ''; this.selectedTagIds = []; this.keyword = ''; this.showSearch = false;
       this.bodyScroller.scrollTo({ xOffset: 0, yOffset: 0 });
       await this.loadLedger();
       this.showSelection = false;
@@ -444,7 +450,7 @@ struct Index {
     this.showExpense = false; this.editingEntry = undefined;
     this.selectedMonth = date.substring(0, 7);
     this.kind = LedgerKind.All; this.displayedKind = LedgerKind.All;
-    this.account = ''; this.keyword = ''; this.showSearch = false;
+    this.account = ''; this.selectedTagIds = []; this.keyword = ''; this.showSearch = false;
     this.bodyScroller.scrollTo({ xOffset: 0, yOffset: 0 });
     await this.loadLedger();
     if (edited) { await this.openDetail(this.detailId); this.notify('账目已更新'); }
@@ -849,14 +855,17 @@ struct Index {
       Image($r('app.media.illustration_no_record')).width(160).height(160).objectFit(ImageFit.Contain)
         .id('ledger-empty-illustration')
       Column({ space: 6 }) {
-        Text(this.preview || pageKind !== LedgerKind.All || this.keyword.length > 0 || this.account.length > 0 ? '没有符合条件的账目' : '从第一笔开始')
+        Text(this.preview || pageKind !== LedgerKind.All || this.keyword.length > 0 || this.account.length > 0 ||
+          this.selectedTagIds.length > 0 ? '没有符合条件的账目' : '从第一笔开始')
           .fontSize('16fp').fontWeight(FontWeight.Regular).lineHeight('22fp')
           .fontColor($r('app.color.xq_font_secondary')).textAlign(TextAlign.Center).width('100%')
-        Text(this.preview || pageKind !== LedgerKind.All || this.keyword.length > 0 || this.account.length > 0 ? '试试其他关键词或筛选条件' : '把日常收支，慢慢记清楚')
+        Text(this.preview || pageKind !== LedgerKind.All || this.keyword.length > 0 || this.account.length > 0 ||
+          this.selectedTagIds.length > 0 ? '试试其他关键词或筛选条件' : '把日常收支，慢慢记清楚')
           .fontSize('12fp').fontWeight(FontWeight.Regular).lineHeight('18fp')
           .fontColor($r('app.color.xq_font_tertiary')).textAlign(TextAlign.Center).width('100%')
       }.width('100%')
-      if (!this.preview && pageKind === LedgerKind.All && this.keyword.length === 0 && this.account.length === 0) {
+      if (!this.preview && pageKind === LedgerKind.All && this.keyword.length === 0 && this.account.length === 0 &&
+        this.selectedTagIds.length === 0) {
         Button('开始记第一笔账', { type: ButtonType.Capsule }).fontSize('16fp').fontColor(Color.White)
           .padding({ top: 10, bottom: 10, left: 32, right: 32 })
           .linearGradient({ angle: 110, colors: [[$r('app.color.xq_app_gradient_start'), 0],
@@ -869,7 +878,8 @@ struct Index {
   @Builder
   private filterGlyph() {
     Image($r('app.media.lucide_funnel1')).width(22).height(22)
-      .fillColor(this.account.length > 0 ? $r('app.color.xq_icon_emphasize') : $r('app.color.xq_icon_primary'))
+      .fillColor(this.account.length > 0 || this.selectedTagIds.length > 0 ?
+        $r('app.color.xq_icon_emphasize') : $r('app.color.xq_icon_primary'))
       .id('ledger-filter-glyph')
   }
 
@@ -879,19 +889,27 @@ struct Index {
       Button({ type: ButtonType.Circle }) { this.filterGlyph() }
         .width(40).height(40).padding(0).backgroundColor(Color.Transparent)
         .systemMaterial(this.filterMaterials?.action).id('ledger-filter-action')
-        .accessibilityText(this.account.length > 0 ? '筛选账目，已生效' : '筛选账目')
+        .accessibilityText(this.account.length > 0 || this.selectedTagIds.length > 0 ? '筛选账目，已生效' : '筛选账目')
         .onClick(() => { this.openAccountFilter(); })
     } else {
       Button({ type: ButtonType.Circle }) { this.filterGlyph() }
         .width(40).height(40).padding(0).backgroundColor($r('app.color.xq_app_surface_card'))
         .id('ledger-filter-action')
-        .accessibilityText(this.account.length > 0 ? '筛选账目，已生效' : '筛选账目')
+        .accessibilityText(this.account.length > 0 || this.selectedTagIds.length > 0 ? '筛选账目，已生效' : '筛选账目')
         .onClick(() => { this.openAccountFilter(); })
     }
   }
 
   private openAccountFilter(): void {
-    this.pendingAccount = this.account; this.selectionKind = 1; this.showSelection = true;
+    this.pendingAccount = this.account;
+    this.pendingTagIds = this.selectedTagIds.slice();
+    this.selectionKind = 1;
+    this.showSelection = true;
+  }
+
+  private togglePendingTag(id: string): void {
+    this.pendingTagIds = this.pendingTagIds.includes(id) ?
+      this.pendingTagIds.filter((value: string) => value !== id) : [...this.pendingTagIds, id];
   }
 
   private selectKind(selected: number[]): void {
@@ -1056,6 +1074,11 @@ struct Index {
       if (this.account.length > 0) {
         Text(`账户：${this.account}`).fontSize('12fp').fontColor($r('app.color.xq_font_emphasize')).width('100%')
       }
+      if (this.selectedTagIds.length > 0) {
+        Text('标签：' + this.selectedTagIds.map((id: string) =>
+          '#' + (this.ledger?.tags.find((tag: TagChoice) => tag.id === id)?.name || '已删除')).join('  '))
+          .fontSize('12fp').fontColor($r('app.color.xq_font_emphasize')).width('100%')
+      }
       if (!this.preview && this.loading) {
         Text('正在读取账本…').fontSize('14fp').padding(32)
       } else if (!this.preview && this.loadError.length > 0) {
@@ -1163,7 +1186,7 @@ struct Index {
   private selectionSheetOptions(): SheetOptions {
     const bookHeight = this.bookEditing ? 520 : Math.min(620, 340 + Math.max(0, this.books.length - 1) * 68);
     const options: SheetOptions = {
-      height: this.selectionKind === 0 ? bookHeight : this.selectionKind === 2 ? 360 : 440, showClose: true,
+      height: this.selectionKind === 0 ? bookHeight : this.selectionKind === 2 ? 360 : 600, showClose: true,
       keyboardAvoidMode: this.selectionKind === 2 ? SheetKeyboardAvoidMode.TRANSLATE_AND_RESIZE : SheetKeyboardAvoidMode.TRANSLATE_AND_SCROLL
     };
     if (this.materialReady && !this.forceLegacyMaterials && this.filterMaterials !== undefined) {
@@ -1259,23 +1282,53 @@ struct Index {
   private filterSheet() {
     Column({ space: 20 }) {
       Text('筛选账目').fontSize('20fp').fontWeight(FontWeight.Bold).width('100%')
-      Text('资金账户').fontSize('14fp').fontColor($r('app.color.xq_font_secondary')).width('100%')
-      ForEach(this.preview ? ['', '微信零钱', '日常储蓄卡'] : ['', ...(this.ledger?.accounts.map((item) => item.name) || [])], (name: string) => {
-        Row() {
-          Text(name.length > 0 ? name : '全部账户').fontSize('16fp').layoutWeight(1)
-          Radio({ value: name, group: 'account' })
-            .radioStyle({ checkedBackgroundColor: $r('app.color.xq_brand'), indicatorColor: Color.White })
-            .checked(this.pendingAccount === name)
-            .onChange((checked: boolean) => { if (checked) { this.pendingAccount = name; } })
-        }.width('100%').height(44).onClick(() => { this.pendingAccount = name; })
-      }, (name: string) => name)
+      Scroll() {
+        Column({ space: 16 }) {
+          Text('资金账户').fontSize('14fp').fontColor($r('app.color.xq_font_secondary')).width('100%')
+          ForEach(this.preview ? ['', '微信零钱', '日常储蓄卡'] :
+            ['', ...(this.ledger?.accounts.map((item) => item.name) || [])], (name: string) => {
+            Row() {
+              Text(name.length > 0 ? name : '全部账户').fontSize('16fp').layoutWeight(1)
+              Radio({ value: name, group: 'account' })
+                .radioStyle({ checkedBackgroundColor: $r('app.color.xq_brand'), indicatorColor: Color.White })
+                .checked(this.pendingAccount === name)
+                .onChange((checked: boolean) => { if (checked) { this.pendingAccount = name; } })
+            }.width('100%').height(44).onClick(() => { this.pendingAccount = name; })
+          }, (name: string) => name)
+          if (!this.preview) {
+            Text('标签').fontSize('14fp').fontColor($r('app.color.xq_font_secondary')).width('100%')
+            if ((this.ledger?.tags || []).length === 0) {
+              Text('尚未创建标签，可在设置中管理。').fontSize('12fp')
+                .fontColor($r('app.color.xq_font_tertiary')).width('100%')
+            } else {
+              Flex({ wrap: FlexWrap.Wrap }) {
+                ForEach(this.ledger?.tags || [], (tag: TagChoice) => {
+                  Button('#' + tag.name, { type: ButtonType.Capsule }).height(36).fontSize('13fp')
+                    .fontColor(tagTextColor(tag.colorKey)).backgroundColor(tagBackground(tag.colorKey))
+                    .border({ width: this.pendingTagIds.includes(tag.id) ? 1.5 : 0,
+                      color: this.pendingTagIds.includes(tag.id) ? tagTextColor(tag.colorKey) : Color.Transparent })
+                    .margin({ right: 8, bottom: 8 }).id('ledger-tag-filter-' + tag.id)
+                    .onClick(() => { this.togglePendingTag(tag.id); })
+                }, (tag: TagChoice) => tag.id)
+              }.width('100%')
+              Text('选择多个标签时，只显示同时包含全部所选标签的账目。').fontSize('12fp')
+                .fontColor($r('app.color.xq_font_tertiary')).width('100%')
+            }
+          }
+        }.width('100%')
+      }.layoutWeight(1).width('100%').scrollBar(BarState.Off).edgeEffect(EdgeEffect.Spring)
       Row({ space: 12 }) {
         Button('重置').layoutWeight(1).height(48)
-          .backgroundColor($r('app.color.xq_app_surface_page')).fontColor($r('app.color.xq_font_primary')).onClick(() => { this.pendingAccount = ''; })
+          .backgroundColor($r('app.color.xq_app_surface_page')).fontColor($r('app.color.xq_font_primary'))
+          .onClick(() => { this.pendingAccount = ''; this.pendingTagIds = []; })
         Button('完成').layoutWeight(1).height(48).backgroundColor($r('app.color.xq_brand')).fontColor(Color.White)
-          .onClick(() => { this.account = this.pendingAccount; this.showSelection = false; })
+          .onClick(() => {
+            this.account = this.pendingAccount;
+            this.selectedTagIds = this.pendingTagIds.slice();
+            this.showSelection = false;
+          })
       }.width('100%')
-    }.width('100%').padding(24)
+    }.width('100%').height('100%').padding(24).id('ledger-filter-sheet')
   }
 
   @Builder
@@ -1392,7 +1445,7 @@ struct Index {
           onOpenTags: () => { this.showTags = true; },
           onRestored: async (): Promise<boolean> => {
             this.kind = LedgerKind.All; this.displayedKind = LedgerKind.All;
-            this.account = ''; this.keyword = ''; this.showSearch = false;
+            this.account = ''; this.selectedTagIds = []; this.keyword = ''; this.showSearch = false;
             await this.loadLedger();
             return this.loadError.length === 0 && this.accountError.length === 0;
           }

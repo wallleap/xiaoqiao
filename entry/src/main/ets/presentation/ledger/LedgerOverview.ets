@@ -39,6 +39,7 @@ export interface LedgerEntry {
   grossMinor: string;
   discountMinor: string;
   tags?: string[];
+  tagIds?: string[];
   icon: Resource;
 }
 
@@ -55,15 +56,17 @@ export function presentEntry(entry: SavedLedgerEntry): LedgerEntry {
       String(local.getUTCMinutes()).padStart(2, '0'), income: entry.income, transfer: entry.transfer, toAccount: entry.toAccount, minor: entry.minor,
     expenseMinor: entry.expenseMinor, transferFeeMinor: entry.transferFeeMinor, transferCouponMinor: entry.transferCouponMinor,
     grossMinor: entry.grossMinor, discountMinor: entry.discountMinor, tags: entry.tagNames || [],
+    tagIds: entry.tagIds || [],
     icon: entry.transfer ? $r('app.media.lucide_arrow_left_right1') : categoryIcon(entry.iconKey) };
 }
 
 export function filterEntries(entries: LedgerEntry[], kind: LedgerKind, query: string,
-  account: string): LedgerEntry[] {
+  account: string, tagIds: string[] = []): LedgerEntry[] {
   const keyword = query.trim().toLowerCase();
   return entries.filter((entry: LedgerEntry) =>
     (kind === LedgerKind.All || (entry.transfer ? kind === LedgerKind.Expense && BigInt(entry.expenseMinor || '0') > BigInt(0) : entry.income === (kind === LedgerKind.Income))) &&
     (account.length === 0 || entry.account === account || entry.toAccount === account) &&
+    tagIds.every((tagId: string) => (entry.tagIds || []).includes(tagId)) &&
     (keyword.length === 0 || (entry.title + entry.category + entry.account + (entry.toAccount || '') +
       (entry.tags || []).join(' ')).toLowerCase().includes(keyword)));
 }

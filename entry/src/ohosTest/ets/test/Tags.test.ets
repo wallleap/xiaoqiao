@@ -79,7 +79,10 @@ export default function tagsTest() {
         expect(savedExpense?.tagNames?.join(',')).assertEqual('旅行,工作');
         expect(snapshot.entries.find((entry) => entry.id === 'tag-income')?.tagNames?.join(',')).assertEqual('工作');
         expect(snapshot.entries.find((entry) => entry.id === 'tag-transfer')?.tagNames?.join(',')).assertEqual('旅行');
-        expect(filterEntries(snapshot.entries.map(presentEntry), LedgerKind.All, '旅行', '').length).assertEqual(2);
+        const presented = snapshot.entries.map(presentEntry);
+        expect(filterEntries(presented, LedgerKind.All, '旅行', '').length).assertEqual(2);
+        expect(filterEntries(presented, LedgerKind.All, '', '', ['tag-travel']).length).assertEqual(2);
+        expect(filterEntries(presented, LedgerKind.All, '', '', ['tag-travel', 'tag-work']).length).assertEqual(1);
 
         const detail = await workspace.entryDetail('tag-expense');
         expect(detail.tags?.length).assertEqual(2);
