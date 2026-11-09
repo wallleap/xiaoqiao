@@ -62,7 +62,11 @@ export struct LocalBackupPage {
       this.progress = '正在保存备份…';
       await backup.exportTo(destinations[0], previous);
       this.feedback(previous ? '恢复前副本已保存' : '本地备份已保存');
-    } catch (_) { this.feedback('未能保存完整备份，请检查存储空间后重试。', true); }
+    } catch (error) {
+      this.feedback((error as Error).message === 'PACKAGE_SIZE' ?
+        '备份文件大小或资源数量不符合限制，支持非空文件、完整包最多 32 MiB、资源最多 2046 个。' :
+        '未能保存完整备份，请检查存储空间后重试。', true);
+    }
     finally { this.setBusy(false); }
   }
 
@@ -157,7 +161,7 @@ export struct LocalBackupPage {
           }.padding(16).width('100%').borderRadius(20).backgroundColor($r('app.color.xq_app_surface_card'))
           Column({ space: 12 }) {
             Text('本地备份与恢复').fontSize('20fp').fontWeight(FontWeight.Bold).fontColor($r('app.color.xq_font_primary'))
-            Text('将账本、图片和自定义图标一起备份，或从备份包恢复。').fontSize('14fp').fontColor($r('app.color.xq_font_secondary'))
+            Text('将账本、图片和自定义图标一起备份，或从备份包恢复。完整包上限 32 MiB，图片与图标合计最多 2046 个。').fontSize('14fp').fontColor($r('app.color.xq_font_secondary'))
             Button('保存本地备份').width('100%').constraintSize({ minHeight: 44 }).fontSize('16fp')
               .backgroundColor($r('app.color.xq_brand')).fontColor(Color.White)
               .enabled(this.ready && !this.busy && !this.recoveryRequired)

@@ -213,18 +213,26 @@ export struct ExpenseEditor {
       options.isSearchSupported = true;
       const view = new photoAccessHelper.PhotoViewPicker();
       const selected = await view.select(options);
-      let next = [...this.attachments];
+      if (!this.active) { return; }
       for (const source of selected.photoUris) {
         const draft = await workspace.saveImageAttachment(source, this.attachmentQuality);
-        if (next.some((attachment: ExpenseImageAttachment) => attachment.sha256 === draft.sha256)) { continue; }
-        next.push({ relativePath: draft.relativePath, sha256: draft.sha256, bytes: draft.bytes,
+        if (!this.active) {
+          await workspace.discardUnpersistedImage(draft);
+          return;
+        }
+        if (this.attachments.some((attachment: ExpenseImageAttachment) => attachment.sha256 === draft.sha256)) { continue; }
+        this.attachments = [...this.attachments, { relativePath: draft.relativePath, sha256: draft.sha256, bytes: draft.bytes,
           mimeType: draft.mimeType, filePath: workspace.backup.resources.root + '/' + draft.relativePath,
-          persisted: false });
-        if (next.length >= 9) { break; }
+          persisted: false }];
+        if (this.attachments.length >= 9) { break; }
       }
-      this.attachments = next;
-    } catch (_) {
-      this.showError(ExpenseErrorField.Attachments, '图片无法读取，请选择 PNG、JPG 或 WebP 图片');
+    } catch (error) {
+      if (!this.active) { return; }
+      const message = (error as Error).message;
+      const reason = message === 'PACKAGE_SIZE' ? '图片为空或超过 32 MiB，请选择较小的图片' :
+        message === 'RESOURCE_FORMAT' ? '图片格式无法识别，请选择 PNG、JPG 或 WebP 图片' :
+        '图片读取或保存失败，请检查图片是否可用及设备存储空间';
+      this.showError(ExpenseErrorField.Attachments, reason + '。已添加的图片会保留，请检查后重试');
     } finally { this.attachmentBusy = false; }
   }
 
@@ -423,7 +431,7 @@ export struct ExpenseEditor {
   }
 
   private async save(): Promise<void> {
-    if (this.saving || this.saved || this.conflicted) { return; }
+    if (this.attachmentBusy || this.saving || this.saved || this.conflicted) { return; }
     this.errorText = '';
     let command: ExpenseCommand;
     try {
@@ -1044,7 +1052,7 @@ export struct ExpenseEditor {
     AmountKeyboard({
       prefix: 'expense',
       disabled: this.saving || this.saved || this.conflicted,
-      canSubmit: this.canSaveAmounts(this.expression, this.discount),
+      canSubmit: !this.attachmentBusy && this.canSaveAmounts(this.expression, this.discount),
       submitLabel: this.saving ? '保存中' : '保存',
       accessory: () => { this.keyboardToolbar() },
       footer: () => { this.keyboardFooter() },

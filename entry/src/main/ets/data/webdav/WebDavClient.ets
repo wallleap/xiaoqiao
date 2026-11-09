@@ -180,6 +180,7 @@ export function davMessage(error: Error): string {
     case 'DAV_REDIRECT': return '服务器发生重定向，请填写最终 HTTPS 文件夹地址。';
     case 'DAV_DIRECTORY': return '无法读取 xiaoqiao 文件夹，请检查父目录地址、权限及同名项是否为文件。';
     case 'DAV_CREATE_DIRECTORY': return '无法创建 xiaoqiao 文件夹，请确认父目录存在并允许创建目录。';
+    case 'PACKAGE_SIZE': return '备份文件大小或资源数量不符合限制，支持非空文件、完整包最多 32 MiB、资源最多 2046 个。';
     case 'DAV_SIZE': return '此备份超出 WebDAV 支持的 32 MiB 上限，请减少资源体积后重试。';
     case 'DAV_EXISTS': return '远端已存在同名文件，请重试生成新的备份。';
     default: return '操作未完成，请检查网络、服务器和备份文件后重试。';

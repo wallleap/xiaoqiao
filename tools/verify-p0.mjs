@@ -287,4 +287,61 @@ await test('embedded transfer fee participates in expense filter and daily total
   assert.equal(filterEntries([entry],LedgerKind.Income,'','').length,0);
   assert.deepEqual(dailyTotals([entry],entry.date),{incomeMinor:'0',expenseMinor:'200'});
 });
+// Exercise the editor's actual async selection method with controlled native dependencies.
+const editorSource = readFileSync(resolve(root, 'entry/src/main/ets/components/ExpenseEditor.ets'), 'utf8');
+const chooseMethod = editorSource.slice(editorSource.indexOf('  private async chooseImages()'), editorSource.indexOf('  private removeAttachment('));
+function imageEditor(uris, saveImage) {
+  const output = ts.transpileModule(`class Editor { ${chooseMethod} }`, {
+    compilerOptions: { target: ts.ScriptTarget.ES2020 }
+  });
+  const Editor = vm.runInNewContext(`${output.outputText}; Editor`, {
+    photoAccessHelper: {
+      PhotoSelectOptions: class {}, PhotoViewMIMETypes: { IMAGE_TYPE: 'image' },
+      PhotoViewPicker: class { async select() { return { photoUris: uris }; } }
+    },
+    ExpenseErrorField: { Attachments: 'attachments' }
+  });
+  const discarded = [];
+  const editor = new Editor();
+  Object.assign(editor, {
+    active: true, attachments: [], attachmentQuality: 'standard',
+    amountController: { stopEditing() {} }, clearFieldError() {},
+    showError(_field, message) { this.error = message; },
+    workspace: {
+      backup: { resources: { root: '/test' } }, saveImageAttachment: saveImage,
+      async discardUnpersistedImage(draft) { discarded.push(draft.sha256); }
+    }
+  });
+  return { editor, discarded };
+}
+await test('image selection retains earlier successes when a later image fails', async () => {
+  const { editor } = imageEditor(['good', 'bad'], async (uri) => {
+    if (uri === 'bad') throw new Error('RESOURCE_FORMAT');
+    return { sha256: uri, relativePath: uri };
+  });
+  await editor.chooseImages();
+  assert.equal(editor.attachments.length, 1);
+  assert.equal(editor.attachments[0].sha256, 'good');
+  assert.match(editor.error, /格式无法识别/);
+  assert.equal(editor.attachmentBusy, false);
+});
+await test('image selection discards a file completed after editor closes', async () => {
+  const { editor, discarded } = imageEditor(['late', 'unused'], async (uri) => {
+    editor.active = false;
+    return { sha256: uri, relativePath: uri };
+  });
+  await editor.chooseImages();
+  assert.equal(editor.attachments.length, 0);
+  assert.deepEqual(discarded, ['late']);
+  assert.equal(editor.attachmentBusy, false);
+});
+await test('image selection deduplicates and explains oversized input', async () => {
+  const { editor } = imageEditor(['same', 'same', 'large'], async (uri) => {
+    if (uri === 'large') throw new Error('PACKAGE_SIZE');
+    return { sha256: uri, relativePath: uri };
+  });
+  await editor.chooseImages();
+  assert.equal(editor.attachments.length, 1);
+  assert.match(editor.error, /32 MiB/);
+});
 console.log(`${count} host checks passed. Native ArkTS/RDB/Decimal and UI require the separate device suite.`);

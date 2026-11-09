@@ -21,7 +21,7 @@
 
 选择和预览不会修改当前账本。取消走既有 discard。下载失败、大小不符、数据库损坏、版本不兼容或资源不齐全时均不进入恢复确认。操作进行中沿用设置页 busy 锁，禁止跨页及并发备份恢复。网络异常只显示经过归类的本地提示。临时上传、下载文件在成功或失败后均尝试清理。
 
-此版未加密完整备份包。账号密码不在账务数据库快照内。用户应使用自己的可信服务器。跨版本转换、图片上传业务 UI、证书私有 CA 配置和 WebDAV Digest/OAuth 不在本轮范围。
+此版未加密完整备份包。账号密码不在账务数据库快照内。用户应使用自己的可信服务器。账目图片选择与预览已接入，见 [账目图片附件](attachments.md)。跨版本转换、证书私有 CA 配置和 WebDAV Digest/OAuth 不在本轮范围。
 
 ## 验证方法
 
@@ -44,3 +44,7 @@ hdc -t 127.0.0.1:5555 fport rm tcp:18765 tcp:18765
 - [HTTP 请求](https://developer.huawei.com/consumer/en/doc/harmonyos-guides/http-request/)
 - [HTTP 接口](https://developer.huawei.com/consumer/en/doc/harmonyos-references/js-apis-http/)，本地 SDK 对 customMethod 和 maxRedirects 标注自 API 23 支持，低于项目最低 API 24。
 - [Asset Store 接口](https://developer.huawei.com/consumer/en/doc/harmonyos-references/js-apis-asset/)
+
+## 本地图片与容量限制
+
+图片保存在应用持久目录，随完整备份导出。完整备份包最多 32 MiB，图片与图标合计最多 2046 个，超限会提示失败。已保存过的图片解除账目关联后仍保留，并计入完整备份容量。

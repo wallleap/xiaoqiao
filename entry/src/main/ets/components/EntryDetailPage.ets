@@ -19,6 +19,8 @@ export struct EntryDetailPage {
   onRetry: () => void = () => {};
   @State private showAttachmentPreview: boolean = false;
   @State private previewAttachment: LedgerAttachment | undefined = undefined;
+  @State private failedAttachmentPaths: string[] = [];
+  @State private previewFailed: boolean = false;
   private readonly scroller: Scroller = new Scroller();
 
   private amount(minor: string): string {
@@ -69,10 +71,18 @@ export struct EntryDetailPage {
         Scroll() {
           Row({ space: 10 }) {
             ForEach(this.entry?.attachments || [], (attachment: LedgerAttachment) => {
-              Image('file://' + attachment.filePath).width(88).height(88).borderRadius(12).objectFit(ImageFit.Cover)
+              Stack() {
+                if (this.failedAttachmentPaths.includes(attachment.filePath)) {
+                  Text('图片加载失败').fontSize('12fp').fontColor($r('app.color.xq_font_secondary'))
+                } else {
+                  Image('file://' + attachment.filePath).width(88).height(88).objectFit(ImageFit.Cover)
+                    .onError(() => { this.failedAttachmentPaths = [...this.failedAttachmentPaths, attachment.filePath]; })
+                }
+              }.width(88).height(88).borderRadius(12)
                 .backgroundColor($r('app.color.xq_app_surface_page'))
                 .id('entry-attachment-' + attachment.id)
                 .onClick(() => {
+                  this.previewFailed = false;
                   this.previewAttachment = attachment;
                   this.showAttachmentPreview = true;
                 })
@@ -98,9 +108,15 @@ export struct EntryDetailPage {
           .onClick(() => { this.showAttachmentPreview = false; })
       }.width('100%')
       if (this.previewAttachment !== undefined) {
-        Image('file://' + this.previewAttachment.filePath).width('100%').layoutWeight(1)
-          .objectFit(ImageFit.Contain).backgroundColor($r('app.color.xq_app_surface_page'))
-          .borderRadius(16).id('entry-attachment-preview-image')
+        if (this.previewFailed) {
+          Text('图片无法加载，文件可能已缺失或损坏。请尝试从完整备份恢复。')
+            .fontSize('14fp').fontColor($r('app.color.xq_font_secondary')).layoutWeight(1)
+        } else {
+          Image('file://' + this.previewAttachment.filePath).width('100%').layoutWeight(1)
+            .objectFit(ImageFit.Contain).backgroundColor($r('app.color.xq_app_surface_page'))
+            .borderRadius(16).id('entry-attachment-preview-image')
+            .onError(() => { this.previewFailed = true; })
+        }
       }
     }.width('100%').height('100%').padding(24)
   }
