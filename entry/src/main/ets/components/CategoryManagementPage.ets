@@ -1,4 +1,4 @@
-import { HdsNavigation, HdsNavigationTitleMode, hdsMaterial, DividerShowType } from '@kit.UIDesignKit';
+import { HdsNavigation, HdsNavigationTitleMode, hdsMaterial, DividerShowType, ScrollEffectType } from '@kit.UIDesignKit';
 import { ChipGroup, ChipSize } from '@kit.ArkUI';
 import { util } from '@kit.ArkTS';
 import { LedgerWorkspace } from '../data/rdb/LedgerWorkspace';
@@ -308,14 +308,17 @@ export struct CategoryManagementPage {
             Text(this.error).fontSize('12fp').fontColor($r('app.color.xq_warning')).width('100%')
           }
         }.width('100%').constraintSize({ maxWidth: 640 }).padding({ left: 16, right: 16, top: 12, bottom: 32 })
-      }.width('100%').height('100%').align(Alignment.Top).scrollBar(BarState.Off).edgeEffect(EdgeEffect.Spring, { alwaysEnabled: true })
+      }.width('100%').height('100%').align(Alignment.Top).scrollBar(BarState.Off).clip(false).edgeEffect(EdgeEffect.Spring, { alwaysEnabled: true })
     }.mode(NavigationMode.Stack).titleMode(HdsNavigationTitleMode.MINI)
       .titleBar({ enableComponentSafeArea: true,
         content: { title: { mainTitle: '收支分类' }, divider: { showType: DividerShowType.OFF },
           backIcon: { componentId: 'category-close', action: () => { if (!this.busy) { this.onClose(); } } } },
         style: { originalStyle: { contentStyle: { titleStyle: { mainTitleColor: $r('app.color.xq_font_primary') },
           backIconStyle: { iconColor: $r('app.color.xq_icon_primary') } } },
-          systemMaterialEffect: { materialType: hdsMaterial.MaterialType.IMMERSIVE, materialLevel: hdsMaterial.MaterialLevel.ADAPTIVE } } })
+          scrollEffectStyle: { contentStyle: { titleStyle: { mainTitleColor: $r('app.color.xq_font_primary') },
+            backIconStyle: { iconColor: $r('app.color.xq_icon_primary') } } },
+          systemMaterialEffect: { materialType: hdsMaterial.MaterialType.IMMERSIVE, materialLevel: hdsMaterial.MaterialLevel.ADAPTIVE },
+          scrollEffectOpts: { enableScrollEffect: true, scrollEffectType: ScrollEffectType.IMMERSIVE_GRADIENT_BLUR } } })
       .systemBarStyle({ statusBarContentColor: this.statusBarColor() }, { statusBarContentColor: this.statusBarColor() })
       .bindToScrollable([this.scroller]).backgroundColor($r('app.color.xq_app_surface_page'))
       .ignoreLayoutSafeArea([LayoutSafeAreaType.SYSTEM], [LayoutSafeAreaEdge.TOP])

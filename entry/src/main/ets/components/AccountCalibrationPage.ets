@@ -1,4 +1,4 @@
-import { HdsNavigation, HdsNavigationTitleMode, hdsMaterial, DividerShowType } from '@kit.UIDesignKit';
+import { HdsNavigation, HdsNavigationTitleMode, hdsMaterial, DividerShowType, ScrollEffectType } from '@kit.UIDesignKit';
 import { ChipGroup, ChipSize } from '@kit.ArkUI';
 import { util } from '@kit.ArkTS';
 import { AccountProfile } from '../domain/model/AccountProfile';
@@ -148,20 +148,26 @@ export struct AccountCalibrationPage {
             }.padding(20).width('100%').borderRadius(20).backgroundColor($r('app.color.xq_app_surface_card'))
             if (this.error) { Text(this.error).fontSize('14fp').fontColor($r('app.color.xq_warning')).id('calibration-error') }
           }.width('100%').padding({ left: 16, right: 16, top: 12, bottom: 24 })
-        }.width('100%').layoutWeight(1).scrollBar(BarState.Off).edgeEffect(EdgeEffect.Spring, { alwaysEnabled: true })
-        if (this.conflict) {
-          Button(this.busy ? '读取中' : '刷新余额', { type: ButtonType.Capsule }).width('calc(100% - 32vp)').height(48).fontSize('16fp')
-            .fontColor(Color.White).backgroundColor($r('app.color.xq_brand')).enabled(!this.busy)
-            .margin({ top: 12, bottom: 8 }).onClick(() => { this.refresh(); }).id('calibration-refresh')
-        } else {
-          Button(this.busy ? '处理中' : '预览并校准', { type: ButtonType.Capsule }).width('calc(100% - 32vp)').height(48).fontSize('16fp')
-            .fontColor(Color.White).backgroundColor($r('app.color.xq_brand')).enabled(!this.busy && this.valid())
-            .margin({ top: 12, bottom: 8 }).onClick(() => { this.confirm(); }).id('calibration-confirm')
-        }
+        }.width('100%').layoutWeight(1).scrollBar(BarState.Off).clip(false).edgeEffect(EdgeEffect.Spring, { alwaysEnabled: true })
+        Column() {
+          if (this.conflict) {
+            Button(this.busy ? '读取中' : '刷新余额', { type: ButtonType.Capsule }).width('100%').height(48).fontSize('16fp')
+              .fontColor(Color.White).backgroundColor($r('app.color.xq_brand')).enabled(!this.busy)
+              .onClick(() => { this.refresh(); }).id('calibration-refresh')
+          } else {
+            Button(this.busy ? '处理中' : '预览并校准', { type: ButtonType.Capsule }).width('100%').height(48).fontSize('16fp')
+              .fontColor(Color.White).backgroundColor($r('app.color.xq_brand')).enabled(!this.busy && this.valid())
+              .onClick(() => { this.confirm(); }).id('calibration-confirm')
+          }
+        }.width('100%').padding({ left: 16, right: 16, top: 12, bottom: 8 })
+          .backgroundColor($r('app.color.xq_app_surface_page')).zIndex(1)
+          .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.BOTTOM])
       }.width('100%').height('100%').constraintSize({ maxWidth: 720 }).align(Alignment.Top)
     }.mode(NavigationMode.Stack).titleMode(HdsNavigationTitleMode.MINI)
       .titleBar({ enableComponentSafeArea: true, content: { title: { mainTitle: '校准余额' }, divider: { showType: DividerShowType.OFF }, backIcon: { componentId: 'calibration-close', action: () => { if (!this.busy) { this.onClose(); } } } },
-        style: { originalStyle: { contentStyle: { titleStyle: { mainTitleColor: $r('app.color.xq_font_primary') }, backIconStyle: { iconColor: $r('app.color.xq_icon_primary') } } }, systemMaterialEffect: { materialType: hdsMaterial.MaterialType.IMMERSIVE, materialLevel: hdsMaterial.MaterialLevel.ADAPTIVE } } })
+        style: { originalStyle: { contentStyle: { titleStyle: { mainTitleColor: $r('app.color.xq_font_primary') }, backIconStyle: { iconColor: $r('app.color.xq_icon_primary') } } }, scrollEffectStyle: { contentStyle: { titleStyle: { mainTitleColor: $r('app.color.xq_font_primary') }, backIconStyle: { iconColor: $r('app.color.xq_icon_primary') } } },
+          systemMaterialEffect: { materialType: hdsMaterial.MaterialType.IMMERSIVE, materialLevel: hdsMaterial.MaterialLevel.ADAPTIVE },
+          scrollEffectOpts: { enableScrollEffect: true, scrollEffectType: ScrollEffectType.IMMERSIVE_GRADIENT_BLUR } } })
       .systemBarStyle({ statusBarContentColor: this.statusBarColor() }, { statusBarContentColor: this.statusBarColor() })
       .bindToScrollable([this.scroller]).backgroundColor($r('app.color.xq_app_surface_page'))
       .ignoreLayoutSafeArea([LayoutSafeAreaType.SYSTEM], [LayoutSafeAreaEdge.TOP])

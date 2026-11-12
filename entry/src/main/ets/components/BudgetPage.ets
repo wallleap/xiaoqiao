@@ -1,4 +1,4 @@
-import { HdsNavigation, HdsNavigationTitleMode, hdsMaterial, DividerShowType } from '@kit.UIDesignKit';
+import { HdsNavigation, HdsNavigationTitleMode, hdsMaterial, DividerShowType, ScrollEffectType } from '@kit.UIDesignKit';
 import { LedgerWorkspace } from '../data/rdb/LedgerWorkspace';
 import { LedgerSnapshot } from '../domain/model/LedgerSnapshot';
 import { BudgetNatureLine } from '../domain/model/SpendingNature';
@@ -188,7 +188,7 @@ export struct BudgetPage {
             Text('分类额度合计不能超过总预算；没有预算分类的支出只计入总预算的未分配部分。')
               .fontSize('12fp').fontColor($r('app.color.xq_font_tertiary')).width('100%')
           }.width('100%').constraintSize({ maxWidth: 640 }).padding({ left: 16, right: 16, top: 12, bottom: 32 })
-        }.width('100%').layoutWeight(1).align(Alignment.Top).scrollBar(BarState.Off)
+        }.width('100%').layoutWeight(1).align(Alignment.Top).scrollBar(BarState.Off).clip(false)
           .edgeEffect(EdgeEffect.Spring, { alwaysEnabled: true })
       }.width('100%').height('100%')
     }.mode(NavigationMode.Stack).titleMode(HdsNavigationTitleMode.MINI)
@@ -197,7 +197,9 @@ export struct BudgetPage {
           backIcon: { componentId: 'budget-close', action: () => { if (!this.busy) { this.onClose(); } } } },
         style: { originalStyle: { contentStyle: { titleStyle: { mainTitleColor: $r('app.color.xq_font_primary') },
           backIconStyle: { iconColor: $r('app.color.xq_icon_primary') } } },
-          systemMaterialEffect: { materialType: hdsMaterial.MaterialType.IMMERSIVE, materialLevel: hdsMaterial.MaterialLevel.ADAPTIVE } } })
+          scrollEffectStyle: { contentStyle: { titleStyle: { mainTitleColor: $r('app.color.xq_font_primary') }, backIconStyle: { iconColor: $r('app.color.xq_icon_primary') } } },
+          systemMaterialEffect: { materialType: hdsMaterial.MaterialType.IMMERSIVE, materialLevel: hdsMaterial.MaterialLevel.ADAPTIVE },
+          scrollEffectOpts: { enableScrollEffect: true, scrollEffectType: ScrollEffectType.IMMERSIVE_GRADIENT_BLUR } } })
       .systemBarStyle({ statusBarContentColor: this.statusBarColor() }, { statusBarContentColor: this.statusBarColor() })
       .bindToScrollable([this.scroller]).backgroundColor($r('app.color.xq_app_surface_page'))
       .ignoreLayoutSafeArea([LayoutSafeAreaType.SYSTEM], [LayoutSafeAreaEdge.TOP])

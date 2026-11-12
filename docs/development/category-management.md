@@ -21,3 +21,12 @@
 `Categories` 原生测试覆盖三级分类、同级重名拒绝、循环移动拒绝、改名换图标、同级排序、父分类归档保护、逐级归档与恢复。`CategoryUI` 覆盖设置页入口、分类树和新增分类 Sheet。完整回归继续覆盖原记账与预算路径。
 
 最终验证：分类业务测试 1/1、分类 UI 1/1、完整 API 26 原生回归 50/50 通过；真机截图确认父分类和子分类的层级缩进、同级排序及管理操作布局。
+
+
+## 标题栏沉浸光感（2026-11-12）
+
+用户截图反馈滚动时标题栏近似不透明白底。代码确认该页使用 HdsNavigation，原有 IMMERSIVE/ADAPTIVE 材质和 bindToScrollable，但遗漏 scrollEffectOpts，正文 Scroll 默认裁剪。补充 enableScrollEffect:true 与 IMMERSIVE_GRADIENT_BLUR，标题栏保留 enableComponentSafeArea，正文设置 clip(false)，让滚动内容可进入标题栏背后的采样范围。滚动前后标题与返回图标沿用原主题色；不添加固定标题偏移、自定义蒙层、模糊半径或全局窗口配置。
+
+本轮仅修改 CategoryManagementPage.ets 与本说明。git diff --check 通过；按用户此前要求未构建、运行测试或安装。实际光感仍待用户手动确认：上滑分类卡片经过标题栏时的渐变模糊、返回按钮可点击、下拉回弹，以及深色模式可读性。后续按用户要求统一了其他普通滚动子页面，完整范围和验证边界见[子页面沉浸光感](hds-subpages.md)。
+
+官网复核后撤掉本轮额外加入的 avoidLayoutSafeArea:true，该参数不是正文避让标题栏的开关；重叠问题及官方依据见[子页面光感修正记录](hds-subpages.md#官网复核与重叠修正2026-11-12)。未运行设备复验。

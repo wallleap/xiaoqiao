@@ -1,4 +1,4 @@
-import { HdsNavigation, HdsNavigationTitleMode, hdsMaterial, DividerShowType } from '@kit.UIDesignKit';
+import { HdsNavigation, HdsNavigationTitleMode, hdsMaterial, DividerShowType, ScrollEffectType } from '@kit.UIDesignKit';
 import { AccountAdjustment, AdjustmentCursor } from '../domain/model/AccountCalibration';
 import { AccountProfile } from '../domain/model/AccountProfile';
 import { LedgerWorkspace } from '../data/rdb/LedgerWorkspace';
@@ -81,10 +81,12 @@ export struct AccountAdjustmentHistoryPage {
               .onClick(() => { this.load(true); }).id('adjustment-history-more')
           }
         }.width('100%').padding({ left: 16, right: 16, top: 12, bottom: 24 })
-      }.width('100%').height('100%').constraintSize({ maxWidth: 720 }).align(Alignment.Top).scrollBar(BarState.Off).edgeEffect(EdgeEffect.Spring, { alwaysEnabled: true })
+      }.width('100%').height('100%').constraintSize({ maxWidth: 720 }).align(Alignment.Top).scrollBar(BarState.Off).clip(false).edgeEffect(EdgeEffect.Spring, { alwaysEnabled: true })
     }.mode(NavigationMode.Stack).titleMode(HdsNavigationTitleMode.MINI)
       .titleBar({ enableComponentSafeArea: true, content: { title: { mainTitle: '余额调整记录' }, divider: { showType: DividerShowType.OFF }, backIcon: { componentId: 'adjustment-history-close', action: () => { this.onClose(); } } },
-        style: { originalStyle: { contentStyle: { titleStyle: { mainTitleColor: $r('app.color.xq_font_primary') }, backIconStyle: { iconColor: $r('app.color.xq_icon_primary') } } }, systemMaterialEffect: { materialType: hdsMaterial.MaterialType.IMMERSIVE, materialLevel: hdsMaterial.MaterialLevel.ADAPTIVE } } })
+        style: { originalStyle: { contentStyle: { titleStyle: { mainTitleColor: $r('app.color.xq_font_primary') }, backIconStyle: { iconColor: $r('app.color.xq_icon_primary') } } }, scrollEffectStyle: { contentStyle: { titleStyle: { mainTitleColor: $r('app.color.xq_font_primary') }, backIconStyle: { iconColor: $r('app.color.xq_icon_primary') } } },
+          systemMaterialEffect: { materialType: hdsMaterial.MaterialType.IMMERSIVE, materialLevel: hdsMaterial.MaterialLevel.ADAPTIVE },
+          scrollEffectOpts: { enableScrollEffect: true, scrollEffectType: ScrollEffectType.IMMERSIVE_GRADIENT_BLUR } } })
       .systemBarStyle({ statusBarContentColor: this.statusBarColor() }, { statusBarContentColor: this.statusBarColor() })
       .bindToScrollable([this.scroller]).backgroundColor($r('app.color.xq_app_surface_page'))
       .ignoreLayoutSafeArea([LayoutSafeAreaType.SYSTEM], [LayoutSafeAreaEdge.TOP])

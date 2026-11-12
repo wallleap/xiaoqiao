@@ -1,6 +1,6 @@
 import { AccountCalibrationPage } from './AccountCalibrationPage';
 import { AccountAdjustmentHistoryPage } from './AccountAdjustmentHistoryPage';
-import { HdsNavigation, HdsNavigationTitleMode, hdsMaterial, DividerShowType } from '@kit.UIDesignKit';
+import { HdsNavigation, HdsNavigationTitleMode, hdsMaterial, DividerShowType, ScrollEffectType } from '@kit.UIDesignKit';
 import { ChipGroup, ChipSize } from '@kit.ArkUI';
 import { util } from '@kit.ArkTS';
 import { AccountProfile, AccountCommand, AccountDraft, ACCOUNT_STYLES, AccountStyle } from '../domain/model/AccountProfile';
@@ -183,6 +183,8 @@ export struct AccountEditor {
             .fontSize('16fp').fontColor(Color.White).backgroundColor($r('app.color.xq_brand'))
             .enabled(!this.busy && !this.operationBusy && !this.conflict && this.validOpening()).id('account-save').onClick(() => { this.save(); })
         }.padding({ left: 16, right: 16, top: 12, bottom: 8 }).width('100%')
+          .backgroundColor($r('app.color.xq_app_surface_page')).zIndex(1)
+          .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.BOTTOM])
       }.width('100%').height('100%').constraintSize({ maxWidth: 720 }).align(Alignment.Top)
     }.mode(NavigationMode.Stack).titleMode(HdsNavigationTitleMode.MINI)
       .titleBar({ enableComponentSafeArea: true,
@@ -190,7 +192,9 @@ export struct AccountEditor {
           backIcon: { componentId: 'account-close', action: () => { if (!this.busy) { this.onClose(); } } } },
         style: { originalStyle: { contentStyle: { titleStyle: { mainTitleColor: $r('app.color.xq_font_primary') },
           backIconStyle: { iconColor: $r('app.color.xq_icon_primary') } } },
-          systemMaterialEffect: { materialType: hdsMaterial.MaterialType.IMMERSIVE, materialLevel: hdsMaterial.MaterialLevel.ADAPTIVE } } })
+          scrollEffectStyle: { contentStyle: { titleStyle: { mainTitleColor: $r('app.color.xq_font_primary') }, backIconStyle: { iconColor: $r('app.color.xq_icon_primary') } } },
+          systemMaterialEffect: { materialType: hdsMaterial.MaterialType.IMMERSIVE, materialLevel: hdsMaterial.MaterialLevel.ADAPTIVE },
+          scrollEffectOpts: { enableScrollEffect: true, scrollEffectType: ScrollEffectType.IMMERSIVE_GRADIENT_BLUR } } })
       .systemBarStyle({ statusBarContentColor: this.statusBarColor() }, { statusBarContentColor: this.statusBarColor() })
       .bindToScrollable([this.scroller]).backgroundColor($r('app.color.xq_app_surface_page'))
       .ignoreLayoutSafeArea([LayoutSafeAreaType.SYSTEM], [LayoutSafeAreaEdge.TOP])

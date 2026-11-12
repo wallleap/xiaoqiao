@@ -285,7 +285,7 @@ export struct EntryDetailPage {
               Button('重新读取').onClick(() => { this.onRetry(); }).id('entry-detail-retry')
             } else { this.receipt() }
           }.width('100%').padding({ left: 16, right: 16, top: 12, bottom: 16 })
-        }.layoutWeight(1).width('100%').scrollBar(BarState.Off).clip(true)
+        }.layoutWeight(1).width('100%').scrollBar(BarState.Off).clip(false)
           .edgeEffect(EdgeEffect.Spring, { alwaysEnabled: true }).id('entry-detail-scroll')
         if (!this.loading && this.error.length === 0 && this.entry !== undefined) {
           Row({ space: 12 }) {
@@ -296,6 +296,8 @@ export struct EntryDetailPage {
               .fontSize('16fp').fontColor(Color.White).backgroundColor($r('app.color.xq_brand'))
               .enabled(!this.busy && !this.recoveryWorking && this.entry.canEdit).onClick(() => { this.onEdit(); }).id('entry-detail-edit')
           }.padding({ left: 16, right: 16, top: 12, bottom: 8 }).width('100%')
+            .backgroundColor($r('app.color.xq_app_surface_page')).zIndex(1)
+            .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.BOTTOM])
         }
       }.width('100%').height('100%').constraintSize({ maxWidth: 720 }).align(Alignment.Top)
     }.mode(NavigationMode.Stack).titleMode(HdsNavigationTitleMode.MINI)

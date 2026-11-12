@@ -177,7 +177,7 @@ export struct TagManagementPage {
             }, (item: TagProfile) => item.id + ':' + item.revision)
           }
         }.width('100%').constraintSize({ maxWidth: 640 }).padding({ left: 16, right: 16, top: 12, bottom: 32 })
-      }.id('tag-scroll').width('100%').height('100%').align(Alignment.Top).scrollBar(BarState.Off)
+      }.id('tag-scroll').width('100%').height('100%').align(Alignment.Top).scrollBar(BarState.Off).clip(false)
         .edgeEffect(EdgeEffect.Spring, { alwaysEnabled: true })
     }.mode(NavigationMode.Stack).titleMode(HdsNavigationTitleMode.MINI)
       .titleBar({ enableComponentSafeArea: true,
@@ -185,6 +185,8 @@ export struct TagManagementPage {
           backIcon: { componentId: 'tag-close', action: () => { if (!this.busy) { this.onClose(); } } } },
         style: {
           originalStyle: { contentStyle: { titleStyle: { mainTitleColor: $r('app.color.xq_font_primary') },
+            backIconStyle: { iconColor: $r('app.color.xq_icon_primary') } } },
+          scrollEffectStyle: { contentStyle: { titleStyle: { mainTitleColor: $r('app.color.xq_font_primary') },
             backIconStyle: { iconColor: $r('app.color.xq_icon_primary') } } },
           systemMaterialEffect: { materialType: hdsMaterial.MaterialType.IMMERSIVE,
             materialLevel: hdsMaterial.MaterialLevel.ADAPTIVE },
