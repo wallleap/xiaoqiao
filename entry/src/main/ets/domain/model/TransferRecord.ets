@@ -1,3 +1,4 @@
+import { LedgerLocation } from './LedgerLocation';
 import { Money } from '../../core/money/Money';
 import { CurrencyUnit } from '../../core/money/CurrencyUnit';
 import { ExpenseRecord } from './ExpenseRecord';
@@ -26,6 +27,11 @@ export interface TransferCommand {
   includeInAssets: boolean;
   tagIds?: string[];
   attachments?: LedgerAttachmentDraft[];
+  /** Undefined preserves existing text on update; empty text clears it. */
+  merchantName?: string;
+  addressText?: string;
+  /** Undefined preserves coordinates; null clears them. */
+  location?: LedgerLocation | null;
   note: string;
   occurredAtMs: number;
   localDate: string;
@@ -49,7 +55,7 @@ export class TransferRecord {
     const validated = new ExpenseRecord({ id: command.id, bookId: command.bookId, categoryId: 'transfer',
       gross: command.amount, discount: Money.fromMinorText('0', command.amount.currency), bookPaid: command.amount,
       includeInAssets: command.includeInAssets, includeInBudget: false, tagIds: command.tagIds, note: command.note,
-      attachments: command.attachments,
+      attachments: command.attachments, merchantName: command.merchantName, addressText: command.addressText, location: command.location,
       occurredAtMs: command.occurredAtMs, localDate: command.localDate, timezone: command.timezone, offsetMinutes: command.offsetMinutes }).command;
     const purpose = TRANSFER_PURPOSES.find((value: TransferPurpose) => value.key === (command.purpose || 'transfer'));
     if (purpose === undefined) { throw new Error('INVALID_TRANSFER_PURPOSE'); }
@@ -67,6 +73,7 @@ export class TransferRecord {
       feeInBudget: this.feeInBudget, includeInAssets: validated.includeInAssets,
       tagIds: validated.tagIds,
       attachments: validated.attachments,
+      merchantName: validated.merchantName, addressText: validated.addressText, location: validated.location,
       note: validated.note, occurredAtMs: validated.occurredAtMs, localDate: validated.localDate,
       timezone: validated.timezone, offsetMinutes: validated.offsetMinutes };
   }

@@ -1,4 +1,8 @@
+import { LedgerLocation, locationFromDegrees } from '../domain/model/LedgerLocation';
 import { HdsNavigation, HdsNavigationTitleMode, DividerShowType, hdsMaterial } from '@kit.UIDesignKit';
+import { sceneMap } from '@kit.MapKit';
+import { common } from '@kit.AbilityKit';
+import { BusinessError } from '@kit.BasicServicesKit';
 import { photoAccessHelper } from '@kit.MediaLibraryKit';
 import { FrameCallback, KeyboardAvoidMode, ChipGroup, ChipSize, curves } from '@kit.ArkUI';
 import { util } from '@kit.ArkTS';
@@ -63,6 +67,11 @@ export struct ExpenseEditor {
   @State private amountFocusHighlight: boolean = false;
   private amountFocusTimer: number = -1;
   @State private note: string = '';
+  @State private merchantName: string = '';
+  @State private addressText: string = '';
+  @State private location: LedgerLocation | undefined = undefined;
+  @State private mapBusy: boolean = false;
+  private mapRequestVersion: number = 0;
   @State private attachments: ExpenseImageAttachment[] = [];
   @State private attachmentBusy: boolean = false;
   @State private attachmentQuality: string = 'standard';
@@ -118,6 +127,8 @@ export struct ExpenseEditor {
       this.selectedTagIds = (entry.tags || []).map((tag: TagChoice) => tag.id);
       this.includeAssets = entry.includeInAssets; this.includeBudget = entry.includeInBudget;
       this.occurredAtMs = entry.occurredAtMs; this.note = entry.note;
+      this.merchantName = entry.merchantName || ''; this.addressText = entry.addressText || '';
+      this.location = entry.location;
       this.attachments = (entry.attachments || []).map((attachment: LedgerAttachment): ExpenseImageAttachment => ({
         relativePath: attachment.relativePath, sha256: attachment.sha256, bytes: attachment.bytes,
         mimeType: attachment.mimeType, filePath: attachment.filePath, persisted: true }));
@@ -131,6 +142,7 @@ export struct ExpenseEditor {
 
   aboutToDisappear(): void {
     this.active = false;
+    this.mapRequestVersion++; this.mapBusy = false;
     clearTimeout(this.amountFocusTimer);
     this.amountController.stopEditing();
     this.getUIContext().setKeyboardAvoidMode(this.previousAvoidMode);
@@ -197,6 +209,56 @@ export struct ExpenseEditor {
     return this.attachments.map((attachment: ExpenseImageAttachment): LedgerAttachmentDraft => ({
       relativePath: attachment.relativePath, sha256: attachment.sha256,
       bytes: attachment.bytes, mimeType: attachment.mimeType }));
+  }
+
+  private async chooseMapLocation(): Promise<void> {
+    if (!this.active || this.mapBusy || this.attachmentBusy || this.saving || this.saved || this.conflicted) { return; }
+    if (!canIUse('SystemCapability.Map.Core')) {
+      this.inform('当前设备不支持地图选点，请手动填写地址。'); return;
+    }
+    const context = this.getUIContext().getHostContext() as common.UIAbilityContext;
+    if (context === undefined) { this.inform('暂时无法打开地图，请手动填写地址。'); return; }
+    this.amountController.stopEditing();
+    this.keyboardVisible = false;
+    this.mapBusy = true;
+    const version = ++this.mapRequestVersion;
+    const options: sceneMap.LocationChoosingOptions = {
+      searchEnabled: true, showNearbyPoi: true, snapshotEnabled: false,
+      cancelCallback: () => {
+        if (version === this.mapRequestVersion) { this.mapBusy = false; }
+      }
+    };
+    if (this.location !== undefined) {
+      options.location = { latitude: this.location.latitudeE6 / 1000000, longitude: this.location.longitudeE6 / 1000000 };
+    }
+    try {
+      const result = await sceneMap.chooseLocation(context, options);
+      if (!this.active || version !== this.mapRequestVersion || !this.mapBusy) { return; }
+      const address = result.address.trim();
+      if (address.length === 0) { this.inform('所选位置没有可用地址，请重新选点或手动填写。'); return; }
+      const location = locationFromDegrees(result.location.latitude, result.location.longitude);
+      this.addressText = address;
+      this.location = location;
+      // A free map point can be named “标记点”; only a POI can supply a merchant name.
+      if (this.merchantName.trim().length === 0 && (result.siteId || '').length > 0) {
+        this.merchantName = (result.name || '').trim();
+      }
+    } catch (error) {
+      if (!this.active || version !== this.mapRequestVersion || !this.mapBusy) { return; }
+      const code = (error as BusinessError).code;
+      const message = code === 1002600003 ? '地图身份校验未通过，请检查应用地图配置。' :
+        code === 1002600004 ? '当前应用尚未开通地图服务。' :
+        code === 1002600002 ? '地图连接失败，请检查网络后重试。' :
+        code === 801 ? '当前设备不支持地图选点。' : '地图选点暂不可用，请稍后重试。';
+      this.inform(message + '已保留原内容，也可以手动填写地址。');
+    } finally {
+      if (version === this.mapRequestVersion) { this.mapBusy = false; }
+    }
+  }
+
+  private changeAddress(value: string): void {
+    if (value.trim() !== this.addressText.trim()) { this.location = undefined; }
+    this.addressText = value;
   }
 
   private async chooseImages(): Promise<void> {
@@ -431,7 +493,7 @@ export struct ExpenseEditor {
   }
 
   private async save(): Promise<void> {
-    if (this.attachmentBusy || this.saving || this.saved || this.conflicted) { return; }
+    if (this.mapBusy || this.attachmentBusy || this.saving || this.saved || this.conflicted) { return; }
     this.errorText = '';
     let command: ExpenseCommand;
     try {
@@ -460,6 +522,7 @@ export struct ExpenseEditor {
         spendingNatureId: !this.isIncome && !this.isTransfer && this.selectedNatureId.length > 0 ? this.selectedNatureId : undefined,
         tagIds: this.selectedTagIds,
         attachments: this.attachmentDrafts(),
+        merchantName: this.merchantName.trim(), addressText: this.addressText.trim(), location: this.location || null,
         note: this.note.trim(),
         occurredAtMs: new Date(this.occurredAtMs).getTime(), localDate: this.localDate(),
         timezone: this.editingEntry !== undefined && !this.dateEdited ? this.editingEntry.timezone : Intl.DateTimeFormat().resolvedOptions().timeZone,
@@ -476,6 +539,7 @@ export struct ExpenseEditor {
           fee: ExpenseAmountInput.evaluateDiscount(this.transferFee, this.currency),
           coupon: ExpenseAmountInput.evaluateDiscount(this.transferCoupon, this.currency), feeInBudget: this.feeBudget, includeInAssets: command.includeInAssets,
           tagIds: this.selectedTagIds, attachments: command.attachments,
+          merchantName: command.merchantName, addressText: command.addressText, location: command.location,
           note: command.note, occurredAtMs: command.occurredAtMs, localDate: command.localDate,
           timezone: command.timezone, offsetMinutes: command.offsetMinutes };
         if (this.editingEntry !== undefined) { await workspace.updateTransfer(transfer, this.editingEntry.revision); }
@@ -484,6 +548,7 @@ export struct ExpenseEditor {
         const income: IncomeCommand = { id: command.id, bookId: command.bookId, categoryId: command.categoryId,
           amount: command.gross, bookAmount: command.bookPaid, accountId: command.accountId, accountAmount: command.accountPaid,
           includeInAssets: command.includeInAssets, tagIds: this.selectedTagIds,
+          merchantName: command.merchantName, addressText: command.addressText, location: command.location,
           attachments: command.attachments, note: command.note, occurredAtMs: command.occurredAtMs,
           localDate: command.localDate, timezone: command.timezone, offsetMinutes: command.offsetMinutes };
         if (this.editingEntry !== undefined) { await workspace.updateIncome(income, this.editingEntry.revision); }
@@ -872,6 +937,33 @@ export struct ExpenseEditor {
           Image($r('app.media.lucide_chevron_down1')).width(14).height(14).fillColor($r('app.color.xq_icon_tertiary'))
         }.height(48).width('100%').onClick(() => { this.pickDate(); })
         Divider().color($r('app.color.xq_comp_background_tertiary'))
+        Row({ space: 12 }) {
+          Text('商户').fontSize('14fp').fontColor($r('app.color.xq_font_secondary'))
+          TextInput({ text: this.merchantName, placeholder: '填写商户（选填）' })
+            .id('expense-merchant').accessibilityText('商户').layoutWeight(1).height(48).fontSize('14fp')
+            .backgroundColor(Color.Transparent).padding(0)
+            .onFocus(() => { this.keyboardVisible = false; })
+            .onEditChange((editing: boolean) => { this.noteEditing = editing; })
+            .onChange((value: string) => { this.merchantName = value; })
+            .onSubmit(() => { this.focusAmountAfterFrame(); })
+        }.width('100%')
+        Divider().color($r('app.color.xq_comp_background_tertiary'))
+        Row({ space: 12 }) {
+          Text('地址').fontSize('14fp').fontColor($r('app.color.xq_font_secondary'))
+          TextInput({ text: this.addressText, placeholder: '填写地址（选填）' })
+            .id('expense-address').accessibilityText('地址').layoutWeight(1).height(48).fontSize('14fp')
+            .backgroundColor(Color.Transparent).padding(0)
+            .onFocus(() => { this.keyboardVisible = false; })
+            .onEditChange((editing: boolean) => { this.noteEditing = editing; })
+            .onChange((value: string) => { this.changeAddress(value); })
+            .onSubmit(() => { this.focusAmountAfterFrame(); })
+          Button(this.mapBusy ? '打开中' : '地图选点', { type: ButtonType.Capsule })
+            .fontSize('12fp').height(32).padding({ left: 10, right: 10 })
+            .fontColor($r('app.color.xq_font_emphasize')).backgroundColor(Color.Transparent)
+            .enabled(!this.mapBusy && !this.attachmentBusy && !this.saving && !this.saved && !this.conflicted)
+            .id('expense-map-location').onClick(() => { this.chooseMapLocation(); })
+        }.width('100%')
+        Divider().color($r('app.color.xq_comp_background_tertiary'))
         TextInput({ text: this.note, placeholder: '添加备注' }).id('expense-note').height(48).fontSize('14fp')
           .backgroundColor(Color.Transparent).padding(0).maxLength(500)
           .onFocus(() => { this.keyboardVisible = false; })
@@ -1052,7 +1144,7 @@ export struct ExpenseEditor {
     AmountKeyboard({
       prefix: 'expense',
       disabled: this.saving || this.saved || this.conflicted,
-      canSubmit: !this.attachmentBusy && this.canSaveAmounts(this.expression, this.discount),
+      canSubmit: !this.mapBusy && !this.attachmentBusy && this.canSaveAmounts(this.expression, this.discount),
       submitLabel: this.saving ? '保存中' : '保存',
       accessory: () => { this.keyboardToolbar() },
       footer: () => { this.keyboardFooter() },

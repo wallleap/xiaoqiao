@@ -1088,13 +1088,16 @@ export class LedgerWorkspace {
           filePath: this.backup.resources.root + '/' + attachment.relativePath });
       }
       detail.attachments = attachments;
-      const extras = await db.querySql("SELECT COALESCE(m.name,t.merchant_name_snapshot,'')," +
-        "COALESCE(t.address_text,'') FROM transactions t LEFT JOIN merchants m ON m.id=t.merchant_id WHERE t.id=?",
+      const extras = await db.querySql("SELECT COALESCE(t.merchant_name_snapshot,m.name,'')," +
+        "COALESCE(t.address_text,''),t.latitude_e6,t.longitude_e6 FROM transactions t LEFT JOIN merchants m ON m.id=t.merchant_id WHERE t.id=?",
       [detail.id]);
       try {
         if (extras.goToFirstRow()) {
           detail.merchantName = extras.getString(0);
           detail.addressText = extras.getString(1);
+          if (!extras.isColumnNull(2) && !extras.isColumnNull(3)) {
+            detail.location = { latitudeE6: extras.getLong(2), longitudeE6: extras.getLong(3) };
+          }
         }
       } finally { extras.close(); }
       return detail;
@@ -1194,7 +1197,7 @@ export class LedgerWorkspace {
       let income: bigint = BigInt(0);
       let expense: bigint = BigInt(0);
       let budgetUsed: bigint = BigInt(0);
-      const rows = await db.querySql("SELECT t.id,t.note,CASE WHEN t.kind='transfer' THEN CASE d.purpose WHEN 'credit_repayment' THEN '信用卡还款' WHEN 'loan_repayment' THEN '借款还款' WHEN 'topup' THEN '充值' WHEN 'withdrawal' THEN '提现' ELSE '转账' END ELSE c.name END,COALESCE(c.icon_key,'transfer'),COALESCE(a.name,'不使用账户'),t.occurred_local_date,t.occurred_at_ms,t.occurred_offset_minutes,t.kind,CAST(COALESCE(t.book_minor,t.paid_minor) AS TEXT),t.include_in_budget,CAST(t.gross_minor AS TEXT),CAST(t.discount_minor AS TEXT),COALESCE(ai.name,''),CAST(COALESCE(d.out_minor,t.paid_minor) AS TEXT),CAST(COALESCE(d.fee_minor,0) AS TEXT),CAST(COALESCE(d.coupon_minor,0) AS TEXT),COALESCE(d.purpose,'transfer'),COALESCE(d.fee_in_expense,1),COALESCE(d.fee_in_budget,1),COALESCE(mc.name,t.merchant_name_snapshot,''),COALESCE(t.address_text,''),COALESCE(m.account_id,d.from_account_id,''),COALESCE(t.merchant_id,'') FROM transactions t LEFT JOIN categories c ON c.id=t.category_id LEFT JOIN transfer_details d ON d.transaction_id=t.id LEFT JOIN account_movements m ON m.transaction_id=t.id AND m.leg<>'transfer_in' LEFT JOIN accounts a ON a.id=COALESCE(m.account_id,d.from_account_id) LEFT JOIN account_movements mi ON mi.transaction_id=t.id AND mi.leg='transfer_in' LEFT JOIN accounts ai ON ai.id=mi.account_id LEFT JOIN merchants mc ON mc.id=t.merchant_id WHERE t.book_id=? AND t.posting_state='posted' AND t.deleted_at_ms IS NULL AND (t.import_batch_id IS NULL OR EXISTS(SELECT 1 FROM import_batches b WHERE b.id=t.import_batch_id AND b.status='committed')) AND (t.kind IN ('expense','income') OR (t.kind='transfer' AND t.currency_id='CNY' AND NOT EXISTS(SELECT 1 FROM account_movements x WHERE x.transaction_id=t.id AND x.currency_id<>'CNY'))) AND substr(t.occurred_local_date,1,7)=? ORDER BY t.occurred_at_ms DESC,t.created_at_ms DESC,t.id DESC", [this.activeBookId, month]);
+      const rows = await db.querySql("SELECT t.id,t.note,CASE WHEN t.kind='transfer' THEN CASE d.purpose WHEN 'credit_repayment' THEN '信用卡还款' WHEN 'loan_repayment' THEN '借款还款' WHEN 'topup' THEN '充值' WHEN 'withdrawal' THEN '提现' ELSE '转账' END ELSE c.name END,COALESCE(c.icon_key,'transfer'),COALESCE(a.name,'不使用账户'),t.occurred_local_date,t.occurred_at_ms,t.occurred_offset_minutes,t.kind,CAST(COALESCE(t.book_minor,t.paid_minor) AS TEXT),t.include_in_budget,CAST(t.gross_minor AS TEXT),CAST(t.discount_minor AS TEXT),COALESCE(ai.name,''),CAST(COALESCE(d.out_minor,t.paid_minor) AS TEXT),CAST(COALESCE(d.fee_minor,0) AS TEXT),CAST(COALESCE(d.coupon_minor,0) AS TEXT),COALESCE(d.purpose,'transfer'),COALESCE(d.fee_in_expense,1),COALESCE(d.fee_in_budget,1),COALESCE(t.merchant_name_snapshot,mc.name,''),COALESCE(t.address_text,''),COALESCE(m.account_id,d.from_account_id,''),COALESCE(t.merchant_id,'') FROM transactions t LEFT JOIN categories c ON c.id=t.category_id LEFT JOIN transfer_details d ON d.transaction_id=t.id LEFT JOIN account_movements m ON m.transaction_id=t.id AND m.leg<>'transfer_in' LEFT JOIN accounts a ON a.id=COALESCE(m.account_id,d.from_account_id) LEFT JOIN account_movements mi ON mi.transaction_id=t.id AND mi.leg='transfer_in' LEFT JOIN accounts ai ON ai.id=mi.account_id LEFT JOIN merchants mc ON mc.id=t.merchant_id WHERE t.book_id=? AND t.posting_state='posted' AND t.deleted_at_ms IS NULL AND (t.import_batch_id IS NULL OR EXISTS(SELECT 1 FROM import_batches b WHERE b.id=t.import_batch_id AND b.status='committed')) AND (t.kind IN ('expense','income') OR (t.kind='transfer' AND t.currency_id='CNY' AND NOT EXISTS(SELECT 1 FROM account_movements x WHERE x.transaction_id=t.id AND x.currency_id<>'CNY'))) AND substr(t.occurred_local_date,1,7)=? ORDER BY t.occurred_at_ms DESC,t.created_at_ms DESC,t.id DESC", [this.activeBookId, month]);
       try {
         while (rows.goToNextRow()) {
           const isIncome = rows.getString(8) === 'income';

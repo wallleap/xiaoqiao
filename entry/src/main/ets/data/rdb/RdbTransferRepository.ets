@@ -4,6 +4,7 @@ import { TransferRecord } from '../../domain/model/TransferRecord';
 import { TransferRepository } from '../../domain/ports/TransferRepository';
 import { RdbSession } from './RdbSession';
 import { RdbAttachmentLinks } from './RdbAttachmentLinks';
+import { RdbMerchantFields } from './RdbMerchantFields';
 
 export class RdbTransferRepository implements TransferRepository {
   private readonly session: RdbSession;
@@ -71,6 +72,7 @@ export class RdbTransferRepository implements TransferRepository {
           new relationalStore.RdbPredicates('transactions').equalTo('id', command.id));
         await db.delete(new relationalStore.RdbPredicates('account_movements').equalTo('transaction_id', command.id));
       }
+      await RdbMerchantFields.apply(db, command.id, command.merchantName, command.addressText, command.location);
       const details: relationalStore.ValuesBucket = { purpose: record.purpose, currency_id: 'CNY',
         from_account_id: command.fromAccountId, to_account_id: command.toAccountId,
         out_minor: record.outgoing.toSafeMinorNumber(), in_minor: minor, fee_minor: record.fee.toSafeMinorNumber(),

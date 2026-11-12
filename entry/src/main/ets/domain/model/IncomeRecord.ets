@@ -1,3 +1,4 @@
+import { LedgerLocation } from './LedgerLocation';
 import { Money } from '../../core/money/Money';
 import { ExpenseRecord } from './ExpenseRecord';
 import { LedgerAttachmentDraft } from './LedgerAttachment';
@@ -14,6 +15,11 @@ export interface IncomeCommand {
   readonly includeInAssets: boolean;
   readonly tagIds?: string[];
   readonly attachments?: LedgerAttachmentDraft[];
+  /** Undefined preserves existing text on update; empty text clears it. */
+  readonly merchantName?: string;
+  readonly addressText?: string;
+  /** Undefined preserves coordinates; null clears them. */
+  readonly location?: LedgerLocation | null;
   readonly note: string;
   readonly occurredAtMs: number;
   readonly localDate: string;
@@ -29,6 +35,7 @@ export class IncomeRecord {
       gross: command.amount, discount: Money.fromMinorText('0', command.amount.currency), bookPaid: command.bookAmount,
       accountId: command.accountId, accountPaid: command.accountAmount, includeInAssets: command.includeInAssets,
       includeInBudget: false, tagIds: command.tagIds, attachments: command.attachments,
+      merchantName: command.merchantName, addressText: command.addressText, location: command.location,
       note: command.note, occurredAtMs: command.occurredAtMs, localDate: command.localDate,
       timezone: command.timezone, offsetMinutes: command.offsetMinutes });
   }

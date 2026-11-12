@@ -1,3 +1,4 @@
+import locationMapTest from './LocationMap.test';
 import backupPackageTest from './BackupPackage.test';
 import { abilityDelegatorRegistry } from '@kit.TestKit';
 import webDavHttpTest from './WebDavHttp.test';
@@ -29,6 +30,8 @@ import dataExchangeFlowTest from './DataExchangeFlow';
 import csvImportTest from './CsvImport.test';
 import xlsxExportTest from './XlsxExport.test';
 import attachmentsTest from './Attachments.test';
+import merchantFieldsTest from './MerchantFields.test';
+import mapPickerUnavailableTest, { mapPickerConfiguredTest } from './MapPicker.test';
 
 export default function testsuite() {
   abilityTest();
@@ -60,5 +63,9 @@ export default function testsuite() {
   csvImportTest();
   xlsxExportTest();
   attachmentsTest();
+  merchantFieldsTest();
+  if (abilityDelegatorRegistry.getArguments().parameters['-s class'] === 'LocationMapUI') { locationMapTest(); }
+  if (abilityDelegatorRegistry.getArguments().parameters['-s class'] === 'MapPickerConfigured') { mapPickerConfiguredTest(); }
+  if (abilityDelegatorRegistry.getArguments().parameters['-s class'] === 'MapPickerUnavailable') { mapPickerUnavailableTest(); }
   if (abilityDelegatorRegistry.getArguments().parameters['-s class'] === 'WebDavHttp') { webDavHttpTest(); }
 }

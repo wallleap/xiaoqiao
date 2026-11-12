@@ -1,3 +1,4 @@
+import { EntryLocationMap } from './EntryLocationMap';
 import { HdsNavigation, HdsNavigationTitleMode, hdsMaterial, DividerShowType, ScrollEffectType } from '@kit.UIDesignKit';
 import { transferPurposeLabel } from '../domain/model/TransferRecord';
 import { EntryDetail } from '../domain/model/EntryDetail';
@@ -189,6 +190,11 @@ export struct EntryDetailPage {
         }
         if ((this.entry.merchantName || '').length > 0) { this.field('商户', this.entry.merchantName || '') }
         if ((this.entry.addressText || '').length > 0) { this.field('地址', this.entry.addressText || '') }
+        if (this.entry.location !== undefined) {
+          ForEach([this.entry], (item: EntryDetail) => {
+            EntryLocationMap({ location: item.location, merchantName: item.merchantName || '', addressText: item.addressText || '' })
+          }, (item: EntryDetail) => item.id + ':' + item.revision)
+        }
         this.attachmentGallery()
         if (this.entry.balanceMode === 'preserve') {
           Text('历史导入账目，不改变账户余额').fontSize('12fp').fontColor($r('app.color.xq_font_secondary'))
@@ -222,7 +228,7 @@ export struct EntryDetailPage {
               Button('重新读取').onClick(() => { this.onRetry(); }).id('entry-detail-retry')
             } else { this.receipt() }
           }.width('100%').padding({ left: 16, right: 16, top: 12, bottom: 16 })
-        }.layoutWeight(1).width('100%').scrollBar(BarState.Off).clip(false)
+        }.layoutWeight(1).width('100%').scrollBar(BarState.Off).clip(true)
           .edgeEffect(EdgeEffect.Spring, { alwaysEnabled: true }).id('entry-detail-scroll')
         if (!this.loading && this.error.length === 0 && this.entry !== undefined) {
           Row({ space: 12 }) {

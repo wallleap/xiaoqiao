@@ -1,3 +1,4 @@
+import { LedgerLocation } from './LedgerLocation';
 import { TagChoice } from './LedgerSnapshot';
 import { LedgerAttachment } from './LedgerAttachment';
 
@@ -19,6 +20,7 @@ export interface EntryDetail {
   attachments?: LedgerAttachment[];
   merchantName?: string;
   addressText?: string;
+  location?: LedgerLocation;
   accountId: string;
   accountName: string;
   toAccountId?: string;

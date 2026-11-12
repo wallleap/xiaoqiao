@@ -1,3 +1,4 @@
+import { LedgerLocation, validateLedgerLocation } from './LedgerLocation';
 import { Money } from '../../core/money/Money';
 import { LedgerAttachmentDraft, validateAttachmentDrafts } from './LedgerAttachment';
 
@@ -16,6 +17,11 @@ export interface ExpenseCommand {
   readonly spendingNatureId?: string;
   readonly tagIds?: string[];
   readonly attachments?: LedgerAttachmentDraft[];
+  /** Undefined preserves existing text on update; empty text clears it. */
+  readonly merchantName?: string;
+  readonly addressText?: string;
+  /** Undefined preserves coordinates; null clears them. */
+  readonly location?: LedgerLocation | null;
   readonly note: string;
   readonly occurredAtMs: number;
   readonly localDate: string;
@@ -63,6 +69,10 @@ export class ExpenseRecord {
     if (command.spendingNatureId !== undefined && command.spendingNatureId.trim().length === 0) {
       throw new Error('INVALID_SPENDING_NATURE');
     }
+    const location = validateLedgerLocation(command.location);
+    if (location !== undefined && location !== null && command.addressText !== undefined && command.addressText.trim().length === 0) {
+      throw new Error('INVALID_LEDGER_LOCATION');
+    }
     const tagIds = validateTagIds(command.tagIds);
     const attachments = validateAttachmentDrafts(command.attachments);
     // P0 manual command intentionally handles only same-currency settlement.
@@ -90,6 +100,7 @@ export class ExpenseRecord {
       spendingNatureId: command.spendingNatureId,
       tagIds: tagIds,
       attachments: attachments,
+      merchantName: command.merchantName?.trim(), addressText: command.addressText?.trim(), location: location,
       note: command.note, occurredAtMs: command.occurredAtMs, localDate: command.localDate,
       timezone: command.timezone, offsetMinutes: command.offsetMinutes
     };

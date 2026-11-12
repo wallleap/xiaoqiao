@@ -9,6 +9,7 @@ import { IncomeRecord } from '../../domain/model/IncomeRecord';
 import { IncomeRepository } from '../../domain/ports/IncomeRepository';
 import { RdbSession } from './RdbSession';
 import { RdbAttachmentLinks } from './RdbAttachmentLinks';
+import { RdbMerchantFields } from './RdbMerchantFields';
 
 export class RdbLedgerRepository implements LedgerRepository, ExpenseUpdateRepository, IncomeRepository {
   private readonly session: RdbSession;
@@ -62,6 +63,7 @@ export class RdbLedgerRepository implements LedgerRepository, ExpenseUpdateRepos
       };
       if (command.spendingNatureId !== undefined) { values.spending_nature_id = command.spendingNatureId; }
       await store.insert('transactions', values);
+      await RdbMerchantFields.apply(store, command.id, command.merchantName, command.addressText, command.location);
       const accountId = command.accountId;
       const accountPaid = command.accountPaid;
       if (accountId !== undefined && accountPaid !== undefined) {
@@ -146,6 +148,7 @@ export class RdbLedgerRepository implements LedgerRepository, ExpenseUpdateRepos
         note: command.note, occurred_at_ms: command.occurredAtMs,
         occurred_local_date: command.localDate, occurred_timezone: command.timezone,
         occurred_offset_minutes: command.offsetMinutes }, new relationalStore.RdbPredicates('transactions').equalTo('id', command.id));
+      await RdbMerchantFields.apply(db, command.id, command.merchantName, command.addressText, command.location);
       await db.delete(new relationalStore.RdbPredicates('account_movements').equalTo('transaction_id', command.id));
       if (command.accountId !== undefined && command.accountPaid !== undefined) {
         await db.insert('account_movements', { id: util.generateRandomUUID(), transaction_id: command.id,

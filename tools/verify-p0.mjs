@@ -344,4 +344,76 @@ await test('image selection deduplicates and explains oversized input', async ()
   assert.equal(editor.attachments.length, 1);
   assert.match(editor.error, /32 MiB/);
 });
+await test('manual expense income and transfer normalize and retain merchant/address text', () => {
+  const expense = new ExpenseRecord({...command(), merchantName:'  小桥咖啡  ',addressText:'  上海市一号路  '}).command;
+  const income = new IncomeRecord({...incomeCommand(),merchantName:'  公司  ',addressText:'  园区  '}).settlement.command;
+  const transfer = new TransferRecord({...transferCommand(),merchantName:'  银行  ',addressText:'  支行  '}).command;
+  for (const [record,name,address] of [[expense,'小桥咖啡','上海市一号路'],[income,'公司','园区'],[transfer,'银行','支行']]) {
+    assert.equal(record.merchantName,name); assert.equal(record.addressText,address);
+  }
+  const cleared = new ExpenseRecord({...command(),merchantName:'  ',addressText:''}).command;
+  assert.equal(cleared.merchantName,''); assert.equal(cleared.addressText,'');
+  const untouched = new ExpenseRecord(command()).command;
+  assert.equal(untouched.merchantName,undefined); assert.equal(untouched.addressText,undefined);
+});
+const { locationFromDegrees, validateLedgerLocation } = load(base + '/domain/model/LedgerLocation.ets');
+const mapMethod = editorSource.slice(editorSource.indexOf('  private async chooseMapLocation()'), editorSource.indexOf('  private async chooseImages()'));
+function mapEditor(chooseLocation, supported=true) {
+  const output=ts.transpileModule(`class Editor { ${mapMethod} }`,{compilerOptions:{target:ts.ScriptTarget.ES2020}});
+  const Editor=vm.runInNewContext(`${output.outputText}; Editor`,{sceneMap:{chooseLocation},canIUse:()=>supported,locationFromDegrees});
+  const editor=new Editor();
+  Object.assign(editor,{active:true,mapBusy:false,mapRequestVersion:0,merchantName:'',addressText:'旧地址',
+    amountController:{stopEditing(){}},getUIContext:()=>({getHostContext:()=>({})}),inform(message){this.message=message;}});
+  return editor;
+}
+await test('map picker fills address and POI merchant without overwriting existing merchant',async()=>{
+  const editor=mapEditor(async()=>({address:' 新地址 ',name:' 店铺 ',siteId:'poi',location:{latitude:31.230416,longitude:121.473701}}));
+  await editor.chooseMapLocation(); assert.equal(editor.addressText,'新地址'); assert.equal(editor.merchantName,'店铺');
+  editor.merchantName='自填商户'; await editor.chooseMapLocation(); assert.equal(editor.merchantName,'自填商户');
+  const point=mapEditor(async()=>({address:'路口',name:'标记点',location:{latitude:0,longitude:0}}));
+  await point.chooseMapLocation(); assert.equal(point.addressText,'路口'); assert.equal(point.merchantName,'');
+});
+await test('map picker rejects unsupported devices and explains authentication failures',async()=>{
+  const unsupported=mapEditor(()=>assert.fail('must not call map'),false);
+  await unsupported.chooseMapLocation(); assert.match(unsupported.message,/不支持/); assert.equal(unsupported.addressText,'旧地址');
+  for(const code of [1002600002,1002600003,1002600004,801,123]) {
+    const editor=mapEditor(async()=>{throw {code};}); await editor.chooseMapLocation();
+    assert.equal(editor.addressText,'旧地址'); assert.equal(editor.mapBusy,false); assert.match(editor.message,/手动填写/);
+  }
+});
+await test('map picker ignores results after cancellation or editor closes and blocks duplicate requests',async()=>{
+  let complete,cancel,calls=0;
+  const editor=mapEditor(async(_context,options)=>{calls++;cancel=options.cancelCallback;return new Promise(resolve=>complete=resolve);});
+  const pending=editor.chooseMapLocation(); await editor.chooseMapLocation(); assert.equal(calls,1);
+  cancel(); complete({address:'不应回填'}); await pending; assert.equal(editor.addressText,'旧地址'); assert.equal(editor.mapBusy,false);
+  const closing=editor.chooseMapLocation(); editor.active=false; complete({address:'迟到结果'}); await closing;
+  assert.equal(editor.addressText,'旧地址');
+});
+await test('empty map address preserves merchant and address and releases busy state',async()=>{
+  const editor=mapEditor(async()=>({address:'  ',name:'店铺',siteId:'poi'}));
+  await editor.chooseMapLocation(); assert.equal(editor.addressText,'旧地址'); assert.equal(editor.merchantName,'');
+  assert.equal(editor.mapBusy,false); assert.match(editor.message,/没有可用地址/);
+});
+await test('location conversion and all manual kinds retain exact E6 coordinates and reject invalid input',()=>{
+  const location=locationFromDegrees(31.2304164,121.4737014);
+  assert.deepEqual(location,{latitudeE6:31230416,longitudeE6:121473701});
+  const records=[new ExpenseRecord({...command(),location}).command,
+    new IncomeRecord({...incomeCommand(),location}).settlement.command,new TransferRecord({...transferCommand(),location}).command];
+  location.latitudeE6=0;for(const record of records)assert.equal(record.location.latitudeE6,31230416);
+  for(const invalid of [{latitudeE6:90000001,longitudeE6:0},{latitudeE6:0,longitudeE6:-180000001},
+    {latitudeE6:1.5,longitudeE6:0},{latitudeE6:NaN,longitudeE6:0},{latitudeE6:0}])assert.throws(()=>validateLedgerLocation(invalid),/INVALID_LEDGER_LOCATION/);
+  for(const pair of [[NaN,0],[0,Infinity],[91,0],[0,-181]])assert.throws(()=>locationFromDegrees(...pair));
+  assert.deepEqual(locationFromDegrees(0,0),{latitudeE6:0,longitudeE6:0});
+  assert.equal(validateLedgerLocation(null),null);assert.equal(validateLedgerLocation(undefined),undefined);
+  assert.throws(()=>new ExpenseRecord({...command(),location:{latitudeE6:0,longitudeE6:0},addressText:''}),/INVALID_LEDGER_LOCATION/);
+});
+await test('map editor retains coordinates until a manual address change and recenters subsequent picks',async()=>{
+  let initial;
+  const editor=mapEditor(async(_context,options)=>{initial=options.location;return {address:'路口',location:{latitude:0,longitude:0}};});
+  editor.location={latitudeE6:31230416,longitudeE6:121473701};
+  await editor.chooseMapLocation();assert.equal(initial.latitude,31.230416);assert.equal(initial.longitude,121.473701);
+  assert.equal(editor.location.latitudeE6,0);assert.equal(editor.location.longitudeE6,0);
+  editor.changeAddress(' 路口 ');assert.equal(editor.location.latitudeE6,0);
+  editor.changeAddress('另一个地址');assert.equal(editor.location,undefined);
+});
 console.log(`${count} host checks passed. Native ArkTS/RDB/Decimal and UI require the separate device suite.`);
