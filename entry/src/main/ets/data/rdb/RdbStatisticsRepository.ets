@@ -18,6 +18,7 @@ interface NatureMeta {
 interface StatisticsRawEntry {
   id: string;
   kind: string;
+  tagSourceId?: string;
   note: string;
   categoryId: string;
   natureId: string;
@@ -143,9 +144,9 @@ export class RdbStatisticsRepository {
     const links: Map<string, TagMeta[]> = new Map();
     const rows = await this.store.querySql('SELECT tt.transaction_id,g.id,g.name,COALESCE(g.color_token,\'neutral\') ' +
       'FROM transaction_tags tt JOIN tags g ON g.id=tt.tag_id JOIN v_posted_transactions tx ON tx.id=tt.transaction_id ' +
-      'WHERE tt.book_id=? AND tx.occurred_local_date>=? AND tx.occurred_local_date<? ' +
+      'WHERE tt.book_id=? AND ((tx.occurred_local_date>=? AND tx.occurred_local_date<?) OR EXISTS(SELECT 1 FROM v_expense_recoveries r WHERE r.transaction_id=tx.id AND r.local_date>=? AND r.local_date<?)) ' +
       'ORDER BY g.sort_order,g.created_at_ms,g.id',
-      [bookId, startDate, endDateExclusive]);
+      [bookId, startDate, endDateExclusive, startDate, endDateExclusive]);
     try {
       while (rows.goToNextRow()) {
         const transactionId = rows.getString(0);
@@ -177,6 +178,18 @@ export class RdbStatisticsRepository {
           occurredAtMs: rows.getLong(12) });
       }
     } finally { rows.close(); }
+    const receipts = await this.store.querySql("SELECT id,transaction_id,kind,note,category_id,COALESCE(spending_nature_id,''),include_in_budget,CAST(amount_minor AS TEXT),local_date,occurred_at_ms FROM v_expense_recoveries WHERE book_id=? AND local_date>=? AND local_date<?", [bookId, startDate, endDateExclusive]);
+    try {
+      while (receipts.goToNextRow()) {
+        const minor = '-' + receipts.getString(7);
+        values.push({ id: receipts.getString(0), tagSourceId: receipts.getString(1), kind: 'expense',
+          note: (receipts.getString(2) === 'refund' ? '退款' : '报销到账') + (receipts.getString(3) ? ' · ' + receipts.getString(3) : ''),
+          categoryId: receipts.getString(4), natureId: receipts.getString(5), includeInBudget: receipts.getLong(6) === 1,
+          bookMinor: minor, paidMinor: minor, date: receipts.getString(8), occurredAtMs: receipts.getLong(9),
+          feeMinor: '0', feeInExpense: false, feeInBudget: false });
+      }
+    } finally { receipts.close(); }
+    values.sort((a: StatisticsRawEntry, b: StatisticsRawEntry) => b.occurredAtMs - a.occurredAtMs || a.id.localeCompare(b.id));
     return values;
   }
 
@@ -227,11 +240,11 @@ export class RdbStatisticsRepository {
     let total = BigInt(0);
     for (const entry of records) {
       const amount = this.effectiveAmount(entry, kind);
-      if (amount <= BigInt(0)) { continue; }
+      if (amount === BigInt(0)) { continue; }
       total += amount;
       const key = bucketKey(entry.date, unit);
       bucketTotals.set(key, (bucketTotals.get(key) || BigInt(0)) + amount);
-      for (const tag of tagsByTransaction.get(entry.id) || []) {
+      for (const tag of tagsByTransaction.get(entry.tagSourceId || entry.id) || []) {
         const current = tagTotals.get(tag.id);
         tagTotals.set(tag.id, { tag: tag, amount: (current?.amount || BigInt(0)) + amount,
           entryCount: (current?.entryCount || 0) + 1 });
@@ -308,7 +321,7 @@ export class RdbStatisticsRepository {
     const values: StatisticsEntry[] = [];
     for (const entry of records) {
       const amount = this.effectiveAmount(entry, kind);
-      if (amount <= BigInt(0)) { continue; }
+      if (amount === BigInt(0)) { continue; }
       let entryKey = TRANSFER_FEE_KEY;
       let entryName = '转账手续费';
       let iconKey = 'transfer';
@@ -319,7 +332,7 @@ export class RdbStatisticsRepository {
         iconKey = category?.iconKey || 'other';
       }
       if (categoryKey.length > 0 && categoryKey !== entryKey) { continue; }
-      if (tagId.length > 0 && !(tagsByTransaction.get(entry.id) || []).some((tag: TagMeta) => tag.id === tagId)) {
+      if (tagId.length > 0 && !(tagsByTransaction.get(entry.tagSourceId || entry.id) || []).some((tag: TagMeta) => tag.id === tagId)) {
         continue;
       }
       values.push({ id: entry.id, title: entry.note.length > 0 ? entry.note : entryName, categoryKey: entryKey,

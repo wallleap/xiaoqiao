@@ -1,3 +1,4 @@
+import { ExpenseRecovery } from './ExpenseRecovery';
 import { LedgerLocation } from './LedgerLocation';
 import { TagChoice } from './LedgerSnapshot';
 import { LedgerAttachment } from './LedgerAttachment';
@@ -50,5 +51,7 @@ export interface EntryDetail {
   timezone: string;
   offsetMinutes: number;
   note: string;
+  reimbursementPending?: boolean;
+  recoveries?: ExpenseRecovery[];
   canEdit: boolean;
 }

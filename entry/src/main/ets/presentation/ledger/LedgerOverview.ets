@@ -31,6 +31,9 @@ export interface LedgerEntry {
   time: string;
   income: boolean;
   transfer?: boolean;
+  recoveryKind?: string;
+  reimbursementPending?: boolean;
+  recoveryBadges?: string[];
   toAccount?: string;
   expenseMinor?: string;
   transferFeeMinor?: string;
@@ -49,14 +52,28 @@ export function displayAmount(minor: string): string {
   return parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',') + '.' + parts[1];
 }
 
+/** Badges describe the original expense; receipt rows already name their own type. */
+function expenseRecoveryBadges(entry: SavedLedgerEntry): string[] {
+  if (entry.income || entry.transfer || entry.recoveryKind) { return []; }
+  const paid = BigInt(entry.minor);
+  const reimbursed = BigInt(entry.reimbursedMinor || '0');
+  const refunded = BigInt(entry.refundedMinor || '0');
+  const recovered = BigInt(entry.recoveredMinor || (reimbursed + refunded).toString());
+  const badges: string[] = [];
+  if (entry.reimbursementPending && reimbursed === BigInt(0) && recovered < paid) { badges.push('待报销'); }
+  if (reimbursed > BigInt(0)) { badges.push(reimbursed >= paid ? '已报销' : '部分报销'); }
+  if (refunded > BigInt(0)) { badges.push(refunded >= paid ? '已退款' : '部分退款'); }
+  return badges;
+}
+
 export function presentEntry(entry: SavedLedgerEntry): LedgerEntry {
   const local = new Date(entry.occurredAtMs + entry.offsetMinutes * 60000);
-  return { id: entry.id, title: entry.note.length > 0 ? entry.note : entry.category, category: entry.category,
+  return { id: entry.id, title: entry.recoveryKind ? (entry.recoveryKind === 'refund' ? '退款' : '报销到账') + (entry.note ? ' · ' + entry.note : '') : entry.note.length > 0 ? entry.note : entry.category, category: entry.category,
     account: entry.account, date: entry.date, time: String(local.getUTCHours()).padStart(2, '0') + ':' +
-      String(local.getUTCMinutes()).padStart(2, '0'), income: entry.income, transfer: entry.transfer, toAccount: entry.toAccount, minor: entry.minor,
+      String(local.getUTCMinutes()).padStart(2, '0'), income: entry.income, recoveryKind: entry.recoveryKind, reimbursementPending: entry.reimbursementPending === true && BigInt(entry.recoveredMinor || '0') < BigInt(entry.minor), transfer: entry.transfer, toAccount: entry.toAccount, minor: entry.minor,
     expenseMinor: entry.expenseMinor, transferFeeMinor: entry.transferFeeMinor, transferCouponMinor: entry.transferCouponMinor,
     grossMinor: entry.grossMinor, discountMinor: entry.discountMinor, tags: entry.tagNames || [],
-    tagIds: entry.tagIds || [],
+    tagIds: entry.tagIds || [], recoveryBadges: expenseRecoveryBadges(entry),
     icon: entry.transfer ? $r('app.media.lucide_arrow_left_right1') : categoryIcon(entry.iconKey) };
 }
 

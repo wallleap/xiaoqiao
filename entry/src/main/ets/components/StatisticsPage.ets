@@ -217,11 +217,13 @@ export struct StatisticsPage {
     let maximum = BigInt(0);
     for (const item of buckets) {
       const amount = BigInt(item.amountMinor);
-      if (amount > maximum) { maximum = amount; }
+      const magnitude = amount < BigInt(0) ? -amount : amount;
+      if (magnitude > maximum) { maximum = magnitude; }
     }
-    const amount = BigInt(bucket.amountMinor);
+    const raw = BigInt(bucket.amountMinor);
+    const amount = raw < BigInt(0) ? -raw : raw;
     if (amount <= BigInt(0) || maximum <= BigInt(0)) { return 4; }
-    return Math.max(4, Number(amount * BigInt(112) / maximum));
+    return Math.max(4, Number(amount * BigInt(52) / maximum));
   }
 
   @Builder
@@ -290,7 +292,7 @@ export struct StatisticsPage {
           .fontColor($r('app.color.xq_font_tertiary')).maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
           .constraintSize({ maxWidth: '42%' })
       }.width('100%')
-      if (BigInt(this.statistics?.totalMinor || '0') === BigInt(0)) {
+      if ((this.statistics?.categories || []).length === 0 && !(this.statistics?.buckets || []).some((item: StatisticsBucket) => BigInt(item.amountMinor) !== BigInt(0))) {
         Column({ space: 10 }) {
           Image($r('app.media.lucide_chart_no_axes_column1')).width(44).height(44)
             .fillColor($r('app.color.xq_icon_tertiary'))
@@ -303,13 +305,20 @@ export struct StatisticsPage {
           Row({ space: 1 }) {
             ForEach(this.statistics?.buckets || [], (bucket: StatisticsBucket) => {
               Column() {
-                Blank()
-                if (BigInt(bucket.amountMinor) > BigInt(0)) {
-                  Row().width('82%').height(this.barHeight(bucket)).borderRadius(3)
-                    .linearGradient({ angle: 90, colors: [[this.kind === 1 ? '#FF45B38E' : '#FFFF956D', 0],
-                      [this.kind === 1 ? '#FF008664' : '#FFFF5425', 1]] })
-                }
-              }.height(124).layoutWeight(1).id('statistics-bucket-' + bucket.key)
+                Column() {
+                  if (BigInt(bucket.amountMinor) > BigInt(0)) {
+                    Row().width('82%').height(this.barHeight(bucket)).borderRadius(3)
+                      .backgroundColor(this.kind === 1 ? '#FF008664' : '#FFFF5425')
+                  }
+                }.height(60).width('100%').justifyContent(FlexAlign.End)
+                Divider().strokeWidth(1).color($r('app.color.xq_app_divider_subtle'))
+                Column() {
+                  if (BigInt(bucket.amountMinor) < BigInt(0)) {
+                    Row().width('82%').height(this.barHeight(bucket)).borderRadius(3).backgroundColor('#FF008664')
+                  }
+                }.height(60).width('100%').justifyContent(FlexAlign.Start)
+              }.height(124).layoutWeight(1).accessibilityText(bucket.label + ' ' + this.amount(bucket.amountMinor))
+                .id('statistics-bucket-' + bucket.key)
             }, (bucket: StatisticsBucket) => bucket.key)
           }.width('100%').height(124).alignItems(VerticalAlign.Bottom)
         }.width('100%').height(124)
@@ -322,6 +331,7 @@ export struct StatisticsPage {
             .layoutWeight(1).textAlign(TextAlign.End)
         }.width('100%').height(16)
       }
+      if (this.kind === 0) { Text('零线上方为净支出，下方为净回款').fontSize('11fp').fontColor($r('app.color.xq_font_tertiary')).width('100%') }
     }.padding(20).width('100%').borderRadius(20).backgroundColor($r('app.color.xq_app_surface_card'))
       .id('statistics-trend')
   }
@@ -349,7 +359,7 @@ export struct StatisticsPage {
         Image($r('app.media.lucide_chevron_right1')).width(16).height(16)
           .fillColor($r('app.color.xq_icon_tertiary'))
       }.width('100%')
-      Progress({ value: Math.min(100, category.share), total: 100, type: ProgressType.Linear })
+      Progress({ value: Math.max(0, Math.min(100, category.share)), total: 100, type: ProgressType.Linear })
         .width('100%').height(4).color(this.kind === 1 ? $r('app.color.xq_app_income') : $r('app.color.xq_brand'))
         .backgroundColor($r('app.color.xq_comp_background_tertiary'))
     }.padding(16).width('100%').borderRadius(16).backgroundColor($r('app.color.xq_app_surface_card'))

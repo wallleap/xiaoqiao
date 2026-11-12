@@ -69,6 +69,7 @@ export struct ExpenseEditor {
   @State private note: string = '';
   @State private merchantName: string = '';
   @State private addressText: string = '';
+  @State private reimbursementPending: boolean = false;
   @State private location: LedgerLocation | undefined = undefined;
   @State private mapBusy: boolean = false;
   private mapRequestVersion: number = 0;
@@ -125,6 +126,7 @@ export struct ExpenseEditor {
       this.selectedId = entry.categoryId; this.accountId = entry.accountId; this.toAccountId = entry.toAccountId || '';
       this.selectedNatureId = entry.spendingNatureId || '';
       this.selectedTagIds = (entry.tags || []).map((tag: TagChoice) => tag.id);
+      this.reimbursementPending = entry.reimbursementPending === true;
       this.includeAssets = entry.includeInAssets; this.includeBudget = entry.includeInBudget;
       this.occurredAtMs = entry.occurredAtMs; this.note = entry.note;
       this.merchantName = entry.merchantName || ''; this.addressText = entry.addressText || '';
@@ -518,6 +520,7 @@ export struct ExpenseEditor {
       const account = this.accountId.length > 0 ? this.accountId : undefined;
       command = { id: this.saveId, bookId: this.bookId, categoryId: this.isTransfer ? 'transfer' : this.selectedId, gross: gross,
         discount: reduction, bookPaid: paid, accountId: account, accountPaid: account === undefined ? undefined : paid,
+        reimbursementPending: !this.isIncome && !this.isTransfer && this.reimbursementPending,
         includeInAssets: this.includeAssets, includeInBudget: !this.isIncome && !this.isTransfer && this.includeBudget,
         spendingNatureId: !this.isIncome && !this.isTransfer && this.selectedNatureId.length > 0 ? this.selectedNatureId : undefined,
         tagIds: this.selectedTagIds,
@@ -562,6 +565,9 @@ export struct ExpenseEditor {
         this.conflicted = true;
         this.showError(ExpenseErrorField.Save, '账目已变更或删除，请返回详情刷新后再编辑');
         return;
+      }
+      if ((error as Error).message.includes('RECOVERY_EXCEEDS_PAID')) {
+        this.showError(ExpenseErrorField.Save, '实付金额不能低于已经报销和退款的合计金额，请先调整回款记录'); return;
       }
       // A retained id prevents a retry from recording the same command twice after an uncertain failure.
       this.showError(ExpenseErrorField.Save, '保存未确认，请勿重复记账。关闭后检查首页，或稍后重试');
@@ -971,6 +977,14 @@ export struct ExpenseEditor {
           .onChange((value: string) => { this.note = value; })
           .onSubmit(() => { this.focusAmountAfterFrame(); })
       }.padding({ left: 16, right: 16 }).width('100%').borderRadius(16).backgroundColor($r('app.color.xq_app_surface_card'))
+      if (!this.isIncome && !this.isTransfer) {
+        Row() {
+          Text('待报销').fontSize('14fp').fontColor($r('app.color.xq_font_primary'))
+          Blank()
+          Toggle({ type: ToggleType.Switch, isOn: this.reimbursementPending }).onChange((value: boolean) => { this.reimbursementPending = value; })
+            .id('expense-reimbursement-pending')
+        }.padding(16).width('100%').borderRadius(16).backgroundColor($r('app.color.xq_app_surface_card'))
+      }
       this.attachmentSection()
       this.tagSelector()
       if (!this.isIncome && !this.isTransfer) { this.spendingNatureSelector() }

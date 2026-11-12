@@ -103,3 +103,9 @@ V1 SQL/checksum保持不变；V2增量SQL及生成器、旧库备份/升级确�
 复用balance_adjustments(kind=calibration)追加差额，不改期初或历史transactions，不计收支/预算。命令携带预览的账户revision与before余额，串行事务重新计算v_effective_movements的BigInt余额并比较；同时核对账户未归档/删除及CNY。通过revision谓词更新账户版本、写draft校准、对应movement并发布，任一步失败全部回滚。前余额、目标余额、差额分别检查最小单位安全整数范围，零差额不写入。
 
 冲突不能静默重算后保存，必须刷新预览并由用户重新确认；稳定操作ID避免重试重复追加。历史仅只读posted期初/校准，按时间+ID游标分页。已发布调整保持不可变，后续历史交易修改仍影响当前余额，不回写旧校准。见[账户余额校准](../development/account-calibration.md)。
+
+## V5 回款写入约定
+
+报销和退款写入 expense_recoveries，金额为正整数分，必须关联当前账本的人民币支出。原支出和回款分别保留；汇总按回款到账日取负贡献，不写普通 income，也不伪造 balance_adjustments。资金有效视图合并回款作为虚拟正向资金项，物理 account_movements 仍只保存原账务结算腿。
+
+同一 RdbSession 事务内检查来源、回款版本和累计上限，写入／软删除回款后推进父支出 revision。数据库触发器兜底保护上限、来源、账户、导入身份，禁止硬删除回款历史；存在有效回款时禁止删除原支出或把实付降至回款合计以下。导入批次在关联完整且普通账目和回款合计数一致后才提交，失败整批回滚。部分／全额、跨月和保留余额策略见[报销与退款](../development/expense-recoveries.md)。

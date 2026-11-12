@@ -53,6 +53,14 @@ export interface SavedLedgerEntry {
   merchant?: string;
   address?: string;
   location?: LedgerLocation;
+  recoveryKind?: string;
+  originalEntryId?: string;
+  reimbursementPending?: boolean;
+  recoveredMinor?: string;
+  reimbursedMinor?: string;
+  refundedMinor?: string;
+  includeInBudget?: boolean;
+  spendingNatureName?: string;
   transferPurpose?: string;
   feeInBudget?: boolean;
   attachments?: LedgerAttachmentDraft[];

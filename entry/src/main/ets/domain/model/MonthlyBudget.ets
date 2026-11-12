@@ -30,8 +30,8 @@ export class MonthlyBudget {
     // Percentage is derived from integer minor units, rounded once to one decimal place.
     const tenths = total > BigInt(0) ? (used * BigInt(1000) + total / BigInt(2)) / total : BigInt(0);
     return { remainingMinor: remaining.toString(), overBudget: remaining < BigInt(0),
-      percentText: total === BigInt(0) ? '—' : `${tenths / BigInt(10)}.${tenths % BigInt(10)}%`,
+      percentText: used < BigInt(0) && total > BigInt(0) ? '0.0%' : total === BigInt(0) ? '—' : `${tenths / BigInt(10)}.${tenths % BigInt(10)}%`,
       ringValue: total === BigInt(0) ? (used > BigInt(0) ? 100 : 0) :
-        Number(tenths > BigInt(1000) ? BigInt(1000) : tenths) / 10 };
+        Number(tenths < BigInt(0) ? BigInt(0) : tenths > BigInt(1000) ? BigInt(1000) : tenths) / 10 };
   }
 }

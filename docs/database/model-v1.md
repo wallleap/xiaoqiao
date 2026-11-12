@@ -212,3 +212,7 @@ DDL定稿时应落实：外键；金额INTEGER类型与范围；布尔0/1；币�
 - [SIX / ISO 4217](https://www.six-group.com/en/products-services/financial-information/market-reference-data/data-standards.html)：币种代码与minor unit维护依据。
 - 本机SDK：`/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/api/@ohos.data.relationalStore.d.ts`，核实ValueType、getLong/getString、事务与backup/restore声明；未视为设备测试。
 - 需求依据：[导入导出规则](../design/import-export.md)、[辅助页面规则](../design/native-secondary-pages.md)。
+
+## 后续扩展：V5 报销与退款（2026-11-12）
+
+此前“实际回款、部分报销和退款尚未确认”的范围已由用户确认更新：人民币支出支持关联多笔部分或全额回款，报销与退款合计不超过原实付；到账日冲减支出和原支出对应预算，不作为普通收入。V5 新增 expense_recoveries 与有效回款／预算资金流视图，不扩展 transactions.kind，不改写原实付。详见 [V5 SQL](schema-v5-expense-recoveries.sql) 与[功能及迁移说明](../development/expense-recoveries.md)。本轮只修改代码，未执行真实迁移或运行验证。

@@ -1,3 +1,4 @@
+import { recoveryError } from '../domain/model/ExpenseRecovery';
 import { transferPurposeLabel } from '../domain/model/TransferRecord';
 import { ChipGroup, ChipSize, curves, window } from '@kit.ArkUI';
 import { HdsTabs, hdsMaterial, HdsNavigation, HdsNavigationTitleMode, HdsListItemCard,
@@ -164,7 +165,7 @@ struct Index {
       const code = (error as Error).message;
       this.upgradeRequired = code === 'LEDGER_UPGRADE_REQUIRED';
       if (code === 'BACKUP_RECOVERY_REQUIRED') { this.showRecoveryError(); }
-      else { this.loadError = this.upgradeRequired ? '升级本地账本后，可使用转账手续费和还款优惠' : '账本暂时无法读取，已有数据不会被覆盖。请重试'; }
+      else { this.loadError = this.upgradeRequired ? '升级本地账本后，可使用部分／全额报销和退款' : '账本暂时无法读取，已有数据不会被覆盖。请重试'; }
     } finally { this.loading = false; }
   }
 
@@ -292,7 +293,7 @@ struct Index {
   private confirmDatabaseUpgrade(): void {
     if (this.loading) { return; }
     this.getUIContext().getPromptAction().showDialog({ title: '升级本地账本？',
-      message: '先在本机备份，再增加转账用途、手续费和优惠字段。原账目及余额会核对保留，失败会回滚并保留备份。',
+      message: '先在本机备份，再增加报销和退款的回款记录与统计支持。原账目及余额会保留；升级失败会回滚，并保留升级前备份。',
       buttons: [{ text: '取消', color: $r('app.color.xq_font_primary') }, { text: '备份并升级', color: $r('app.color.xq_font_emphasize') }]
     }).then(async (result) => {
       if (result.index !== 1) { return; }
@@ -435,8 +436,9 @@ struct Index {
     try {
       const detail = await this.workspace.entryDetail(id);
       if (request !== this.detailRequest || !this.showDetail) { return; }
-      this.detail = detail;
-      if (edit) { this.editDetail(); }
+      this.detail = detail; this.detailId = detail.id;
+      if (edit && id === detail.id) { this.editDetail(); }
+      else if (edit) { this.notify('请在报销与退款明细中修改这笔回款'); }
     } catch (_) {
       if (request === this.detailRequest) { this.detailError = '账目可能已删除，或暂时无法读取。请返回或重新读取'; }
     } finally { if (request === this.detailRequest) { this.detailLoading = false; } }
@@ -510,7 +512,9 @@ struct Index {
 
   @Builder
   private detailPage() {
-    EntryDetailPage({ entry: this.detail, loading: this.detailLoading, error: this.detailError, busy: this.deleting,
+    EntryDetailPage({ workspace: this.workspace, accounts: this.editAccounts(),
+      onRecoveryChanged: async (): Promise<void> => { await this.loadLedger(); if (this.workspace !== undefined) { await this.refreshAccountOverview(this.workspace); } if (this.showDetail) { await this.openDetail(this.detailId); } },
+      entry: this.detail, loading: this.detailLoading, error: this.detailError, busy: this.deleting,
       onClose: () => { this.closeDetail(); }, onEdit: () => { this.editDetail(); },
       onRetry: () => { this.openDetail(this.detailId); }, onDelete: () => {
         if (this.detail !== undefined) {
@@ -534,9 +538,9 @@ struct Index {
       if (choice.index !== 1) { return; }
       this.deleting = true;
       try { await workspace.deleteEntry(entry.id); }
-      catch (_) { this.notify('删除失败，账目未删除，请重试'); return; }
+      catch (error) { this.notify(recoveryError(error as Error)); return; }
       this.activeSwipeId = '';
-      if (this.showDetail && this.detailId === entry.id) { this.closeDetail(); }
+      if (this.showDetail && (this.detailId === entry.id || this.detail?.id === entry.id)) { this.closeDetail(); }
       // Refresh both views after the committed write without replacing the list with a loading view.
       await Promise.all([this.refreshAfterDeletion(workspace), this.refreshAccountOverview(workspace)]);
       this.notify(this.loadError.length > 0 || this.accountError.length > 0 ? '账目已删除，部分数据刷新失败' : '已删除账目');
@@ -792,10 +796,10 @@ struct Index {
   @Builder
   private entryAmount(entry: LedgerEntry, pageKind: LedgerKind) {
     Column({ space: 3 }) {
-      AmountText({ amount: displayAmount(entry.transfer && pageKind === LedgerKind.Expense ? (entry.expenseMinor || '0') : entry.minor), amountSize: 16, bold: true, currencyBottom: 0,
-        sign: entry.transfer && pageKind !== LedgerKind.Expense ? '' : entry.income ? '+' : '−',
+      AmountText({ amount: displayAmount(entry.recoveryKind ? (-BigInt(entry.minor)).toString() : entry.transfer && pageKind === LedgerKind.Expense ? (entry.expenseMinor || '0') : entry.minor), amountSize: 16, bold: true, currencyBottom: 0,
+        sign: entry.recoveryKind ? '+' : entry.transfer && pageKind !== LedgerKind.Expense ? '' : entry.income ? '+' : '−',
         onOpen: () => { this.openDetail(entry.id); },
-        color: entry.transfer && pageKind !== LedgerKind.Expense ? $r('app.color.xq_font_primary') : entry.income ? $r('app.color.xq_app_income') : $r('app.color.xq_brand') })
+        color: entry.recoveryKind ? $r('app.color.xq_app_income') : entry.transfer && pageKind !== LedgerKind.Expense ? $r('app.color.xq_font_primary') : entry.income ? $r('app.color.xq_app_income') : $r('app.color.xq_brand') })
       if (entry.transfer && BigInt(entry.transferFeeMinor || '0') > BigInt(0)) {
         Text(pageKind === LedgerKind.Expense ? '转出 ' + displayAmount(entry.minor) : '手续费 ' + displayAmount(entry.transferFeeMinor || '0')).fontSize('12fp')
           .fontColor($r('app.color.xq_font_secondary')).maxLines(1).id(`ledger-transfer-fee-${entry.id}`)
@@ -841,8 +845,19 @@ struct Index {
     Row({ space: 0 }) {
       this.categoryBadge(entry)
       Column({ space: 4 }) {
-        Text(entry.title).fontSize('16fp').fontWeight(FontWeight.Medium)
-          .fontColor($r('app.color.xq_font_primary')).maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
+        Flex({ wrap: FlexWrap.Wrap, alignItems: ItemAlign.Center }) {
+          Text(entry.title).fontSize('16fp').fontWeight(FontWeight.Medium)
+            .fontColor($r('app.color.xq_font_primary')).maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
+            .constraintSize({ maxWidth: '100%' }).margin({ right: (entry.recoveryBadges || []).length > 0 ? 6 : 0 })
+          ForEach(entry.recoveryBadges || [], (label: string) => {
+            Text(label).fontSize('10fp').fontWeight(FontWeight.Medium)
+              .fontColor(label === '待报销' ? $r('app.color.xq_font_emphasize') :
+                label.startsWith('部分') ? $r('app.color.xq_font_secondary') : $r('app.color.xq_app_income'))
+              .backgroundColor($r('app.color.xq_app_surface_page')).borderRadius(4)
+              .padding({ left: 6, right: 6, top: 2, bottom: 2 }).margin({ right: 4, top: 2, bottom: 2 })
+              .maxLines(1).accessibilityText(label).id('ledger-recovery-badge-' + entry.id + '-' + label)
+          }, (label: string) => label)
+        }.width('100%')
         Text(this.entrySubtitle(entry)).fontSize('12fp').fontColor($r('app.color.xq_font_secondary'))
           .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis }).id(`ledger-entry-subtitle-${entry.id}`)
       }.layoutWeight(1).alignItems(HorizontalAlign.Start)
@@ -1118,9 +1133,9 @@ struct Index {
               editable: !this.preview, onEdit: () => { this.openDetail(entry.id, true); },
               menuMaterial: this.materialReady && !this.forceLegacyMaterials ? this.filterMaterials?.menu : undefined,
               content: () => { this.ledgerRow(entry, pageKind); }, onDelete: () => {
-                this.confirmDelete({ id: entry.id, category: entry.category, minor: entry.minor });
+                this.confirmDelete({ id: entry.id, category: entry.recoveryKind ? (entry.recoveryKind === 'refund' ? '退款' : '报销到账') : entry.category, minor: entry.recoveryKind ? (-BigInt(entry.minor)).toString() : entry.minor });
               } }).width('100%')
-          }, (entry: LedgerEntry) => entry.id)
+          }, (entry: LedgerEntry) => entry.id + ':' + (entry.recoveryBadges || []).join(','))
         }.width('100%')
       }
     }.width('100%')

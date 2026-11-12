@@ -57,6 +57,7 @@ export class RdbLedgerRepository implements LedgerRepository, ExpenseUpdateRepos
         discount_minor: command.discount.toSafeMinorNumber(), paid_minor: record.paid.toSafeMinorNumber(),
         book_currency_id: command.bookPaid.currency.id, book_minor: command.bookPaid.toSafeMinorNumber(),
         include_in_assets: command.includeInAssets ? 1 : 0, include_in_budget: command.includeInBudget ? 1 : 0,
+        reimbursement_status: kind === 'expense' && command.reimbursementPending ? 'pending' : 'none',
         balance_mode: 'apply', note: command.note, occurred_at_ms: command.occurredAtMs,
         occurred_local_date: command.localDate, occurred_timezone: command.timezone,
         occurred_offset_minutes: command.offsetMinutes, created_at_ms: Date.now(), updated_at_ms: Date.now()
@@ -119,6 +120,10 @@ export class RdbLedgerRepository implements LedgerRepository, ExpenseUpdateRepos
           source.getLong(3) !== 0 || source.getLong(4) !== 0) { throw new Error('UNSUPPORTED_EXPENSE_EDIT'); }
         oldCategory = source.getString(0); oldAccount = source.getString(5); oldNature = source.getString(6);
       } finally { source.close(); }
+      if (kind === 'expense') {
+        const received = await db.querySql('SELECT CAST(COALESCE(SUM(amount_minor),0) AS TEXT) FROM expense_recoveries WHERE transaction_id=? AND deleted_at_ms IS NULL', [command.id]);
+        try { received.goToFirstRow(); if (BigInt(received.getString(0)) > record.paid.minor) { throw new Error('RECOVERY_EXCEEDS_PAID'); } } finally { received.close(); }
+      }
       const category = await db.querySql("SELECT id FROM categories WHERE id=? AND book_id=? AND kind=? AND deleted_at_ms IS NULL AND (archived_at_ms IS NULL OR id=?)",
         [command.categoryId, command.bookId, kind, oldCategory]);
       try { if (!category.goToFirstRow()) { throw new Error('CATEGORY_UNAVAILABLE'); } }
@@ -148,6 +153,9 @@ export class RdbLedgerRepository implements LedgerRepository, ExpenseUpdateRepos
         note: command.note, occurred_at_ms: command.occurredAtMs,
         occurred_local_date: command.localDate, occurred_timezone: command.timezone,
         occurred_offset_minutes: command.offsetMinutes }, new relationalStore.RdbPredicates('transactions').equalTo('id', command.id));
+      if (kind === 'expense' && command.reimbursementPending !== undefined) {
+        await db.update({ reimbursement_status: command.reimbursementPending ? 'pending' : 'none' }, new relationalStore.RdbPredicates('transactions').equalTo('id', command.id));
+      }
       await RdbMerchantFields.apply(db, command.id, command.merchantName, command.addressText, command.location);
       await db.delete(new relationalStore.RdbPredicates('account_movements').equalTo('transaction_id', command.id));
       if (command.accountId !== undefined && command.accountPaid !== undefined) {

@@ -14,6 +14,7 @@ export interface ExpenseCommand {
   readonly accountPaid?: Money;
   readonly includeInAssets: boolean;
   readonly includeInBudget: boolean;
+  readonly reimbursementPending?: boolean;
   readonly spendingNatureId?: string;
   readonly tagIds?: string[];
   readonly attachments?: LedgerAttachmentDraft[];
@@ -96,7 +97,7 @@ export class ExpenseRecord {
       id: command.id, bookId: command.bookId, categoryId: command.categoryId,
       gross: command.gross, discount: command.discount, bookPaid: command.bookPaid,
       accountId: command.accountId, accountPaid: command.accountPaid,
-      includeInAssets: command.includeInAssets, includeInBudget: command.includeInBudget,
+      includeInAssets: command.includeInAssets, includeInBudget: command.includeInBudget, reimbursementPending: command.reimbursementPending,
       spendingNatureId: command.spendingNatureId,
       tagIds: tagIds,
       attachments: attachments,

@@ -139,7 +139,7 @@ export struct BudgetPage {
             $r('app.color.xq_warning') : $r('app.color.xq_font_secondary'))
       }.width('100%')
       if (line.amountMinor !== '0') {
-        Progress({ value: Number(Math.min(100, Number(line.usedMinor) * 100 / Math.max(1, Number(line.amountMinor)))),
+        Progress({ value: Number(Math.max(0, Math.min(100, Number(line.usedMinor) * 100 / Math.max(1, Number(line.amountMinor))))),
           total: 100, type: ProgressType.Linear }).height(4).color(spendingNatureText(line.colorKey))
           .backgroundColor($r('app.color.xq_comp_background_tertiary')).width('100%')
       }

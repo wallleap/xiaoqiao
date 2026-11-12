@@ -1,3 +1,4 @@
+import { recoveryError } from '../domain/model/ExpenseRecovery';
 import { common } from '@kit.AbilityKit';
 import { picker } from '@kit.CoreFileKit';
 import { HdsNavigation, HdsNavigationTitleMode, hdsMaterial, DividerShowType, ScrollEffectType } from '@kit.UIDesignKit';
@@ -46,7 +47,7 @@ export struct DataExchangePage {
   @State private importPreview: CsvPreviewRow[] = [];
   @State private importMapping: CsvColumnMapping = { date: -1, time: -1, type: -1, amount: -1, category: -1,
     transferAmount: -1, account: -1, toAccount: -1, purpose: -1, fee: -1, coupon: -1, feeBudget: -1, note: -1,
-    sourceId: -1, merchant: -1, address: -1, latitude: -1, longitude: -1, status: -1 };
+    sourceId: -1, merchant: -1, address: -1, latitude: -1, longitude: -1, includeInBudget: -1, spendingNature: -1, originalEntryId: -1, reimbursementPending: -1, status: -1 };
   @State private importFileName: string = '';
   @State private importSha256: string = '';
   @State private importDelimiter: string = ',';
@@ -420,6 +421,10 @@ export struct DataExchangePage {
       address: field === 'address' ? index : this.importMapping.address,
       latitude: field === 'latitude' ? index : this.importMapping.latitude,
       longitude: field === 'longitude' ? index : this.importMapping.longitude,
+      includeInBudget: field === 'includeInBudget' ? index : this.importMapping.includeInBudget,
+      spendingNature: field === 'spendingNature' ? index : this.importMapping.spendingNature,
+      originalEntryId: field === 'originalEntryId' ? index : this.importMapping.originalEntryId,
+      reimbursementPending: field === 'reimbursementPending' ? index : this.importMapping.reimbursementPending,
       status: field === 'status' ? index : this.importMapping.status
     };
     this.refreshImportPreview();
@@ -651,8 +656,11 @@ export struct DataExchangePage {
 
   private mappedPreview(row: CsvPreviewRow): string {
     const kind = row.type === 'income' ? '收入' : row.type === 'expense' ? '支出' :
-      row.type === 'transfer' ? '转账' : '类型未识别';
+      row.type === 'transfer' ? '转账' : row.type === 'refund' ? '退款' : row.type === 'reimbursement' ? '报销到账' : '类型未识别';
     const date = row.date.length > 0 ? row.date + (row.timeKnown ? ' ' + row.time : '') : '日期无效';
+    if (row.type === 'refund' || row.type === 'reimbursement') {
+      return `映射 ${date}；${kind}；${row.amount}；关联支出 ${row.originalEntryId || '未填写'}；到账 ${row.accountName || '不使用账户'}`;
+    }
     if (row.type === 'transfer') {
       const from = row.createAccount ? `新建 ${row.accountName}` : this.accountName(row.accountId);
       const to = row.createToAccount === true ? `新建 ${row.toAccountName || ''}` :
@@ -707,7 +715,7 @@ export struct DataExchangePage {
       await this.refreshImportHistory();
     } catch (error) {
       const code = (error as Error).message;
-      this.importMessage = code.startsWith('CSV_CATEGORY_INVALID') ? '导入未完成：分类与收支类型不匹配' :
+      this.importMessage = code.includes('RECOVERY_') || code.includes('ACCOUNT_UNAVAILABLE') ? recoveryError(error as Error) : code.startsWith('CSV_CATEGORY_INVALID') ? '导入未完成：分类与收支类型不匹配' :
         code === 'CSV_ACCOUNT_INVALID' ? '导入未完成：账户不可用' :
         code === 'CSV_TRANSFER_ACCOUNT_INVALID' ? '导入未完成：转账的转出、转入账户无效' :
         code === 'CSV_TRANSFER_REPAYMENT_ACCOUNT_INVALID' ? '导入未完成：还款的转入账户必须是负债账户' :
@@ -734,7 +742,7 @@ export struct DataExchangePage {
         transferFee: row.transferFee, transferCoupon: row.transferCoupon, feeInBudget: row.feeInBudget,
         sourceId: row.sourceId, duplicate: row.duplicate,
         duplicateReason: row.duplicateReason, selected: !row.selected, merchant: row.merchant,
-        address: row.address, location: row.location, sourceStatus: row.sourceStatus, note: row.note,
+        address: row.address, location: row.location, includeInBudget: row.includeInBudget, spendingNatureId: row.spendingNatureId, originalEntryId: row.originalEntryId, reimbursementPending: row.reimbursementPending, sourceStatus: row.sourceStatus, note: row.note,
         valid: row.valid, issues: row.issues };
     });
   }
@@ -871,6 +879,11 @@ export struct DataExchangePage {
           this.mappingRow('经度', 'longitude', this.importMapping.longitude ?? -1)
           Text('经纬度使用十进制度数，须同时填写或同时留空；没有坐标也可导入地址文字。')
             .fontSize('12fp').lineHeight('18fp').fontColor($r('app.color.xq_font_tertiary')).width('100%')
+          this.mappingRow('计入预算', 'includeInBudget', this.importMapping.includeInBudget ?? -1)
+          this.mappingRow('预算分类', 'spendingNature', this.importMapping.spendingNature ?? -1)
+          this.mappingRow('关联支出ID', 'originalEntryId', this.importMapping.originalEntryId ?? -1)
+          this.mappingRow('待报销', 'reimbursementPending', this.importMapping.reimbursementPending ?? -1)
+          Text('报销、退款按正数金额导入，必须关联原支出；按到账日期冲减支出。找不到关联记录时整批不写入。').fontSize('12fp').width('100%')
           this.mappingRow('交易状态', 'status', this.importMapping.status)
           Text('分类和账户默认使用兜底或不使用账户；需要保留原始名称时可开启自动创建。')
             .fontSize('12fp').lineHeight('18fp').fontColor($r('app.color.xq_font_tertiary')).width('100%')
@@ -1163,7 +1176,7 @@ export struct DataExchangePage {
           Column({ space: 8 }) {
             Text('导出字段').fontSize('16fp').fontWeight(FontWeight.Medium)
               .fontColor($r('app.color.xq_font_primary')).width('100%')
-            Text('日期、时间、类型、分类、账户、转入账户、备注、商户、地址、币种、金额、转账、标签和账目 ID。')
+            Text('可选择日期、金额、商户、地址、坐标、待报销状态及关联支出 ID 等字段。报销和退款单独导出为回款行，回导时需保留账目 ID、类型和关联支出 ID，并包含原支出或目标账本已有原支出。')
               .fontSize('13fp').lineHeight('20fp').fontColor($r('app.color.xq_font_secondary')).width('100%')
             Text('CSV 使用 UTF-8 BOM 和标准引号转义。“导出含图片 ZIP”会附带当前筛选范围的图片；完整恢复仍使用本地或 WebDAV 备份。')
               .fontSize('12fp').lineHeight('18fp').fontColor($r('app.color.xq_font_tertiary')).width('100%')

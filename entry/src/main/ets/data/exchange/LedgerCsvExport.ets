@@ -9,6 +9,8 @@ export const LEDGER_EXPORT_COLUMNS: LedgerExportColumn[] = [
   { key: 'date', label: '日期' }, { key: 'time', label: '时间' }, { key: 'kind', label: '类型' },
   { key: 'category', label: '收支分类' }, { key: 'account', label: '账户' }, { key: 'toAccount', label: '转入账户' },
   { key: 'note', label: '备注' }, { key: 'merchant', label: '商户' }, { key: 'address', label: '地址' },
+  { key: 'includeInBudget', label: '计入预算' }, { key: 'spendingNature', label: '预算分类' },
+  { key: 'originalEntryId', label: '关联支出ID' }, { key: 'reimbursementPending', label: '待报销' },
   { key: 'latitude', label: '纬度' }, { key: 'longitude', label: '经度' },
   { key: 'currency', label: '币种' }, { key: 'gross', label: '原金额' },
   { key: 'discount', label: '优惠' }, { key: 'paid', label: '实付金额' }, { key: 'fee', label: '转账手续费' },
@@ -35,7 +37,7 @@ export function ledgerExportValue(entry: SavedLedgerEntry, key: string): string 
   switch (key) {
     case 'date': return entry.date;
     case 'time': return time(entry);
-    case 'kind': return entry.transfer ? '转账' : entry.income ? '收入' : '支出';
+    case 'kind': return entry.recoveryKind === 'refund' ? '退款' : entry.recoveryKind === 'reimbursement' ? '报销' : entry.transfer ? '转账' : entry.income ? '收入' : '支出';
     case 'category': return entry.category;
     case 'account': return entry.account;
     case 'toAccount': return entry.toAccount || '';
@@ -44,10 +46,14 @@ export function ledgerExportValue(entry: SavedLedgerEntry, key: string): string 
     case 'address': return entry.address || '';
     case 'latitude': return entry.location === undefined ? '' : (entry.location.latitudeE6 / 1000000).toFixed(6);
     case 'longitude': return entry.location === undefined ? '' : (entry.location.longitudeE6 / 1000000).toFixed(6);
+    case 'includeInBudget': return !entry.income && !entry.transfer && !entry.recoveryKind ? (entry.includeInBudget ? '是' : '否') : '';
+    case 'spendingNature': return entry.spendingNatureName || '';
+    case 'originalEntryId': return entry.originalEntryId || '';
+    case 'reimbursementPending': return !entry.income && !entry.transfer && !entry.recoveryKind ? (entry.reimbursementPending ? '是' : '否') : '';
     case 'currency': return 'CNY';
-    case 'gross': return decimal(entry.grossMinor);
+    case 'gross': return decimal(entry.recoveryKind ? (-BigInt(entry.minor)).toString() : entry.grossMinor);
     case 'discount': return decimal(entry.discountMinor);
-    case 'paid': return decimal(entry.minor);
+    case 'paid': return decimal(entry.recoveryKind ? (-BigInt(entry.minor)).toString() : entry.minor);
     case 'fee': return decimal(entry.transferFeeMinor || '0');
     case 'coupon': return decimal(entry.transferCouponMinor || '0');
     case 'transferPurpose': return entry.transfer ? transferPurposeLabel(entry.transferPurpose || 'transfer') : '';

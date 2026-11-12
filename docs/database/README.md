@@ -41,3 +41,7 @@
 ## 交付与限制
 
 设计产出包括逻辑模型、SQL评审草案、字段字典与纯内存验证；当前 [P0 接入与验证](../development/p0-foundation.md) 另行记录代码边界。不含已部署正式账本、正式迁移、真实账单解析、真实WebDAV操作或云同步实现。既有UI工作已停止，不继续替换Figma控件。此前TabBar材质试改尚未完成验收，此次未回退或继续修改。
+
+## V5：支出报销与退款
+
+`schema-v5-expense-recoveries.sql` 定义关联回款、累计金额和来源保护，以及余额／预算视图。用 `python3 tools/generate-recovery-schema.py` 生成 RecoverySchema.ets；生成器不执行 SQL。迁移经现有“备份并升级账本”入口确认，升级前备份，失败事务回滚。旧完整备份在候选库中升级后再验证。详细规则、文件清单与手动验收见[报销与退款](../development/expense-recoveries.md)。本轮按用户要求未运行构建、测试或用户库迁移。

@@ -1,3 +1,6 @@
+import { ExpenseRecoveryController, ExpenseRecoveryPanel, RecoveryMenuAction } from './ExpenseRecoveryPanel';
+import { LedgerWorkspace } from '../data/rdb/LedgerWorkspace';
+import { LedgerAccount } from '../domain/model/LedgerSnapshot';
 import { EntryLocationMap } from './EntryLocationMap';
 import { HdsNavigation, HdsNavigationTitleMode, hdsMaterial, DividerShowType, ScrollEffectType } from '@kit.UIDesignKit';
 import { transferPurposeLabel } from '../domain/model/TransferRecord';
@@ -14,10 +17,15 @@ export struct EntryDetailPage {
   @Prop loading: boolean = false;
   @Prop error: string = '';
   @Prop busy: boolean = false;
+  workspace: LedgerWorkspace | undefined = undefined;
+  accounts: LedgerAccount[] = [];
+  onRecoveryChanged: () => Promise<void> = async () => {};
   onClose: () => void = () => {};
   onEdit: () => void = () => {};
   onDelete: () => void = () => {};
   onRetry: () => void = () => {};
+  private readonly recoveryController: ExpenseRecoveryController = new ExpenseRecoveryController();
+  @State private recoveryWorking: boolean = false;
   @State private showAttachmentPreview: boolean = false;
   @State private previewAttachment: LedgerAttachment | undefined = undefined;
   @State private failedAttachmentPaths: string[] = [];
@@ -36,6 +44,48 @@ export struct EntryDetailPage {
     if (this.entry === undefined) { return ''; }
     const local = new Date(this.entry.occurredAtMs + this.entry.offsetMinutes * 60000);
     return this.entry.localDate + ' ' + String(local.getUTCHours()).padStart(2, '0') + ':' + String(local.getUTCMinutes()).padStart(2, '0');
+  }
+
+  private canManageRecovery(): boolean {
+    const entry = this.entry;
+    return !this.loading && !this.busy && !this.recoveryWorking && this.error.length === 0 &&
+      this.workspace !== undefined && entry !== undefined && entry.kind === 'expense' && entry.canEdit;
+  }
+
+  private recoveryRemaining(): bigint {
+    let received = BigInt(0);
+    for (const item of this.entry?.recoveries || []) { received += BigInt(item.amountMinor); }
+    return BigInt(this.entry?.paidMinor || '0') - received;
+  }
+
+  private requestRecovery(action: RecoveryMenuAction): void {
+    if (!this.canManageRecovery() || this.recoveryRemaining() <= BigInt(0)) { return; }
+    this.recoveryController.request(action);
+  }
+
+  @Builder
+  private moreMenu() {
+    Menu() {
+      if (this.recoveryRemaining() <= BigInt(0)) { MenuItem({ content: '已全额收回' }).enabled(false) }
+      MenuItem({ content: '记报销' }).enabled(this.canManageRecovery() && this.recoveryRemaining() > BigInt(0))
+        .onClick(() => { this.requestRecovery('reimbursement'); }).id('entry-detail-menu-reimbursement')
+      MenuItem({ content: '记退款' }).enabled(this.canManageRecovery() && this.recoveryRemaining() > BigInt(0))
+        .onClick(() => { this.requestRecovery('refund'); }).id('entry-detail-menu-refund')
+      MenuItem({ content: this.entry?.reimbursementPending ? '取消待报销' : '标记待报销' })
+        .enabled(this.canManageRecovery() && this.recoveryRemaining() > BigInt(0))
+        .onClick(() => { this.requestRecovery('togglePending'); }).id('entry-detail-menu-pending')
+    }.width(224)
+  }
+
+  @Builder
+  private moreAction() {
+    Row() {
+      Button({ type: ButtonType.Circle }) {
+        Image($r('app.media.lucide_ellipsis1')).width(24).height(24).fillColor($r('app.color.xq_icon_primary'))
+      }.width(44).height(44).padding(10).backgroundColor(Color.Transparent)
+        .enabled(this.canManageRecovery()).accessibilityText('更多操作').id('entry-detail-more')
+        .bindMenu(this.moreMenu, { placement: Placement.BottomRight })
+    }.width('100%').justifyContent(FlexAlign.End).padding({ right: 16 }).hitTestBehavior(HitTestMode.Transparent)
   }
 
   @Builder
@@ -204,6 +254,13 @@ export struct EntryDetailPage {
         Text('备注').fontSize('12fp').fontColor($r('app.color.xq_font_secondary')).width('100%')
         Text(this.entry.note || '未填写').fontSize('14fp').lineHeight('22fp')
           .fontColor($r('app.color.xq_font_primary')).width('100%').margin({ top: 8 }).id('entry-detail-note')
+        if (this.entry.kind === 'expense' && this.entry.canEdit) {
+          ForEach([this.entry], (item: EntryDetail) => {
+            ExpenseRecoveryPanel({ entry: item, workspace: this.workspace, accounts: this.accounts,
+              onChanged: this.onRecoveryChanged, controller: this.recoveryController,
+              onBusyChange: (busy: boolean) => { this.recoveryWorking = busy; } })
+          }, (item: EntryDetail) => item.id + ':' + item.revision)
+        }
         // Page-colored cuts form the perforated paper edge without a bitmap asset.
         Row() {
           ForEach(Array.from({ length: 24 }, (_: number, index: number) => index), (index: number) => {
@@ -234,16 +291,16 @@ export struct EntryDetailPage {
           Row({ space: 12 }) {
             Button('删除账目', { type: ButtonType.Capsule }).height(48).layoutWeight(1)
               .fontSize('16fp').fontColor($r('app.color.xq_warning')).backgroundColor($r('app.color.xq_app_surface_card'))
-              .enabled(!this.busy).onClick(() => { this.onDelete(); }).id('entry-detail-delete')
+              .enabled(!this.busy && !this.recoveryWorking).onClick(() => { this.onDelete(); }).id('entry-detail-delete')
             Button('编辑账目', { type: ButtonType.Capsule }).height(48).layoutWeight(2)
               .fontSize('16fp').fontColor(Color.White).backgroundColor($r('app.color.xq_brand'))
-              .enabled(!this.busy && this.entry.canEdit).onClick(() => { this.onEdit(); }).id('entry-detail-edit')
+              .enabled(!this.busy && !this.recoveryWorking && this.entry.canEdit).onClick(() => { this.onEdit(); }).id('entry-detail-edit')
           }.padding({ left: 16, right: 16, top: 12, bottom: 8 }).width('100%')
         }
       }.width('100%').height('100%').constraintSize({ maxWidth: 720 }).align(Alignment.Top)
     }.mode(NavigationMode.Stack).titleMode(HdsNavigationTitleMode.MINI)
       .titleBar({ enableComponentSafeArea: true,
-        content: { title: { mainTitle: '账目详情' }, divider: { showType: DividerShowType.OFF },
+        content: { title: { mainTitle: '账目详情' }, stackBuilder: this.moreAction.bind(this), divider: { showType: DividerShowType.OFF },
           backIcon: { componentId: 'entry-detail-close', label: '返回账目', action: () => { if (!this.busy) { this.onClose(); } } } },
         style: { systemMaterialEffect: { materialType: hdsMaterial.MaterialType.IMMERSIVE, materialLevel: hdsMaterial.MaterialLevel.ADAPTIVE },
           scrollEffectOpts: { enableScrollEffect: true, scrollEffectType: ScrollEffectType.IMMERSIVE_GRADIENT_BLUR },

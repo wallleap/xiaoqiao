@@ -30,6 +30,10 @@ export interface CsvColumnMapping {
   merchant: number;
   address: number;
   /** Optional for compatibility with saved mappings and callers created before map export. */
+  includeInBudget?: number;
+  spendingNature?: number;
+  originalEntryId?: number;
+  reimbursementPending?: number;
   latitude?: number;
   longitude?: number;
   status: number;
@@ -63,6 +67,10 @@ export interface CsvPreviewRow {
   merchant: string;
   address: string;
   location?: LedgerLocation;
+  includeInBudget?: boolean;
+  spendingNatureId?: string;
+  originalEntryId?: string;
+  reimbursementPending?: boolean;
   sourceStatus: string;
   note: string;
   valid: boolean;
@@ -125,6 +133,10 @@ export function detectCsvMapping(headers: string[]): CsvColumnMapping {
     sourceId: column(headers, ['账目ID', '交易单号', '交易订单号', '来源记录编号', 'sourceid', 'transactionid']),
     merchant: column(headers, ['商户', '交易对方', '商家', 'merchant']),
     address: column(headers, ['地址', '商户地址', 'address']),
+    includeInBudget: column(headers, ['计入预算', 'includeinbudget']),
+    spendingNature: column(headers, ['预算分类', 'spendingnature']),
+    originalEntryId: column(headers, ['关联支出ID', '原支出ID', 'originalentryid']),
+    reimbursementPending: column(headers, ['待报销', 'reimbursementpending']),
     latitude: column(headers, ['纬度', '纬度(度)', '纬度（度）', 'latitude', 'lat']),
     longitude: column(headers, ['经度', '经度(度)', '经度（度）', 'longitude', 'lng', 'lon']),
     status: column(headers, ['交易状态', '当前状态', '状态', 'status'])
@@ -280,6 +292,8 @@ function parseDateTime(value: string): ParsedDateTime {
 
 function type(value: string): string {
   const normalized = value.trim().toLowerCase();
+  if (/退款|refund/.test(normalized)) { return 'refund'; }
+  if (/报销|reimbursement/.test(normalized)) { return 'reimbursement'; }
   if (normalized.includes('支出') || normalized.includes('expense') ||
     normalized.includes('付款') || normalized.includes('支付')) { return 'expense'; }
   if (normalized.includes('收入') || normalized.includes('income') ||
@@ -405,6 +419,15 @@ export function previewCsv(table: CsvTable, mapping: CsvColumnMapping, snapshot:
         }
       }
     }
+    const budgetText = (mapping.includeInBudget ?? -1) >= 0 ? (raw[mapping.includeInBudget ?? -1] || '').trim().toLowerCase() : '';
+    const includeInBudget = ['是', '1', 'true'].includes(budgetText);
+    if (budgetText && !['是', '否', '1', '0', 'true', 'false'].includes(budgetText)) { issues.push('计入预算须为是或否'); }
+    const natureName = (mapping.spendingNature ?? -1) >= 0 ? (raw[mapping.spendingNature ?? -1] || '').trim() : '';
+    const nature = snapshot.spendingNatures.find((item) => normalizeHeader(item.name) === normalizeHeader(natureName));
+    const originalEntryId = (mapping.originalEntryId ?? -1) >= 0 ? (raw[mapping.originalEntryId ?? -1] || '').trim() : '';
+    const pendingText = (mapping.reimbursementPending ?? -1) >= 0 ? (raw[mapping.reimbursementPending ?? -1] || '').trim().toLowerCase() : '';
+    const reimbursementPending = ['是', '1', 'true', '待报销'].includes(pendingText);
+    if (pendingText.length > 0 && !['是', '否', '1', '0', 'true', 'false', '待报销'].includes(pendingText)) { issues.push('待报销须为是或否'); }
     const status = mapping.status >= 0 ? (raw[mapping.status] || '').trim() : '';
     let parsedDate = parseDateTime(rawDate);
     const rawTime = mapping.time >= 0 ? raw[mapping.time] || '' : '';
@@ -415,6 +438,11 @@ export function previewCsv(table: CsvTable, mapping: CsvColumnMapping, snapshot:
     const effectiveRawAmount = transfer && rawTransferAmount.trim().length > 0 ? rawTransferAmount : rawAmount;
     let kind = transfer ? 'transfer' : type(rawType);
     if (kind.length === 0) { kind = type(rawPurpose); }
+    const recovery = kind === 'refund' || kind === 'reimbursement';
+    if (kind === 'expense' && natureName.length > 0 && nature === undefined) { issues.push('预算分类未匹配，请先在设置中创建同名预算分类'); }
+    if (recovery && originalEntryId.length === 0) { issues.push('报销或退款必须填写关联支出ID'); }
+    if (!recovery && originalEntryId.length > 0) { issues.push('关联支出ID仅用于报销或退款'); }
+    if (reimbursementPending && kind !== 'expense') { issues.push('只有支出可以标记待报销'); }
     let paid = '';
     let negative = false;
     let transferFee = '0.00';
@@ -424,6 +452,7 @@ export function previewCsv(table: CsvTable, mapping: CsvColumnMapping, snapshot:
       const parsed = amount(effectiveRawAmount);
       paid = parsed.decimal;
       negative = parsed.negative;
+      if (recovery && negative) { issues.push('报销或退款金额须为正数'); }
       if (kind.length === 0) { kind = negative ? 'expense' : 'income'; }
       if (kind === 'transfer') {
         transferFee = optionalAmount(rawFee);
@@ -437,12 +466,12 @@ export function previewCsv(table: CsvTable, mapping: CsvColumnMapping, snapshot:
         }
       }
     } catch (_) { issues.push('金额无效'); }
-    let categoryId = kind === 'transfer' ? '' : (kind === 'income' ?
+    let categoryId = kind === 'transfer' || recovery ? '' : (kind === 'income' ?
       incomeCategoryIds.get(normalizeHeader(rawCategory)) :
       expenseCategoryIds.get(normalizeHeader(rawCategory))) || '';
-    let categoryName = kind === 'transfer' ? '转账' : rawCategory.trim();
+    let categoryName = recovery ? (kind === 'refund' ? '退款' : '报销到账') : kind === 'transfer' ? '转账' : rawCategory.trim();
     let createCategory = false;
-    if (kind !== 'transfer' && categoryId.length === 0) {
+    if (kind !== 'transfer' && !recovery && categoryId.length === 0) {
       if (options.createMissingCategories) {
         categoryName = categoryName || (kind === 'income' ? '其他收入' : '其它');
         createCategory = true;
@@ -456,16 +485,18 @@ export function previewCsv(table: CsvTable, mapping: CsvColumnMapping, snapshot:
         createCategory = categoryId.length === 0;
       }
     }
-    const accountText = kind !== 'transfer' && rawAccount.trim().length === 0 ? rawToAccount : rawAccount;
+    const mappedAccountText = kind !== 'transfer' && rawAccount.trim().length === 0 ? rawToAccount : rawAccount;
+    const accountText = ['不使用账户', '无'].includes(mappedAccountText.trim()) ? '' : mappedAccountText;
     const accountId = accountText.trim().length === 0 ? '' :
       accountIds.get(normalizeHeader(accountText)) || '';
     const createAccount = accountText.trim().length > 0 && accountId.length === 0 && options.createMissingAccounts;
     const toAccountId = rawToAccount.trim().length === 0 ? '' :
       accountIds.get(normalizeHeader(rawToAccount)) || '';
     const createToAccount = rawToAccount.trim().length > 0 && toAccountId.length === 0 && options.createMissingAccounts;
+    if (recovery && accountText.trim().length > 0 && !['不使用账户', '无'].includes(accountText.trim()) && accountId.length === 0 && !createAccount) { issues.push('到账账户未匹配'); }
     if (parsedDate.localDate.length === 0) { issues.push('日期无效'); }
     if (kind.length === 0) { issues.push('类型无法判断'); }
-    const statusIssue = importStatusIssue(status, transfer ? '' : rawType);
+    const statusIssue = recovery && /^(退款成功|已退款|报销成功|已到账)$/.test(status) ? '' : importStatusIssue(status, transfer || recovery ? '' : rawType);
     if (statusIssue.length > 0) { issues.push(statusIssue); }
     if (paid.length === 0 && !issues.includes('金额无效')) { issues.push('金额无效'); }
     if (kind === 'transfer') {
@@ -475,7 +506,7 @@ export function previewCsv(table: CsvTable, mapping: CsvColumnMapping, snapshot:
         (createAccount && createToAccount && normalizeHeader(rawAccount) === normalizeHeader(rawToAccount))) {
         issues.push('转出和转入账户不能相同');
       }
-    } else if (categoryId.length === 0 && !createCategory) {
+    } else if (!recovery && categoryId.length === 0 && !createCategory) {
       issues.push('分类未匹配');
     }
     // Unmatched accounts intentionally leave the entry without an account and never affect balances.
@@ -497,7 +528,8 @@ export function previewCsv(table: CsvTable, mapping: CsvColumnMapping, snapshot:
       feeInBudget: kind === 'transfer' ? feeBudget(rawFeeBudget, options.feeInBudget === true) : false,
       sourceId: sourceId, duplicate: duplicate, duplicateReason: duplicateReason,
       selected: issues.length === 0 && !duplicate,
-      merchant: merchant, address: address, location: location,
+      merchant: merchant, address: address, location: location, includeInBudget: kind === 'expense' && includeInBudget,
+      spendingNatureId: kind === 'expense' ? nature?.id : undefined, originalEntryId: originalEntryId, reimbursementPending: reimbursementPending,
       sourceStatus: status,
       note: mapping.note >= 0 ? raw[mapping.note] || '' : '', valid: issues.length === 0, issues: issues });
   });

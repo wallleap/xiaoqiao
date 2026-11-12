@@ -4,6 +4,7 @@ import { fileIo as fs } from '@kit.CoreFileKit';
 import { RdbSession } from './RdbSession';
 import { TransferMigration } from './TransferMigration';
 import { SpendingNatureMigration } from './SpendingNatureMigration';
+import { RecoveryMigration } from './RecoveryMigration';
 import { BudgetNatureMigration } from './BudgetNatureMigration';
 
 const MAX_BACKUP_BYTES: number = 128 * 1024 * 1024;
@@ -76,8 +77,9 @@ export class LocalLedgerBackup {
     return JSON.stringify(objects);
   }
 
-  private static async check(db: relationalStore.RdbStore): Promise<void> {
-    if (await BudgetNatureMigration.status(db) !== 4) { throw new Error('BACKUP_VERSION_UNSUPPORTED'); }
+  private static async check(db: relationalStore.RdbStore, allowLegacy: boolean = false): Promise<void> {
+    const version = await RecoveryMigration.status(db);
+    if (version !== 5 && (!allowLegacy || ![2, 3, 4].includes(version))) { throw new Error('BACKUP_VERSION_UNSUPPORTED'); }
     const integrity = await db.querySql('PRAGMA integrity_check(1)');
     try {
       if (integrity.rowCount !== 1 || !integrity.goToFirstRow() || integrity.getString(0) !== 'ok') {
@@ -90,7 +92,7 @@ export class LocalLedgerBackup {
 
   private static async preview(db: relationalStore.RdbStore, bytes: number): Promise<LocalBackupPreview> {
     const counts = await db.querySql('SELECT (SELECT COUNT(*) FROM books WHERE deleted_at_ms IS NULL),' +
-      '(SELECT COUNT(*) FROM v_posted_transactions),(SELECT COUNT(*) FROM accounts WHERE deleted_at_ms IS NULL),' +
+      '((SELECT COUNT(*) FROM v_posted_transactions)+(SELECT COUNT(*) FROM v_expense_recoveries)),(SELECT COUNT(*) FROM accounts WHERE deleted_at_ms IS NULL),' +
       '(SELECT COUNT(*) FROM attachments)');
     try {
       if (!counts.goToFirstRow()) { throw new Error('BACKUP_PREVIEW_FAILED'); }
@@ -103,7 +105,7 @@ export class LocalLedgerBackup {
     const candidate = await relationalStore.getRdbStore(this.context, { name: this.candidateName,
       securityLevel: relationalStore.SecurityLevel.S1 });
     try {
-      let version = await BudgetNatureMigration.status(candidate);
+      let version = await RecoveryMigration.status(candidate);
       if (version === 2) {
         await SpendingNatureMigration.upgradeCandidate(candidate);
         version = 3;
@@ -112,7 +114,11 @@ export class LocalLedgerBackup {
         await BudgetNatureMigration.upgradeCandidate(candidate);
         version = 4;
       }
-      if (version !== 4) { throw new Error('BACKUP_VERSION_UNSUPPORTED'); }
+      if (version === 4) {
+        await RecoveryMigration.upgradeCandidate(candidate);
+        version = 5;
+      }
+      if (version !== 5) { throw new Error('BACKUP_VERSION_UNSUPPORTED'); }
       if (await LocalLedgerBackup.schema(candidate) !== schema) { throw new Error('BACKUP_SCHEMA_MISMATCH'); }
       await LocalLedgerBackup.check(candidate);
       return await LocalLedgerBackup.preview(candidate, (await fs.stat(this.candidate)).size);
@@ -222,7 +228,7 @@ export class LocalLedgerBackup {
     if (!await fs.access(this.pending)) { return; }
     try {
       await db.restore(this.pending);
-      await LocalLedgerBackup.check(db);
+      await LocalLedgerBackup.check(db, true);
       await fs.rename(this.pending, this.previous);
     } catch (_) { throw new Error('BACKUP_RECOVERY_REQUIRED'); }
   }
