@@ -67,3 +67,5 @@
 `LocationMapUI` 只在显式指定该 class 时注册，使用 TestRunner 隔离库与公开地点坐标。运行命令为 `aa test -b cn.oicode.xiaoqiao -m entry_test -s unittest OpenHarmonyTestRunner -s class LocationMapUI -s timeout 60000 -w 60`。调试期间修正了首页刷新、截图路径、从页面留白滑动、等待原生页面退场动画和编辑后返回详情页等测试前置条件；未删除或降低地图加载、入口可见性及坐标保留断言。详情页滚动内容启用裁剪，避免内容绘制到固定操作栏下方。日志保存在临时目录 `/tmp/xq-location-{host,main-build,test-build,ui-native,db-native}.log`，截图未纳入仓库。
 
 本次仅安装到独立空白模拟器 `127.0.0.1:15556`，未覆盖原模拟器或真机。未执行全量原生回归、真机、低版本、深色与大字号专项；本轮 UI 用例使用预置公开坐标，不代替搜索选点完整流程验收。旧账目不会自动补坐标；CSV/Excel 坐标导入导出仍未实现。
+
+后续更新（2026-11-12）：已补充 CSV/Excel 纬度、经度字段及坐标导入保存，本更新取代上文“仅导出文字”和“坐标导入导出未实现”的限制描述。格式、兼容行为与用户手动验收步骤见[地图坐标导入导出](import-export.md#地图坐标导入导出2026-11-12)。该后续更新按用户要求未运行测试或构建。

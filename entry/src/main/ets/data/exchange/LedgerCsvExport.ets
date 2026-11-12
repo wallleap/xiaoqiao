@@ -9,6 +9,7 @@ export const LEDGER_EXPORT_COLUMNS: LedgerExportColumn[] = [
   { key: 'date', label: '日期' }, { key: 'time', label: '时间' }, { key: 'kind', label: '类型' },
   { key: 'category', label: '收支分类' }, { key: 'account', label: '账户' }, { key: 'toAccount', label: '转入账户' },
   { key: 'note', label: '备注' }, { key: 'merchant', label: '商户' }, { key: 'address', label: '地址' },
+  { key: 'latitude', label: '纬度' }, { key: 'longitude', label: '经度' },
   { key: 'currency', label: '币种' }, { key: 'gross', label: '原金额' },
   { key: 'discount', label: '优惠' }, { key: 'paid', label: '实付金额' }, { key: 'fee', label: '转账手续费' },
   { key: 'coupon', label: '转账优惠' }, { key: 'transferPurpose', label: '转账用途' },
@@ -41,6 +42,8 @@ export function ledgerExportValue(entry: SavedLedgerEntry, key: string): string 
     case 'note': return entry.note;
     case 'merchant': return entry.merchant || '';
     case 'address': return entry.address || '';
+    case 'latitude': return entry.location === undefined ? '' : (entry.location.latitudeE6 / 1000000).toFixed(6);
+    case 'longitude': return entry.location === undefined ? '' : (entry.location.longitudeE6 / 1000000).toFixed(6);
     case 'currency': return 'CNY';
     case 'gross': return decimal(entry.grossMinor);
     case 'discount': return decimal(entry.discountMinor);

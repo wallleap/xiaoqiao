@@ -1,5 +1,6 @@
 import { BudgetNatureLine } from './SpendingNature';
 import { LedgerAttachmentDraft } from './LedgerAttachment';
+import { LedgerLocation } from './LedgerLocation';
 
 export interface ExpenseCategory {
   id: string;
@@ -51,6 +52,7 @@ export interface SavedLedgerEntry {
   merchantId?: string;
   merchant?: string;
   address?: string;
+  location?: LedgerLocation;
   transferPurpose?: string;
   feeInBudget?: boolean;
   attachments?: LedgerAttachmentDraft[];

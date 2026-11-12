@@ -3,6 +3,7 @@ import { Money } from '../../core/money/Money';
 import { ExpenseCategory, LedgerSnapshot } from '../../domain/model/LedgerSnapshot';
 import { BackupFiles } from '../backup/BackupFiles';
 import { util } from '@kit.ArkTS';
+import { LedgerLocation, locationFromDegrees } from '../../domain/model/LedgerLocation';
 
 export interface CsvTable {
   headers: string[];
@@ -28,6 +29,9 @@ export interface CsvColumnMapping {
   sourceId: number;
   merchant: number;
   address: number;
+  /** Optional for compatibility with saved mappings and callers created before map export. */
+  latitude?: number;
+  longitude?: number;
   status: number;
 }
 
@@ -58,6 +62,7 @@ export interface CsvPreviewRow {
   selected: boolean;
   merchant: string;
   address: string;
+  location?: LedgerLocation;
   sourceStatus: string;
   note: string;
   valid: boolean;
@@ -120,6 +125,8 @@ export function detectCsvMapping(headers: string[]): CsvColumnMapping {
     sourceId: column(headers, ['账目ID', '交易单号', '交易订单号', '来源记录编号', 'sourceid', 'transactionid']),
     merchant: column(headers, ['商户', '交易对方', '商家', 'merchant']),
     address: column(headers, ['地址', '商户地址', 'address']),
+    latitude: column(headers, ['纬度', '纬度(度)', '纬度（度）', 'latitude', 'lat']),
+    longitude: column(headers, ['经度', '经度(度)', '经度（度）', 'longitude', 'lng', 'lon']),
     status: column(headers, ['交易状态', '当前状态', '状态', 'status'])
   };
 }
@@ -379,6 +386,25 @@ export function previewCsv(table: CsvTable, mapping: CsvColumnMapping, snapshot:
     const sourceId = mapping.sourceId >= 0 ? (raw[mapping.sourceId] || '').trim() : '';
     const merchant = mapping.merchant >= 0 ? (raw[mapping.merchant] || '').trim() : '';
     const address = mapping.address >= 0 ? (raw[mapping.address] || '').trim() : '';
+    const latitudeColumn = mapping.latitude ?? -1;
+    const longitudeColumn = mapping.longitude ?? -1;
+    const latitude = latitudeColumn >= 0 ? (raw[latitudeColumn] || '').trim() : '';
+    const longitude = longitudeColumn >= 0 ? (raw[longitudeColumn] || '').trim() : '';
+    let location: LedgerLocation | undefined = undefined;
+    if (latitude.length > 0 || longitude.length > 0) {
+      if (latitude.length === 0 || longitude.length === 0) {
+        issues.push('纬度和经度必须同时填写，或同时留空');
+      } else {
+        // Accept decimal/scientific notation from spreadsheets, never hex, units or non-finite values.
+        const coordinate = /^[+-]?(?:[0-9]+(?:\.[0-9]*)?|\.[0-9]+)(?:[eE][+-]?[0-9]+)?$/;
+        if (!coordinate.test(latitude) || !coordinate.test(longitude)) {
+          issues.push('纬度和经度须为十进制度数');
+        } else {
+          try { location = locationFromDegrees(Number(latitude), Number(longitude)); }
+          catch (_) { issues.push('纬度须在 -90～90，经度须在 -180～180 之间'); }
+        }
+      }
+    }
     const status = mapping.status >= 0 ? (raw[mapping.status] || '').trim() : '';
     let parsedDate = parseDateTime(rawDate);
     const rawTime = mapping.time >= 0 ? raw[mapping.time] || '' : '';
@@ -471,7 +497,7 @@ export function previewCsv(table: CsvTable, mapping: CsvColumnMapping, snapshot:
       feeInBudget: kind === 'transfer' ? feeBudget(rawFeeBudget, options.feeInBudget === true) : false,
       sourceId: sourceId, duplicate: duplicate, duplicateReason: duplicateReason,
       selected: issues.length === 0 && !duplicate,
-      merchant: merchant, address: address,
+      merchant: merchant, address: address, location: location,
       sourceStatus: status,
       note: mapping.note >= 0 ? raw[mapping.note] || '' : '', valid: issues.length === 0, issues: issues });
   });

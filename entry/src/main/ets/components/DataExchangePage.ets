@@ -46,7 +46,7 @@ export struct DataExchangePage {
   @State private importPreview: CsvPreviewRow[] = [];
   @State private importMapping: CsvColumnMapping = { date: -1, time: -1, type: -1, amount: -1, category: -1,
     transferAmount: -1, account: -1, toAccount: -1, purpose: -1, fee: -1, coupon: -1, feeBudget: -1, note: -1,
-    sourceId: -1, merchant: -1, address: -1, status: -1 };
+    sourceId: -1, merchant: -1, address: -1, latitude: -1, longitude: -1, status: -1 };
   @State private importFileName: string = '';
   @State private importSha256: string = '';
   @State private importDelimiter: string = ',';
@@ -418,6 +418,8 @@ export struct DataExchangePage {
       sourceId: field === 'sourceId' ? index : this.importMapping.sourceId,
       merchant: field === 'merchant' ? index : this.importMapping.merchant,
       address: field === 'address' ? index : this.importMapping.address,
+      latitude: field === 'latitude' ? index : this.importMapping.latitude,
+      longitude: field === 'longitude' ? index : this.importMapping.longitude,
       status: field === 'status' ? index : this.importMapping.status
     };
     this.refreshImportPreview();
@@ -732,7 +734,7 @@ export struct DataExchangePage {
         transferFee: row.transferFee, transferCoupon: row.transferCoupon, feeInBudget: row.feeInBudget,
         sourceId: row.sourceId, duplicate: row.duplicate,
         duplicateReason: row.duplicateReason, selected: !row.selected, merchant: row.merchant,
-        address: row.address, sourceStatus: row.sourceStatus, note: row.note,
+        address: row.address, location: row.location, sourceStatus: row.sourceStatus, note: row.note,
         valid: row.valid, issues: row.issues };
     });
   }
@@ -865,6 +867,10 @@ export struct DataExchangePage {
           this.mappingRow('来源编号', 'sourceId', this.importMapping.sourceId)
           this.mappingRow('商户', 'merchant', this.importMapping.merchant)
           this.mappingRow('地址', 'address', this.importMapping.address)
+          this.mappingRow('纬度', 'latitude', this.importMapping.latitude ?? -1)
+          this.mappingRow('经度', 'longitude', this.importMapping.longitude ?? -1)
+          Text('经纬度使用十进制度数，须同时填写或同时留空；没有坐标也可导入地址文字。')
+            .fontSize('12fp').lineHeight('18fp').fontColor($r('app.color.xq_font_tertiary')).width('100%')
           this.mappingRow('交易状态', 'status', this.importMapping.status)
           Text('分类和账户默认使用兜底或不使用账户；需要保留原始名称时可开启自动创建。')
             .fontSize('12fp').lineHeight('18fp').fontColor($r('app.color.xq_font_tertiary')).width('100%')
@@ -963,6 +969,10 @@ export struct DataExchangePage {
               .fontColor($r('app.color.xq_font_tertiary')).width('100%').maxLines(4)
             Text(this.mappedPreview(row)).fontSize('11fp').lineHeight('17fp')
               .fontColor($r('app.color.xq_font_primary')).width('100%').maxLines(4)
+            if (row.location !== undefined) {
+              Text(`位置：纬度 ${(row.location.latitudeE6 / 1000000).toFixed(6)}，经度 ${(row.location.longitudeE6 / 1000000).toFixed(6)}`)
+                .fontSize('11fp').lineHeight('17fp').fontColor($r('app.color.xq_font_secondary')).width('100%')
+            }
             if (row.valid && (row.createCategory || row.createAccount || row.createToAccount === true)) {
               Text([
                 row.createCategory ? `将新建分类“${row.categoryName}”` : '',
