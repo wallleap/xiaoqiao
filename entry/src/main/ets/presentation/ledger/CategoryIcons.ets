@@ -1,3 +1,5 @@
+import { COLORFUL_CATEGORY_ICONS, ColorfulCategoryIcon, LEGACY_COLORFUL_ICON_KEYS } from './ColorfulCategoryIcons';
+
 /** Stable semantic keys stored in SQLite; resource handles stay in the presentation layer. */
 export interface CategoryIconOption {
   key: string;
@@ -24,24 +26,37 @@ export const CATEGORY_ICON_OPTIONS: CategoryIconOption[] = [
   { key: 'other', label: '其他' }
 ];
 
-export function categoryIcon(key: string): Resource {
+/** Resolve legacy semantic keys without rewriting existing category records. */
+function semanticCategoryIconKey(key: string): string {
   switch (key) {
-    case 'salary': return $r('app.media.colorful_icon_0280');
-    case 'bonus': return $r('app.media.colorful_icon_0088');
-    case 'sidejob': return $r('app.media.colorful_icon_0161');
-    case 'investment': return $r('app.media.colorful_icon_0126');
-    case 'food': return $r('app.media.colorful_icon_0287');
-    case 'transport': return $r('app.media.colorful_icon_0224');
-    case 'clothes': return $r('app.media.colorful_icon_0207');
-    case 'car': return $r('app.media.colorful_icon_0222');
-    case 'fun': return $r('app.media.colorful_icon_0235');
-    case 'care': return $r('app.media.colorful_icon_0071');
-    case 'home': return $r('app.media.colorful_icon_0161');
-    case 'study': return $r('app.media.colorful_icon_0280');
-    case 'health': return $r('app.media.colorful_icon_0073');
-    case 'gift': return $r('app.media.colorful_icon_0088');
-    case 'charity': return $r('app.media.colorful_icon_0104');
-    case 'insurance': return $r('app.media.colorful_icon_0126');
-    default: return $r('app.media.colorful_icon_0205');
+    case 'salary': return 'colorful_icon_0280';
+    case 'bonus': return 'colorful_icon_0088';
+    case 'sidejob': return 'colorful_icon_0161';
+    case 'investment': return 'colorful_icon_0126';
+    case 'food': return 'colorful_icon_0287';
+    case 'transport': return 'colorful_icon_0224';
+    case 'clothes': return 'colorful_icon_0207';
+    case 'car': return 'colorful_icon_0222';
+    case 'fun': return 'colorful_icon_0235';
+    case 'care': return 'colorful_icon_0071';
+    case 'home': return 'colorful_icon_0161';
+    case 'study': return 'colorful_icon_0280';
+    case 'health': return 'colorful_icon_0073';
+    case 'gift': return 'colorful_icon_0088';
+    case 'charity': return 'colorful_icon_0104';
+    case 'insurance': return 'colorful_icon_0126';
+    case 'other': return 'colorful_icon_0205';
+    default: return key;
   }
+}
+
+export function categoryIconKey(key: string): string {
+  const legacyKey = semanticCategoryIconKey(key);
+  return LEGACY_COLORFUL_ICON_KEYS[legacyKey] || legacyKey;
+}
+
+export function categoryIcon(key: string): Resource {
+  const resolvedKey = categoryIconKey(key);
+  return COLORFUL_CATEGORY_ICONS.find((option: ColorfulCategoryIcon) => option.key === resolvedKey)?.resource ||
+    $r('app.media.icon00204');
 }

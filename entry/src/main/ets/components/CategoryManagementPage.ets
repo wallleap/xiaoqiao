@@ -3,7 +3,8 @@ import { ChipGroup, ChipSize, ItemRestriction, SegmentButton, SegmentButtonOptio
 import { util } from '@kit.ArkTS';
 import { LedgerWorkspace } from '../data/rdb/LedgerWorkspace';
 import { CategoryCommand, CategoryOrderItem, CategoryProfile } from '../domain/model/CategoryProfile';
-import { CATEGORY_ICON_OPTIONS, CategoryIconOption, categoryIcon } from '../presentation/ledger/CategoryIcons';
+import { categoryIcon, categoryIconKey } from '../presentation/ledger/CategoryIcons';
+import { COLORFUL_CATEGORY_ICONS, ColorfulCategoryIcon } from '../presentation/ledger/ColorfulCategoryIcons';
 
 interface CategorySelectOption {
   value: string;
@@ -353,23 +354,37 @@ export struct CategoryManagementPage {
         .borderRadius(12).backgroundColor($r('app.color.xq_app_surface_keyboard'))
         .id('category-name').onChange((value: string) => { this.name = value; this.error = ''; })
       Text('父分类').fontSize('12fp').fontColor($r('app.color.xq_font_secondary')).width('100%')
-      Select(this.parentSelectOptions())
-        .selected(this.parentId.length === 0 ? 0 : Math.max(0, this.parentChoices().findIndex((item: CategoryProfile) => item.id === this.parentId) + 1))
-        .value(this.selectedParentLabel()).font({ size: '14fp' }).height(44).backgroundColor($r('app.color.xq_app_surface_keyboard'))
-        .selectedOptionBgColor($r('app.color.xq_comp_emphasize_tertiary')).id('category-parent')
-        .onSelect((index: number) => { this.parentId = index === 0 ? '' : this.parentChoices()[index - 1]?.id || ''; })
+      Row() {
+        Select(this.parentSelectOptions())
+          .selected(this.parentId.length === 0 ? 0 : Math.max(0, this.parentChoices().findIndex((item: CategoryProfile) => item.id === this.parentId) + 1))
+          .value(this.selectedParentLabel()).font({ size: '14fp' }).height(44)
+          .constraintSize({ maxWidth: '100%' }).backgroundColor($r('app.color.xq_app_surface_keyboard'))
+          .menuAlign(MenuAlignType.START).selectedOptionBgColor($r('app.color.xq_comp_emphasize_tertiary')).id('category-parent')
+          .onSelect((index: number) => { this.parentId = index === 0 ? '' : this.parentChoices()[index - 1]?.id || ''; })
+      }.width('100%').justifyContent(FlexAlign.Start)
       Text('图标').fontSize('12fp').fontColor($r('app.color.xq_font_secondary')).width('100%')
-      Scroll() {
-        Flex({ wrap: FlexWrap.Wrap }) {
-          ForEach(CATEGORY_ICON_OPTIONS, (option: CategoryIconOption) => {
-            Column({ space: 4 }) {
-              Image(categoryIcon(option.key)).width(30).height(30)
-              Text(option.label).fontSize('10fp').fontColor(this.iconKey === option.key ?
-                $r('app.color.xq_font_emphasize') : $r('app.color.xq_font_secondary'))
-            }.width('25%').height(62).onClick(() => { this.iconKey = option.key; }).id('category-icon-' + option.key)
-          }, (option: CategoryIconOption) => option.key)
-        }.width('100%')
-      }.layoutWeight(1).width('100%').scrollBar(BarState.Off)
+      Grid() {
+        ForEach(COLORFUL_CATEGORY_ICONS, (option: ColorfulCategoryIcon) => {
+          GridItem() {
+            Button({ type: ButtonType.Normal }) {
+              Stack({ alignContent: Alignment.Center }) {
+                Image(option.resource).width(32).height(32).objectFit(ImageFit.Contain)
+                if (categoryIconKey(this.iconKey) === option.key) {
+                  Image($r('app.media.lucide_check1')).width(12).height(12)
+                    .fillColor($r('app.color.xq_font_on_primary')).padding(2).backgroundColor($r('app.color.xq_brand'))
+                    .borderRadius(8).align(Alignment.BottomEnd)
+                }
+              }.width('100%').height('100%')
+            }.width('100%').height(52).padding(8).borderRadius(12)
+              .backgroundColor(categoryIconKey(this.iconKey) === option.key ? $r('app.color.xq_comp_emphasize_tertiary') : Color.Transparent)
+              .border({ width: 1.5, color: categoryIconKey(this.iconKey) === option.key ? $r('app.color.xq_brand') : Color.Transparent })
+              .onClick(() => { this.iconKey = option.key; }).id('category-icon-' + option.key)
+              .accessibilityText('分类图标 ' + option.key.replace(/^icon0*/, ''))
+              .accessibilityDescription(categoryIconKey(this.iconKey) === option.key ? '已选中' : '未选中')
+          }
+        }, (option: ColorfulCategoryIcon) => option.key)
+      }.columnsTemplate('1fr 1fr 1fr 1fr 1fr').columnsGap(8).rowsGap(8).cachedCount(2)
+        .layoutWeight(1).width('100%').scrollBar(BarState.Auto).id('category-icon-grid')
       if (this.error.length > 0) {
         Text(this.error).fontSize('12fp').fontColor($r('app.color.xq_warning')).width('100%')
       }

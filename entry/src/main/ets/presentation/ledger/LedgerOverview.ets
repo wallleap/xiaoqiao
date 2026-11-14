@@ -92,17 +92,17 @@ export function filterEntries(entries: LedgerEntry[], kind: LedgerKind, query: s
 export function previewEntries(expanded: boolean = false): LedgerEntry[] {
   const entries: LedgerEntry[] = [
     { id: 'preview-lunch', title: '午餐', category: '餐饮', account: '微信零钱', date: '2026-10-28',
-      time: '12:30', income: false, minor: '2800', grossMinor: '3000', discountMinor: '200', icon: $r('app.media.colorful_icon_0287') },
+      time: '12:30', income: false, minor: '2800', grossMinor: '3000', discountMinor: '200', icon: categoryIcon('colorful_icon_0287') },
     { id: 'preview-metro', title: '地铁', category: '交通', account: '微信零钱', date: '2026-10-28',
-      time: '08:20', income: false, minor: '400', grossMinor: '400', discountMinor: '0', icon: $r('app.media.colorful_icon_0111') },
+      time: '08:20', income: false, minor: '400', grossMinor: '400', discountMinor: '0', icon: categoryIcon('colorful_icon_0111') },
     { id: 'preview-salary', title: '工资', category: '工资', account: '日常储蓄卡', date: '2026-10-25',
-      time: '09:00', income: true, minor: '860000', grossMinor: '860000', discountMinor: '0', icon: $r('app.media.colorful_icon_0138') }
+      time: '09:00', income: true, minor: '860000', grossMinor: '860000', discountMinor: '0', icon: categoryIcon('colorful_icon_0138') }
   ];
   if (expanded) {
     for (let index = 0; index < 12; index++) {
       entries.push({ id: index === 11 ? 'preview-scroll-tail' : `preview-scroll-${index}`,
         title: index === 11 ? '滚动验证末项' : `日常支出 ${index + 1}`, category: '餐饮', account: '微信零钱',
-        date: '2026-10-24', time: '12:30', income: false, minor: '1000', grossMinor: '1000', discountMinor: '0', icon: $r('app.media.colorful_icon_0287') });
+        date: '2026-10-24', time: '12:30', income: false, minor: '1000', grossMinor: '1000', discountMinor: '0', icon: categoryIcon('colorful_icon_0287') });
     }
   }
   return entries;
