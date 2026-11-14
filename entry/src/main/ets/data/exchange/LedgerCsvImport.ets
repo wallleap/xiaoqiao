@@ -1,3 +1,4 @@
+import { isSpendingNatureColor, isCustomNatureColor } from '../../domain/model/SpendingNature';
 import { CurrencyUnit } from '../../core/money/CurrencyUnit';
 import { Money } from '../../core/money/Money';
 import { ExpenseCategory, LedgerSnapshot } from '../../domain/model/LedgerSnapshot';
@@ -32,6 +33,7 @@ export interface CsvColumnMapping {
   /** Optional for compatibility with saved mappings and callers created before map export. */
   includeInBudget?: number;
   spendingNature?: number;
+  spendingNatureColor?: number;
   originalEntryId?: number;
   reimbursementPending?: number;
   latitude?: number;
@@ -135,6 +137,7 @@ export function detectCsvMapping(headers: string[]): CsvColumnMapping {
     address: column(headers, ['地址', '商户地址', 'address']),
     includeInBudget: column(headers, ['计入预算', 'includeinbudget']),
     spendingNature: column(headers, ['预算分类', 'spendingnature']),
+    spendingNatureColor: column(headers, ['预算分类颜色', 'spendingnaturecolor']),
     originalEntryId: column(headers, ['关联支出ID', '原支出ID', 'originalentryid']),
     reimbursementPending: column(headers, ['待报销', 'reimbursementpending']),
     latitude: column(headers, ['纬度', '纬度(度)', '纬度（度）', 'latitude', 'lat']),
@@ -440,6 +443,14 @@ export function previewCsv(table: CsvTable, mapping: CsvColumnMapping, snapshot:
     if (kind.length === 0) { kind = type(rawPurpose); }
     const recovery = kind === 'refund' || kind === 'reimbursement';
     if (kind === 'expense' && natureName.length > 0 && nature === undefined) { issues.push('预算分类未匹配，请先在设置中创建同名预算分类'); }
+    const natureColor = (mapping.spendingNatureColor ?? -1) >= 0 ? (raw[mapping.spendingNatureColor ?? -1] || '').trim() : '';
+    if (kind === 'expense' && natureColor.length > 0) {
+      if (!isSpendingNatureColor(natureColor)) { issues.push('预算分类颜色须为预设颜色名或 #RRGGBB'); }
+      else if (natureName.length === 0) { issues.push('填写预算分类颜色时须同时填写预算分类'); }
+      else if (nature !== undefined && (isCustomNatureColor(natureColor) ? natureColor.toUpperCase() : natureColor) !== nature.colorKey) {
+        issues.push('预算分类颜色与现有分类不一致，请先在预算分类管理中设置相同颜色');
+      }
+    }
     if (recovery && originalEntryId.length === 0) { issues.push('报销或退款必须填写关联支出ID'); }
     if (!recovery && originalEntryId.length > 0) { issues.push('关联支出ID仅用于报销或退款'); }
     if (reimbursementPending && kind !== 'expense') { issues.push('只有支出可以标记待报销'); }

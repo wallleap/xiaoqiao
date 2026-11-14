@@ -61,6 +61,7 @@ export interface SavedLedgerEntry {
   refundedMinor?: string;
   includeInBudget?: boolean;
   spendingNatureName?: string;
+  spendingNatureColor?: string;
   transferPurpose?: string;
   feeInBudget?: boolean;
   attachments?: LedgerAttachmentDraft[];

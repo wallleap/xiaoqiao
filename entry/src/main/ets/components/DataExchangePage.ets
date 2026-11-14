@@ -47,7 +47,7 @@ export struct DataExchangePage {
   @State private importPreview: CsvPreviewRow[] = [];
   @State private importMapping: CsvColumnMapping = { date: -1, time: -1, type: -1, amount: -1, category: -1,
     transferAmount: -1, account: -1, toAccount: -1, purpose: -1, fee: -1, coupon: -1, feeBudget: -1, note: -1,
-    sourceId: -1, merchant: -1, address: -1, latitude: -1, longitude: -1, includeInBudget: -1, spendingNature: -1, originalEntryId: -1, reimbursementPending: -1, status: -1 };
+    sourceId: -1, merchant: -1, address: -1, latitude: -1, longitude: -1, includeInBudget: -1, spendingNature: -1, spendingNatureColor: -1, originalEntryId: -1, reimbursementPending: -1, status: -1 };
   @State private importFileName: string = '';
   @State private importSha256: string = '';
   @State private importDelimiter: string = ',';
@@ -423,6 +423,7 @@ export struct DataExchangePage {
       longitude: field === 'longitude' ? index : this.importMapping.longitude,
       includeInBudget: field === 'includeInBudget' ? index : this.importMapping.includeInBudget,
       spendingNature: field === 'spendingNature' ? index : this.importMapping.spendingNature,
+      spendingNatureColor: field === 'spendingNatureColor' ? index : this.importMapping.spendingNatureColor,
       originalEntryId: field === 'originalEntryId' ? index : this.importMapping.originalEntryId,
       reimbursementPending: field === 'reimbursementPending' ? index : this.importMapping.reimbursementPending,
       status: field === 'status' ? index : this.importMapping.status
@@ -881,6 +882,7 @@ export struct DataExchangePage {
             .fontSize('12fp').lineHeight('18fp').fontColor($r('app.color.xq_font_tertiary')).width('100%')
           this.mappingRow('计入预算', 'includeInBudget', this.importMapping.includeInBudget ?? -1)
           this.mappingRow('预算分类', 'spendingNature', this.importMapping.spendingNature ?? -1)
+          this.mappingRow('预算分类颜色', 'spendingNatureColor', this.importMapping.spendingNatureColor ?? -1)
           this.mappingRow('关联支出ID', 'originalEntryId', this.importMapping.originalEntryId ?? -1)
           this.mappingRow('待报销', 'reimbursementPending', this.importMapping.reimbursementPending ?? -1)
           Text('报销、退款按正数金额导入，必须关联原支出；按到账日期冲减支出。找不到关联记录时整批不写入。').fontSize('12fp').width('100%')

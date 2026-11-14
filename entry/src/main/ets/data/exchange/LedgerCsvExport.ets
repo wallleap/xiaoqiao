@@ -10,6 +10,7 @@ export const LEDGER_EXPORT_COLUMNS: LedgerExportColumn[] = [
   { key: 'category', label: '收支分类' }, { key: 'account', label: '账户' }, { key: 'toAccount', label: '转入账户' },
   { key: 'note', label: '备注' }, { key: 'merchant', label: '商户' }, { key: 'address', label: '地址' },
   { key: 'includeInBudget', label: '计入预算' }, { key: 'spendingNature', label: '预算分类' },
+  { key: 'spendingNatureColor', label: '预算分类颜色' },
   { key: 'originalEntryId', label: '关联支出ID' }, { key: 'reimbursementPending', label: '待报销' },
   { key: 'latitude', label: '纬度' }, { key: 'longitude', label: '经度' },
   { key: 'currency', label: '币种' }, { key: 'gross', label: '原金额' },
@@ -48,6 +49,7 @@ export function ledgerExportValue(entry: SavedLedgerEntry, key: string): string 
     case 'longitude': return entry.location === undefined ? '' : (entry.location.longitudeE6 / 1000000).toFixed(6);
     case 'includeInBudget': return !entry.income && !entry.transfer && !entry.recoveryKind ? (entry.includeInBudget ? '是' : '否') : '';
     case 'spendingNature': return entry.spendingNatureName || '';
+    case 'spendingNatureColor': return entry.spendingNatureColor || '';
     case 'originalEntryId': return entry.originalEntryId || '';
     case 'reimbursementPending': return !entry.income && !entry.transfer && !entry.recoveryKind ? (entry.reimbursementPending ? '是' : '否') : '';
     case 'currency': return 'CNY';

@@ -4,6 +4,7 @@ import { TRANSFER_SCHEMA_SHA256, TRANSFER_SCHEMA_STATEMENTS } from './TransferSc
 import { SPENDING_NATURE_SCHEMA_SHA256 } from './SpendingNatureSchema';
 import { BUDGET_NATURE_SCHEMA_SHA256 } from './BudgetNatureSchema';
 import { RECOVERY_SCHEMA_SHA256 } from './RecoverySchema';
+import { NATURE_COLOR_SCHEMA_SHA256 } from './NatureColorSchema';
 import { RdbSession } from './RdbSession';
 
 /** Additive extension only: original transaction and movement rows are never rewritten. */
@@ -17,7 +18,7 @@ export class TransferMigration {
     const rows = await db.querySql('SELECT version,checksum FROM schema_migrations ORDER BY version');
     let version: number = 1;
     try {
-      if ((rows.rowCount < 1 || rows.rowCount > 5) || !rows.goToFirstRow() || rows.getLong(0) !== 1 || rows.getString(1) !== REVIEW_SCHEMA_SHA256) {
+      if ((rows.rowCount < 1 || rows.rowCount > 6) || !rows.goToFirstRow() || rows.getLong(0) !== 1 || rows.getString(1) !== REVIEW_SCHEMA_SHA256) {
         throw new Error('UNSUPPORTED_LEDGER_SCHEMA');
       }
       if (rows.rowCount >= 2) {
@@ -36,9 +37,13 @@ export class TransferMigration {
         }
         version = 4;
       }
-      if (rows.rowCount === 5) {
+      if (rows.rowCount >= 5) {
         if (!rows.goToNextRow() || rows.getLong(0) !== 5 || rows.getString(1) !== RECOVERY_SCHEMA_SHA256) { throw new Error('UNSUPPORTED_LEDGER_SCHEMA'); }
         version = 5;
+      }
+      if (rows.rowCount === 6) {
+        if (!rows.goToNextRow() || rows.getLong(0) !== 6 || rows.getString(1) !== NATURE_COLOR_SCHEMA_SHA256) { throw new Error('UNSUPPORTED_LEDGER_SCHEMA'); }
+        version = 6;
       }
     } finally { rows.close(); }
     const marker = await db.querySql("SELECT value FROM db_meta WHERE key='transfer_schema_checksum'");

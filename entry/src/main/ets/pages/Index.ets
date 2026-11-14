@@ -165,7 +165,7 @@ struct Index {
       const code = (error as Error).message;
       this.upgradeRequired = code === 'LEDGER_UPGRADE_REQUIRED';
       if (code === 'BACKUP_RECOVERY_REQUIRED') { this.showRecoveryError(); }
-      else { this.loadError = this.upgradeRequired ? '升级本地账本后，可使用部分／全额报销和退款' : '账本暂时无法读取，已有数据不会被覆盖。请重试'; }
+      else { this.loadError = this.upgradeRequired ? '升级本地账本后，可使用报销、退款及预算分类自定义颜色' : '账本暂时无法读取，已有数据不会被覆盖。请重试'; }
     } finally { this.loading = false; }
   }
 
@@ -293,7 +293,7 @@ struct Index {
   private confirmDatabaseUpgrade(): void {
     if (this.loading) { return; }
     this.getUIContext().getPromptAction().showDialog({ title: '升级本地账本？',
-      message: '先在本机备份，再增加报销和退款的回款记录与统计支持。原账目及余额会保留；升级失败会回滚，并保留升级前备份。',
+      message: '先在本机备份，再升级报销、退款和预算分类自定义颜色支持。原账目及余额会保留；升级失败会回滚，并保留升级前备份。',
       buttons: [{ text: '取消', color: $r('app.color.xq_font_primary') }, { text: '备份并升级', color: $r('app.color.xq_font_emphasize') }]
     }).then(async (result) => {
       if (result.index !== 1) { return; }

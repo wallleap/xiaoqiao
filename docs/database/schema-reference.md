@@ -387,3 +387,8 @@
 | v_budget_usage | 按直接账目累计预算支出，不累加父子分类行。 |
 | v_budget_line_usage | 单个分类额度包含后代支出的使用额。 |
 | v_net_assets_by_currency | 仅累计账户级计入总资产的账户，按币种分组，不做隐含跨币换算。 |
+
+
+## V6 预算分类自定义颜色（2026-11-14）
+
+源文件 schema-v6-nature-color.sql；通过 tools/generate-nature-color-schema.py 生成 NatureColorSchema.ets，不手改生成代码。新增 spending_natures.custom_color TEXT NULL，非空须为大写 #RRGGBB。旧 color_token CHECK 保留，自定义色以 neutral 令牌配合该字段保存；旧行无更新。升级代码 NatureColorMigration 遵循 v5 备份、事务、旧数据指纹／外键／完整性校验及迁移标记，普通开库要求显式升级确认。回退使用升级前备份，不直接降级表结构；迁移代码未在用户数据执行。备份容器 schema 6 可接收 v2–v5 候选备份并逐级迁移。

@@ -25,15 +25,20 @@ export interface BudgetNatureLine {
 
 export const SPENDING_NATURE_COLORS: string[] = ['survival', 'experience', 'growth', 'emergency', 'calm', 'creative', 'social', 'neutral'];
 
+export function isCustomNatureColor(value: string): boolean { return /^#[0-9a-fA-F]{6}$/.test(value); }
+export function isSpendingNatureColor(value: string): boolean {
+  return SPENDING_NATURE_COLORS.includes(value) || isCustomNatureColor(value);
+}
+
 export class ValidatedSpendingNature {
   readonly command: SpendingNatureCommand;
 
   constructor(command: SpendingNatureCommand) {
     const name = command.name.trim();
     if (command.id.trim().length === 0 || name.length === 0 || name.length > 20 ||
-      SPENDING_NATURE_COLORS.indexOf(command.colorKey) < 0) {
+      !isSpendingNatureColor(command.colorKey)) {
       throw new Error('INVALID_SPENDING_NATURE');
     }
-    this.command = { id: command.id, name: name, colorKey: command.colorKey };
+    this.command = { id: command.id, name: name, colorKey: isCustomNatureColor(command.colorKey) ? command.colorKey.toUpperCase() : command.colorKey };
   }
 }

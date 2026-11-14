@@ -131,7 +131,7 @@ export class RdbStatisticsRepository {
   private async natures(): Promise<Map<string, NatureMeta>> {
     const values: Map<string, NatureMeta> = new Map();
     const rows = await this.store.querySql(
-      "SELECT id,name,COALESCE(color_token,'neutral') FROM spending_natures WHERE deleted_at_ms IS NULL");
+      "SELECT id,name,COALESCE(custom_color,color_token,'neutral') FROM spending_natures WHERE deleted_at_ms IS NULL");
     try {
       while (rows.goToNextRow()) {
         values.set(rows.getString(0), { id: rows.getString(0), name: rows.getString(1), colorKey: rows.getString(2) });
