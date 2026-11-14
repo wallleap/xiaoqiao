@@ -1,5 +1,5 @@
 import { HdsNavigation, HdsNavigationTitleMode, hdsMaterial, DividerShowType, ScrollEffectType } from '@kit.UIDesignKit';
-import { ChipGroup, ChipSize } from '@kit.ArkUI';
+import { ChipGroup, ChipSize, ItemRestriction, SegmentButton, SegmentButtonOptions, SegmentButtonTextItem } from '@kit.ArkUI';
 import { util } from '@kit.ArkTS';
 import { LedgerWorkspace } from '../data/rdb/LedgerWorkspace';
 import { CategoryCommand, CategoryProfile } from '../domain/model/CategoryProfile';
@@ -19,10 +19,23 @@ interface CategorySelectOption {
 export struct CategoryManagementPage {
   workspace: LedgerWorkspace | undefined = undefined;
   sheetMaterial: SystemUiMaterial | undefined = undefined;
+  @Prop @Watch('applyArchiveMaterial') segmentMaterial: SystemUiMaterial | undefined = undefined;
   onClose: () => void = () => {};
   @State private values: CategoryProfile[] = [];
   @State private kind: string = 'expense';
   @State private showArchived: boolean = false;
+  @State @Watch('archiveSelectionChanged') private archiveSelection: number[] = [0];
+  @State private archiveOptions: SegmentButtonOptions = SegmentButtonOptions.tab({
+    buttons: [{ text: '使用中' }, { text: '已归档' }] as ItemRestriction<SegmentButtonTextItem>,
+    fontSize: '13fp', selectedFontSize: '13fp',
+    fontColor: $r('sys.color.font_primary'), selectedFontColor: $r('app.color.xq_font_on_primary'),
+    backgroundColor: Color.Transparent, selectedBackgroundColor: $r('app.color.xq_brand')
+  });
+
+  private archiveSelectionChanged(): void {
+    this.showArchived = this.archiveSelection[0] === 1;
+  }
+
   @State private loading: boolean = true;
   @State private showEditor: boolean = false;
   @State private editing: CategoryProfile | undefined = undefined;
@@ -33,7 +46,27 @@ export struct CategoryManagementPage {
   @State private error: string = '';
   private readonly scroller: Scroller = new Scroller();
 
-  aboutToAppear(): void { this.load(); }
+  aboutToAppear(): void { this.applyArchiveMaterial(); this.load(); }
+
+  private applyArchiveMaterial(): void {
+    const options = SegmentButtonOptions.tab({
+      buttons: [{ text: '使用中' }, { text: '已归档' }] as ItemRestriction<SegmentButtonTextItem>,
+      fontSize: '13fp', selectedFontSize: '13fp',
+      fontColor: $r('sys.color.font_primary'), selectedFontColor: $r('app.color.xq_font_on_primary'),
+      backgroundColor: Color.Transparent, selectedBackgroundColor: $r('app.color.xq_brand')
+    });
+    if (this.segmentMaterial !== undefined) { options.backgroundSystemMaterial = this.segmentMaterial; }
+    this.archiveOptions = options;
+  }
+
+  @Builder
+  private archiveAction() {
+    Row() {
+      SegmentButton({ options: this.archiveOptions, selectedIndexes: $archiveSelection })
+        .width(168).constraintSize({ maxWidth: '100%' }).id('category-toggle-archive')
+    }.width('100%').justifyContent(FlexAlign.End).padding({ left: 160, right: 16 })
+      .hitTestBehavior(HitTestMode.Transparent)
+  }
 
   private statusBarColor(): string {
     const host = this.getUIContext().getHostContext();
@@ -287,10 +320,6 @@ export struct CategoryManagementPage {
                 selectedFontColor: $r('app.color.xq_font_on_primary') },
               onChange: (selected: number[]) => { this.kind = selected[0] === 1 ? 'income' : 'expense'; }
             }).width(240).id('category-kind-tabs')
-            Blank()
-            Button(this.showArchived ? '使用中' : '已归档', { type: ButtonType.Capsule }).height(32).fontSize('12fp')
-              .backgroundColor(Color.Transparent).fontColor($r('app.color.xq_font_secondary'))
-              .onClick(() => { this.showArchived = !this.showArchived; }).id('category-toggle-archive')
           }.width('100%')
           Button('新增分类', { type: ButtonType.Capsule }).width('100%').height(46).fontSize('15fp')
             .fontColor(Color.White).backgroundColor($r('app.color.xq_brand')).enabled(!this.busy)
@@ -311,7 +340,7 @@ export struct CategoryManagementPage {
       }.width('100%').height('100%').align(Alignment.Top).scrollBar(BarState.Off).clip(false).edgeEffect(EdgeEffect.Spring, { alwaysEnabled: true })
     }.mode(NavigationMode.Stack).titleMode(HdsNavigationTitleMode.MINI)
       .titleBar({ enableComponentSafeArea: true,
-        content: { title: { mainTitle: '收支分类' }, divider: { showType: DividerShowType.OFF },
+        content: { title: { mainTitle: '收支分类' }, stackBuilder: this.archiveAction.bind(this), divider: { showType: DividerShowType.OFF },
           backIcon: { componentId: 'category-close', action: () => { if (!this.busy) { this.onClose(); } } } },
         style: { originalStyle: { contentStyle: { titleStyle: { mainTitleColor: $r('app.color.xq_font_primary') },
           backIconStyle: { iconColor: $r('app.color.xq_icon_primary') } } },

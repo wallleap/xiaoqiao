@@ -135,3 +135,43 @@ Canvas 就绪时绘制，统计数据和容器宽度变化时重绘；选中标�
 收支柱形和两张曲线图增加横向 PanGesture，起始、移动及结束阶段按 FingerInfo.localX/localY 的 vp 坐标更新最近日期，保留点击选择；横向拖动与页面纵向滚动分工。柱形上下区域继续区分收入／支出，拖动不会因重复经过同一日期而取消选择，松手保留结果。环形在自身区域使用优先全方向 PanGesture，按角度选择分类，拖动时扩大命中范围以便选择很窄的扇区，仅忽略圆心附近 16vp 防止角度抖动；拖动不触发点击的反选逻辑。环形之外的页面仍可滚动，图例点击及排行明细入口不变。
 
 修改 StatisticsPage.ets 和本说明，git diff --check 通过，并核对本地 SDK 手指局部坐标声明；按用户要求未构建或运行测试。实际手势竞争、拖动跨日期、窄扇区命中及松手保留待设备复验。
+
+
+统计周期原生分段按钮（2026-11-14）：标题栏右侧“周／月／年／自定义”由 ChipGroup 改为原生 SegmentButton 胶囊单选，与使用中／已归档的分段样式一致，保留 272vp 宽度及容器宽度限制。选中索引同步原范围逻辑，自定义仅确认后生效；关闭日期 Sheet 时将分段选中项恢复到实际生效范围，再次点击已选自定义仍可打开编辑。保留图表和统计口径。修改 StatisticsPage.ets 和本说明，git diff --check 通过，并核对本地 SDK 的 onItemClicked；按用户要求未构建或运行测试，实际分段选择和自定义取消／重开待手动查看。
+
+
+周期分段沉浸材质（2026-11-14）：Index 在 API 26 沉浸材质已就绪且未强制兼容模式时，将既有 filterMaterials.chip（ULTRA_THIN、交互光感）传给 StatisticsPage.rangeMaterial。页面初始化及材质变化时重新配置 SegmentButtonOptions，在存在材质时设置 backgroundSystemMaterial 并使用透明底色，保留选中橙底白字；缺少材质时重建为原实色配置，不绑定 API 26 材质属性。不新增材质实例或改全局配置，标题栏已有滚动渐变模糊保持。
+
+修改 StatisticsPage.ets、Index.ets 和本说明，git diff --check 通过，静态检查材质能力分支、响应式传参与回退配置；按用户要求未构建或运行测试。实际光感、选中项颜色及兼容回退待设备查看。
+
+
+周期分段底板透明化（2026-11-14）：用户反馈仍存在整块灰色背景，取消周期分段单独绑定的沉浸材质，显式 backgroundColor=Transparent、backgroundBlurStyle=NONE，保留主题橙选中项。移除上轮 rangeMaterial 参数及其更新方法，Index 不再传入材质；标题栏原有 HDS 沉浸材质和滚动光感不变，分段直接透出标题栏背景。共享材质配置及其它页面分段不变。本节替代上条分段独立材质方案。
+
+修改 StatisticsPage.ets、Index.ets 和本说明，git diff --check 通过；按用户要求未构建或运行测试，实际无灰色底板效果待设备查看。
+
+
+## 对照官网修正标题栏分段（2026-11-14）
+
+按华为官方 [SegmentButton 示例8：设置背景板材质](https://developer.huawei.com/consumer/cn/doc/harmonyos-references/ohos-arkui-advanced-segmentbutton#示例8设置背景板材质) 采用 SegmentButtonOptions.tab、backgroundColor=Transparent 与独立 ULTRA_THIN 沉浸材质。新增 FilterMaterials.segment，由原有 API 26 动态工厂创建，配置 colorInvert、interactive 与 lightEffect，不指定 materialColor，不复用带灰色染色的 chip。统计页通过响应式 rangeMaterial 接收并更新 backgroundSystemMaterial；无材质时仍为透明底板，不访问新材质实例。
+
+沿用 HdsNavigation.titleBar.content.stackBuilder 放置在标题栏右侧；该位置对应官方 [设置自定义区域](https://developer.huawei.com/consumer/cn/doc/doccenter-references/api/ui-design-hdsnavigation#设置自定义区域) 能力。普通文字使用 sys.color.font_primary 以配合自动反色；选中项继续品牌橙底白字。移除上一版 backgroundBlurStyle=NONE，恢复标准独立材质绑定。账户、分类、预算分类分段及其它共享材质不变。本节替代此前灰色 chip 材质复用和取消材质的两次尝试。
+
+修改 StatisticsPage.ets、Index.ets、FilterMaterials.ets、ImmersiveFilterMaterials.ets 和本说明。git diff --check 通过，静态核对官网字段、tab 类型、透明背景、工厂能力判断及回退；按用户要求未构建或运行测试。实际透明底板、标题栏光感、选中配色及兼容设备仍待手动确认，不能视为视觉复验通过。
+
+
+## 日期导航固定在标题栏下方（2026-11-14）
+
+依据官方 [HdsNavigation BottomBuilderParams](https://developer.huawei.com/consumer/cn/doc/doccenter-references/api/ui-design-hdsnavigation#bottombuilderparams)，将周期日期／上一期／下一期从正文 Scroll 移至 titleBar.content.bottomBuilder，区域与 builder 容器均为 56vp，内部沿用 40vp 控件及左右 16vp、上下 8vp 间距。dynamicHideTitleBar 显式保留标题、底部自定义区和状态栏，日期导航不随正文滚走。自定义日期点击编辑及上一期／下一期禁用规则保持。
+
+透明底部容器复用既有标题栏 IMMERSIVE／ADAPTIVE 和 IMMERSIVE_GRADIENT_BLUR，保留 enableComponentSafeArea 与 Scroll.clip(false)，由 HDS 管理正文初始避让；不添加手工顶部占位或额外浮层，不改变主 Tab 已有系统安全区配置。滚动后的正文进入标题栏采样区，日期文字与按钮位于其上；实际可读性需设备确认。
+
+修改 StatisticsPage.ets 和本说明，git diff --check 通过，静态确认日期导航只在 bottomBuilder 渲染一次、其高度与固定显隐配置匹配；按用户要求未构建或运行测试。待手动验证首屏不遮挡、滚动时日期固定与光感、日期点选和切换，以及大字号下的阅读体验。
+
+
+日期切换按钮内收与沉浸材质（2026-11-14）：固定日期导航左右内边距从 16vp 调为 32vp，导航内容最大宽度 400vp，宽屏保持居中，日期继续居中且最多两行。两个 40vp 圆形按钮在 rangeMaterial 可用时使用透明背景并绑定现有独立 ULTRA_THIN 材质，沿用同一能力判断；无材质时保留实色卡片底。自定义范围禁用与前后周期逻辑不变，不新增材质实例。修改 StatisticsPage.ets 和本说明，git diff --check 通过；按用户要求未构建或运行测试，实际内收间距、光感及长日期阅读待设备查看。
+
+
+自定义日期显示完整年份（2026-11-14）：统计页自定义范围统一显示 YYYY/MM/DD — YYYY/MM/DD，日期导航和明细副标题使用当前已生效范围，结束日期仍为包含当天；日期选择 Sheet 的开始和结束按钮改用斜杠格式。周、月、年的标题格式不变，保留导航最多两行及居中，不改日期存储和查询边界。修改 StatisticsPage.ets 和本说明，git diff --check 通过；按用户要求未构建或运行测试，跨年范围和窄屏显示待手动查看。
+
+
+周范围完整日期显示（2026-11-14）：统计页周范围也使用 YYYY/MM/DD — YYYY/MM/DD，与自定义一致；修复原周标题仅显示月日的问题，日期导航和明细副标题同步。保留周一至周日的查询范围及前后周切换逻辑。修改 StatisticsPage.ets 和本说明，git diff --check 通过；按用户要求未构建或运行测试，跨年周和窄屏换行待手动查看。

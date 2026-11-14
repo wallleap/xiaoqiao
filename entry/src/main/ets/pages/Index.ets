@@ -352,6 +352,7 @@ struct Index {
     SpendingNaturePage({
       workspace: this.workspace,
       sheetMaterial: this.materialReady && !this.forceLegacyMaterials ? this.filterMaterials?.menu : undefined,
+      segmentMaterial: this.materialReady && !this.forceLegacyMaterials ? this.filterMaterials?.segment : undefined,
       onClose: () => {
         this.showSpendingNatures = false;
         this.loadLedger();
@@ -378,6 +379,7 @@ struct Index {
     CategoryManagementPage({
       workspace: this.workspace,
       sheetMaterial: this.materialReady && !this.forceLegacyMaterials ? this.filterMaterials?.menu : undefined,
+      segmentMaterial: this.materialReady && !this.forceLegacyMaterials ? this.filterMaterials?.segment : undefined,
       onClose: () => {
         this.showCategories = false;
         this.loadLedger();
@@ -1484,6 +1486,7 @@ struct Index {
           bookName: this.ledger?.bookName || '',
           refreshToken: this.ledgerVersion,
           sheetMaterial: this.materialReady && !this.forceLegacyMaterials ? this.filterMaterials?.menu : undefined,
+          rangeMaterial: this.materialReady && !this.forceLegacyMaterials ? this.filterMaterials?.segment : undefined,
           onOpenEntry: (id: string) => { this.openDetail(id); }
         })
       }.tabBar(this.tabItem(1))

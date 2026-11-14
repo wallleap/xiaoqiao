@@ -1,4 +1,4 @@
-import { ChipGroup, ChipSize } from '@kit.ArkUI';
+import { ItemRestriction, SegmentButton, SegmentButtonOptions, SegmentButtonTextItem } from '@kit.ArkUI';
 import { DividerShowType, HdsNavigation, HdsNavigationTitleMode, hdsMaterial, ScrollEffectType } from '@kit.UIDesignKit';
 import { LedgerWorkspace } from '../data/rdb/LedgerWorkspace';
 import { LedgerStatistics, StatisticsBucket, StatisticsBudgetCategory, StatisticsCategory,
@@ -40,9 +40,17 @@ export struct StatisticsPage {
   @Prop @Watch('pageContextChanged') refreshToken: number = 0;
   @Prop bookName: string = '';
   sheetMaterial: SystemUiMaterial | undefined = undefined;
+  @Prop @Watch('applyRangeMaterial') rangeMaterial: SystemUiMaterial | undefined = undefined;
   onOpenEntry: (id: string) => void = () => {};
   @State private kind: number = 0;
   @State private range: number = 1;
+  @State @Watch('rangeSelectionChanged') private rangeSelection: number[] = [1];
+  @State private rangeOptions: SegmentButtonOptions = SegmentButtonOptions.tab({
+    buttons: [{ text: '周' }, { text: '月' }, { text: '年' }, { text: '自定义' }] as ItemRestriction<SegmentButtonTextItem>,
+    fontSize: '13fp', selectedFontSize: '13fp',
+    fontColor: $r('sys.color.font_primary'), selectedFontColor: $r('app.color.xq_font_on_primary'),
+    backgroundColor: Color.Transparent, selectedBackgroundColor: $r('app.color.xq_brand')
+  });
   @State private dateRange: StatisticsDateRange = currentRange('month');
   @State @Watch('redrawLineCharts') private statistics: LedgerStatistics | undefined = undefined;
   @State @Watch('redrawLineCharts') private incomeStatistics: LedgerStatistics | undefined = undefined;
@@ -78,11 +86,24 @@ export struct StatisticsPage {
   private incomeLineReady: boolean = false;
 
   aboutToAppear(): void {
+    this.applyRangeMaterial();
     const range = currentRange('month');
     this.customStart = range.startDate;
     this.customEnd = this.lastInclusive(range.endDateExclusive);
     this.dateRange = range;
     if (this.active) { this.load(); }
+  }
+
+  private applyRangeMaterial(): void {
+    const options = SegmentButtonOptions.tab({
+      buttons: [{ text: '周' }, { text: '月' }, { text: '年' }, { text: '自定义' }] as ItemRestriction<SegmentButtonTextItem>,
+      fontSize: '13fp', selectedFontSize: '13fp',
+      fontColor: $r('sys.color.font_primary'), selectedFontColor: $r('app.color.xq_font_on_primary'),
+      backgroundColor: Color.Transparent, selectedBackgroundColor: $r('app.color.xq_brand')
+    });
+    // Material instances are supplied only by the existing API 26 capability-gated factory.
+    if (this.rangeMaterial !== undefined) { options.backgroundSystemMaterial = this.rangeMaterial; }
+    this.rangeOptions = options;
   }
 
   private pageContextChanged(): void {
@@ -97,6 +118,12 @@ export struct StatisticsPage {
 
   private kindValue(): StatisticsKind {
     return this.kind === 1 ? 'income' : 'expense';
+  }
+
+  private periodTitle(): string {
+    if (this.rangeValue() !== 'custom' && this.rangeValue() !== 'week') { return rangeTitle(this.rangeValue(), this.dateRange); }
+    return this.dateRange.startDate.replace(/-/g, '/') + ' — ' +
+      this.lastInclusive(this.dateRange.endDateExclusive).replace(/-/g, '/');
   }
 
   private rangeValue(): StatisticsRange {
@@ -136,6 +163,12 @@ export struct StatisticsPage {
       if (request === this.requestId) { this.error = '统计数据暂时无法读取，请稍后重试'; }
     } finally {
       if (request === this.requestId) { this.loading = false; }
+    }
+  }
+
+  private rangeSelectionChanged(): void {
+    if (this.rangeSelection.length === 1 && this.rangeSelection[0] !== this.range) {
+      this.selectRange(this.rangeSelection);
     }
   }
 
@@ -288,16 +321,8 @@ export struct StatisticsPage {
 
   @Builder
   private rangeChips() {
-    ChipGroup({
-      items: [{ label: { text: '周' }, allowClose: false }, { label: { text: '月' }, allowClose: false },
-        { label: { text: '年' }, allowClose: false }, { label: { text: '自定义' }, allowClose: false }],
-      multiple: false, selectedIndexes: [this.range],
-      itemStyle: { size: ChipSize.NORMAL, backgroundColor: $r('app.color.xq_app_filter_unselected'),
-        fontColor: $r('app.color.xq_font_primary'), selectedBackgroundColor: $r('app.color.xq_brand'),
-        selectedFontColor: $r('app.color.xq_font_on_primary') },
-      chipGroupSpace: { startSpace: 0, endSpace: 0, itemSpace: 4 },
-      chipGroupPadding: { top: 0, bottom: 0 },
-      onChange: (selected: number[]) => { this.selectRange(selected); }
+    SegmentButton({ options: this.rangeOptions, selectedIndexes: $rangeSelection,
+      onItemClicked: (index: number) => { if (index === 3 && this.range === 3) { this.selectRange([3]); } }
     }).width(272).constraintSize({ maxWidth: '100%' }).id('statistics-range')
   }
 
@@ -308,25 +333,42 @@ export struct StatisticsPage {
   }
 
   @Builder
+  private periodButton(direction: number) {
+    if (this.rangeMaterial !== undefined) {
+      Button({ type: ButtonType.Circle }) {
+        Image(direction < 0 ? $r('app.media.lucide_chevron_left1') : $r('app.media.lucide_chevron_right1'))
+          .width(20).height(20).fillColor($r('app.color.xq_icon_secondary'))
+      }.width(40).height(40).padding(0).backgroundColor(Color.Transparent).systemMaterial(this.rangeMaterial)
+        .enabled(this.range !== 3).opacity(this.range === 3 ? 0.35 : 1)
+        .accessibilityText(direction < 0 ? '上一周期' : '下一周期').onClick(() => { this.shiftPeriod(direction); })
+    } else {
+      Button({ type: ButtonType.Circle }) {
+        Image(direction < 0 ? $r('app.media.lucide_chevron_left1') : $r('app.media.lucide_chevron_right1'))
+          .width(20).height(20).fillColor($r('app.color.xq_icon_secondary'))
+      }.width(40).height(40).padding(0).backgroundColor($r('app.color.xq_app_surface_card'))
+        .enabled(this.range !== 3).opacity(this.range === 3 ? 0.35 : 1)
+        .accessibilityText(direction < 0 ? '上一周期' : '下一周期').onClick(() => { this.shiftPeriod(direction); })
+    }
+  }
+
+  @Builder
   private periodNavigator() {
     Row({ space: 8 }) {
-      Button({ type: ButtonType.Circle }) {
-        Image($r('app.media.lucide_chevron_left1')).width(20).height(20)
-          .fillColor($r('app.color.xq_icon_secondary'))
-      }.width(40).height(40).padding(0).backgroundColor($r('app.color.xq_app_surface_card'))
-        .enabled(this.range !== 3).opacity(this.range === 3 ? 0.35 : 1)
-        .accessibilityText('上一周期').onClick(() => { this.shiftPeriod(-1); })
-      Text(rangeTitle(this.rangeValue(), this.dateRange)).fontSize('14fp').fontWeight(FontWeight.Medium)
+      this.periodButton(-1)
+      Text(this.periodTitle()).fontSize('14fp').fontWeight(FontWeight.Medium)
         .fontColor($r('app.color.xq_font_primary')).textAlign(TextAlign.Center).layoutWeight(1)
+        .maxLines(2).textOverflow({ overflow: TextOverflow.Ellipsis })
         .id('statistics-period-title').accessibilityDescription(this.range === 3 ? '点击修改自定义日期范围' : '')
         .onClick(() => { if (this.range === 3) { this.selectRange([3]); } })
-      Button({ type: ButtonType.Circle }) {
-        Image($r('app.media.lucide_chevron_right1')).width(20).height(20)
-          .fillColor($r('app.color.xq_icon_secondary'))
-      }.width(40).height(40).padding(0).backgroundColor($r('app.color.xq_app_surface_card'))
-        .enabled(this.range !== 3).opacity(this.range === 3 ? 0.35 : 1)
-        .accessibilityText('下一周期').onClick(() => { this.shiftPeriod(1); })
-    }.width('100%')
+      this.periodButton(1)
+    }.width('100%').constraintSize({ maxWidth: 400 })
+  }
+
+  @Builder
+  private fixedPeriodNavigator() {
+    Column() { this.periodNavigator() }.width('100%').height(56)
+      .padding({ left: 32, right: 32, top: 8, bottom: 8 })
+      .backgroundColor(Color.Transparent)
   }
 
   @Builder
@@ -882,14 +924,14 @@ export struct StatisticsPage {
       Row({ space: 12 }) {
         Column({ space: 6 }) {
           Text('开始日期').fontSize('12fp').fontColor($r('app.color.xq_font_secondary'))
-          Button(this.customStart.replace(/-/g, '.'), { type: ButtonType.Normal }).width('100%').height(48)
+          Button(this.customStart.replace(/-/g, '/'), { type: ButtonType.Normal }).width('100%').height(48)
             .fontSize('16fp').fontFamily('XiaoQiaoDINMedium').fontColor($r('app.color.xq_font_primary'))
             .backgroundColor($r('app.color.xq_app_surface_page')).id('statistics-custom-start')
             .onClick(() => { this.pickCustomDate(true); })
         }.layoutWeight(1).alignItems(HorizontalAlign.Start)
         Column({ space: 6 }) {
           Text('结束日期').fontSize('12fp').fontColor($r('app.color.xq_font_secondary'))
-          Button(this.customEnd.replace(/-/g, '.'), { type: ButtonType.Normal }).width('100%').height(48)
+          Button(this.customEnd.replace(/-/g, '/'), { type: ButtonType.Normal }).width('100%').height(48)
             .fontSize('16fp').fontFamily('XiaoQiaoDINMedium').fontColor($r('app.color.xq_font_primary'))
             .backgroundColor($r('app.color.xq_app_surface_page')).id('statistics-custom-end')
             .onClick(() => { this.pickCustomDate(false); })
@@ -945,7 +987,7 @@ export struct StatisticsPage {
         Column({ space: 4 }) {
           Text(this.selectedSheetTitle || '账目明细').fontSize('20fp').fontWeight(FontWeight.Bold)
             .fontColor($r('app.color.xq_font_primary'))
-          Text(rangeTitle(this.rangeValue(), this.dateRange) + ' · ' + (this.kind === 1 ? '收入' : '支出'))
+          Text(this.periodTitle() + ' · ' + (this.kind === 1 ? '收入' : '支出'))
             .fontSize('12fp').fontColor($r('app.color.xq_font_secondary'))
         }.layoutWeight(1).alignItems(HorizontalAlign.Start)
         Text('¥' + this.amount(this.selectedSheetAmount)).fontSize('18fp')
@@ -978,7 +1020,10 @@ export struct StatisticsPage {
   }
 
   private sheetOptions(): SheetOptions {
-    const options: SheetOptions = { height: this.sheetMode === 0 ? 360 : 620, showClose: true };
+    const options: SheetOptions = { height: this.sheetMode === 0 ? 360 : 620, showClose: true,
+      onDisappear: () => {
+        if (this.rangeSelection[0] !== this.range) { this.rangeSelection = [this.range]; }
+      } };
     if (this.sheetMaterial !== undefined) { options.systemMaterial = this.sheetMaterial; }
     else { options.backgroundColor = $r('app.color.xq_app_surface_card'); }
     return options;
@@ -988,7 +1033,6 @@ export struct StatisticsPage {
   private content() {
     Scroll(this.scroller) {
       Column({ space: 16 }) {
-        this.periodNavigator()
         if (this.loading && this.statistics === undefined) {
           Text('正在汇总账目…').fontSize('14fp').fontColor($r('app.color.xq_font_secondary'))
             .width('100%').padding(32).textAlign(TextAlign.Center)
@@ -1019,8 +1063,11 @@ export struct StatisticsPage {
     HdsNavigation() {
       this.content()
     }.mode(NavigationMode.Stack).titleMode(HdsNavigationTitleMode.MINI).hideBackButton(true)
+      .dynamicHideTitleBar({ hideTitleArea: false, hideBottomBuilder: false, hideStatusBar: false })
       .titleBar({ enableComponentSafeArea: true, avoidLayoutSafeArea: true,
-        content: { title: { mainTitle: '统计' }, stackBuilder: this.rangeAction.bind(this), divider: { showType: DividerShowType.OFF } },
+        content: { title: { mainTitle: '统计' }, stackBuilder: this.rangeAction.bind(this),
+          bottomBuilder: { builder: this.fixedPeriodNavigator.bind(this), height: 56 },
+          divider: { showType: DividerShowType.OFF } },
         style: { originalStyle: { contentStyle: { titleStyle: { mainTitleColor: $r('app.color.xq_font_primary') } } },
           scrollEffectStyle: { contentStyle: { titleStyle: { mainTitleColor: $r('app.color.xq_font_primary') } } },
           systemMaterialEffect: { materialType: hdsMaterial.MaterialType.IMMERSIVE,

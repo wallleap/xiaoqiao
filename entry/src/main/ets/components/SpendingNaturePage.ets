@@ -1,3 +1,4 @@
+import { ItemRestriction, SegmentButton, SegmentButtonOptions, SegmentButtonTextItem } from '@kit.ArkUI';
 import { HdsNavigation, HdsNavigationTitleMode, hdsMaterial, DividerShowType, ScrollEffectType } from '@kit.UIDesignKit';
 import { util } from '@kit.ArkTS';
 import { LedgerWorkspace } from '../data/rdb/LedgerWorkspace';
@@ -8,10 +9,23 @@ import { spendingNatureBackground, spendingNatureText } from '../presentation/le
 export struct SpendingNaturePage {
   workspace: LedgerWorkspace | undefined = undefined;
   sheetMaterial: SystemUiMaterial | undefined = undefined;
+  @Prop @Watch('applyArchiveMaterial') segmentMaterial: SystemUiMaterial | undefined = undefined;
   onClose: () => void = () => {};
   @State private values: SpendingNatureProfile[] = [];
   @State private loading: boolean = true;
   @State private showArchived: boolean = false;
+  @State @Watch('archiveSelectionChanged') private archiveSelection: number[] = [0];
+  @State private archiveOptions: SegmentButtonOptions = SegmentButtonOptions.tab({
+    buttons: [{ text: '使用中' }, { text: '已归档' }] as ItemRestriction<SegmentButtonTextItem>,
+    fontSize: '13fp', selectedFontSize: '13fp',
+    fontColor: $r('sys.color.font_primary'), selectedFontColor: $r('app.color.xq_font_on_primary'),
+    backgroundColor: Color.Transparent, selectedBackgroundColor: $r('app.color.xq_brand')
+  });
+
+  private archiveSelectionChanged(): void {
+    this.showArchived = this.archiveSelection[0] === 1;
+  }
+
   @State private showEditor: boolean = false;
   @State private editing: SpendingNatureProfile | undefined = undefined;
   @State private name: string = '';
@@ -20,7 +34,27 @@ export struct SpendingNaturePage {
   @State private error: string = '';
   private readonly scroller: Scroller = new Scroller();
 
-  aboutToAppear(): void { this.load(); }
+  aboutToAppear(): void { this.applyArchiveMaterial(); this.load(); }
+
+  private applyArchiveMaterial(): void {
+    const options = SegmentButtonOptions.tab({
+      buttons: [{ text: '使用中' }, { text: '已归档' }] as ItemRestriction<SegmentButtonTextItem>,
+      fontSize: '13fp', selectedFontSize: '13fp',
+      fontColor: $r('sys.color.font_primary'), selectedFontColor: $r('app.color.xq_font_on_primary'),
+      backgroundColor: Color.Transparent, selectedBackgroundColor: $r('app.color.xq_brand')
+    });
+    if (this.segmentMaterial !== undefined) { options.backgroundSystemMaterial = this.segmentMaterial; }
+    this.archiveOptions = options;
+  }
+
+  @Builder
+  private archiveAction() {
+    Row() {
+      SegmentButton({ options: this.archiveOptions, selectedIndexes: $archiveSelection })
+        .width(168).constraintSize({ maxWidth: '100%' }).id('spending-nature-toggle-archive')
+    }.width('100%').justifyContent(FlexAlign.End).padding({ left: 160, right: 16 })
+      .hitTestBehavior(HitTestMode.Transparent)
+  }
 
   private visible(): SpendingNatureProfile[] {
     return this.values.filter((item: SpendingNatureProfile) => item.archived === this.showArchived);
@@ -136,13 +170,6 @@ export struct SpendingNaturePage {
               .fontColor(Color.White).backgroundColor($r('app.color.xq_brand')).enabled(!this.busy)
               .id('spending-nature-create').onClick(() => { this.beginCreate(); })
           }.padding(16).width('100%').borderRadius(20).backgroundColor($r('app.color.xq_app_surface_card'))
-          Row() {
-            Text(this.showArchived ? '已归档' : '使用中').fontSize('18fp').fontWeight(FontWeight.Medium)
-            Blank()
-            Button(this.showArchived ? '使用中' : '已归档', { type: ButtonType.Capsule }).height(32)
-              .fontSize('12fp').fontColor($r('app.color.xq_font_secondary')).backgroundColor(Color.Transparent)
-              .id('spending-nature-toggle-archive').onClick(() => { this.showArchived = !this.showArchived; })
-          }.width('100%')
           if (this.loading) {
             Text('正在读取…').fontSize('14fp').padding(24)
           } else if (this.error.length > 0 && this.values.length === 0) {
@@ -177,7 +204,7 @@ export struct SpendingNaturePage {
         .edgeEffect(EdgeEffect.Spring, { alwaysEnabled: true })
     }.mode(NavigationMode.Stack).titleMode(HdsNavigationTitleMode.MINI)
       .titleBar({ enableComponentSafeArea: true,
-        content: { title: { mainTitle: '预算分类' }, divider: { showType: DividerShowType.OFF },
+        content: { title: { mainTitle: '预算分类' }, stackBuilder: this.archiveAction.bind(this), divider: { showType: DividerShowType.OFF },
           backIcon: { componentId: 'spending-nature-close', action: () => { if (!this.busy) { this.onClose(); } } } },
         style: {
           originalStyle: { contentStyle: { titleStyle: { mainTitleColor: $r('app.color.xq_font_primary') },

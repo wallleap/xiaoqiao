@@ -50,3 +50,6 @@
 创建与编辑截图已检查；当前亮色列表的标题对比度、顶部位置和总资产读数修正后正常。深色、大字号、宽屏、旧API和余额校准尚未专项验收。构建仍含原有异常处理及互斥分支重复组件ID警告，不以构建通过代替上述验收。未自动提交。
 
 最终验证命令：`node tools/verify-p0.mjs`（34/34）、`python3 tools/generate-rdb-schema.py --check`（82条一致）、Hvigor entry@default / entry@ohosTest 的 `assembleHap --no-daemon`、`aa test -b cn.oicode.xiaoqiao -m entry_test -s unittest OpenHarmonyTestRunner -s timeout 240000 -w 480`（16/16）、`git diff --check`，均通过。实际新增账户及资产页截图保存在临时目录。测试结束后重启正式入口，退出UUID隔离库；未改写用户账目，未提交本轮改动。
+
+
+归档筛选分段按钮（2026-11-14）：将原“已归档／使用中”单按钮切换改为原生 SegmentButton 胶囊单选分段，同时展示“使用中”和“已归档”，选中项使用主题橙底白字。通过选中索引同步原 showArchived 筛选，保留归档、恢复、空状态及列表规则。git diff --check 通过，并核对本地 SDK 分段按钮配置及 Link 接口；按用户要求未构建或运行测试，实际显示和筛选待手动查看。

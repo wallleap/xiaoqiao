@@ -1,3 +1,4 @@
+import { SegmentButton, SegmentButtonOptions } from '@kit.ArkUI';
 import { HdsNavigation, HdsNavigationTitleMode, hdsMaterial, DividerShowType, ScrollEffectType } from '@kit.UIDesignKit';
 import { AccountOverview, AccountProfile } from '../domain/model/AccountProfile';
 import { AccountAvatar } from './AccountAvatar';
@@ -10,6 +11,18 @@ export struct AccountsPage {
   @Prop loading: boolean = false;
   @Prop error: string = '';
   @State private showArchived: boolean = false;
+  @State @Watch('archiveSelectionChanged') private archiveSelection: number[] = [0];
+  @State private archiveOptions: SegmentButtonOptions = SegmentButtonOptions.capsule({
+    buttons: [{ text: '使用中' }, { text: '已归档' }], multiply: false,
+    fontSize: '13fp', selectedFontSize: '13fp',
+    fontColor: $r('app.color.xq_font_secondary'), selectedFontColor: $r('app.color.xq_font_on_primary'),
+    backgroundColor: $r('app.color.xq_app_surface_page'), selectedBackgroundColor: $r('app.color.xq_brand')
+  });
+
+  private archiveSelectionChanged(): void {
+    this.showArchived = this.archiveSelection[0] === 1;
+  }
+
   onCreate: () => void = () => {};
   onEdit: (account: AccountProfile) => void = () => {};
   onRetry: () => void = () => {};
@@ -63,9 +76,8 @@ export struct AccountsPage {
               Text(this.showArchived ? '已归档账户' : '我的账户').fontSize('18fp').fontWeight(FontWeight.Medium)
                 .fontColor($r('app.color.xq_font_primary'))
               Blank()
-              Button(this.showArchived ? '使用中' : '已归档', { type: ButtonType.Capsule })
-                .fontSize('12fp').fontColor($r('app.color.xq_font_secondary')).backgroundColor(Color.Transparent)
-                .onClick(() => { this.showArchived = !this.showArchived; }).id('accounts-toggle-archive')
+              SegmentButton({ options: this.archiveOptions, selectedIndexes: $archiveSelection })
+                .width(168).id('accounts-toggle-archive')
             }.width('100%')
             if (this.visible().length === 0) {
               Column({ space: 12 }) {

@@ -9,6 +9,9 @@ export function createFilterMaterials(): FilterMaterials | undefined {
       materialColor: $r('app.color.xq_app_filter_action_tint'), applyShadow: false, interactive: true, lightEffect: {} }),
     chip: new uiMaterial.ImmersiveMaterial({ style: uiMaterial.ImmersiveStyle.ULTRA_THIN,
       materialColor: $r('app.color.xq_app_filter_material_tint'), applyShadow: false, interactive: true, lightEffect: {} }),
+    // Follow the official SegmentButton transparent-backplate example; do not reuse the tinted chip material.
+    segment: new uiMaterial.ImmersiveMaterial({ style: uiMaterial.ImmersiveStyle.ULTRA_THIN,
+      colorInvert: true, applyShadow: false, interactive: true, lightEffect: {} }),
     menu: new uiMaterial.ImmersiveMaterial({ style: uiMaterial.ImmersiveStyle.THICK,
       applyShadow: true, interactive: true, lightEffect: {} })
   };
