@@ -18,7 +18,7 @@
     },
     {
       "name": "xq_brand",
-      "value": "#FFFF956D"
+      "value": "#FFF07850"
     },
     {
       "name": "xq_warning",
@@ -50,7 +50,7 @@
     },
     {
       "name": "xq_font_emphasize",
-      "value": "#FFFF956D"
+      "value": "#FFFF936D"
     },
     {
       "name": "xq_font_on_primary",
@@ -86,11 +86,11 @@
     },
     {
       "name": "xq_icon_emphasize",
-      "value": "#FFFF956D"
+      "value": "#FFFF936D"
     },
     {
       "name": "xq_icon_sub_emphasize",
-      "value": "#66FF956D"
+      "value": "#66FF936D"
     },
     {
       "name": "xq_icon_on_primary",
@@ -126,7 +126,7 @@
     },
     {
       "name": "xq_background_emphasize",
-      "value": "#FFFF5425"
+      "value": "#FFE9673D"
     },
     {
       "name": "xq_comp_foreground_primary",
@@ -154,7 +154,7 @@
     },
     {
       "name": "xq_comp_background_emphasize",
-      "value": "#FFFF5425"
+      "value": "#FFE9673D"
     },
     {
       "name": "xq_comp_background_neutral",
@@ -162,11 +162,11 @@
     },
     {
       "name": "xq_comp_emphasize_secondary",
-      "value": "#33FF956D"
+      "value": "#33F07850"
     },
     {
       "name": "xq_comp_emphasize_tertiary",
-      "value": "#19FF956D"
+      "value": "#19F07850"
     },
     {
       "name": "xq_comp_divider",
@@ -202,15 +202,15 @@
     },
     {
       "name": "xq_interactive_focus",
-      "value": "#FFFF956D"
+      "value": "#FFFF936D"
     },
     {
       "name": "xq_interactive_active",
-      "value": "#FFFF956D"
+      "value": "#FFF07850"
     },
     {
       "name": "xq_interactive_select",
-      "value": "#33FF956D"
+      "value": "#33F07850"
     },
     {
       "name": "xq_interactive_click",
@@ -230,7 +230,7 @@
     },
     {
       "name": "xq_app_surface_summary",
-      "value": "#FF000000"
+      "value": "#FF141414"
     },
     {
       "name": "xq_app_border_subtle",
@@ -270,11 +270,11 @@
     },
     {
       "name": "xq_app_summary_gradient_mid",
-      "value": "#FF2B261E"
+      "value": "#FF302821"
     },
     {
       "name": "xq_app_summary_gradient_end",
-      "value": "#FF4B3E2F"
+      "value": "#FF252120"
     },
     {
       "name": "xq_app_summary_track",
@@ -282,11 +282,11 @@
     },
     {
       "name": "xq_app_gradient_start",
-      "value": "#FFFD6E3E"
+      "value": "#FFE96D43"
     },
     {
       "name": "xq_app_gradient_end",
-      "value": "#FFFF0A0A"
+      "value": "#FFCA4936"
     },
     {
       "name": "xq_app_button_on_gradient",
@@ -302,7 +302,7 @@
     },
     {
       "name": "xq_app_focus_ring",
-      "value": "#FFFF956D"
+      "value": "#FFFF936D"
     },
     {
       "name": "xq_app_receipt_line",
@@ -310,7 +310,7 @@
     },
     {
       "name": "xq_app_chart_fill",
-      "value": "#19FF956D"
+      "value": "#19F07850"
     },
     {
       "name": "xq_app_summary_secondary",
