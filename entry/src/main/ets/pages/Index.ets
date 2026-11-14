@@ -607,6 +607,31 @@ struct Index {
     } catch (_) { /* HdsNavigation still owns subsequent native scroll-style updates. */ }
   }
 
+  private expenseManagementVisible(): boolean {
+    return this.showCategories || this.showTags || this.showSpendingNatures || this.showAccountEditor;
+  }
+
+  private openExpenseManagement(kind: string): void {
+    if (!this.showExpense || this.savingExpense) { return; }
+    if (kind === 'categories') { this.showCategories = true; }
+    else if (kind === 'tags') { this.showTags = true; }
+    else if (kind === 'natures') { this.showSpendingNatures = true; }
+    else if (kind === 'accounts') { this.editingAccount = undefined; this.showAccountEditor = true; }
+  }
+
+  @Builder
+  private expenseWithManagement() {
+    Stack() {
+      // Keep the draft component mounted so text, attachments, and keyboard state survive management.
+      Column() { this.expensePage() }.width('100%').height('100%')
+        .visibility(this.expenseManagementVisible() ? Visibility.Hidden : Visibility.Visible)
+      if (this.showCategories) { this.categoryManagementPage() }
+      else if (this.showTags) { this.tagManagementPage() }
+      else if (this.showSpendingNatures) { this.spendingNaturePage() }
+      else if (this.showAccountEditor) { this.accountEditorPage() }
+    }.width('100%').height('100%')
+  }
+
   @Builder
   private expensePage() {
     if (this.workspace !== undefined && this.ledger !== undefined) {
@@ -616,7 +641,9 @@ struct Index {
         sheetMaterial: this.materialReady && !this.forceLegacyMaterials ? this.filterMaterials?.menu : undefined,
         editingEntry: this.editingEntry, categories: this.editCategories(), incomeCategories: this.editCategories(true), accounts: this.editAccounts(),
         spendingNatures: this.editSpendingNatures(),
-        tags: this.editTags(),
+        accountProfiles: this.accountError.length === 0 ? (this.accountOverview?.accounts || []) : [],
+        tags: this.editTags(), managementVisible: this.expenseManagementVisible(),
+        onManage: (kind: string) => { this.openExpenseManagement(kind); },
         onSavingChange: (saving: boolean) => { this.savingExpense = saving; },
         onClose: () => { this.closeEditor(); }, onSaved: (date: string) => { this.expenseSaved(date); } })
     }
@@ -1499,13 +1526,13 @@ struct Index {
   }
 
   build() {
-    if (this.showBudgetPage) { this.budgetPage() }
+    if (this.showExpense) { this.expenseWithManagement() }
+    else if (this.showBudgetPage) { this.budgetPage() }
     else if (this.showCategories) { this.categoryManagementPage() }
     else if (this.showTags) { this.tagManagementPage() }
     else if (this.showDataExchange) { this.dataExchangePage() }
     else if (this.showSpendingNatures) { this.spendingNaturePage() }
     else if (this.showAccountEditor) { this.accountEditorPage() }
-    else if (this.showExpense) { this.expensePage() }
     else if (this.showDetail) { this.detailPage() }
     else { this.homeTabs() }
   }

@@ -359,8 +359,11 @@ export struct ExpenseRecoveryPanel {
               Text(this.receiptTime(item)).fontSize('11fp').fontColor($r('app.color.xq_font_secondary')).maxLines(2)
             }.layoutWeight(1).alignItems(HorizontalAlign.Start)
             Column({ space: 5 }) {
-              Text('+¥' + this.decimal(item.amountMinor)).fontFamily('XiaoQiaoDINMedium').fontSize('17fp')
-                .fontColor($r('app.color.xq_app_income')).maxLines(1).minFontSize('12fp').maxFontSize('17fp')
+              Row({ space: 4 }) {
+                Text('+ ¥').fontSize('12fp').fontColor($r('app.color.xq_app_income')).margin({ bottom: 1 }).flexShrink(0)
+                Text(this.decimal(item.amountMinor)).fontFamily('XiaoQiaoDINMedium').fontSize('17fp')
+                  .fontColor($r('app.color.xq_app_income')).maxLines(1).minFontSize('12fp').maxFontSize('17fp').flexShrink(1)
+              }.alignItems(VerticalAlign.Bottom).justifyContent(FlexAlign.End)
               Text(item.accountName).fontSize('11fp').fontColor($r('app.color.xq_font_secondary')).maxLines(2).textOverflow({ overflow: TextOverflow.Ellipsis }).textAlign(TextAlign.End)
             }.constraintSize({ maxWidth: '44%' }).alignItems(HorizontalAlign.End)
             this.chevron()

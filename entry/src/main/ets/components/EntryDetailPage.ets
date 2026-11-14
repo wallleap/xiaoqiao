@@ -99,6 +99,24 @@ export struct EntryDetailPage {
   }
 
   @Builder
+  private exclusionBadge(label: string, badgeId: string) {
+    Text(label).fontSize('12fp').fontColor($r('app.color.xq_font_secondary'))
+      .backgroundColor($r('app.color.xq_app_surface_page')).borderRadius(6)
+      .padding({ left: 8, right: 8, top: 4, bottom: 4 }).margin({ right: 6, bottom: 4 }).id(badgeId)
+  }
+
+  /** Same label/value styling as the other fields; keep long notes fully readable. */
+  @Builder
+  private footerField(label: string, value: string, fieldId: string) {
+    Row({ space: 16 }) {
+      Text(label).fontSize('14fp').fontColor($r('app.color.xq_font_secondary'))
+      Blank()
+      Text(value).fontSize('14fp').fontColor($r('app.color.xq_font_primary')).textAlign(TextAlign.End)
+        .constraintSize({ maxWidth: '68%' }).id(fieldId)
+    }.width('100%').alignItems(VerticalAlign.Top).padding({ top: 9, bottom: 9 })
+  }
+
+  @Builder
   private transferAccount(outgoing: boolean) {
     Row({ space: 16 }) {
       Text(outgoing ? '转出账户' : '转入账户').fontSize('14fp').fontColor($r('app.color.xq_font_secondary'))
@@ -182,19 +200,20 @@ export struct EntryDetailPage {
         } else { Image(categoryIcon(this.entry.iconKey)).width(32).height(32).margin({ top: 4, bottom: 10 }) }
         Text(this.entry.kind === 'transfer' ? transferPurposeLabel(this.entry.transferPurpose || 'transfer') : this.entry.categoryName).fontSize('18fp').fontWeight(FontWeight.Medium)
           .fontColor($r('app.color.xq_font_primary')).maxLines(2).textAlign(TextAlign.Center)
-        Text(this.entry.kind === 'transfer' ? '实际转出' : this.entry.kind === 'income' ? '收入' : '实付金额').fontSize('12fp')
-          .fontColor($r('app.color.xq_font_tertiary')).margin({ top: 16, bottom: 6 })
+        if (this.entry.kind !== 'expense') {
+          Text(this.entry.kind === 'transfer' ? '实际转出' : '收入').fontSize('12fp')
+            .fontColor($r('app.color.xq_font_tertiary')).margin({ top: 16, bottom: 6 })
+        }
         Row({ space: 4 }) {
-          if (this.entry.kind !== 'transfer') {
-            Text(this.entry.kind === 'income' ? '+' : '−').fontSize('18fp')
-              .fontColor(this.entry.kind === 'transfer' ? $r('app.color.xq_font_primary') : this.entry.kind === 'income' ? $r('app.color.xq_app_income') : $r('app.color.xq_brand'))
-          }
-          Text(this.entry.currencySymbol || this.entry.currencyCode).fontSize('14fp').margin({ bottom: 5 })
+          // Keep sign and currency on one system-font baseline; only digits use DIN.
+          Text((this.entry.kind === 'transfer' ? '' : this.entry.kind === 'income' ? '+ ' : '− ') +
+            (this.entry.currencySymbol || this.entry.currencyCode)).fontSize('14fp').margin({ bottom: 5 })
             .fontColor(this.entry.kind === 'transfer' ? $r('app.color.xq_font_primary') : this.entry.kind === 'income' ? $r('app.color.xq_app_income') : $r('app.color.xq_brand'))
           Text(this.amount(this.entry.kind === 'transfer' ? (this.entry.transferOutMinor || this.entry.paidMinor) : this.entry.paidMinor)).fontFamily('XiaoQiaoDINBold').fontWeight(FontWeight.Bold)
             .fontSize('38fp').minFontSize('22fp').maxFontSize('38fp').maxLines(1).id('entry-detail-amount')
             .fontColor(this.entry.kind === 'transfer' ? $r('app.color.xq_font_primary') : this.entry.kind === 'income' ? $r('app.color.xq_app_income') : $r('app.color.xq_brand'))
         }.alignItems(VerticalAlign.Bottom).justifyContent(FlexAlign.Center).width('100%')
+          .margin({ top: this.entry.kind === 'expense' ? 16 : 0 })
         if (BigInt(this.entry.discountMinor) > BigInt(0)) {
           Row({ space: 8 }) {
             Text(this.entry.currencySymbol + this.amount(this.entry.grossMinor)).decoration({ type: TextDecorationType.LineThrough })
@@ -203,8 +222,6 @@ export struct EntryDetailPage {
               .fontSize('12fp').fontColor($r('app.color.xq_font_secondary'))
           }.margin({ top: 10 })
         }
-        Text(this.dateText()).fontSize('12fp').fontColor($r('app.color.xq_font_tertiary'))
-          .margin({ top: 12, bottom: 20 }).id('entry-detail-date')
         Stack() {
           Row().width('100%').height(1).border({ width: { top: 1 }, style: BorderStyle.Dashed,
             color: $r('app.color.xq_comp_divider') })
@@ -213,7 +230,7 @@ export struct EntryDetailPage {
             Blank()
             Circle().width(16).height(16).fill($r('app.color.xq_app_surface_page'))
           }.width('100%').padding({ left: 0, right: 0 })
-        }.width('calc(100% + 64vp)').height(16).margin({ bottom: 8 })
+        }.width('calc(100% + 64vp)').height(16).margin({ top: 20, bottom: 8 })
         this.field('账本', this.entry.bookName)
         if (this.entry.kind === 'transfer') {
           this.transferAccount(true)
@@ -232,9 +249,17 @@ export struct EntryDetailPage {
             this.field('预算分类', this.entry.spendingNatureName)
           }
           this.field('资金账户', this.entry.accountName || '不使用账户')
-          this.field('计入预算', this.entry.includeInBudget ? '计入' : '不计入')
         }
-        this.field('计入资产', this.entry.includeInAssets ? '计入' : '不计入')
+        if ((this.entry.kind === 'expense' && !this.entry.includeInBudget) || !this.entry.includeInAssets) {
+          Flex({ wrap: FlexWrap.Wrap }) {
+            if (this.entry.kind === 'expense' && !this.entry.includeInBudget) {
+              this.exclusionBadge('不计入预算', 'entry-detail-budget-excluded')
+            }
+            if (!this.entry.includeInAssets) {
+              this.exclusionBadge('不计入资产', 'entry-detail-assets-excluded')
+            }
+          }.width('100%').padding({ top: 4, bottom: 4 })
+        }
         if ((this.entry.tags || []).length > 0) {
           this.field('标签', (this.entry.tags || []).map((tag: TagChoice) => '#' + tag.name).join('  '))
         }
@@ -250,10 +275,9 @@ export struct EntryDetailPage {
           Text('历史导入账目，不改变账户余额').fontSize('12fp').fontColor($r('app.color.xq_font_secondary'))
             .width('100%').padding({ top: 8, bottom: 12 })
         }
-        Divider().color($r('app.color.xq_comp_background_tertiary')).margin({ top: 8, bottom: 16 })
-        Text('备注').fontSize('12fp').fontColor($r('app.color.xq_font_secondary')).width('100%')
-        Text(this.entry.note || '未填写').fontSize('14fp').lineHeight('22fp')
-          .fontColor($r('app.color.xq_font_primary')).width('100%').margin({ top: 8 }).id('entry-detail-note')
+        Divider().color($r('app.color.xq_comp_background_tertiary')).margin({ top: 8 })
+        this.footerField('时间', this.dateText(), 'entry-detail-date')
+        if (this.entry.note.trim().length > 0) { this.footerField('备注', this.entry.note, 'entry-detail-note') }
         if (this.entry.kind === 'expense' && this.entry.canEdit) {
           ForEach([this.entry], (item: EntryDetail) => {
             ExpenseRecoveryPanel({ entry: item, workspace: this.workspace, accounts: this.accounts,
@@ -268,7 +292,8 @@ export struct EntryDetailPage {
           }, (index: number) => index.toString())
         }.width('calc(100% + 32vp)').justifyContent(FlexAlign.SpaceBetween).height(12)
           .margin({ top: 20, bottom: -30 })
-      }.width('100%').padding({ left: 24, right: 24, top: 24, bottom: 24 }).borderRadius(4)
+      }.width('100%').padding({ left: 24, right: 24, top: 24, bottom: 24 })
+        .borderRadius({ topLeft: 20, topRight: 20, bottomLeft: 4, bottomRight: 4 })
         .backgroundColor($r('app.color.xq_app_surface_card')).id('entry-detail-receipt')
     }
   }
@@ -284,8 +309,8 @@ export struct EntryDetailPage {
               Text(this.error).fontSize('14fp').fontColor($r('app.color.xq_font_secondary')).padding(20)
               Button('重新读取').onClick(() => { this.onRetry(); }).id('entry-detail-retry')
             } else { this.receipt() }
-          }.width('100%').padding({ left: 16, right: 16, top: 12, bottom: 16 })
-        }.layoutWeight(1).width('100%').scrollBar(BarState.Off).clip(false)
+          }.width('100%').padding({ left: 16, right: 16, top: 16, bottom: 16 })
+        }.layoutWeight(1).width('100%').align(Alignment.Top).scrollBar(BarState.Off).clip(false)
           .edgeEffect(EdgeEffect.Spring, { alwaysEnabled: true }).id('entry-detail-scroll')
         if (!this.loading && this.error.length === 0 && this.entry !== undefined) {
           Row({ space: 12 }) {
