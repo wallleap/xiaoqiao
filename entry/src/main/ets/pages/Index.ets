@@ -46,6 +46,7 @@ struct Index {
   @State private showSpendingNatures: boolean = false;
   @State private showBudgetPage: boolean = false;
   @State private showCategories: boolean = false;
+  private categoryBackHandler: () => boolean = () => false;
   @State private showTags: boolean = false;
   @State private showDataExchange: boolean = false;
   @State private accountOverview: AccountOverview | undefined = undefined;
@@ -379,6 +380,7 @@ struct Index {
   @Builder
   private categoryManagementPage() {
     CategoryManagementPage({
+      onRegisterBack: (handler: () => boolean) => { this.categoryBackHandler = handler; },
       workspace: this.workspace,
       onCreated: (id: string) => { if (this.showExpense) { this.expenseCreatedOption = 'categories:' + id; } },
       sheetMaterial: this.materialReady && !this.forceLegacyMaterials ? this.filterMaterials?.menu : undefined,
@@ -659,7 +661,10 @@ struct Index {
 
   onBackPress(): boolean {
     if (this.showBudgetPage) { this.showBudgetPage = false; this.loadLedger(); return true; }
-    if (this.showCategories) { this.showCategories = false; this.loadLedger(); return true; }
+    if (this.showCategories) {
+      if (this.categoryBackHandler()) { return true; }
+      this.showCategories = false; this.loadLedger(); return true;
+    }
     if (this.showTags) { this.showTags = false; this.loadLedger(); return true; }
     if (this.showDataExchange) { this.showDataExchange = false; return true; }
     if (this.showSpendingNatures) { this.showSpendingNatures = false; this.loadLedger(); return true; }

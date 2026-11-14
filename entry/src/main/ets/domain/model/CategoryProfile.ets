@@ -17,6 +17,12 @@ export interface CategoryCommand {
   iconKey: string;
 }
 
+/** Complete active sibling order, with revisions captured before dragging. */
+export interface CategoryOrderItem {
+  id: string;
+  revision: number;
+}
+
 export class ValidatedCategory {
   readonly command: CategoryCommand;
 

@@ -25,7 +25,7 @@ import { validateLedgerLocation } from '../../domain/model/LedgerLocation';
 import { MonthlyBudget, DEFAULT_MONTHLY_BUDGET_MINOR } from '../../domain/model/MonthlyBudget';
 import { LedgerBook, ValidatedLedgerBook } from '../../domain/model/LedgerBook';
 import { BudgetNatureLine, SpendingNatureCommand, SpendingNatureProfile, ValidatedSpendingNature, isCustomNatureColor } from '../../domain/model/SpendingNature';
-import { CategoryCommand, CategoryProfile, ValidatedCategory } from '../../domain/model/CategoryProfile';
+import { CategoryCommand, CategoryOrderItem, CategoryProfile, ValidatedCategory } from '../../domain/model/CategoryProfile';
 import { TagCommand, TagProfile, ValidatedTag } from '../../domain/model/TagProfile';
 import { LedgerDatabase, DEFAULT_BOOK_ID } from './LedgerDatabase';
 import { RdbLedgerRepository } from './RdbLedgerRepository';
@@ -911,6 +911,36 @@ export class LedgerWorkspace {
         new relationalStore.RdbPredicates('categories').equalTo('id', draft.id).equalTo('book_id', this.activeBookId)
           .equalTo('kind', draft.kind).equalTo('revision', revision).isNull('deleted_at_ms'));
       if (changed !== 1) { throw new Error('CATEGORY_CHANGED'); }
+    });
+  }
+
+  /** Save a complete active sibling permutation atomically; never reparent categories. */
+  async reorderCategories(kind: string, parentId: string, order: CategoryOrderItem[]): Promise<void> {
+    if ((kind !== 'expense' && kind !== 'income') || order.length === 0 ||
+      new Set<string>(order.map((item: CategoryOrderItem) => item.id)).size !== order.length ||
+      order.some((item: CategoryOrderItem) => item.id.length === 0 || !Number.isSafeInteger(item.revision) ||
+        item.revision < 1 || item.revision >= Number.MAX_SAFE_INTEGER)) {
+      throw new Error('INVALID_CATEGORY_ORDER');
+    }
+    await this.session.write(async (db: relationalStore.RdbStore): Promise<void> => {
+      const bookId = await this.activeBookFromMeta(db);
+      const rows = await db.querySql("SELECT id,revision FROM categories WHERE book_id=? AND kind=? AND COALESCE(parent_id,'')=? " +
+        'AND deleted_at_ms IS NULL AND archived_at_ms IS NULL', [bookId, kind, parentId]);
+      const current: Map<string, number> = new Map<string, number>();
+      try { while (rows.goToNextRow()) { current.set(rows.getString(0), rows.getLong(1)); } }
+      finally { rows.close(); }
+      // Check membership as well as revisions: adding, archiving or moving a sibling invalidates this drag.
+      if (current.size !== order.length || order.some((item: CategoryOrderItem) => current.get(item.id) !== item.revision)) {
+        throw new Error('CATEGORY_CHANGED');
+      }
+      const now = Date.now();
+      for (let index = 0; index < order.length; index++) {
+        const item = order[index];
+        const changed = await db.update({ sort_order: index, updated_at_ms: now, revision: item.revision + 1 },
+          new relationalStore.RdbPredicates('categories').equalTo('id', item.id).equalTo('book_id', bookId)
+            .equalTo('kind', kind).equalTo('revision', item.revision).isNull('deleted_at_ms').isNull('archived_at_ms'));
+        if (changed !== 1) { throw new Error('CATEGORY_CHANGED'); }
+      }
     });
   }
 
