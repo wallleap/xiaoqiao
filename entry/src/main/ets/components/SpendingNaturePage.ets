@@ -12,6 +12,7 @@ export struct SpendingNaturePage {
   sheetMaterial: SystemUiMaterial | undefined = undefined;
   @Prop @Watch('applyArchiveMaterial') segmentMaterial: SystemUiMaterial | undefined = undefined;
   onClose: () => void = () => {};
+  onCreated: (id: string) => void = () => {};
   @State private values: SpendingNatureProfile[] = [];
   @State private loading: boolean = true;
   @State private showArchived: boolean = false;
@@ -95,7 +96,9 @@ export struct SpendingNaturePage {
     this.busy = true; this.error = '';
     try {
       if (this.editing === undefined) {
-        await this.workspace.createSpendingNature({ id: util.generateRandomUUID(), name: this.name, colorKey: this.colorKey });
+        const id = util.generateRandomUUID();
+        await this.workspace.createSpendingNature({ id: id, name: this.name, colorKey: this.colorKey });
+        this.onCreated(id);
       } else {
         await this.workspace.updateSpendingNature({ id: this.editing.id, name: this.name, colorKey: this.colorKey }, this.editing.revision);
       }

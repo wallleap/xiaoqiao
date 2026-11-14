@@ -55,6 +55,7 @@ export struct ExpenseEditor {
   @Prop @Watch('accountChoicesChanged') accounts: LedgerAccount[] = [];
   @Prop accountProfiles: AccountProfile[] = [];
   @Prop @Watch('managementChanged') managementVisible: boolean = false;
+  @Prop @Watch('managementOptionCreated') managementCreatedOption: string = '';
   onManage: (kind: string) => void = () => {};
   onClose: () => void = () => {};
   onSavingChange: (saving: boolean) => void = () => {};
@@ -97,6 +98,8 @@ export struct ExpenseEditor {
   @State private showTagPicker: boolean = false;
   @State private tagSearch: string = '';
   private managementOpening: boolean = false;
+  private pendingCreatedOptions: string[] = [];
+  private managementAccountTarget: number = 1;
   @State private activeHelp: string = '';
   @State private optionKind: number = 0;
   @State private parentId: string = '';
@@ -163,6 +166,7 @@ export struct ExpenseEditor {
   }
 
   private categoryChoicesChanged(): void {
+    this.applyCreatedOptions();
     if (this.isTransfer) { return; }
     if (this.selectedId.length > 0 && !this.activeCategories().some((item: ExpenseCategory) => item.id === this.selectedId)) {
       this.selectedId = '';
@@ -172,6 +176,7 @@ export struct ExpenseEditor {
   }
 
   private accountChoicesChanged(): void {
+    this.applyCreatedOptions();
     let removed = false;
     if (this.accountId.length > 0 && !this.accounts.some((item: LedgerAccount) => item.id === this.accountId)) {
       this.accountId = ''; removed = true;
@@ -183,22 +188,67 @@ export struct ExpenseEditor {
   }
 
   private natureChoicesChanged(): void {
+    this.applyCreatedOptions();
     if (this.selectedNatureId.length > 0 && !this.spendingNatures.some((item: SpendingNatureChoice) => item.id === this.selectedNatureId)) {
       this.selectedNatureId = '';
     }
   }
 
   private tagChoicesChanged(): void {
+    this.applyCreatedOptions();
     this.selectedTagIds = this.selectedTagIds.filter((id: string) => this.tags.some((item: TagChoice) => item.id === id));
   }
 
   private managementChanged(): void {
-    if (!this.managementVisible) { this.managementOpening = false; }
+    if (!this.managementVisible) { this.managementOpening = false; this.applyCreatedOptions(); }
+  }
+
+  private managementOptionCreated(): void {
+    if (this.managementCreatedOption.length === 0) { return; }
+    this.pendingCreatedOptions.push(this.managementCreatedOption);
+    this.applyCreatedOptions();
+  }
+
+  private applyCreatedOptions(): void {
+    if (this.managementVisible) { return; }
+    this.pendingCreatedOptions = this.pendingCreatedOptions.filter((value: string) => {
+      const separator = value.indexOf(':');
+      const kind = value.substring(0, separator); const id = value.substring(separator + 1);
+      if (kind === 'categories') {
+        const income = this.incomeCategories.some((item: ExpenseCategory) => item.id === id);
+        const item = (income ? this.incomeCategories : this.categories).find((item: ExpenseCategory) => item.id === id);
+        if (item === undefined || this.isTransfer) { return true; }
+        this.isIncome = income; this.selectedId = id;
+        let rootId = item.id;
+        const visited: Set<string> = new Set<string>();
+        let parentId = item.parentId;
+        while (parentId.length > 0 && !visited.has(parentId)) {
+          visited.add(parentId); rootId = parentId;
+          parentId = this.activeCategories().find((parent: ExpenseCategory) => parent.id === rootId)?.parentId || '';
+        }
+        const page = this.roots().findIndex((root: ExpenseCategory) => root.id === rootId);
+        if (page >= 0) { this.categoryPage = Math.floor(page / this.categoryPageSize()); }
+        this.clearFieldError(ExpenseErrorField.Category);
+      } else if (kind === 'accounts') {
+        if (!this.accounts.some((item: LedgerAccount) => item.id === id)) { return true; }
+        if (this.managementAccountTarget === 2) { this.toAccountId = id; } else { this.accountId = id; }
+        this.clearFieldError(ExpenseErrorField.Accounts);
+      } else if (kind === 'natures') {
+        if (!this.spendingNatures.some((item: SpendingNatureChoice) => item.id === id)) { return true; }
+        this.selectedNatureId = id;
+      } else if (kind === 'tags') {
+        if (!this.tags.some((item: TagChoice) => item.id === id)) { return true; }
+        if (!this.selectedTagIds.includes(id)) { this.selectedTagIds = this.selectedTagIds.concat([id]); }
+      }
+      return false;
+    });
   }
 
   private openManagement(kind: string): void {
     if (this.saving || this.saved || this.conflicted || this.mapBusy || this.attachmentBusy || this.managementOpening) { return; }
     this.managementOpening = true;
+    this.pendingCreatedOptions = [];
+    this.managementAccountTarget = this.optionKind === 2 ? 2 : 1;
     this.activeHelp = '';
     this.showOptions = false;
     this.showTagPicker = false;

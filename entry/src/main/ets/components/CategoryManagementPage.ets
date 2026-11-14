@@ -21,6 +21,7 @@ export struct CategoryManagementPage {
   sheetMaterial: SystemUiMaterial | undefined = undefined;
   @Prop @Watch('applyArchiveMaterial') segmentMaterial: SystemUiMaterial | undefined = undefined;
   onClose: () => void = () => {};
+  onCreated: (id: string) => void = () => {};
   @State private values: CategoryProfile[] = [];
   @State private kind: string = 'expense';
   @State private showArchived: boolean = false;
@@ -172,7 +173,7 @@ export struct CategoryManagementPage {
     const command: CategoryCommand = { id: this.editing?.id || util.generateRandomUUID(), kind: this.kind,
       parentId: this.parentId.length > 0 ? this.parentId : undefined, name: this.name, iconKey: this.iconKey };
     try {
-      if (this.editing === undefined) { await this.workspace.createCategory(command); }
+      if (this.editing === undefined) { await this.workspace.createCategory(command); this.onCreated(command.id); }
       else { await this.workspace.updateCategory(command, this.editing.revision); }
       this.values = await this.workspace.categories();
       this.showEditor = false;

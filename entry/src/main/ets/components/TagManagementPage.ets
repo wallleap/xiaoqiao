@@ -10,6 +10,7 @@ export struct TagManagementPage {
   workspace: LedgerWorkspace | undefined = undefined;
   sheetMaterial: SystemUiMaterial | undefined = undefined;
   onClose: () => void = () => {};
+  onCreated: (id: string) => void = () => {};
   @State private values: TagProfile[] = [];
   @State private loading: boolean = true;
   @State private showEditor: boolean = false;
@@ -62,7 +63,9 @@ export struct TagManagementPage {
     this.error = '';
     try {
       if (this.editing === undefined) {
-        await this.workspace.createTag({ id: util.generateRandomUUID(), name: this.name, colorKey: this.colorKey });
+        const id = util.generateRandomUUID();
+        await this.workspace.createTag({ id: id, name: this.name, colorKey: this.colorKey });
+        this.onCreated(id);
       } else {
         await this.workspace.updateTag({ id: this.editing.id, name: this.name, colorKey: this.colorKey }, this.editing.revision);
       }

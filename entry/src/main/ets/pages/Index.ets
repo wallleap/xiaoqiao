@@ -81,6 +81,7 @@ struct Index {
   @State private upgradeRequired: boolean = false;
   @State private loading: boolean = true;
   @State private showExpense: boolean = false;
+  @State private expenseCreatedOption: string = '';
   @State private showDetail: boolean = false;
   @State private detail: EntryDetail | undefined = undefined;
   @State private editingEntry: EntryDetail | undefined = undefined;
@@ -351,6 +352,7 @@ struct Index {
   private spendingNaturePage() {
     SpendingNaturePage({
       workspace: this.workspace,
+      onCreated: (id: string) => { if (this.showExpense) { this.expenseCreatedOption = 'natures:' + id; } },
       sheetMaterial: this.materialReady && !this.forceLegacyMaterials ? this.filterMaterials?.menu : undefined,
       segmentMaterial: this.materialReady && !this.forceLegacyMaterials ? this.filterMaterials?.segment : undefined,
       onClose: () => {
@@ -378,6 +380,7 @@ struct Index {
   private categoryManagementPage() {
     CategoryManagementPage({
       workspace: this.workspace,
+      onCreated: (id: string) => { if (this.showExpense) { this.expenseCreatedOption = 'categories:' + id; } },
       sheetMaterial: this.materialReady && !this.forceLegacyMaterials ? this.filterMaterials?.menu : undefined,
       segmentMaterial: this.materialReady && !this.forceLegacyMaterials ? this.filterMaterials?.segment : undefined,
       onClose: () => {
@@ -391,6 +394,7 @@ struct Index {
   private tagManagementPage() {
     TagManagementPage({
       workspace: this.workspace,
+      onCreated: (id: string) => { if (this.showExpense) { this.expenseCreatedOption = 'tags:' + id; } },
       sheetMaterial: this.materialReady && !this.forceLegacyMaterials ? this.filterMaterials?.menu : undefined,
       onClose: () => {
         this.showTags = false;
@@ -412,6 +416,7 @@ struct Index {
   @Builder
   private accountEditorPage() {
     AccountEditor({ workspace: this.workspace, original: this.editingAccount, operationBusy: this.accountSaving,
+      onCreated: (id: string) => { if (this.showExpense) { this.expenseCreatedOption = 'accounts:' + id; } },
       sheetMaterial: this.materialReady && !this.forceLegacyMaterials ? this.filterMaterials?.menu : undefined,
       onClose: () => { if (!this.accountSaving) { this.showAccountEditor = false; this.editingAccount = undefined; } },
       onBusy: (busy: boolean) => { this.accountSaving = busy; }, onSaved: () => { this.accountSaved(); },
@@ -615,6 +620,7 @@ struct Index {
 
   private openExpenseManagement(kind: string): void {
     if (!this.showExpense || this.savingExpense) { return; }
+    this.expenseCreatedOption = '';
     if (kind === 'categories') { this.showCategories = true; }
     else if (kind === 'tags') { this.showTags = true; }
     else if (kind === 'natures') { this.showSpendingNatures = true; }
@@ -644,7 +650,7 @@ struct Index {
         editingEntry: this.editingEntry, categories: this.editCategories(), incomeCategories: this.editCategories(true), accounts: this.editAccounts(),
         spendingNatures: this.editSpendingNatures(),
         accountProfiles: this.accountError.length === 0 ? (this.accountOverview?.accounts || []) : [],
-        tags: this.editTags(), managementVisible: this.expenseManagementVisible(),
+        tags: this.editTags(), managementCreatedOption: this.expenseCreatedOption, managementVisible: this.expenseManagementVisible(),
         onManage: (kind: string) => { this.openExpenseManagement(kind); },
         onSavingChange: (saving: boolean) => { this.savingExpense = saving; },
         onClose: () => { this.closeEditor(); }, onSaved: (date: string) => { this.expenseSaved(date); } })

@@ -18,6 +18,7 @@ export struct AccountEditor {
   original: AccountProfile | undefined = undefined;
   sheetMaterial: SystemUiMaterial | undefined = undefined;
   onClose: () => void = () => {};
+  onCreated: (id: string) => void = () => {};
   onSaved: () => void = () => {};
   onArchive: () => void = () => {};
   onBusy: (busy: boolean) => void = () => {};
@@ -76,7 +77,7 @@ export struct AccountEditor {
     this.busy = true; this.onBusy(true);
     try {
       if (this.workspace === undefined) { throw new Error('WORKSPACE_UNAVAILABLE'); }
-      if (this.original === undefined) { await this.workspace.createAccount(command); }
+      if (this.original === undefined) { await this.workspace.createAccount(command); this.onCreated(command.id); }
       else { await this.workspace.updateAccount(command, this.original.revision); }
       this.onSaved();
     } catch (error) {
