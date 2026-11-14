@@ -6,7 +6,7 @@ import { LedgerStatistics, StatisticsBucket, StatisticsBudgetCategory, Statistic
 import { categoryIcon } from '../presentation/ledger/CategoryIcons';
 import { displayAmount } from '../presentation/ledger/LedgerOverview';
 import { spendingNatureBackground, spendingNatureText } from '../presentation/ledger/SpendingNatureStyles';
-import { tagBackground, tagTextColor } from '../presentation/ledger/TagStyles';
+import { tagTextColor } from '../presentation/ledger/TagStyles';
 import { currentRange, localDate, parseLocalDate, rangeTitle, shiftedRange,
   StatisticsDateRange, StatisticsRange } from '../presentation/statistics/StatisticsPeriod';
 
@@ -851,15 +851,25 @@ export struct StatisticsPage {
 
   @Builder
   private budgetRow(category: StatisticsBudgetCategory) {
-    Row({ space: 12 }) {
-      Column({ space: 4 }) {
-        Text(category.name).fontSize('15fp').fontWeight(FontWeight.Medium)
-          .fontColor(spendingNatureText(category.colorKey)).maxLines(1)
+    Column({ space: 12 }) {
+      Row({ space: 12 }) {
+        Row() {
+          Text(category.name).fontSize('14fp').fontWeight(FontWeight.Regular).height(32)
+            .fontColor(spendingNatureText(category.colorKey)).backgroundColor(spendingNatureBackground(category.colorKey))
+            .padding({ left: 12, right: 12 }).borderRadius(16).maxLines(1)
+            .textOverflow({ overflow: TextOverflow.Ellipsis }).constraintSize({ maxWidth: '100%' })
+        }.layoutWeight(1)
+        Text('¥' + this.amount(category.amountMinor)).fontSize('16fp').fontFamily('XiaoQiaoDINMedium')
+          .fontColor($r('app.color.xq_font_primary')).maxLines(1).minFontSize('12fp').maxFontSize('16fp')
+          .constraintSize({ maxWidth: '45%' })
+      }.width('100%').alignItems(VerticalAlign.Center)
+      Row({ space: 12 }) {
+        Progress({ value: Math.max(0, Math.min(100, category.share)), total: 100, type: ProgressType.Linear })
+          .layoutWeight(1).height(4).color(spendingNatureText(category.colorKey))
+          .backgroundColor($r('app.color.xq_comp_background_tertiary'))
         Text(this.percent(category.share)).fontSize('12fp').fontColor($r('app.color.xq_font_secondary'))
-      }.layoutWeight(1).alignItems(HorizontalAlign.Start)
-      Text('¥' + this.amount(category.amountMinor)).fontSize('16fp').fontFamily('XiaoQiaoDINMedium')
-        .fontColor($r('app.color.xq_font_primary')).maxLines(1).minFontSize('12fp').maxFontSize('16fp')
-    }.padding(16).width('100%').borderRadius(16).backgroundColor(spendingNatureBackground(category.colorKey))
+      }.width('100%').alignItems(VerticalAlign.Center)
+    }.padding(16).width('100%').borderRadius(16).backgroundColor($r('app.color.xq_app_surface_card'))
       .id('statistics-budget-' + category.key)
   }
 
@@ -883,17 +893,19 @@ export struct StatisticsPage {
   @Builder
   private tagRow(tag: StatisticsTagCategory, kind: StatisticsKind) {
     Row({ space: 12 }) {
+      Circle().width(8).height(8).fill(tagTextColor(tag.colorKey)).flexShrink(0)
       Column({ space: 4 }) {
-        Text('#' + tag.name).fontSize('16fp').fontWeight(FontWeight.Medium)
-          .fontColor(tagTextColor(tag.colorKey)).maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
-        Text((kind === 'income' ? '收入 · ' : '支出 · ') + `${tag.entryCount} 笔 · ${this.percent(tag.share)}`).fontSize('12fp')
+        Text('#' + tag.name).fontSize('16fp')
+          .fontColor($r('app.color.xq_font_primary')).maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
+        Text((kind === 'income' ? '收入 · ' : '支出 · ') + `${tag.entryCount} 笔`).fontSize('12fp')
           .fontColor($r('app.color.xq_font_secondary'))
       }.layoutWeight(1).alignItems(HorizontalAlign.Start)
       Text('¥' + this.amount(tag.amountMinor)).fontSize('16fp').fontFamily('XiaoQiaoDINMedium')
-        .fontColor($r('app.color.xq_font_primary')).maxLines(1).minFontSize('12fp').maxFontSize('16fp')
+        .fontColor($r('app.color.xq_font_primary')).maxLines(1).minFontSize('12fp').maxFontSize('16fp').constraintSize({ maxWidth: '40%' })
       Image($r('app.media.lucide_chevron_right1')).width(16).height(16)
         .fillColor($r('app.color.xq_icon_tertiary'))
-    }.padding(16).width('100%').borderRadius(16).backgroundColor(tagBackground(tag.colorKey))
+    }.padding({ left: 16, right: 16, top: 12, bottom: 12 }).constraintSize({ minHeight: 64 })
+      .width('100%').alignItems(VerticalAlign.Center)
       .id('statistics-tag-' + (kind === 'income' ? 'income-' : '') + tag.key).onClick(() => { this.openTagEntries(tag, kind); })
   }
 
@@ -907,9 +919,14 @@ export struct StatisticsPage {
           Blank()
           Text('多标签账目分别计入').fontSize('12fp').fontColor($r('app.color.xq_font_secondary'))
         }.width('100%')
-        ForEach(this.rankedTags().slice(0, 5), (item: TagRankingItem) => {
-          this.tagRow(item.tag, item.kind)
-        }, (item: TagRankingItem) => item.kind + ':' + item.tag.key + ':' + item.tag.amountMinor + ':' + item.tag.entryCount)
+        Column() {
+          ForEach(this.rankedTags().slice(0, 5), (item: TagRankingItem, index: number) => {
+            this.tagRow(item.tag, item.kind)
+            if (index < Math.min(5, this.rankedTags().length) - 1) {
+              Divider().color($r('app.color.xq_comp_divider')).margin({ left: 36, right: 16 })
+            }
+          }, (item: TagRankingItem) => item.kind + ':' + item.tag.key + ':' + item.tag.amountMinor + ':' + item.tag.entryCount)
+        }.width('100%').borderRadius(16).backgroundColor($r('app.color.xq_app_surface_card')).clip(true)
       }.width('100%').id('statistics-tag-ranking')
     }
   }
