@@ -1,4 +1,7 @@
+import { isCustomTagColor } from '../../domain/model/TagProfile';
+
 export function tagTextColor(key: string): ResourceColor {
+  if (isCustomTagColor(key)) { return key; }
   switch (key) {
     case 'brand': return $r('app.color.xq_font_emphasize');
     case 'income': return $r('app.color.xq_app_income');
@@ -9,6 +12,7 @@ export function tagTextColor(key: string): ResourceColor {
 }
 
 export function tagBackground(key: string): ResourceColor {
+  if (isCustomTagColor(key)) { return '#22' + key.substring(1).toUpperCase(); }
   switch (key) {
     case 'brand': return $r('app.color.xq_comp_emphasize_tertiary');
     case 'income': return $r('app.color.xq_app_confirm_background');
