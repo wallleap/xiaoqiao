@@ -62,3 +62,6 @@
 图标资源替换兼容：保留用户提供的 icon00001.svg～icon00371.svg 文件名及内容。旧 colorful_icon_* 编号与新编号不同；通过对比旧 Git 版本中 SVG 的图形及颜色属性（忽略导出元数据）建立 360 条完整映射，保存于 tools/category-icon-aliases.json。生成器默认读取此映射，新旧资源名和既有语义键都能定位到同一图形；没有执行数据库更新。LedgerOverview 的预览图标也改为调用统一映射，移除对已删除资源的直接引用。
 
 首次重建兼容表可执行 python3 tools/generate-category-icon-catalog.py --legacy-ref b276055；日常更新目录只需执行 python3 tools/generate-category-icon-catalog.py。生成器在旧图标没有对应图形、或映射目标资源缺失时拒绝生成，避免静默错配。
+
+
+父分类 Select 菜单样式：选中项明确使用主题强调色文字、14fp 中等字重与品牌色浅底，普通项使用主题正文色，避免系统默认选中色。材质可用时通过 Select.menuSystemMaterial 绑定现有菜单沉浸材质；无材质时走普通 Select 分支，不访问 API 26 材质接口。保留父分类左对齐、选择规则和图标网格。git diff --check 通过，核对本地 SDK 声明及记一笔已有实现；未运行构建或设备测试，实际菜单光感待手动确认。

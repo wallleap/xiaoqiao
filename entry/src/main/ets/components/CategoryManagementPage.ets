@@ -338,6 +338,30 @@ export struct CategoryManagementPage {
   }
 
   @Builder
+  private parentSelect() {
+    if (this.sheetMaterial !== undefined) {
+        Select(this.parentSelectOptions())
+          .selected(this.parentId.length === 0 ? 0 : Math.max(0, this.parentChoices().findIndex((item: CategoryProfile) => item.id === this.parentId) + 1))
+          .value(this.selectedParentLabel()).font({ size: '14fp' }).height(44)
+          .constraintSize({ maxWidth: '100%' }).backgroundColor($r('app.color.xq_app_surface_keyboard'))
+          .fontColor($r('app.color.xq_font_primary')).optionFontColor($r('app.color.xq_font_primary'))
+          .selectedOptionFontColor($r('app.color.xq_font_emphasize')).selectedOptionFont({ size: '14fp', weight: FontWeight.Medium })
+          .menuAlign(MenuAlignType.START).selectedOptionBgColor($r('app.color.xq_comp_emphasize_tertiary')).id('category-parent')
+          .menuSystemMaterial(this.sheetMaterial)
+          .onSelect((index: number) => { this.parentId = index === 0 ? '' : this.parentChoices()[index - 1]?.id || ''; })
+    } else {
+        Select(this.parentSelectOptions())
+          .selected(this.parentId.length === 0 ? 0 : Math.max(0, this.parentChoices().findIndex((item: CategoryProfile) => item.id === this.parentId) + 1))
+          .value(this.selectedParentLabel()).font({ size: '14fp' }).height(44)
+          .constraintSize({ maxWidth: '100%' }).backgroundColor($r('app.color.xq_app_surface_keyboard'))
+          .fontColor($r('app.color.xq_font_primary')).optionFontColor($r('app.color.xq_font_primary'))
+          .selectedOptionFontColor($r('app.color.xq_font_emphasize')).selectedOptionFont({ size: '14fp', weight: FontWeight.Medium })
+          .menuAlign(MenuAlignType.START).selectedOptionBgColor($r('app.color.xq_comp_emphasize_tertiary')).id('category-parent')
+          .onSelect((index: number) => { this.parentId = index === 0 ? '' : this.parentChoices()[index - 1]?.id || ''; })
+    }
+  }
+
+  @Builder
   private editorSheet() {
     Column({ space: 14 }) {
       Text(this.editing === undefined ? '新增分类' : '编辑分类').fontSize('20fp').fontWeight(FontWeight.Bold).width('100%')
@@ -355,12 +379,7 @@ export struct CategoryManagementPage {
         .id('category-name').onChange((value: string) => { this.name = value; this.error = ''; })
       Text('父分类').fontSize('12fp').fontColor($r('app.color.xq_font_secondary')).width('100%')
       Row() {
-        Select(this.parentSelectOptions())
-          .selected(this.parentId.length === 0 ? 0 : Math.max(0, this.parentChoices().findIndex((item: CategoryProfile) => item.id === this.parentId) + 1))
-          .value(this.selectedParentLabel()).font({ size: '14fp' }).height(44)
-          .constraintSize({ maxWidth: '100%' }).backgroundColor($r('app.color.xq_app_surface_keyboard'))
-          .menuAlign(MenuAlignType.START).selectedOptionBgColor($r('app.color.xq_comp_emphasize_tertiary')).id('category-parent')
-          .onSelect((index: number) => { this.parentId = index === 0 ? '' : this.parentChoices()[index - 1]?.id || ''; })
+        this.parentSelect()
       }.width('100%').justifyContent(FlexAlign.Start)
       Text('图标').fontSize('12fp').fontColor($r('app.color.xq_font_secondary')).width('100%')
       Grid() {

@@ -23,6 +23,7 @@ export struct LocalBackupPage {
   onOpenCategories: () => void = () => {};
   onOpenTags: () => void = () => {};
   onOpenDataExchange: () => void = () => {};
+  onOpenHuaweiCloud: () => void = () => {};
   private readonly scroller: Scroller = new Scroller();
 
   aboutToAppear(): void { this.refreshPrevious(); }
@@ -159,6 +160,10 @@ export struct LocalBackupPage {
               .enabled(this.ready && !this.busy).id('settings-data-exchange')
               .onClick(() => { this.onOpenDataExchange(); })
           }.padding(16).width('100%').borderRadius(20).backgroundColor($r('app.color.xq_app_surface_card'))
+          Button('华为账号与云备份', { type: ButtonType.Capsule }).width('100%').height(48).fontSize('16fp')
+            .fontColor($r('app.color.xq_font_emphasize')).backgroundColor($r('app.color.xq_app_surface_card'))
+            .enabled(this.ready && !this.busy && !this.recoveryRequired).id('settings-huawei-cloud')
+            .onClick(() => { this.onOpenHuaweiCloud(); })
           Column({ space: 12 }) {
             Text('本地备份与恢复').fontSize('20fp').fontWeight(FontWeight.Bold).fontColor($r('app.color.xq_font_primary'))
             Text('将账本、图片和自定义图标一起备份，或从备份包恢复。完整包上限 32 MiB，图片与图标合计最多 2046 个。').fontSize('14fp').fontColor($r('app.color.xq_font_secondary'))
