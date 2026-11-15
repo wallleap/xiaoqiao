@@ -25,7 +25,7 @@ import { util } from '@kit.ArkTS';
 import { FilterMaterials } from '../presentation/materials/FilterMaterials';
 import { LedgerDatabase } from '../data/rdb/LedgerDatabase';
 import { LedgerWorkspace } from '../data/rdb/LedgerWorkspace';
-import { LedgerSnapshot, ExpenseCategory, LedgerAccount, SpendingNatureChoice, TagChoice } from '../domain/model/LedgerSnapshot';
+import { LedgerSnapshot, LedgerUsageSummary, ExpenseCategory, LedgerAccount, SpendingNatureChoice, TagChoice } from '../domain/model/LedgerSnapshot';
 import { LedgerBook } from '../domain/model/LedgerBook';
 import { EntryDetail } from '../domain/model/EntryDetail';
 import { MonthlyBudget, BudgetProgress, DEFAULT_MONTHLY_BUDGET_MINOR } from '../domain/model/MonthlyBudget';
@@ -80,6 +80,9 @@ struct Index {
   @State private periodOpacity: number = 1;
   @State private ledger: LedgerSnapshot | undefined = undefined;
   @State private ledgerVersion: number = 0;
+  @State private usage: LedgerUsageSummary | undefined = undefined;
+  @State private usageLoading: boolean = false;
+  @State private usageError: string = '';
   @State private loadError: string = '';
   @State private upgradeRequired: boolean = false;
   @State private loading: boolean = true;
@@ -111,10 +114,10 @@ struct Index {
   private workspace: LedgerWorkspace | undefined = undefined;
   private readonly bodyScroller: ListScroller = new ListScroller();
   private snackBar: HdsSnackBar | undefined = undefined;
-  private readonly labels: string[] = ['账目', '统计', '记一笔', '资产', '设置'];
+  private readonly labels: string[] = ['账目', '统计', '记一笔', '资产', '我的'];
   private readonly tabIcons: Resource[] = [$r('app.media.lucide_house1'),
     $r('app.media.lucide_chart_no_axes_combined1'), $r('app.media.lucide_plus1'),
-    $r('app.media.lucide_wallet1'), $r('app.media.lucide_settings1')];
+    $r('app.media.lucide_wallet1'), $r('app.media.lucide_user_round1')];
 
   private entries(kind: LedgerKind = this.kind): LedgerEntry[] {
     const saved = this.ledger?.entries.map(presentEntry) || [];
@@ -165,6 +168,7 @@ struct Index {
       this.selectedTagIds = this.selectedTagIds.filter((id: string) => availableTags.has(id));
       this.ledgerVersion++;
       await this.refreshAccountOverview(this.workspace);
+      await this.refreshUsage(this.workspace);
     } catch (error) {
       const code = (error as Error).message;
       this.upgradeRequired = code === 'LEDGER_UPGRADE_REQUIRED';
@@ -279,6 +283,14 @@ struct Index {
     this.accountError = this.loadError;
   }
 
+  private async refreshUsage(workspace: LedgerWorkspace): Promise<void> {
+    if (this.usageLoading) { return; }
+    this.usageLoading = true;
+    try { this.usage = await workspace.usageSummary(); this.usageError = ''; }
+    catch (_) { this.usageError = '记账汇总暂时无法读取'; }
+    finally { this.usageLoading = false; }
+  }
+
   private async refreshAccountOverview(workspace: LedgerWorkspace): Promise<void> {
     try {
       this.accountOverview = await workspace.accountOverview();
@@ -291,6 +303,7 @@ struct Index {
       this.ledger = await workspace.snapshot(this.selectedMonth);
       this.ledgerVersion++;
       this.loadError = '';
+      await this.refreshUsage(workspace);
     } catch (_) { this.loadError = '账目已删除，但列表刷新失败，请重试读取'; }
   }
 
@@ -1502,7 +1515,6 @@ struct Index {
     .backgroundColor($r('app.color.xq_comp_common_contrary'))
     .ignoreLayoutSafeArea([LayoutSafeAreaType.SYSTEM], [LayoutSafeAreaEdge.TOP, LayoutSafeAreaEdge.BOTTOM])
     .onAppear(() => { this.restoreStatusBar(); })
-    .bindSheet($$this.showSelection, this.selectionSheet(), this.selectionSheetOptions())
   }
 
   @Builder
@@ -1525,6 +1537,10 @@ struct Index {
       TabContent() { this.accountsPage() }.tabBar(this.tabItem(3))
       TabContent() {
         LocalBackupPage({
+          active: this.selectedTab === 4, refreshToken: this.ledgerVersion,
+          netMinor: this.accountError.length === 0 && !this.loading ? this.accountOverview?.netMinor || '' : '',
+          usage: this.usage, usageLoading: this.loading || this.usageLoading, usageError: this.usageError,
+          onRetryUsage: () => { if (this.workspace !== undefined && !this.loading) { this.refreshUsage(this.workspace); } },
           getBackup: () => this.workspace?.backup,
           ready: !this.preview && !this.loading && !this.deleting && this.loadError.length === 0 && this.ledger !== undefined,
           onBusy: (busy: boolean) => { this.backupBusy = busy; },
@@ -1534,6 +1550,12 @@ struct Index {
           onOpenTags: () => { this.showTags = true; },
           onOpenDataExchange: () => { this.showDataExchange = true; },
           onOpenHuaweiCloud: () => { this.showHuaweiCloud = true; },
+          onOpenBooks: () => { this.openBookSheet(); },
+          onOpenAccounts: () => { this.selectedTab = 3; },
+          onOpenBudget: () => { this.openBudget(); },
+          onOpenStatistics: () => { this.selectedTab = 1; },
+          onOpenRecords: () => { this.selectedTab = 0; },
+
           onRestored: async (): Promise<boolean> => {
             this.kind = LedgerKind.All; this.displayedKind = LedgerKind.All;
             this.account = ''; this.selectedTagIds = []; this.keyword = ''; this.showSearch = false;
@@ -1550,9 +1572,14 @@ struct Index {
           materialLevel: hdsMaterial.MaterialLevel.ADAPTIVE
         } })
       .ignoreLayoutSafeArea([LayoutSafeAreaType.SYSTEM], [LayoutSafeAreaEdge.TOP, LayoutSafeAreaEdge.BOTTOM])
+      .bindSheet($$this.showSelection, this.selectionSheet(), this.selectionSheetOptions())
       .onContentWillChange((_current: number, next: number): boolean => {
         if (this.backupBusy) { return false; }
-        if (next === 0 || next === 1 || next === 3 || next === 4) { this.selectedTab = next; return true; }
+        if (next === 0 || next === 1 || next === 3 || next === 4) {
+          this.selectedTab = next;
+          if (next === 4 && this.workspace !== undefined && !this.loading) { this.refreshUsage(this.workspace); }
+          return true;
+        }
         if (next === 2) { this.openExpense(); } else { this.notify(`${this.labels[next]}页面尚未接入`); }
         return false;
       })

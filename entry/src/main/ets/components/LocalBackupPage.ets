@@ -1,6 +1,10 @@
 import { LedgerBackupPackage } from '../data/backup/LedgerBackupPackage';
 import { WebDavPanel } from './WebDavPanel';
 import { common } from '@kit.AbilityKit';
+import { Money } from '../core/money/Money';
+import { CurrencyUnit } from '../core/money/CurrencyUnit';
+import { LedgerUsageSummary } from '../domain/model/LedgerSnapshot';
+import { HuaweiAccountConnection } from '../data/cloud/HuaweiCloudBackup';
 import { picker } from '@kit.CoreFileKit';
 import { HdsNavigation, HdsNavigationTitleMode, hdsMaterial, DividerShowType, ScrollEffectType } from '@kit.UIDesignKit';
 import { LocalBackupPreview } from '../data/rdb/LocalLedgerBackup';
@@ -9,6 +13,19 @@ import { LocalBackupPreview } from '../data/rdb/LocalLedgerBackup';
 export struct LocalBackupPage {
   getBackup: () => LedgerBackupPackage | undefined = () => undefined;
   @Prop @Watch('readyChanged') ready: boolean = false;
+  @Prop @Watch('personalChanged') active: boolean = false;
+  @Prop @Watch('personalChanged') refreshToken: number = 0;
+  @Prop netMinor: string = '';
+  @Prop usage: LedgerUsageSummary | undefined = undefined;
+  @Prop usageLoading: boolean = false;
+  @Prop usageError: string = '';
+  onRetryUsage: () => void = () => {};
+  @State private connected: boolean = false;
+  @State private nickName: string = '';
+  @State private avatarUri: string = '';
+  @State private avatarFailed: boolean = false;
+  private personalRequest: number = 0;
+
   @State private busy: boolean = false;
   @State private previous: boolean = false;
   @State private preview: LocalBackupPreview | undefined = undefined;
@@ -24,10 +41,121 @@ export struct LocalBackupPage {
   onOpenTags: () => void = () => {};
   onOpenDataExchange: () => void = () => {};
   onOpenHuaweiCloud: () => void = () => {};
+  onOpenBooks: () => void = () => {};
+  onOpenAccounts: () => void = () => {};
+  onOpenBudget: () => void = () => {};
+  onOpenStatistics: () => void = () => {};
+  onOpenRecords: () => void = () => {};
+
   private readonly scroller: Scroller = new Scroller();
 
-  aboutToAppear(): void { this.refreshPrevious(); }
-  private readyChanged(): void { if (this.ready) { this.refreshPrevious(); } }
+  aboutToAppear(): void { this.refreshPrevious(); this.personalChanged(); }
+  aboutToDisappear(): void { this.personalRequest++; }
+  private readyChanged(): void { if (this.ready) { this.refreshPrevious(); this.personalChanged(); } }
+  private personalChanged(): void { if (this.active) { this.refreshPersonal(); } }
+
+  private async refreshPersonal(): Promise<void> {
+    const version = ++this.personalRequest;
+    try {
+      await HuaweiAccountConnection.current();
+      const profile = HuaweiAccountConnection.profile();
+      if (version === this.personalRequest) {
+        this.connected = true; this.nickName = profile.nickName; this.avatarUri = profile.avatarUri; this.avatarFailed = false;
+      }
+    } catch (_) {
+      if (version === this.personalRequest) { this.connected = false; this.nickName = ''; this.avatarUri = ''; this.avatarFailed = false; }
+    }
+  }
+
+  private recordedDays(): string {
+    if (this.usage === undefined) { return '1'; }
+    const first = this.usage.firstEntryDate;
+    if (first.length === 0) { return '1'; }
+    const parts = first.split('-').map((value: string) => Number(value));
+    const today = new Date();
+    const days = Math.floor((Date.UTC(today.getFullYear(), today.getMonth(), today.getDate()) -
+      Date.UTC(parts[0], parts[1] - 1, parts[2])) / 86400000) + 1;
+    return Math.max(1, days).toString();
+  }
+
+  private netAssets(): string {
+    if (this.netMinor.length === 0) { return '—'; }
+    const parts = Money.fromMinorText(this.netMinor, new CurrencyUnit('CNY', 'CNY', 2)).toDecimalString().split('.');
+    return parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',') + '.' + parts[1];
+  }
+
+  @Builder
+  private personalStat(value: string, label: string) {
+    Column({ space: 6 }) {
+      Text(value).fontSize('22fp').fontFamily('XiaoQiaoDINMedium').fontWeight(FontWeight.Medium)
+        .fontColor($r('app.color.xq_font_primary')).maxLines(1).minFontSize('14fp').maxFontSize('22fp')
+        .width('100%').height(30).textAlign(TextAlign.Center).textOverflow({ overflow: TextOverflow.Ellipsis })
+      Text(label).fontSize('12fp').fontColor($r('app.color.xq_font_secondary'))
+    }.layoutWeight(1).alignItems(HorizontalAlign.Center)
+  }
+
+  @Builder
+  private personalHeader() {
+    Column({ space: 24 }) {
+      Row({ space: 16 }) {
+        Stack() {
+          if (this.connected && this.avatarUri.length > 0 && !this.avatarFailed) {
+            Image(this.avatarUri).width(64).height(64).objectFit(ImageFit.Cover)
+              .onError(() => { this.avatarFailed = true; })
+          } else {
+            Image($r('app.media.lucide_user_round1')).width(32).height(32).fillColor($r('app.color.xq_icon_tertiary'))
+          }
+        }.width(64).height(64).borderRadius(32).clip(true).backgroundColor($r('app.color.xq_app_surface_card'))
+        Column({ space: 6 }) {
+          Text(this.connected ? this.nickName || '华为账号用户' : '点击登录').fontSize('22fp').fontWeight(FontWeight.Medium)
+            .fontColor($r('app.color.xq_font_primary')).maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
+          Text(this.connected ? '华为账号已连接' : '登录后使用云空间备份').fontSize('12fp')
+            .fontColor($r('app.color.xq_font_secondary'))
+        }.layoutWeight(1).alignItems(HorizontalAlign.Start)
+        Image($r('app.media.lucide_chevron_right1')).width(20).height(20).fillColor($r('app.color.xq_icon_tertiary'))
+      }.width('100%').alignItems(VerticalAlign.Center).enabled(!this.busy)
+        .onClick(() => { this.onOpenHuaweiCloud(); }).id('my-account-header')
+        .accessibilityText(this.connected ? '查看华为账号与云备份' : '登录华为账号')
+      Row({ space: 8 }) {
+        this.personalStat(this.recordedDays(), '记账天数')
+        this.personalStat(this.usageError.length > 0 ? '重试' : this.usage?.entryCount || '0', '记账笔数')
+        this.personalStat(this.netAssets(), '净资产')
+      }.width('100%').alignItems(VerticalAlign.Top)
+      if (this.usageError.length > 0) {
+        Button('记账汇总读取失败，点击重试').fontSize('12fp').fontColor($r('app.color.xq_font_emphasize'))
+          .backgroundColor(Color.Transparent).enabled(!this.usageLoading).onClick(() => { this.onRetryUsage(); })
+      } else if (this.usageLoading) {
+        Text('正在读取记账汇总…').fontSize('12fp').fontColor($r('app.color.xq_font_tertiary'))
+      }
+    }.width('100%').padding({ left: 4, right: 4, top: 12, bottom: 16 })
+  }
+
+
+  @Builder
+  private shortcut(icon: Resource, label: string, componentId: string, action: () => void) {
+    Button({ type: ButtonType.Normal }) {
+      Column({ space: 8 }) {
+        Image(icon).width(40).height(40).objectFit(ImageFit.Contain)
+        Text(label).fontSize('13fp').fontColor($r('app.color.xq_font_primary')).maxLines(1)
+          .textOverflow({ overflow: TextOverflow.Ellipsis }).width('100%').textAlign(TextAlign.Center)
+      }.width('100%').justifyContent(FlexAlign.Center)
+    }.width('25%').height(92).padding({ left: 2, right: 2 }).borderRadius(12).backgroundColor(Color.Transparent)
+      .enabled(this.ready && !this.busy && !this.recoveryRequired).accessibilityText(label).id(componentId).onClick(action)
+  }
+
+  @Builder
+  private shortcuts() {
+    Flex({ wrap: FlexWrap.Wrap }) {
+      this.shortcut($r('app.media.mine_icon_ledgers'), '账本管理', 'my-books', this.onOpenBooks)
+      this.shortcut($r('app.media.mine_icon_assets'), '资产账户', 'my-accounts', this.onOpenAccounts)
+      this.shortcut($r('app.media.mine_icon_categories'), '分类设置', 'settings-categories', this.onOpenCategories)
+      this.shortcut($r('app.media.mine_icon_budget_categories'), '预算分类', 'settings-spending-natures', this.onOpenSpendingNatures)
+      this.shortcut($r('app.media.mine_icon_budgets'), '修改预算', 'my-budget', this.onOpenBudget)
+      this.shortcut($r('app.media.mine_icon_charts'), '图表统计', 'my-statistics', this.onOpenStatistics)
+      this.shortcut($r('app.media.mine_icon_records'), '账单明细', 'my-records', this.onOpenRecords)
+      this.shortcut($r('app.media.mine_icon_tags'), '自定义标签', 'settings-tags', this.onOpenTags)
+    }.width('100%').padding(12).borderRadius(20).backgroundColor($r('app.color.xq_app_surface_card'))
+  }
 
   private async refreshPrevious(): Promise<void> {
     try { this.previous = await this.getBackup()?.hasPrevious() || false; }
@@ -134,32 +262,11 @@ export struct LocalBackupPage {
     HdsNavigation() {
       Scroll(this.scroller) {
         Column({ space: 16 }) {
-          Column({ space: 12 }) {
-            Row() {
-              Column({ space: 4 }) {
-                Text('分类、预算与标签').fontSize('18fp').fontWeight(FontWeight.Medium)
-                  .fontColor($r('app.color.xq_font_primary')).width('100%')
-                Text('收支分类负责记账明细，预算分类用于月度分类预算，标签继续用于交叉检索。')
-                  .fontSize('12fp').fontColor($r('app.color.xq_font_secondary')).width('100%')
-              }.layoutWeight(1).alignItems(HorizontalAlign.Start)
-            }.width('100%')
-            Button('管理预算分类', { type: ButtonType.Capsule }).width('100%').height(44).fontSize('14fp')
-              .fontColor($r('app.color.xq_font_emphasize')).backgroundColor($r('app.color.xq_app_surface_page'))
-              .enabled(this.ready && !this.busy).id('settings-spending-natures')
-              .onClick(() => { this.onOpenSpendingNatures(); })
-            Button('管理收支分类', { type: ButtonType.Capsule }).width('100%').height(44).fontSize('14fp')
-              .fontColor($r('app.color.xq_font_primary')).backgroundColor($r('app.color.xq_app_surface_page'))
-              .enabled(this.ready && !this.busy).id('settings-categories')
-              .onClick(() => { this.onOpenCategories(); })
-            Button('管理标签', { type: ButtonType.Capsule }).width('100%').height(44).fontSize('14fp')
-              .fontColor($r('app.color.xq_font_primary')).backgroundColor($r('app.color.xq_app_surface_page'))
-              .enabled(this.ready && !this.busy).id('settings-tags')
-              .onClick(() => { this.onOpenTags(); })
-            Button('导入与导出', { type: ButtonType.Capsule }).width('100%').height(44).fontSize('14fp')
-              .fontColor($r('app.color.xq_font_primary')).backgroundColor($r('app.color.xq_app_surface_page'))
-              .enabled(this.ready && !this.busy).id('settings-data-exchange')
-              .onClick(() => { this.onOpenDataExchange(); })
-          }.padding(16).width('100%').borderRadius(20).backgroundColor($r('app.color.xq_app_surface_card'))
+          this.personalHeader()
+          this.shortcuts()
+          Button('导入与导出', { type: ButtonType.Capsule }).width('100%').height(44).fontSize('14fp')
+            .fontColor($r('app.color.xq_font_primary')).backgroundColor($r('app.color.xq_app_surface_card'))
+            .enabled(this.ready && !this.busy).id('settings-data-exchange').onClick(() => { this.onOpenDataExchange(); })
           Button('华为账号与云备份', { type: ButtonType.Capsule }).width('100%').height(48).fontSize('16fp')
             .fontColor($r('app.color.xq_font_emphasize')).backgroundColor($r('app.color.xq_app_surface_card'))
             .enabled(this.ready && !this.busy && !this.recoveryRequired).id('settings-huawei-cloud')
@@ -220,7 +327,7 @@ export struct LocalBackupPage {
         .edgeEffect(EdgeEffect.Spring, { alwaysEnabled: true })
     }.mode(NavigationMode.Stack).titleMode(HdsNavigationTitleMode.MINI).hideBackButton(true)
       .titleBar({ enableComponentSafeArea: true, avoidLayoutSafeArea: true,
-        content: { title: { mainTitle: '设置' }, divider: { showType: DividerShowType.OFF } },
+        content: { title: { mainTitle: '我的' }, divider: { showType: DividerShowType.OFF } },
         style: {
           originalStyle: { contentStyle: { titleStyle: { mainTitleColor: $r('app.color.xq_font_primary') } } },
           scrollEffectStyle: { contentStyle: { titleStyle: { mainTitleColor: $r('app.color.xq_font_primary') } } },

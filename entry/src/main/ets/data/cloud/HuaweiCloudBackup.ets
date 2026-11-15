@@ -10,11 +10,38 @@ import { LocalBackupPreview } from '../rdb/LocalLedgerBackup';
 
 export interface CloudBackupRecord { name: string; bytes: number; createdAt: number; }
 
+export interface HuaweiAccountProfile { nickName: string; avatarUri: string; }
+
 /** Client-side connection only: never persist authorization codes, tokens or client secrets. */
 export class HuaweiAccountConnection {
   private static openID: string = '';
-  static connect(openID: string): void { if (!openID) { throw new Error('HUAWEI_ACCOUNT_REQUIRED'); } HuaweiAccountConnection.openID = openID; }
-  static disconnect(): void { HuaweiAccountConnection.openID = ''; }
+  private static accountProfile: HuaweiAccountProfile = { nickName: '', avatarUri: '' };
+  static connect(openID: string): void {
+    if (!openID) { throw new Error('HUAWEI_ACCOUNT_REQUIRED'); }
+    if (HuaweiAccountConnection.openID !== openID) { HuaweiAccountConnection.accountProfile = { nickName: '', avatarUri: '' }; }
+    HuaweiAccountConnection.openID = openID;
+  }
+  static disconnect(): void {
+    HuaweiAccountConnection.openID = '';
+    HuaweiAccountConnection.accountProfile = { nickName: '', avatarUri: '' };
+  }
+  static profile(): HuaweiAccountProfile { return HuaweiAccountConnection.accountProfile; }
+
+  static async loadProfile(context: common.Context, forceAuthorization: boolean): Promise<HuaweiAccountProfile> {
+    const id = await HuaweiAccountConnection.current();
+    const request = new authentication.HuaweiIDProvider().createAuthorizationWithHuaweiIDRequest();
+    request.scopes = ['openid', 'profile']; request.forceAuthorization = forceAuthorization;
+    request.state = util.generateRandomUUID();
+    const response = await new authentication.AuthenticationController(context).executeRequest(request) as authentication.AuthorizationWithHuaweiIDResponse;
+    const credential = response.data;
+    if (credential === undefined || response.state !== request.state || credential.openID !== id || await HuaweiAccountConnection.current() !== id) {
+      throw new Error('HUAWEI_ACCOUNT_CHANGED');
+    }
+    const uri = credential.avatarUri || '';
+    HuaweiAccountConnection.accountProfile = { nickName: (credential.nickName || '').trim().substring(0, 20),
+      avatarUri: /^https:\/\//i.test(uri) ? uri : '' };
+    return HuaweiAccountConnection.accountProfile;
+  }
   static async current(): Promise<string> {
     const id = HuaweiAccountConnection.openID;
     if (!id) { throw new Error('HUAWEI_ACCOUNT_REQUIRED'); }

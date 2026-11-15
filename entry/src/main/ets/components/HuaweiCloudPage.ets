@@ -42,7 +42,7 @@ export struct HuaweiCloudPage {
     this.loginController.onClickLoginWithHuaweiIDButton((err: BusinessError, credential: loginComponentManager.HuaweiIDCredential) => {
       if (!this.active || this.busy) { return; }
       if (err) { this.failure(err); return; }
-      try { HuaweiAccountConnection.connect(credential.openID); this.connect(); }
+      try { HuaweiAccountConnection.connect(credential.openID); this.connect(true); }
       catch (_) { this.message = '未能确认华为账号，请重新登录'; this.error = true; }
     });
     this.resumeConnection();
@@ -59,17 +59,33 @@ export struct HuaweiCloudPage {
     catch (_) { this.connected = false; }
   }
 
-  private async connect(): Promise<void> {
+  private async connect(requestProfile: boolean = false): Promise<void> {
     this.setBusy(true); this.message = ''; this.error = false;
     try {
       if (this.service === undefined) { throw new Error('CLOUD_NOT_READY'); }
       await HuaweiAccountConnection.current(); this.connected = true;
+      const host = this.getUIContext().getHostContext();
+      if (host !== undefined) {
+        try { await HuaweiAccountConnection.loadProfile(host, requestProfile); }
+        catch (_) { /* Avatar/nickname consent is optional and must not undo account connection. */ }
+      }
       if (!HuaweiCloudBackup.available()) { this.syncStatus = '当前设备暂不支持云文件同步'; return; }
       await this.service?.observe((progress: cloudSync.SyncProgress) => { this.syncProgress(progress); });
       this.lastSync = await this.service?.lastSyncTime() || 0;
       this.records = await this.service?.list() || [];
       this.message = '已连接华为账号；备份前请在系统云空间中开启本应用同步';
     } catch (error) { this.failure(error as Error); }
+    finally { this.setBusy(false); }
+  }
+
+  private async authorizeProfile(): Promise<void> {
+    const host = this.getUIContext().getHostContext();
+    if (host === undefined || this.busy || !this.connected) { return; }
+    this.setBusy(true);
+    try {
+      await HuaweiAccountConnection.loadProfile(host, true);
+      this.message = '头像昵称已更新，返回“我的”页即可查看'; this.error = false;
+    } catch (_) { this.message = '暂未取得头像昵称，仍可正常使用云备份'; this.error = false; }
     finally { this.setBusy(false); }
   }
 
@@ -212,6 +228,8 @@ export struct HuaweiCloudPage {
             } else if (!this.connected) {
               Text('当前设备暂不支持华为账号登录').fontSize('14fp').fontColor($r('app.color.xq_font_secondary'))
             } else {
+              Button('更新头像昵称').fontSize('14fp').fontColor($r('app.color.xq_font_emphasize')).backgroundColor(Color.Transparent)
+                .enabled(!this.busy).onClick(() => { this.authorizeProfile(); })
               Button('断开应用内连接').fontSize('14fp').fontColor($r('app.color.xq_font_secondary')).backgroundColor(Color.Transparent)
                 .enabled(!this.busy && this.preview === undefined).onClick(() => {
                   HuaweiAccountConnection.disconnect(); this.service?.close(); this.connected = false; this.records = []; this.lastSync = 0;

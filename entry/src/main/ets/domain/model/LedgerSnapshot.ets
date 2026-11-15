@@ -82,3 +82,6 @@ export interface LedgerSnapshot {
   budgetTotalMinor: string;
   budgetUsedMinor: string;
 }
+
+/** All posted user transactions across books; recovery receipts are not separate entries. */
+export interface LedgerUsageSummary { firstEntryDate: string; entryCount: string; }

@@ -17,7 +17,7 @@ import { IncomeCommand } from '../../domain/model/IncomeRecord';
 import { IncomeService } from '../../domain/services/IncomeService';
 import { ExpenseCommand } from '../../domain/model/ExpenseRecord';
 import { ExpenseCategory, LedgerAccount, LedgerSnapshot, SavedLedgerEntry, SpendingNatureChoice,
-  TagChoice } from '../../domain/model/LedgerSnapshot';
+  TagChoice, LedgerUsageSummary } from '../../domain/model/LedgerSnapshot';
 import { RecordExpense } from '../../domain/services/RecordExpense';
 import { UpdateExpense } from '../../domain/services/UpdateExpense';
 import { EntryDetail } from '../../domain/model/EntryDetail';
@@ -835,6 +835,16 @@ export class LedgerWorkspace {
       default_address: address.trim().length > 0 ? address.trim() : null,
       created_at_ms: now, updated_at_ms: now });
     return id;
+  }
+
+  async usageSummary(): Promise<LedgerUsageSummary> {
+    return this.session.read(async (db: relationalStore.RdbStore): Promise<LedgerUsageSummary> => {
+      const rows = await db.querySql("SELECT MIN(occurred_local_date),CAST(COUNT(*) AS TEXT) FROM v_posted_transactions WHERE kind IN ('expense','income','transfer')");
+      try {
+        if (!rows.goToFirstRow()) { return { firstEntryDate: '', entryCount: '0' }; }
+        return { firstEntryDate: rows.isColumnNull(0) ? '' : rows.getString(0), entryCount: rows.getString(1) };
+      } finally { rows.close(); }
+    });
   }
 
   async categories(): Promise<CategoryProfile[]> {

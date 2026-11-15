@@ -43,3 +43,6 @@
 
 
 编译反馈修复：HuaweiAccountConnection 静态方法通过类名访问 openID 与 disconnect，避免 ArkTS 的 arkts-no-standalone-this 错误。已静态检查新增云备份类的静态方法，无同类 this 用法；未重新运行构建，待用户手动编译确认。
+
+
+我的页资料展示：首次通过华为原生按钮连接后申请 openid/profile 授权，取消资料授权不撤销登录；可通过“更新头像昵称”再次授权。只在当前进程保存头像 HTTPS 地址与昵称，响应 state 及 OpenID 必须与当前账号匹配。断开或切换账号清空资料，不获取手机号。我的页头像加载失败时显示默认图标；统计口径见[我的页](my-page.md)。
