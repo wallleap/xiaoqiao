@@ -5,6 +5,7 @@ import { HdsTabs, hdsMaterial, HdsNavigation, HdsNavigationTitleMode, HdsListIte
   PrefixCustomBuilder, SuffixCustomBuilder, HdsSnackBar, SnackBarOperationType, ScrollEffectType, DividerShowType } from '@kit.UIDesignKit';
 import { AccountsPage } from '../components/AccountsPage';
 import { LocalBackupPage } from '../components/LocalBackupPage';
+import { BackupRestorePage } from '../components/BackupRestorePage';
 import { HuaweiCloudPage } from '../components/HuaweiCloudPage';
 import { SpendingNaturePage } from '../components/SpendingNaturePage';
 import { BudgetPage } from '../components/BudgetPage';
@@ -51,6 +52,7 @@ struct Index {
   @State private showTags: boolean = false;
   @State private showDataExchange: boolean = false;
   @State private showHuaweiCloud: boolean = false;
+  @State private showBackupRestore: boolean = false;
   @State private accountOverview: AccountOverview | undefined = undefined;
   @State private accountError: string = '';
   @State private showAccountEditor: boolean = false;
@@ -421,6 +423,24 @@ struct Index {
   }
 
   @Builder
+  private backupRestorePage() {
+    BackupRestorePage({
+      getBackup: () => this.workspace?.backup,
+      ready: !this.preview && !this.loading && !this.deleting && this.loadError.length === 0 && this.ledger !== undefined,
+      onBusy: (busy: boolean) => { this.backupBusy = busy; },
+      onClose: () => { if (!this.backupBusy) { this.showBackupRestore = false; } },
+      onOpenHuaweiCloud: () => { this.showHuaweiCloud = true; },
+      onRecoveryRequired: () => { this.showRecoveryError(); },
+      onRestored: async (): Promise<boolean> => {
+        this.kind = LedgerKind.All; this.displayedKind = LedgerKind.All;
+        this.account = ''; this.selectedTagIds = []; this.keyword = ''; this.showSearch = false;
+        await this.loadLedger();
+        return this.loadError.length === 0 && this.accountError.length === 0;
+      }
+    })
+  }
+
+  @Builder
   private huaweiCloudPage() {
     HuaweiCloudPage({
       getBackup: () => this.workspace?.backup,
@@ -693,6 +713,7 @@ struct Index {
 
   onBackPress(): boolean {
     if (this.showHuaweiCloud) { if (!this.backupBusy) { this.showHuaweiCloud = false; } return true; }
+    if (this.showBackupRestore) { if (!this.backupBusy) { this.showBackupRestore = false; } return true; }
     if (this.showBudgetPage) { this.showBudgetPage = false; this.loadLedger(); return true; }
     if (this.showCategories) {
       if (this.categoryBackHandler()) { return true; }
@@ -1537,31 +1558,22 @@ struct Index {
       TabContent() { this.accountsPage() }.tabBar(this.tabItem(3))
       TabContent() {
         LocalBackupPage({
-          active: this.selectedTab === 4, refreshToken: this.ledgerVersion,
+          busy: this.backupBusy, active: this.selectedTab === 4, refreshToken: this.ledgerVersion,
           netMinor: this.accountError.length === 0 && !this.loading ? this.accountOverview?.netMinor || '' : '',
           usage: this.usage, usageLoading: this.loading || this.usageLoading, usageError: this.usageError,
           onRetryUsage: () => { if (this.workspace !== undefined && !this.loading) { this.refreshUsage(this.workspace); } },
-          getBackup: () => this.workspace?.backup,
           ready: !this.preview && !this.loading && !this.deleting && this.loadError.length === 0 && this.ledger !== undefined,
-          onBusy: (busy: boolean) => { this.backupBusy = busy; },
-          onRecoveryRequired: () => { this.showRecoveryError(); },
           onOpenSpendingNatures: () => { this.showSpendingNatures = true; },
           onOpenCategories: () => { this.showCategories = true; },
           onOpenTags: () => { this.showTags = true; },
           onOpenDataExchange: () => { this.showDataExchange = true; },
+          onOpenBackupRestore: () => { this.showBackupRestore = true; },
           onOpenHuaweiCloud: () => { this.showHuaweiCloud = true; },
           onOpenBooks: () => { this.openBookSheet(); },
           onOpenAccounts: () => { this.selectedTab = 3; },
           onOpenBudget: () => { this.openBudget(); },
           onOpenStatistics: () => { this.selectedTab = 1; },
           onOpenRecords: () => { this.selectedTab = 0; },
-
-          onRestored: async (): Promise<boolean> => {
-            this.kind = LedgerKind.All; this.displayedKind = LedgerKind.All;
-            this.account = ''; this.selectedTagIds = []; this.keyword = ''; this.showSearch = false;
-            await this.loadLedger();
-            return this.loadError.length === 0 && this.accountError.length === 0;
-          }
         })
       }.tabBar(this.tabItem(4))
     }.width('100%').height(LayoutPolicy.matchParent).scrollable(false).barHeight(64)
@@ -1594,6 +1606,7 @@ struct Index {
     else if (this.showTags) { this.tagManagementPage() }
     else if (this.showDataExchange) { this.dataExchangePage() }
     else if (this.showHuaweiCloud) { this.huaweiCloudPage() }
+    else if (this.showBackupRestore) { this.backupRestorePage() }
     else if (this.showSpendingNatures) { this.spendingNaturePage() }
     else if (this.showAccountEditor) { this.accountEditorPage() }
     else if (this.showDetail) { this.detailPage() }

@@ -1,5 +1,6 @@
 import { common } from '@kit.AbilityKit';
-import { LoginWithHuaweiIDButton, loginComponentManager } from '@kit.AccountKit';
+import { authentication, LoginWithHuaweiIDButton, loginComponentManager } from '@kit.AccountKit';
+import { util } from '@kit.ArkTS';
 import { BusinessError } from '@kit.BasicServicesKit';
 import { cloudSync } from '@kit.CoreFileKit';
 import { HdsNavigation, HdsNavigationTitleMode, hdsMaterial, DividerShowType, ScrollEffectType } from '@kit.UIDesignKit';
@@ -18,6 +19,7 @@ export struct HuaweiCloudPage {
   @State private connected: boolean = false;
   @State private busy: boolean = false;
   @State private records: CloudBackupRecord[] = [];
+  @State private recordsLoaded: boolean = false;
   @State private message: string = '';
   @State private error: boolean = false;
   @State private syncStatus: string = '尚未请求同步';
@@ -38,7 +40,7 @@ export struct HuaweiCloudPage {
   aboutToAppear(): void {
     this.active = true;
     const host = this.getUIContext().getHostContext();
-    if (host !== undefined) { this.service = new HuaweiCloudBackup(host); }
+    if (host !== undefined) { HuaweiAccountConnection.initialize(host); this.service = new HuaweiCloudBackup(host); }
     this.loginController.onClickLoginWithHuaweiIDButton((err: BusinessError, credential: loginComponentManager.HuaweiIDCredential) => {
       if (!this.active || this.busy) { return; }
       if (err) { this.failure(err); return; }
@@ -61,6 +63,8 @@ export struct HuaweiCloudPage {
 
   private async connect(requestProfile: boolean = false): Promise<void> {
     this.setBusy(true); this.message = ''; this.error = false;
+    this.recordsLoaded = false;
+    let step = '校验账号';
     try {
       if (this.service === undefined) { throw new Error('CLOUD_NOT_READY'); }
       await HuaweiAccountConnection.current(); this.connected = true;
@@ -70,28 +74,47 @@ export struct HuaweiCloudPage {
         catch (_) { /* Avatar/nickname consent is optional and must not undo account connection. */ }
       }
       if (!HuaweiCloudBackup.available()) { this.syncStatus = '当前设备暂不支持云文件同步'; return; }
+      step = '初始化云同步';
       await this.service?.observe((progress: cloudSync.SyncProgress) => { this.syncProgress(progress); });
+      step = '请求云同步';
+      await this.service?.requestSync();
+      this.syncStatus = '已请求同步，等待系统完成';
+      step = '读取同步状态';
       this.lastSync = await this.service?.lastSyncTime() || 0;
+      step = '读取备份目录';
       this.records = await this.service?.list() || [];
+      this.recordsLoaded = true;
       this.message = '已连接华为账号；备份前请在系统云空间中开启本应用同步';
-    } catch (error) { this.failure(error as Error); }
+    } catch (error) { this.failure(error as Error, step); }
     finally { this.setBusy(false); }
   }
 
-  private async authorizeProfile(): Promise<void> {
-    const host = this.getUIContext().getHostContext();
-    if (host === undefined || this.busy || !this.connected) { return; }
+  private async logout(): Promise<void> {
+    if (this.busy || this.preview !== undefined) { return; }
     this.setBusy(true);
+    let completed = false;
     try {
-      await HuaweiAccountConnection.loadProfile(host, true);
-      this.message = '头像昵称已更新，返回“我的”页即可查看'; this.error = false;
-    } catch (_) { this.message = '暂未取得头像昵称，仍可正常使用云备份'; this.error = false; }
+      const host = this.getUIContext().getHostContext();
+      if (host === undefined) { throw new Error('ACCOUNT_CONTEXT_UNAVAILABLE'); }
+      const request = new authentication.HuaweiIDProvider().createCancelAuthorizationRequest();
+      request.state = util.generateRandomUUID();
+      const response = await new authentication.AuthenticationController(host).executeRequest(request) as authentication.CancelAuthorizationResponse;
+      if (response.state !== request.state) { throw new Error('ACCOUNT_REVOKE_STATE_MISMATCH'); }
+      HuaweiAccountConnection.disconnect();
+      this.service?.close(); this.connected = false; this.records = []; this.lastSync = 0;
+      this.syncStatus = '已退出登录'; this.message = ''; this.error = false;
+      completed = true;
+    } catch (_) { this.message = '退出登录未完成，请重试'; this.error = true; }
     finally { this.setBusy(false); }
+    if (completed) { this.onClose(); }
   }
 
-  private failure(error: Error | BusinessError): void {
+  private failure(error: Error | BusinessError, step: string = '云备份操作'): void {
     const code = (error as BusinessError).code;
     const message = error.message;
+    if (message === 'CLOUD_ROOT_LIST') { step = '列出系统云根目录'; }
+    else if (message === 'CLOUD_BACKUP_LIST') { step = '列出本账号备份目录'; }
+    else if (message === 'CLOUD_BACKUP_STAT') { step = '读取备份文件属性'; }
     this.error = true;
     if (message === 'HUAWEI_ACCOUNT_CHANGED' || message === 'HUAWEI_ACCOUNT_REQUIRED' || code === 1001502001) {
       this.connected = false; this.records = []; this.preview = undefined; this.previewAccount = '';
@@ -105,7 +128,12 @@ export struct HuaweiCloudPage {
     else if (code === 22400003) { this.message = '电量过低，请充电后重试同步'; }
     else if (message === 'PACKAGE_SIZE') { this.message = '完整备份包上限为 32 MiB，请检查备份大小'; }
     else if (message === 'CLOUD_DOWNLOAD_TIMEOUT' || message === 'CLOUD_DOWNLOAD_FAILED') { this.message = '备份下载未完成，请检查网络和云空间后重试'; }
-    else { this.message = '操作未完成，请检查网络、云空间开关和剩余空间后重试'; }
+    else if (code === 13900012) { this.message = step + '失败：文件系统拒绝访问。同步开关开启后仍可能发生目录访问异常，需进一步检查云目录挂载或文件权限'; }
+    else if (code === 201) { this.message = step + '失败：当前应用没有访问权限'; }
+    else if (code === 13900025) { this.message = step + '失败：设备可用存储空间不足'; }
+    else if (code === 13600001) { this.message = step + '失败：无法连接系统云同步服务，请稍后重试'; }
+    else { this.message = step + '失败，请稍后重试'; }
+    if (this.error && typeof code === 'number') { this.message += '（错误码：' + code.toString() + '）'; }
   }
 
   private async syncProgress(progress: cloudSync.SyncProgress): Promise<void> {
@@ -115,6 +143,10 @@ export struct HuaweiCloudPage {
     if (progress.state === cloudSync.SyncState.COMPLETED) {
       this.syncStatus = '云空间同步已完成';
       this.lastSync = await this.service?.lastSyncTime().catch(() => 0) || 0;
+      try {
+        const records = await this.service?.list() || [];
+        if (this.active && this.connected) { this.records = records; this.recordsLoaded = true; }
+      } catch (error) { if (this.active) { this.failure(error as Error, '同步后读取备份目录'); } }
     } else if (progress.error === cloudSync.ErrorType.CLOUD_STORAGE_FULL) { this.syncStatus = '云空间不足，同步已暂停'; }
     else if (progress.error === cloudSync.ErrorType.NETWORK_UNAVAILABLE || progress.error === cloudSync.ErrorType.WIFI_UNAVAILABLE) {
       this.syncStatus = '网络不可用，同步已暂停';
@@ -127,10 +159,14 @@ export struct HuaweiCloudPage {
   private async refresh(): Promise<void> {
     if (this.busy || !this.connected || this.service === undefined) { return; }
     this.setBusy(true); this.message = ''; this.error = false;
+    let step = '请求云同步';
     try {
-      this.records = await this.service.list();
+      // A directory read failure must not prevent metadata synchronization after reinstall.
       await this.service.requestSync(); this.syncStatus = '已请求同步，等待系统完成';
-    } catch (error) { this.failure(error as Error); }
+      step = '读取备份目录';
+      this.records = await this.service.list();
+      this.recordsLoaded = true;
+    } catch (error) { this.failure(error as Error, step); }
     finally { this.setBusy(false); }
   }
 
@@ -147,10 +183,37 @@ export struct HuaweiCloudPage {
       this.message = '正在生成完整备份…';
       await this.service.create(backup);
       this.records = await this.service.list();
+      this.recordsLoaded = true;
       this.message = '备份已写入云目录，等待系统同步；可稍后查看同步状态';
       await this.service.requestSync(); this.syncStatus = '已请求同步，等待系统完成';
     } catch (error) { this.failure(error as Error); }
     finally { this.setBusy(false); }
+  }
+
+  private async deleteBackup(record: CloudBackupRecord): Promise<void> {
+    if (this.busy || !this.connected || this.preview !== undefined || this.recoveryRequired || this.service === undefined) { return; }
+    this.setBusy(true); this.message = ''; this.error = false;
+    let deleted = false;
+    try {
+      const account = await HuaweiAccountConnection.current();
+      const result = await this.getUIContext().getPromptAction().showDialog({
+        title: '删除这份云备份？',
+        message: this.date(record.createdAt) + ' · ' + (record.bytes / 1024 / 1024).toFixed(2) +
+          ' MiB\n删除将同步到云端及其他设备，无法通过本应用撤销。不影响当前账本和其他备份。',
+        buttons: [{ text: '取消', color: $r('app.color.xq_font_primary') }, { text: '删除备份', color: $r('app.color.xq_warning') }]
+      }).catch(() => undefined);
+      if (result?.index !== 1) { return; }
+      if (await HuaweiAccountConnection.current() !== account) { throw new Error('HUAWEI_ACCOUNT_CHANGED'); }
+      await this.service.remove(record);
+      deleted = true;
+      this.records = this.records.filter((item: CloudBackupRecord) => item.name !== record.name);
+      this.message = '备份已从本地云目录删除，等待云端同步';
+      await this.service.requestSync();
+      this.syncStatus = '已请求同步，等待系统完成';
+    } catch (error) {
+      if (deleted) { this.message = '备份已从本地云目录删除，但请求同步失败，请稍后刷新重试'; this.error = true; }
+      else { this.failure(error as Error, '删除备份'); }
+    } finally { this.setBusy(false); }
   }
 
   private async choose(record: CloudBackupRecord): Promise<void> {
@@ -218,25 +281,9 @@ export struct HuaweiCloudPage {
     HdsNavigation() {
       Scroll(this.scroller) {
         Column({ space: 16 }) {
-          Column({ space: 12 }) {
-            Text(this.connected ? '已连接华为账号' : '连接华为账号').fontSize('18fp').fontWeight(FontWeight.Medium)
-              .fontColor($r('app.color.xq_font_primary')).width('100%')
-            Text('使用当前设备的华为账号管理云备份。登录不会自动上传账本，不获取手机号。').fontSize('12fp')
-              .fontColor($r('app.color.xq_font_secondary')).width('100%')
-            if (!this.connected && canIUse('SystemCapability.AuthenticationServices.HuaweiID.UIComponent')) {
-              LoginWithHuaweiIDButton({ params: this.loginParams, controller: this.loginController }).width('100%').height(44).enabled(!this.busy)
-            } else if (!this.connected) {
-              Text('当前设备暂不支持华为账号登录').fontSize('14fp').fontColor($r('app.color.xq_font_secondary'))
-            } else {
-              Button('更新头像昵称').fontSize('14fp').fontColor($r('app.color.xq_font_emphasize')).backgroundColor(Color.Transparent)
-                .enabled(!this.busy).onClick(() => { this.authorizeProfile(); })
-              Button('断开应用内连接').fontSize('14fp').fontColor($r('app.color.xq_font_secondary')).backgroundColor(Color.Transparent)
-                .enabled(!this.busy && this.preview === undefined).onClick(() => {
-                  HuaweiAccountConnection.disconnect(); this.service?.close(); this.connected = false; this.records = []; this.lastSync = 0;
-                  this.syncStatus = '已断开应用内连接'; this.message = '系统云空间开关不受此操作影响，已写入云目录的文件仍可能继续同步'; this.error = false;
-                })
-            }
-          }.padding(16).width('100%').borderRadius(16).backgroundColor($r('app.color.xq_app_surface_card'))
+          if (!this.connected && canIUse('SystemCapability.AuthenticationServices.HuaweiID.UIComponent')) {
+            LoginWithHuaweiIDButton({ params: this.loginParams, controller: this.loginController }).width('100%').height(44).enabled(!this.busy)
+          }
           Column({ space: 12 }) {
             Text('云空间备份').fontSize('18fp').fontWeight(FontWeight.Medium).fontColor($r('app.color.xq_font_primary')).width('100%')
             Text(this.syncStatus).fontSize('14fp').fontColor($r('app.color.xq_font_secondary')).width('100%')
@@ -257,7 +304,7 @@ export struct HuaweiCloudPage {
           Text('记录来自云目录；文件写入成功不代表已上传完成，请结合系统同步状态查看。').fontSize('12fp')
             .fontColor($r('app.color.xq_font_secondary')).width('100%')
           if (this.records.length === 0) {
-            Text(this.connected ? '暂无备份记录，开启同步后可刷新查看' : '连接华为账号后查看备份').fontSize('14fp')
+            Text(!this.connected ? '连接华为账号后查看备份' : this.recordsLoaded ? '暂无备份记录，开启同步后可刷新查看' : this.busy ? '正在读取备份记录…' : '备份记录尚未读取成功，请刷新重试').fontSize('14fp')
               .fontColor($r('app.color.xq_font_secondary')).width('100%').padding({ top: 12, bottom: 12 })
           }
           ForEach(this.records, (record: CloudBackupRecord) => {
@@ -266,9 +313,15 @@ export struct HuaweiCloudPage {
                 Text(this.date(record.createdAt)).fontSize('16fp').fontColor($r('app.color.xq_font_primary'))
                 Text((record.bytes / 1024 / 1024).toFixed(2) + ' MiB').fontSize('12fp').fontColor($r('app.color.xq_font_secondary'))
               }.layoutWeight(1).alignItems(HorizontalAlign.Start)
-              Button('查看并恢复').fontSize('12fp').fontColor($r('app.color.xq_font_emphasize'))
-                .backgroundColor($r('app.color.xq_app_surface_page')).enabled(this.ready && !this.busy && !this.recoveryRequired)
-                .onClick(() => { this.choose(record); })
+              Button({ type: ButtonType.Circle }) {
+                Image($r('app.media.lucide_ellipsis1')).width(20).height(20).fillColor($r('app.color.xq_icon_secondary'))
+              }.width(40).height(40).padding(0).backgroundColor(Color.Transparent)
+                .enabled(this.connected && !this.busy && !this.recoveryRequired && this.preview === undefined)
+                .accessibilityText(this.date(record.createdAt) + '备份的更多操作')
+                .bindMenu([
+                  { value: '查看并恢复', enabled: this.ready, action: () => { this.choose(record); } },
+                  { value: '删除备份', action: () => { this.deleteBackup(record); } }
+                ], { placement: Placement.BottomRight })
             }.width('100%').padding(16).borderRadius(16).backgroundColor($r('app.color.xq_app_surface_card'))
           }, (record: CloudBackupRecord) => record.name)
           if (this.preview !== undefined) {
@@ -285,7 +338,12 @@ export struct HuaweiCloudPage {
             }.padding(16).width('100%').borderRadius(16).backgroundColor($r('app.color.xq_app_surface_card'))
           }
           if (this.message.length > 0) { Text(this.message).fontSize('14fp').fontColor(this.error ? $r('app.color.xq_warning') : $r('app.color.xq_font_secondary')).width('100%') }
-          Text('云备份包含完整账本和附件，不会自动合并多设备账目。应用不保存登录令牌；重新启动后需要再次连接。').fontSize('12fp')
+          if (this.connected) {
+            Button('退出登录').width('100%').height(44).fontSize('14fp')
+              .fontColor($r('app.color.xq_warning')).backgroundColor($r('app.color.xq_app_surface_card'))
+              .enabled(!this.busy && this.preview === undefined).onClick(() => { this.logout(); })
+          }
+          Text('云备份包含完整账本和附件，不会自动合并多设备账目。退出登录会撤销本应用的华为账号授权，下次登录需重新同意；不会退出系统华为账号或删除已有备份。').fontSize('12fp')
             .fontColor($r('app.color.xq_font_tertiary')).width('100%')
         }.width('100%').constraintSize({ maxWidth: 640 }).padding({ left: 16, right: 16, top: 12, bottom: 32 })
       }.width('100%').height('100%').align(Alignment.Top).scrollBar(BarState.Off).clip(false)

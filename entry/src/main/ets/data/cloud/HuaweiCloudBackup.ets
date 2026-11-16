@@ -2,8 +2,9 @@ import { authentication } from '@kit.AccountKit';
 import { common } from '@kit.AbilityKit';
 import { cloudSync, fileIo as fs, fileUri } from '@kit.CoreFileKit';
 import { cryptoFramework } from '@kit.CryptoArchitectureKit';
-import { deviceInfo } from '@kit.BasicServicesKit';
+import { BusinessError, deviceInfo } from '@kit.BasicServicesKit';
 import { util } from '@kit.ArkTS';
+import { preferences } from '@kit.ArkData';
 import { BackupFiles, PACKAGE_MAX_BYTES } from '../backup/BackupFiles';
 import { LedgerBackupPackage } from '../backup/LedgerBackupPackage';
 import { LocalBackupPreview } from '../rdb/LocalLedgerBackup';
@@ -11,19 +12,50 @@ import { LocalBackupPreview } from '../rdb/LocalLedgerBackup';
 export interface CloudBackupRecord { name: string; bytes: number; createdAt: number; }
 
 export interface HuaweiAccountProfile { nickName: string; avatarUri: string; }
+interface CachedHuaweiAccount { openID: string; nickName: string; avatarUri: string; }
+class CloudDirectoryError extends Error {
+  code: number;
+  constructor(stage: string, code: number) { super(stage); this.code = code; }
+}
 
 /** Client-side connection only: never persist authorization codes, tokens or client secrets. */
 export class HuaweiAccountConnection {
   private static openID: string = '';
   private static accountProfile: HuaweiAccountProfile = { nickName: '', avatarUri: '' };
+  private static store: preferences.Preferences | undefined = undefined;
+  static initialize(context: common.Context): void {
+    if (HuaweiAccountConnection.store !== undefined) { return; }
+    const store = preferences.getPreferencesSync(context, { name: 'huawei_account_connection' });
+    HuaweiAccountConnection.store = store;
+    const raw = store.getSync('account', '') as string;
+    if (!raw) { return; }
+    try {
+      const cached = JSON.parse(raw) as CachedHuaweiAccount;
+      if (typeof cached.openID !== 'string' || !cached.openID || typeof cached.nickName !== 'string' || typeof cached.avatarUri !== 'string') {
+        throw new Error('INVALID_ACCOUNT_CACHE');
+      }
+      HuaweiAccountConnection.openID = cached.openID;
+      HuaweiAccountConnection.accountProfile = { nickName: cached.nickName.trim().substring(0, 20),
+        avatarUri: /^https:\/\//i.test(cached.avatarUri) ? cached.avatarUri : '' };
+    } catch (_) { HuaweiAccountConnection.disconnect(); }
+  }
+  private static persist(): void {
+    const cached: CachedHuaweiAccount = { openID: HuaweiAccountConnection.openID,
+      nickName: HuaweiAccountConnection.accountProfile.nickName, avatarUri: HuaweiAccountConnection.accountProfile.avatarUri };
+    HuaweiAccountConnection.store?.putSync('account', JSON.stringify(cached));
+    HuaweiAccountConnection.store?.flushSync();
+  }
   static connect(openID: string): void {
     if (!openID) { throw new Error('HUAWEI_ACCOUNT_REQUIRED'); }
     if (HuaweiAccountConnection.openID !== openID) { HuaweiAccountConnection.accountProfile = { nickName: '', avatarUri: '' }; }
     HuaweiAccountConnection.openID = openID;
+    HuaweiAccountConnection.persist();
   }
   static disconnect(): void {
     HuaweiAccountConnection.openID = '';
     HuaweiAccountConnection.accountProfile = { nickName: '', avatarUri: '' };
+    HuaweiAccountConnection.store?.deleteSync('account');
+    HuaweiAccountConnection.store?.flushSync();
   }
   static profile(): HuaweiAccountProfile { return HuaweiAccountConnection.accountProfile; }
 
@@ -40,6 +72,7 @@ export class HuaweiAccountConnection {
     const uri = credential.avatarUri || '';
     HuaweiAccountConnection.accountProfile = { nickName: (credential.nickName || '').trim().substring(0, 20),
       avatarUri: /^https:\/\//i.test(uri) ? uri : '' };
+    HuaweiAccountConnection.persist();
     return HuaweiAccountConnection.accountProfile;
   }
   static async current(): Promise<string> {
@@ -56,10 +89,13 @@ export class HuaweiAccountConnection {
 /** Own immutable backup files only. The live SQLite database stays outside the cloud filesystem. */
 export class HuaweiCloudBackup {
   private readonly context: common.Context;
-  private readonly root: string = '/data/storage/el2/cloud';
+  private readonly root: string;
   private sync: cloudSync.FileSync | undefined = undefined;
   private listener: ((progress: cloudSync.SyncProgress) => void) | undefined = undefined;
-  constructor(context: common.Context) { this.context = context; }
+  constructor(context: common.Context) {
+    this.context = context;
+    this.root = context.cloudFileDir.replace(/\/+$/, '');
+  }
 
   static available(): boolean {
     return deviceInfo.sdkApiVersion >= 21 && canIUse('SystemCapability.FileManagement.DistributedFileService.CloudSync.Core');
@@ -67,6 +103,7 @@ export class HuaweiCloudBackup {
 
   private async directory(): Promise<string> {
     if (!HuaweiCloudBackup.available()) { throw new Error('CLOUD_UNSUPPORTED'); }
+    if (!this.root) { throw new Error('CLOUD_NOT_READY'); }
     const id = await HuaweiAccountConnection.current();
     const md = cryptoFramework.createMd('SHA256');
     await md.update({ data: new util.TextEncoder().encodeInto(id) });
@@ -100,12 +137,25 @@ export class HuaweiCloudBackup {
 
   async list(): Promise<CloudBackupRecord[]> {
     const directory = await this.directory();
-    if (!await fs.access(directory)) { return []; }
-    const names = await fs.listFile(directory);
+    // Read directly: an access preflight is neither required nor authoritative on cloud files.
+    let names: string[];
+    try { names = await fs.listFile(directory); }
+    catch (error) {
+      const code = (error as BusinessError).code;
+      if (code === 13900002) { await HuaweiAccountConnection.current(); return []; }
+      if (code === 13900012) {
+        // Read-only probe distinguishes an unavailable cloud mount from a denied backup subdirectory.
+        try { await fs.listFile(this.root); }
+        catch (rootError) { throw new CloudDirectoryError('CLOUD_ROOT_LIST', (rootError as BusinessError).code); }
+      }
+      throw new CloudDirectoryError('CLOUD_BACKUP_LIST', code);
+    }
     const records: CloudBackupRecord[] = [];
     for (const name of names) {
       if (!/^backup-\d{13}-[0-9a-f-]{36}\.xqbackup$/.test(name)) { continue; }
-      const stat = await fs.lstat(directory + '/' + name);
+      let stat: fs.Stat;
+      try { stat = await fs.lstat(directory + '/' + name); }
+      catch (error) { throw new CloudDirectoryError('CLOUD_BACKUP_STAT', (error as BusinessError).code); }
       if (stat.isFile() && !stat.isSymbolicLink() && stat.size > 0 && stat.size <= PACKAGE_MAX_BYTES) {
         records.push({ name: name, bytes: stat.size, createdAt: Number(name.substring(7, 20)) });
       }
@@ -133,6 +183,16 @@ export class HuaweiCloudBackup {
       await BackupFiles.remove(local);
       if (partial.length > 0) { await BackupFiles.remove(partial); }
     }
+  }
+
+  async remove(record: CloudBackupRecord): Promise<void> {
+    const account = await HuaweiAccountConnection.current();
+    if (!/^backup-\d{13}-[0-9a-f-]{36}\.xqbackup$/.test(record.name)) { throw new Error('CLOUD_BACKUP_NAME'); }
+    const path = await this.directory() + '/' + record.name;
+    const stat = await fs.lstat(path);
+    if (!stat.isFile() || stat.isSymbolicLink()) { throw new Error('CLOUD_BACKUP_NAME'); }
+    if (await HuaweiAccountConnection.current() !== account) { throw new Error('HUAWEI_ACCOUNT_CHANGED'); }
+    await fs.unlink(path);
   }
 
   private async cache(path: string): Promise<void> {
