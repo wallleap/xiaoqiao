@@ -1,3 +1,10 @@
+import { FxConversion } from '../../core/money/FxConversion';
+import { parseFxEntry } from '../../domain/model/FxEntrySnapshot';
+import { validateConversion } from '../../core/money/FxConversion';
+import { RdbFxSnapshots } from './RdbFxSnapshots';
+import { OfficialExchangeRates } from '../exchange/OfficialExchangeRates';
+import { currencyUnit } from '../../core/money/Currencies';
+import { ExchangeRate } from '../../core/money/ExchangeRate';
 import { RecoveryCommand } from '../../domain/model/ExpenseRecovery';
 import { RdbRecoveryRepository } from './RdbRecoveryRepository';
 import { LedgerBackupPackage } from '../backup/LedgerBackupPackage';
@@ -70,6 +77,7 @@ export class LedgerWorkspace {
   private activeBookId: string = DEFAULT_BOOK_ID;
 
   private constructor(context: common.Context, name: string, store: relationalStore.RdbStore) {
+    OfficialExchangeRates.initialize(context);
     this.store = store;
     this.session = RdbSession.forStore(store);
     this.localBackup = new LocalLedgerBackup(context, name, this.session);
@@ -401,13 +409,17 @@ export class LedgerWorkspace {
         .concat(validRows.filter((row: CsvPreviewRow) => row.type === 'refund' || row.type === 'reimbursement'));
       let processed = 0;
       for (const row of orderedRows) {
+        const fx = row.fx === undefined ? undefined : parseFxEntry(JSON.stringify(row.fx));
+        const code = fx?.currencyId || 'CNY';
+        const accountCode = row.type === 'transfer' ? code : fx?.accountCurrencyId || code;
+        const incomingCode = fx?.receivedCurrencyId || code;
         let categoryId = row.categoryId;
         let accountId = row.accountId;
         if (accountId.length === 0 && row.createAccount) {
-          const key = row.accountName.trim().toLowerCase();
+          const key = accountCode + ":" + row.accountName.trim().toLowerCase();
           accountId = createdAccounts.get(key) || '';
           if (accountId.length === 0) {
-            accountId = await this.ensureCsvAccount(db, row.accountName);
+            accountId = await this.ensureCsvAccount(db, row.accountName, accountCode);
             createdAccounts.set(key, accountId);
           }
         }
@@ -428,8 +440,8 @@ export class LedgerWorkspace {
           }
           const date = new Date(row.date + 'T' + (row.timeKnown ? row.time + ':00' : '12:00:00'));
           await RdbRecoveryRepository.save(db, { id: util.generateRandomUUID(), transactionId: parentId, bookId: this.activeBookId,
-            kind: row.type === 'refund' ? 'refund' : 'reimbursement', amountMinor: Money.parse(row.amount, this.currency).minor.toString(),
-            accountId: accountId, occurredAtMs: date.getTime(), localDate: row.date,
+            kind: row.type === 'refund' ? 'refund' : 'reimbursement', currencyId: code, amountMinor: Money.parse(row.amount, currencyUnit(code)).minor.toString(), accountMinor: fx?.accountMinor, accountFx: fx?.accountFx,
+            accountId: accountId, bookMinor: fx?.bookMinor, occurredAtMs: date.getTime(), localDate: row.date,
             offsetMinutes: -date.getTimezoneOffset(), note: row.note }, batchId, row.sourceId || String(row.rowNumber), applyBalance,
             importRowIds.get(row.rowNumber) || '');
           processed++; onProgress(processed, validRows.length);
@@ -437,18 +449,18 @@ export class LedgerWorkspace {
         }
         let toAccountId = row.toAccountId || '';
         if (toAccountId.length === 0 && row.createToAccount === true && (row.toAccountName || '').trim().length > 0) {
-          const key = (row.toAccountName || '').trim().toLowerCase();
+          const key = incomingCode + ':' + (row.toAccountName || '').trim().toLowerCase();
           toAccountId = createdAccounts.get(key) || '';
           if (toAccountId.length === 0) {
-            toAccountId = await this.ensureCsvAccount(db, row.toAccountName || '');
+            toAccountId = await this.ensureCsvAccount(db, row.toAccountName || '', incomingCode);
             createdAccounts.set(key, toAccountId);
           }
         }
-        await this.validateCsvAccount(db, accountId, false, row.type === 'transfer');
+        await this.validateCsvAccount(db, accountId, false, row.type === 'transfer', accountCode);
         await this.validateCsvAccount(db, toAccountId,
           row.type === 'transfer' &&
             (row.transferPurpose === 'credit_repayment' || row.transferPurpose === 'loan_repayment'),
-          row.type === 'transfer');
+          row.type === 'transfer', incomingCode);
         if (row.type === 'transfer') {
           if (accountId.length === 0 || toAccountId.length === 0 || accountId === toAccountId) {
             throw new Error('CSV_TRANSFER_ACCOUNT_INVALID');
@@ -476,7 +488,7 @@ export class LedgerWorkspace {
         }
         const occurred = new Date(row.date + 'T' + (row.timeKnown ? (row.time + ':00') : '12:00:00'));
         const transactionId = util.generateRandomUUID();
-        const amount = Money.parse(row.amount, this.currency).toSafeMinorNumber();
+        const amount = Money.parse(row.amount, currencyUnit(code)).toSafeMinorNumber();
         let merchantId: string | null = null;
         if (row.merchant.trim().length > 0) {
           const merchantKey = row.merchant.trim().toLowerCase().replace(/\s+/g, '');
@@ -489,8 +501,8 @@ export class LedgerWorkspace {
         const location = validateLedgerLocation(row.location);
         await db.insert('transactions', { id: transactionId, book_id: this.activeBookId, kind: row.type,
           category_id: row.type === 'transfer' ? null : categoryId,
-          currency_id: 'CNY', gross_minor: amount, discount_minor: 0,
-          paid_minor: amount, book_currency_id: 'CNY', book_minor: amount, include_in_budget: row.type === 'expense' && row.includeInBudget ? 1 : 0,
+          currency_id: code, gross_minor: fx === undefined ? amount : Number(fx.grossMinor), discount_minor: fx === undefined ? 0 : Number(fx.discountMinor),
+          paid_minor: amount, book_currency_id: 'CNY', book_minor: fx === undefined ? amount : Number(fx.bookMinor), include_in_budget: row.type === 'expense' && row.includeInBudget ? 1 : 0,
           spending_nature_id: row.type === 'expense' ? row.spendingNatureId || null : null,
           include_in_assets: accountId.length > 0 ? 1 : 0, balance_mode: applyBalance ? 'apply' : 'preserve',
           reimbursement_status: row.type === 'expense' && row.reimbursementPending ? 'pending' : 'none',
@@ -506,27 +518,39 @@ export class LedgerWorkspace {
           occurred_timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
           occurred_offset_minutes: -occurred.getTimezoneOffset(), created_at_ms: now, updated_at_ms: now });
         if (row.type === 'transfer') {
-          const fee = Money.parse(row.transferFee || '0', this.currency);
-          const coupon = Money.parse(row.transferCoupon || '0', this.currency);
-          const outgoing = Money.fromMinorText(String(amount), this.currency).add(fee).subtract(coupon);
-          await db.insert('transfer_details', { transaction_id: transactionId,
-            purpose: row.transferPurpose || 'transfer', currency_id: 'CNY',
+          const fee = Money.parse(row.transferFee || '0', currencyUnit(code));
+          const coupon = Money.parse(row.transferCoupon || '0', currencyUnit(code));
+          const outgoing = Money.fromMinorText(String(amount), currencyUnit(code)).add(fee).subtract(coupon);
+          if (fx !== undefined) {
+            const bookFee = Money.fromMinorText(fx.bookFeeMinor || '0', this.currency);
+            if (fee.minor > BigInt(0)) { validateConversion(fee, bookFee, fx.bookFx); }
+            else if (bookFee.minor !== BigInt(0)) { throw new Error('FX_AMOUNT_MISMATCH'); }
+          }
+          await db.insert('fx_transfer_details', { transaction_id: transactionId,
+            to_currency_id: incomingCode, principal_minor: amount, book_fee_minor: fx === undefined ? fee.toSafeMinorNumber() : Number(fx.bookFeeMinor || '0'),
+            purpose: row.transferPurpose || 'transfer', currency_id: code,
             from_account_id: accountId, to_account_id: toAccountId,
-            out_minor: outgoing.toSafeMinorNumber(), in_minor: amount,
+            out_minor: outgoing.toSafeMinorNumber(), in_minor: fx === undefined ? amount : Number(fx.receivedMinor || fx.paidMinor),
             fee_minor: fee.toSafeMinorNumber(), coupon_minor: coupon.toSafeMinorNumber(),
             fee_in_expense: 1, fee_in_budget: row.feeInBudget === true || metadata.feeInBudget ? 1 : 0 });
           if (outgoing.minor > BigInt(0)) {
             await db.insert('account_movements', { id: util.generateRandomUUID(), transaction_id: transactionId,
-              account_id: accountId, currency_id: 'CNY', leg: 'transfer_out',
+              account_id: accountId, currency_id: code, leg: 'transfer_out',
               delta_minor: -outgoing.toSafeMinorNumber(), occurred_at_ms: occurred.getTime() });
           }
           await db.insert('account_movements', { id: util.generateRandomUUID(), transaction_id: transactionId,
-            account_id: toAccountId, currency_id: 'CNY', leg: 'transfer_in',
-            delta_minor: amount, occurred_at_ms: occurred.getTime() });
+            account_id: toAccountId, currency_id: incomingCode, leg: 'transfer_in',
+            delta_minor: fx === undefined ? amount : Number(fx.receivedMinor || fx.paidMinor), occurred_at_ms: occurred.getTime() });
         } else if (accountId.length > 0) {
           await db.insert('account_movements', { id: util.generateRandomUUID(), transaction_id: transactionId,
-            account_id: accountId, currency_id: 'CNY', leg: row.type,
-            delta_minor: (row.type === 'income' ? 1 : -1) * amount, occurred_at_ms: occurred.getTime() });
+            account_id: accountId, currency_id: accountCode, leg: row.type,
+            delta_minor: (row.type === 'income' ? 1 : -1) * (fx === undefined ? amount : Number(fx.accountMinor)), occurred_at_ms: occurred.getTime() });
+        }
+        if (fx !== undefined) {
+          const original = Money.fromMinorText(fx.paidMinor, currencyUnit(code));
+          await RdbFxSnapshots.insert(db, transactionId, original, Money.fromMinorText(fx.bookMinor, this.currency), fx.bookFx);
+          const movement = await db.querySql('SELECT id,currency_id,CAST(abs(delta_minor) AS TEXT) FROM account_movements WHERE transaction_id=? AND leg=?', [transactionId, row.type === 'transfer' ? 'transfer_in' : row.type]);
+          try { if (movement.goToFirstRow()) { await RdbFxSnapshots.insert(db, transactionId, original, Money.fromMinorText(movement.getString(2), currencyUnit(movement.getString(1))), fx.accountFx, movement.getString(0)); } } finally { movement.close(); }
         }
         await db.executeSql("UPDATE transactions SET posting_state='posted' WHERE id=?", [transactionId]);
         if (row.type === 'expense' && row.sourceId.length > 0) {
@@ -717,7 +741,7 @@ export class LedgerWorkspace {
       address: index(mapping.address), latitude: index(mapping.latitude ?? -1),
       longitude: index(mapping.longitude ?? -1), includeInBudget: index(mapping.includeInBudget ?? -1),
       spendingNature: index(mapping.spendingNature ?? -1), originalEntryId: index(mapping.originalEntryId ?? -1),
-      reimbursementPending: index(mapping.reimbursementPending ?? -1), status: index(mapping.status)
+      reimbursementPending: index(mapping.reimbursementPending ?? -1), fx: index(mapping.fx ?? -1), currency: index(mapping.currency ?? -1), status: index(mapping.status)
     };
   }
 
@@ -761,14 +785,14 @@ export class LedgerWorkspace {
     return parentId || '';
   }
 
-  private async ensureCsvAccount(db: relationalStore.RdbStore, name: string): Promise<string> {
+  private async ensureCsvAccount(db: relationalStore.RdbStore, name: string, currency: string = 'CNY'): Promise<string> {
     const accountName = name.trim();
     if (accountName.length === 0) { return ''; }
     let id = '';
     let revision = 0;
     let archived = false;
-    const existing = await db.querySql("SELECT id,revision,archived_at_ms FROM accounts WHERE name=? AND currency_id='CNY' " +
-      'AND deleted_at_ms IS NULL LIMIT 1', [accountName]);
+    const existing = await db.querySql("SELECT id,revision,archived_at_ms FROM accounts WHERE name=? AND currency_id=? " +
+      'AND deleted_at_ms IS NULL LIMIT 1', [accountName, currency]);
     try {
       if (existing.goToFirstRow()) {
         id = existing.getString(0); revision = existing.getLong(1); archived = !existing.isColumnNull(2);
@@ -788,19 +812,19 @@ export class LedgerWorkspace {
     const now = Date.now();
     id = util.generateRandomUUID();
     await db.insert('accounts', { id: id, name: accountName, kind: liability ? 'liability' : 'asset',
-      currency_id: 'CNY', brand: 'cash', icon_key: 'cash', icon_variant: 'monochrome',
+      currency_id: currency, brand: 'cash', icon_key: 'cash', icon_variant: 'monochrome',
       brand_color: '#D49A38', include_in_net_assets: 1, sort_order: sortOrder, created_at_ms: now, updated_at_ms: now });
     return id;
   }
 
   private async validateCsvAccount(db: relationalStore.RdbStore, id: string, requireLiability: boolean,
-    required: boolean): Promise<void> {
+    required: boolean, currency: string = 'CNY'): Promise<void> {
     if (id.length === 0) {
       if (required) { throw new Error('CSV_ACCOUNT_INVALID'); }
       return;
     }
-    const account = await db.querySql("SELECT kind FROM accounts WHERE id=? AND currency_id='CNY' AND deleted_at_ms IS NULL",
-      [id]);
+    const account = await db.querySql("SELECT kind FROM accounts WHERE id=? AND currency_id=? AND deleted_at_ms IS NULL",
+      [id, currency]);
     try {
       if (!account.goToFirstRow() || (requireLiability && account.getString(0) !== 'liability')) {
         throw new Error(requireLiability ? 'CSV_TRANSFER_REPAYMENT_ACCOUNT_INVALID' : 'CSV_ACCOUNT_INVALID');
@@ -1079,7 +1103,28 @@ export class LedgerWorkspace {
     await this.updater.execute(command, expectedRevision);
   }
 
-  async accountOverview(): Promise<AccountOverview> { return this.accountRepository.snapshot(); }
+  async accountOverview(): Promise<AccountOverview> {
+    const result = await this.accountRepository.snapshot();
+    let assets = BigInt(result.assetsMinor); let liabilities = BigInt(result.liabilitiesMinor);
+    const missing: string[] = [];
+    const now = new Date();
+    const date = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
+    for (const account of result.accounts) {
+      if (!account.includeInNetAssets || account.currencyId === 'CNY' || account.balanceMinor === '0') { continue; }
+      try {
+        const quote = await OfficialExchangeRates.quote(account.currencyId, 'CNY', date);
+        const converted = new ExchangeRate(currencyUnit(account.currencyId), this.currency, quote.rate)
+          .convert(Money.fromMinorText(account.balanceMinor, currencyUnit(account.currencyId))).minor;
+        if (converted >= BigInt(0)) { assets += converted; } else { liabilities -= converted; }
+        result.valuationDate = quote.date;
+      } catch (_) { if (!missing.includes(account.currencyId)) { missing.push(account.currencyId); } }
+    }
+    result.valuationMissing = missing;
+    result.assetsMinor = missing.length > 0 ? '' : assets.toString();
+    result.liabilitiesMinor = missing.length > 0 ? '' : liabilities.toString();
+    result.netMinor = missing.length > 0 ? '' : (assets-liabilities).toString();
+    return result;
+  }
   async calibrateAccount(command: AccountCalibrationCommand): Promise<void> { await this.accountRepository.calibrate(command); }
   async accountAdjustments(id: string, cursor: AdjustmentCursor | undefined = undefined): Promise<AdjustmentPage> { return this.accountRepository.adjustmentHistory(id, cursor); }
   async createAccount(command: AccountCommand): Promise<void> { await this.accountRepository.create(command); }
@@ -1126,13 +1171,12 @@ export class LedgerWorkspace {
       this.activeBookId = await this.activeBookFromMeta(db);
       const linked = await db.querySql('SELECT transaction_id FROM v_expense_recoveries WHERE id=? AND book_id=?', [id, this.activeBookId]);
       try { if (linked.goToFirstRow()) { id = linked.getString(0); } } finally { linked.close(); }
-      const rows = await db.querySql("SELECT t.id,t.book_id,b.name,t.kind,t.revision,COALESCE(t.category_id,''),COALESCE(c.name,'转账'),COALESCE(c.icon_key,'other'),COALESCE(m.account_id,d.from_account_id,''),COALESCE(a.name,''),t.currency_id,u.code,u.symbol,u.minor_unit,CAST(t.gross_minor AS TEXT),CAST(t.discount_minor AS TEXT),CAST(t.paid_minor AS TEXT),CAST(COALESCE(t.book_minor,t.paid_minor) AS TEXT),t.include_in_budget,t.include_in_assets,t.balance_mode,t.occurred_at_ms,t.occurred_local_date,t.occurred_timezone,t.occurred_offset_minutes,t.note,t.book_currency_id,COALESCE(m.currency_id,t.currency_id),(SELECT COUNT(*) FROM fx_snapshots WHERE transaction_id=t.id),COALESCE(mi.account_id,''),COALESCE(ai.name,''),COALESCE(mi.currency_id,t.currency_id),t.group_id,COALESCE(d.purpose,'transfer'),CAST(COALESCE(d.out_minor,t.paid_minor) AS TEXT),CAST(COALESCE(d.in_minor,t.paid_minor) AS TEXT),CAST(COALESCE(d.fee_minor,0) AS TEXT),CAST(COALESCE(d.coupon_minor,0) AS TEXT),COALESCE(d.fee_in_expense,1),COALESCE(d.fee_in_budget,1),COALESCE(a.kind,'asset'),COALESCE(ai.kind,'asset'),COALESCE(nt.spending_nature_id,''),COALESCE(n.name,''),COALESCE(n.custom_color,n.color_token,'') FROM v_posted_transactions t JOIN transactions nt ON nt.id=t.id JOIN books b ON b.id=t.book_id JOIN currencies u ON u.id=t.currency_id LEFT JOIN categories c ON c.id=t.category_id LEFT JOIN spending_natures n ON n.id=nt.spending_nature_id LEFT JOIN transfer_details d ON d.transaction_id=t.id LEFT JOIN account_movements m ON m.transaction_id=t.id AND m.leg<>'transfer_in' LEFT JOIN accounts a ON a.id=COALESCE(m.account_id,d.from_account_id) LEFT JOIN account_movements mi ON mi.transaction_id=t.id AND mi.leg='transfer_in' LEFT JOIN accounts ai ON ai.id=mi.account_id WHERE t.id=? AND t.book_id=?",
+      const rows = await db.querySql("SELECT t.id,t.book_id,b.name,t.kind,t.revision,COALESCE(t.category_id,''),COALESCE(c.name,'转账'),COALESCE(c.icon_key,'other'),COALESCE(m.account_id,d.from_account_id,''),COALESCE(a.name,''),t.currency_id,u.code,u.symbol,u.minor_unit,CAST(t.gross_minor AS TEXT),CAST(t.discount_minor AS TEXT),CAST(t.paid_minor AS TEXT),CAST(COALESCE(t.book_minor,t.paid_minor) AS TEXT),t.include_in_budget,t.include_in_assets,t.balance_mode,t.occurred_at_ms,t.occurred_local_date,t.occurred_timezone,t.occurred_offset_minutes,t.note,t.book_currency_id,COALESCE(m.currency_id,t.currency_id),(SELECT COUNT(*) FROM fx_snapshots WHERE transaction_id=t.id),COALESCE(mi.account_id,''),COALESCE(ai.name,''),COALESCE(mi.currency_id,t.currency_id),t.group_id,COALESCE(d.purpose,'transfer'),CAST(COALESCE(d.out_minor,t.paid_minor) AS TEXT),CAST(COALESCE(d.in_minor,t.paid_minor) AS TEXT),CAST(COALESCE(d.fee_minor,0) AS TEXT),CAST(COALESCE(d.coupon_minor,0) AS TEXT),COALESCE(d.fee_in_expense,1),COALESCE(d.fee_in_budget,1),COALESCE(a.kind,'asset'),COALESCE(ai.kind,'asset'),COALESCE(nt.spending_nature_id,''),COALESCE(n.name,''),COALESCE(n.custom_color,n.color_token,'') FROM v_posted_transactions t JOIN transactions nt ON nt.id=t.id JOIN books b ON b.id=t.book_id JOIN currencies u ON u.id=t.currency_id LEFT JOIN categories c ON c.id=t.category_id LEFT JOIN spending_natures n ON n.id=nt.spending_nature_id LEFT JOIN v_transfer_details d ON d.transaction_id=t.id LEFT JOIN account_movements m ON m.transaction_id=t.id AND m.leg<>'transfer_in' LEFT JOIN accounts a ON a.id=COALESCE(m.account_id,d.from_account_id) LEFT JOIN account_movements mi ON mi.transaction_id=t.id AND mi.leg='transfer_in' LEFT JOIN accounts ai ON ai.id=mi.account_id WHERE t.id=? AND t.book_id=?",
         [id, this.activeBookId]);
       let detail: EntryDetail;
       try {
         if (!rows.goToFirstRow()) { throw new Error('TRANSACTION_NOT_FOUND'); }
-        const canEdit = (rows.getString(3) === 'expense' || rows.getString(3) === 'income' || rows.getString(3) === 'transfer') && rows.getString(10) === this.currency.id &&
-          rows.getString(26) === this.currency.id && rows.getString(27) === this.currency.id && rows.getLong(28) === 0 && (rows.getString(3) !== 'transfer' || (rows.getString(29).length > 0 && rows.getString(31) === this.currency.id && rows.isColumnNull(32)));
+        const canEdit = ['expense','income','transfer'].includes(rows.getString(3)) && rows.isColumnNull(32);
         detail = { id: rows.getString(0), bookId: rows.getString(1), bookName: rows.getString(2), kind: rows.getString(3),
           revision: rows.getLong(4), categoryId: rows.getString(5), categoryName: rows.getString(6), categoryPath: rows.getString(6),
           iconKey: rows.getString(7), accountId: rows.getString(8), accountName: rows.getString(9), currencyId: rows.getString(10),
@@ -1145,6 +1189,10 @@ export class LedgerWorkspace {
           feeInExpense: rows.getLong(38) === 1, feeInBudget: rows.getLong(39) === 1, accountKind: rows.getString(40), toAccountKind: rows.getString(41),
           spendingNatureId: rows.getString(42), spendingNatureName: rows.getString(43), spendingNatureColor: rows.getString(44), canEdit: canEdit };
       } finally { rows.close(); }
+      detail.bookFx = await RdbFxSnapshots.read(db, detail.id, 'book');
+      detail.accountFx = await RdbFxSnapshots.read(db, detail.id, 'settlement');
+      const settlement = await db.querySql("SELECT currency_id,CAST(abs(delta_minor) AS TEXT) FROM account_movements WHERE transaction_id=? AND leg=?", [detail.id, detail.kind === 'transfer' ? 'transfer_in' : detail.kind]);
+      try { if (settlement.goToFirstRow()) { detail.accountCurrencyId = settlement.getString(0); detail.accountMinor = settlement.getString(1); } } finally { settlement.close(); }
       const path: string[] = [];
       const visited: Set<string> = new Set();
       let categoryId = detail.categoryId;
@@ -1312,13 +1360,13 @@ export class LedgerWorkspace {
       let income: bigint = BigInt(0);
       let expense: bigint = BigInt(0);
       let budgetUsed: bigint = BigInt(0);
-      const rows = await db.querySql("SELECT t.id,t.note,CASE WHEN t.kind='transfer' THEN CASE d.purpose WHEN 'credit_repayment' THEN '信用卡还款' WHEN 'loan_repayment' THEN '借款还款' WHEN 'topup' THEN '充值' WHEN 'withdrawal' THEN '提现' ELSE '转账' END ELSE c.name END,COALESCE(c.icon_key,'transfer'),COALESCE(a.name,'不使用账户'),t.occurred_local_date,t.occurred_at_ms,t.occurred_offset_minutes,t.kind,CAST(COALESCE(t.book_minor,t.paid_minor) AS TEXT),t.include_in_budget,CAST(t.gross_minor AS TEXT),CAST(t.discount_minor AS TEXT),COALESCE(ai.name,''),CAST(COALESCE(d.out_minor,t.paid_minor) AS TEXT),CAST(COALESCE(d.fee_minor,0) AS TEXT),CAST(COALESCE(d.coupon_minor,0) AS TEXT),COALESCE(d.purpose,'transfer'),COALESCE(d.fee_in_expense,1),COALESCE(d.fee_in_budget,1),COALESCE(t.merchant_name_snapshot,mc.name,''),COALESCE(t.address_text,''),COALESCE(m.account_id,d.from_account_id,''),COALESCE(t.merchant_id,''),t.latitude_e6,t.longitude_e6,t.reimbursement_status,CAST(COALESCE((SELECT SUM(r.amount_minor) FROM v_expense_recoveries r WHERE r.transaction_id=t.id),0) AS TEXT),COALESCE((SELECT name FROM spending_natures WHERE id=t.spending_nature_id),''),CAST(COALESCE((SELECT SUM(r.amount_minor) FROM v_expense_recoveries r WHERE r.transaction_id=t.id AND r.kind='reimbursement'),0) AS TEXT),CAST(COALESCE((SELECT SUM(r.amount_minor) FROM v_expense_recoveries r WHERE r.transaction_id=t.id AND r.kind='refund'),0) AS TEXT),COALESCE((SELECT COALESCE(custom_color,color_token) FROM spending_natures WHERE id=t.spending_nature_id),'') FROM transactions t LEFT JOIN categories c ON c.id=t.category_id LEFT JOIN transfer_details d ON d.transaction_id=t.id LEFT JOIN account_movements m ON m.transaction_id=t.id AND m.leg<>'transfer_in' LEFT JOIN accounts a ON a.id=COALESCE(m.account_id,d.from_account_id) LEFT JOIN account_movements mi ON mi.transaction_id=t.id AND mi.leg='transfer_in' LEFT JOIN accounts ai ON ai.id=mi.account_id LEFT JOIN merchants mc ON mc.id=t.merchant_id WHERE t.book_id=? AND t.posting_state='posted' AND t.deleted_at_ms IS NULL AND (t.import_batch_id IS NULL OR EXISTS(SELECT 1 FROM import_batches b WHERE b.id=t.import_batch_id AND b.status='committed')) AND (t.kind IN ('expense','income') OR (t.kind='transfer' AND t.currency_id='CNY' AND NOT EXISTS(SELECT 1 FROM account_movements x WHERE x.transaction_id=t.id AND x.currency_id<>'CNY'))) AND substr(t.occurred_local_date,1,7)=? ORDER BY t.occurred_at_ms DESC,t.created_at_ms DESC,t.id DESC", [this.activeBookId, month]);
+      const rows = await db.querySql("SELECT t.id,t.note,CASE WHEN t.kind='transfer' THEN CASE d.purpose WHEN 'credit_repayment' THEN '信用卡还款' WHEN 'loan_repayment' THEN '借款还款' WHEN 'topup' THEN '充值' WHEN 'withdrawal' THEN '提现' ELSE '转账' END ELSE c.name END,COALESCE(c.icon_key,'transfer'),COALESCE(a.name,'不使用账户'),t.occurred_local_date,t.occurred_at_ms,t.occurred_offset_minutes,t.kind,CAST(COALESCE(t.book_minor,t.paid_minor) AS TEXT),t.include_in_budget,CAST(t.gross_minor AS TEXT),CAST(t.discount_minor AS TEXT),COALESCE(ai.name,''),CAST(COALESCE(d.out_minor,t.paid_minor) AS TEXT),CAST(COALESCE(d.fee_minor,0) AS TEXT),CAST(COALESCE(d.coupon_minor,0) AS TEXT),COALESCE(d.purpose,'transfer'),COALESCE(d.fee_in_expense,1),COALESCE(d.fee_in_budget,1),COALESCE(t.merchant_name_snapshot,mc.name,''),COALESCE(t.address_text,''),COALESCE(m.account_id,d.from_account_id,''),COALESCE(t.merchant_id,''),t.latitude_e6,t.longitude_e6,t.reimbursement_status,CAST(COALESCE((SELECT SUM(r.amount_minor) FROM v_expense_recoveries r WHERE r.transaction_id=t.id),0) AS TEXT),COALESCE((SELECT name FROM spending_natures WHERE id=t.spending_nature_id),''),CAST(COALESCE((SELECT SUM(r.amount_minor) FROM v_expense_recoveries r WHERE r.transaction_id=t.id AND r.kind='reimbursement'),0) AS TEXT),CAST(COALESCE((SELECT SUM(r.amount_minor) FROM v_expense_recoveries r WHERE r.transaction_id=t.id AND r.kind='refund'),0) AS TEXT),COALESCE((SELECT COALESCE(custom_color,color_token) FROM spending_natures WHERE id=t.spending_nature_id),''),t.currency_id,CAST(t.paid_minor AS TEXT),CAST(COALESCE(d.book_fee_minor,0) AS TEXT) FROM transactions t LEFT JOIN categories c ON c.id=t.category_id LEFT JOIN v_transfer_details d ON d.transaction_id=t.id LEFT JOIN account_movements m ON m.transaction_id=t.id AND m.leg<>'transfer_in' LEFT JOIN accounts a ON a.id=COALESCE(m.account_id,d.from_account_id) LEFT JOIN account_movements mi ON mi.transaction_id=t.id AND mi.leg='transfer_in' LEFT JOIN accounts ai ON ai.id=mi.account_id LEFT JOIN merchants mc ON mc.id=t.merchant_id WHERE t.book_id=? AND t.posting_state='posted' AND t.deleted_at_ms IS NULL AND (t.import_batch_id IS NULL OR EXISTS(SELECT 1 FROM import_batches b WHERE b.id=t.import_batch_id AND b.status='committed')) AND t.kind IN ('expense','income','transfer') AND substr(t.occurred_local_date,1,7)=? ORDER BY t.occurred_at_ms DESC,t.created_at_ms DESC,t.id DESC", [this.activeBookId, month]);
       try {
         while (rows.goToNextRow()) {
           const isIncome = rows.getString(8) === 'income';
           const isTransfer = rows.getString(8) === 'transfer';
           const minor = rows.getString(9);
-          const feeExpense = isTransfer && rows.getLong(18) === 1 ? rows.getString(15) : '0';
+          const feeExpense = isTransfer && rows.getLong(18) === 1 ? rows.getString(34) : '0';
           if (isTransfer) { expense += BigInt(feeExpense); if (rows.getLong(19) === 1) { budgetUsed += BigInt(feeExpense); } }
           if (isIncome) { income += BigInt(minor); } else if (!isTransfer) { expense += BigInt(minor); }
           if (!isIncome && !isTransfer && rows.getLong(10) === 1) { budgetUsed += BigInt(minor); }
@@ -1335,7 +1383,7 @@ export class LedgerWorkspace {
               { latitudeE6: rows.getLong(24), longitudeE6: rows.getLong(25) } });
         }
       } finally { rows.close(); }
-      const receipts = await db.querySql("SELECT r.id,r.transaction_id,r.kind,CAST(r.amount_minor AS TEXT),COALESCE(a.name,'不使用账户'),COALESCE(r.account_id,''),r.local_date,r.occurred_at_ms,r.offset_minutes,r.note,c.name,COALESCE(c.icon_key,'other'),COALESCE(r.merchant_name_snapshot,''),COALESCE(r.address_text,''),r.latitude_e6,r.longitude_e6 FROM v_expense_recoveries r LEFT JOIN accounts a ON a.id=r.account_id LEFT JOIN categories c ON c.id=r.category_id WHERE r.book_id=? AND substr(r.local_date,1,7)=?", [this.activeBookId, month]);
+      const receipts = await db.querySql("SELECT r.id,r.transaction_id,r.kind,CAST(r.book_minor AS TEXT),COALESCE(a.name,'不使用账户'),COALESCE(r.account_id,''),r.local_date,r.occurred_at_ms,r.offset_minutes,r.note,c.name,COALESCE(c.icon_key,'other'),COALESCE(r.merchant_name_snapshot,''),COALESCE(r.address_text,''),r.latitude_e6,r.longitude_e6 FROM v_expense_recoveries r LEFT JOIN accounts a ON a.id=r.account_id LEFT JOIN categories c ON c.id=r.category_id WHERE r.book_id=? AND substr(r.local_date,1,7)=?", [this.activeBookId, month]);
       try {
         while (receipts.goToNextRow()) {
           const value = receipts.getString(3);
@@ -1349,6 +1397,29 @@ export class LedgerWorkspace {
             location: receipts.isColumnNull(14) || receipts.isColumnNull(15) ? undefined : { latitudeE6: receipts.getLong(14), longitudeE6: receipts.getLong(15) } });
         }
       } finally { receipts.close(); }
+      for (const entry of entries) {
+        if (entry.recoveryKind) {
+          const recovery = await db.querySql('SELECT transaction_id,currency_id,CAST(amount_minor AS TEXT),CAST(book_minor AS TEXT),account_currency_id,CAST(account_minor AS TEXT),fx_snapshot FROM v_expense_recoveries WHERE id=?', [entry.id]);
+          try { if (recovery.goToFirstRow()) {
+            const original = recovery.getString(2);
+            const parentQuote = await RdbFxSnapshots.read(db,recovery.getString(0),'book');
+            entry.fx = { currencyId: recovery.getString(1), paidMinor: original, grossMinor: original, discountMinor: '0',
+              bookMinor: recovery.getString(3), accountCurrencyId: recovery.getString(4), accountMinor: recovery.getString(5),
+              bookFx: parentQuote === undefined ? undefined : { rate: parentQuote.rate, source: parentQuote.source, date: parentQuote.date, actual: true },
+              accountFx: recovery.getString(6) ? JSON.parse(recovery.getString(6)) as FxConversion : undefined };
+          } } finally { recovery.close(); }
+          continue;
+        }
+        const monetary = await db.querySql("SELECT t.currency_id,CAST(t.paid_minor AS TEXT),CAST(t.book_minor AS TEXT),COALESCE(m.currency_id,t.currency_id),CAST(COALESCE(abs(m.delta_minor),t.paid_minor) AS TEXT),COALESCE(d.to_currency_id,t.currency_id),CAST(COALESCE(d.in_minor,t.paid_minor) AS TEXT),CAST(COALESCE(d.book_fee_minor,0) AS TEXT) FROM transactions t LEFT JOIN account_movements m ON m.transaction_id=t.id AND m.leg=t.kind LEFT JOIN v_transfer_details d ON d.transaction_id=t.id WHERE t.id=?", [entry.id]);
+        try {
+          if (monetary.goToFirstRow()) {
+            entry.fx = { currencyId: monetary.getString(0), paidMinor: monetary.getString(1), grossMinor: entry.grossMinor, discountMinor: entry.discountMinor,
+              bookMinor: monetary.getString(2), accountCurrencyId: monetary.getString(3), accountMinor: monetary.getString(4),
+              receivedCurrencyId: entry.transfer ? monetary.getString(5) : undefined, receivedMinor: entry.transfer ? monetary.getString(6) : undefined,
+              bookFeeMinor: monetary.getString(7), bookFx: await RdbFxSnapshots.read(db,entry.id,'book'), accountFx: await RdbFxSnapshots.read(db,entry.id,'settlement') };
+          }
+        } finally { monetary.close(); }
+      }
       entries.sort((a: SavedLedgerEntry, b: SavedLedgerEntry) => b.occurredAtMs - a.occurredAtMs || a.id.localeCompare(b.id));
       const usage = await db.querySql('SELECT CAST(COALESCE(SUM(amount_minor),0) AS TEXT) FROM v_budget_expense_flows WHERE book_id=? AND substr(local_date,1,7)=?', [this.activeBookId, month]);
       try { usage.goToFirstRow(); budgetUsed = BigInt(usage.getString(0)); } finally { usage.close(); }

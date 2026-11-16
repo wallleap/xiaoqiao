@@ -1,3 +1,4 @@
+import { FxConversion } from '../../core/money/FxConversion';
 import { ExpenseRecovery } from './ExpenseRecovery';
 import { LedgerLocation } from './LedgerLocation';
 import { TagChoice } from './LedgerSnapshot';
@@ -43,6 +44,10 @@ export interface EntryDetail {
   discountMinor: string;
   paidMinor: string;
   bookMinor: string;
+  bookFx?: FxConversion;
+  accountFx?: FxConversion;
+  accountCurrencyId?: string;
+  accountMinor?: string;
   includeInBudget: boolean;
   includeInAssets: boolean;
   balanceMode: string;

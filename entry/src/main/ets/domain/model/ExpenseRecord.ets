@@ -1,3 +1,4 @@
+import { FxConversion, validateConversion } from '../../core/money/FxConversion';
 import { LedgerLocation, validateLedgerLocation } from './LedgerLocation';
 import { Money } from '../../core/money/Money';
 import { LedgerAttachmentDraft, validateAttachmentDrafts } from './LedgerAttachment';
@@ -10,6 +11,8 @@ export interface ExpenseCommand {
   readonly gross: Money;
   readonly discount: Money;
   readonly bookPaid: Money;
+  readonly bookFx?: FxConversion;
+  readonly accountFx?: FxConversion;
   readonly accountId?: string;
   readonly accountPaid?: Money;
   readonly includeInAssets: boolean;
@@ -76,13 +79,8 @@ export class ExpenseRecord {
     }
     const tagIds = validateTagIds(command.tagIds);
     const attachments = validateAttachmentDrafts(command.attachments);
-    // P0 manual command intentionally handles only same-currency settlement.
-    // Foreign-currency persistence requires explicit FX snapshot commands first.
-    if (!this.paid.currency.matches(command.bookPaid.currency) || this.paid.minor !== command.bookPaid.minor ||
-      (command.accountPaid !== undefined && (!command.accountPaid.currency.matches(this.paid.currency) ||
-      command.accountPaid.minor !== this.paid.minor))) {
-      throw new Error('FX_SNAPSHOT_COMMAND_REQUIRED');
-    }
+    validateConversion(this.paid, command.bookPaid, command.bookFx);
+    if (command.accountPaid !== undefined) { validateConversion(this.paid, command.accountPaid, command.accountFx); }
     command.gross.toSafeMinorNumber();
     command.discount.toSafeMinorNumber();
     command.bookPaid.toSafeMinorNumber();
@@ -96,7 +94,7 @@ export class ExpenseRecord {
     this.command = {
       id: command.id, bookId: command.bookId, categoryId: command.categoryId,
       gross: command.gross, discount: command.discount, bookPaid: command.bookPaid,
-      accountId: command.accountId, accountPaid: command.accountPaid,
+      accountId: command.accountId, accountPaid: command.accountPaid, bookFx: command.bookFx, accountFx: command.accountFx,
       includeInAssets: command.includeInAssets, includeInBudget: command.includeInBudget, reimbursementPending: command.reimbursementPending,
       spendingNatureId: command.spendingNatureId,
       tagIds: tagIds,

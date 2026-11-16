@@ -13,7 +13,7 @@ export struct MoneyAmountField {
   fontFamily: string = 'XiaoQiaoDINMedium';
   submitLabel: string = '保存';
   fieldHeight: number = 48;
-  currency: CurrencyUnit = new CurrencyUnit('CNY', 'CNY', 2);
+  @Prop currency: CurrencyUnit = new CurrencyUnit('CNY', 'CNY', 2);
   controller: TextInputController = new TextInputController();
   onSubmit: () => void = () => {};
   @State private inputError: string = '';
@@ -35,7 +35,7 @@ export struct MoneyAmountField {
     this.inputError = '';
     try {
       this.value = key === '清空' ? '0' : ExpenseAmountInput.appendNonnegative(this.value, key, this.currency);
-    } catch (_) { this.inputError = '请输入非负金额，最多两位小数，且不能超出金额上限'; }
+    } catch (_) { this.inputError = '请输入符合币种小数位的非负金额，且不能超出金额上限'; }
   }
 
   @Builder

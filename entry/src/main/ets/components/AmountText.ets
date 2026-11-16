@@ -2,6 +2,7 @@
 @Component
 export struct AmountText {
   @Prop amount: string = '0.00';
+  @Prop currencySymbol: string = '¥';
   amountSize: number = 38;
   /** Optional smaller fraction, including its decimal point. Zero keeps the uniform amount style. */
   fractionSize: number = 0;
@@ -16,7 +17,7 @@ export struct AmountText {
       if (this.sign.length > 0) {
         Text(this.sign).fontSize('14fp').fontColor(this.color)
       }
-      Text('¥').fontSize('12fp').fontColor(this.color).margin({ bottom: this.currencyBottom })
+      Text(this.currencySymbol).fontSize('12fp').fontColor(this.color).margin({ bottom: this.currencyBottom })
       Text() {
         if (this.fractionSize > 0 && this.amount.indexOf('.') >= 0) {
           Span(this.amount.substring(0, this.amount.indexOf('.')))
@@ -35,7 +36,7 @@ export struct AmountText {
         .accessibilityText(`${this.sign}人民币${this.amount}元`)
         .onClick(() => {
           if (this.onOpen !== undefined) { this.onOpen(); return; }
-          this.getUIContext().getPromptAction().showDialog({ title: '完整金额', message: `${this.sign}¥${this.amount}`,
+          this.getUIContext().getPromptAction().showDialog({ title: '完整金额', message: `${this.sign}${this.currencySymbol}${this.amount}`,
             buttons: [{ text: '知道了', color: $r('app.color.xq_font_emphasize') }] });
         })
     }.alignItems(VerticalAlign.Bottom)

@@ -1,3 +1,4 @@
+import { currencyUnit } from '../core/money/Currencies';
 import { HdsNavigation, HdsNavigationTitleMode, hdsMaterial, DividerShowType, ScrollEffectType } from '@kit.UIDesignKit';
 import { AccountAdjustment, AdjustmentCursor } from '../domain/model/AccountCalibration';
 import { AccountProfile } from '../domain/model/AccountProfile';
@@ -15,7 +16,7 @@ export struct AccountAdjustmentHistoryPage {
   @State private error: string = '';
   @State private next: AdjustmentCursor | undefined = undefined;
   private readonly scroller: Scroller = new Scroller();
-  private readonly currency: CurrencyUnit = new CurrencyUnit('CNY', 'CNY', 2);
+  private get currency(): CurrencyUnit { return currencyUnit(this.account?.currencyId || 'CNY'); }
 
   aboutToAppear(): void { this.load(false); }
   private async load(more: boolean): Promise<void> {

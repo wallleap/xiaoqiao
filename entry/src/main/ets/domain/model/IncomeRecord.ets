@@ -1,3 +1,4 @@
+import { FxConversion } from '../../core/money/FxConversion';
 import { LedgerLocation } from './LedgerLocation';
 import { Money } from '../../core/money/Money';
 import { ExpenseRecord } from './ExpenseRecord';
@@ -10,6 +11,8 @@ export interface IncomeCommand {
   readonly categoryId: string;
   readonly amount: Money;
   readonly bookAmount: Money;
+  readonly bookFx?: FxConversion;
+  readonly accountFx?: FxConversion;
   readonly accountId?: string;
   readonly accountAmount?: Money;
   readonly includeInAssets: boolean;
@@ -33,7 +36,7 @@ export class IncomeRecord {
   constructor(command: IncomeCommand) {
     this.settlement = new ExpenseRecord({ id: command.id, bookId: command.bookId, categoryId: command.categoryId,
       gross: command.amount, discount: Money.fromMinorText('0', command.amount.currency), bookPaid: command.bookAmount,
-      accountId: command.accountId, accountPaid: command.accountAmount, includeInAssets: command.includeInAssets,
+      accountId: command.accountId, accountPaid: command.accountAmount, bookFx: command.bookFx, accountFx: command.accountFx, includeInAssets: command.includeInAssets,
       includeInBudget: false, tagIds: command.tagIds, attachments: command.attachments,
       merchantName: command.merchantName, addressText: command.addressText, location: command.location,
       note: command.note, occurredAtMs: command.occurredAtMs, localDate: command.localDate,

@@ -1,5 +1,5 @@
 import { Money } from '../../core/money/Money';
-import { CurrencyUnit } from '../../core/money/CurrencyUnit';
+import { currencyUnit } from '../../core/money/Currencies';
 
 export interface AccountStyle {
   key: string;
@@ -49,6 +49,8 @@ export interface AccountOverview {
   assetsMinor: string;
   liabilitiesMinor: string;
   netMinor: string;
+  valuationMissing?: string[];
+  valuationDate?: string;
 }
 
 export class AccountDraft {
@@ -58,7 +60,7 @@ export class AccountDraft {
     const style = ACCOUNT_STYLES.find((item: AccountStyle) => item.key === command.styleKey);
     if (command.id.trim().length === 0 || command.name.trim().length === 0 || command.name.trim().length > 40 ||
       (command.kind !== 'asset' && command.kind !== 'liability') || style === undefined) { throw new Error('INVALID_ACCOUNT'); }
-    if (!command.opening.currency.matches(new CurrencyUnit('CNY', 'CNY', 2)) ||
+    if (!command.opening.currency.matches(currencyUnit(command.opening.currency.code)) ||
       (command.kind === 'asset' && command.opening.minor < BigInt(0)) ||
       (command.kind === 'liability' && command.opening.minor > BigInt(0))) { throw new Error('INVALID_OPENING_BALANCE'); }
     command.opening.toSafeMinorNumber();

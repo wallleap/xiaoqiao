@@ -1,3 +1,4 @@
+import { currencyUnit } from '../core/money/Currencies';
 import { HdsNavigation, HdsNavigationTitleMode, hdsMaterial, DividerShowType, ScrollEffectType } from '@kit.UIDesignKit';
 import { ChipGroup, ChipSize } from '@kit.ArkUI';
 import { util } from '@kit.ArkTS';
@@ -24,7 +25,7 @@ export struct AccountCalibrationPage {
   @State private conflict: boolean = false;
   @State private error: string = '';
   private readonly operationId: string = util.generateRandomUUID();
-  private readonly currency: CurrencyUnit = new CurrencyUnit('CNY', 'CNY', 2);
+  private get currency(): CurrencyUnit { return currencyUnit(this.account?.currencyId || 'CNY'); }
   private readonly scroller: Scroller = new Scroller();
   private readonly amountController: TextInputController = new TextInputController();
   private readonly reasonController: TextInputController = new TextInputController();
@@ -80,7 +81,7 @@ export struct AccountCalibrationPage {
   private async confirm(): Promise<void> {
     if (this.busy || this.conflict) { return; }
     let draft: AccountCalibration;
-    try { draft = this.draft(); } catch (_) { this.error = '请填写有效且不同于当前余额的金额，最多两位小数'; return; }
+    try { draft = this.draft(); } catch (_) { this.error = '请填写有效且不同于当前余额的金额，小数位须符合账户币种'; return; }
     this.amountController.stopEditing(); this.reasonController.stopEditing();
     this.busy = true; this.onBusy(true); this.error = '';
     try {
@@ -111,7 +112,7 @@ export struct AccountCalibrationPage {
           Column({ space: 16 }) {
             Column({ space: 8 }) {
               Text(this.current?.name || this.account?.name || '').fontSize('18fp').fontWeight(FontWeight.Medium).fontColor($r('app.color.xq_font_primary')).maxLines(2)
-              Text('当前账面余额 · CNY').fontSize('12fp').fontColor($r('app.color.xq_font_secondary'))
+              Text('当前账面余额 · ' + this.currency.code).fontSize('12fp').fontColor($r('app.color.xq_font_secondary'))
               Text(this.current === undefined ? '—' : this.money(this.current.balanceMinor)).fontSize('30fp').fontFamily('XiaoQiaoDINBold')
                 .fontColor($r('app.color.xq_font_primary')).maxLines(1).minFontSize('18fp').maxFontSize('30fp').id('calibration-before')
             }.padding(20).width('100%').alignItems(HorizontalAlign.Start).borderRadius(20).backgroundColor($r('app.color.xq_app_surface_card'))

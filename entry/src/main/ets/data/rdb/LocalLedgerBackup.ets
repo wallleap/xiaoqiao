@@ -5,6 +5,7 @@ import { RdbSession } from './RdbSession';
 import { TransferMigration } from './TransferMigration';
 import { SpendingNatureMigration } from './SpendingNatureMigration';
 import { RecoveryMigration } from './RecoveryMigration';
+import { MulticurrencyMigration } from './MulticurrencyMigration';
 import { NatureColorMigration } from './NatureColorMigration';
 import { BudgetNatureMigration } from './BudgetNatureMigration';
 
@@ -79,8 +80,8 @@ export class LocalLedgerBackup {
   }
 
   private static async check(db: relationalStore.RdbStore, allowLegacy: boolean = false): Promise<void> {
-    const version = await NatureColorMigration.status(db);
-    if (version !== 6 && (!allowLegacy || ![2, 3, 4, 5].includes(version))) { throw new Error('BACKUP_VERSION_UNSUPPORTED'); }
+    const version = await MulticurrencyMigration.status(db);
+    if (version !== 7 && (!allowLegacy || ![2, 3, 4, 5, 6].includes(version))) { throw new Error('BACKUP_VERSION_UNSUPPORTED'); }
     const integrity = await db.querySql('PRAGMA integrity_check(1)');
     try {
       if (integrity.rowCount !== 1 || !integrity.goToFirstRow() || integrity.getString(0) !== 'ok') {
@@ -106,7 +107,7 @@ export class LocalLedgerBackup {
     const candidate = await relationalStore.getRdbStore(this.context, { name: this.candidateName,
       securityLevel: relationalStore.SecurityLevel.S1 });
     try {
-      let version = await NatureColorMigration.status(candidate);
+      let version = await MulticurrencyMigration.status(candidate);
       if (version === 2) {
         await SpendingNatureMigration.upgradeCandidate(candidate);
         version = 3;
@@ -123,7 +124,8 @@ export class LocalLedgerBackup {
         await NatureColorMigration.upgradeCandidate(candidate);
         version = 6;
       }
-      if (version !== 6) { throw new Error('BACKUP_VERSION_UNSUPPORTED'); }
+      if (version === 6) { await MulticurrencyMigration.upgradeCandidate(candidate); version = 7; }
+      if (version !== 7) { throw new Error('BACKUP_VERSION_UNSUPPORTED'); }
       if (await LocalLedgerBackup.schema(candidate) !== schema) { throw new Error('BACKUP_SCHEMA_MISMATCH'); }
       await LocalLedgerBackup.check(candidate);
       return await LocalLedgerBackup.preview(candidate, (await fs.stat(this.candidate)).size);

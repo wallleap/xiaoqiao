@@ -1,3 +1,4 @@
+import { currencyUnit } from '../../core/money/Currencies';
 import { CurrencyUnit } from '../../core/money/CurrencyUnit';
 import { Money } from '../../core/money/Money';
 import { LedgerSnapshot, SavedLedgerEntry } from '../../domain/model/LedgerSnapshot';
@@ -13,6 +14,7 @@ export const LEDGER_EXPORT_COLUMNS: LedgerExportColumn[] = [
   { key: 'spendingNatureColor', label: '预算分类颜色' },
   { key: 'originalEntryId', label: '关联支出ID' }, { key: 'reimbursementPending', label: '待报销' },
   { key: 'latitude', label: '纬度' }, { key: 'longitude', label: '经度' },
+  { key: 'fx', label: '多币种快照' }, { key: 'bookPaid', label: '人民币折算金额' },
   { key: 'currency', label: '币种' }, { key: 'gross', label: '原金额' },
   { key: 'discount', label: '优惠' }, { key: 'paid', label: '实付金额' }, { key: 'fee', label: '转账手续费' },
   { key: 'coupon', label: '转账优惠' }, { key: 'transferPurpose', label: '转账用途' },
@@ -25,8 +27,8 @@ function csvCell(value: string): string {
   return '"' + value.replace(/"/g, '""') + '"';
 }
 
-function decimal(minor: string): string {
-  return Money.fromMinorText(minor || '0', new CurrencyUnit('CNY', 'CNY', 2)).toDecimalString();
+function decimal(minor: string, code: string = 'CNY'): string {
+  return Money.fromMinorText(minor || '0', currencyUnit(code)).toDecimalString();
 }
 
 function time(entry: SavedLedgerEntry): string {
@@ -52,12 +54,14 @@ export function ledgerExportValue(entry: SavedLedgerEntry, key: string): string 
     case 'spendingNatureColor': return entry.spendingNatureColor || '';
     case 'originalEntryId': return entry.originalEntryId || '';
     case 'reimbursementPending': return !entry.income && !entry.transfer && !entry.recoveryKind ? (entry.reimbursementPending ? '是' : '否') : '';
-    case 'currency': return 'CNY';
-    case 'gross': return decimal(entry.recoveryKind ? (-BigInt(entry.minor)).toString() : entry.grossMinor);
-    case 'discount': return decimal(entry.discountMinor);
-    case 'paid': return decimal(entry.recoveryKind ? (-BigInt(entry.minor)).toString() : entry.minor);
-    case 'fee': return decimal(entry.transferFeeMinor || '0');
-    case 'coupon': return decimal(entry.transferCouponMinor || '0');
+    case 'currency': return entry.fx?.currencyId || 'CNY';
+    case 'fx': return entry.fx === undefined ? '' : JSON.stringify(entry.fx);
+    case 'bookPaid': return decimal(entry.fx?.bookMinor || entry.minor);
+    case 'gross': return decimal(entry.fx?.grossMinor || (entry.recoveryKind ? (-BigInt(entry.minor)).toString() : entry.grossMinor), entry.fx?.currencyId);
+    case 'discount': return decimal(entry.discountMinor, entry.fx?.currencyId);
+    case 'paid': return decimal(entry.fx?.paidMinor || (entry.recoveryKind ? (-BigInt(entry.minor)).toString() : entry.minor), entry.fx?.currencyId);
+    case 'fee': return decimal(entry.transferFeeMinor || '0', entry.fx?.currencyId);
+    case 'coupon': return decimal(entry.transferCouponMinor || '0', entry.fx?.currencyId);
     case 'transferPurpose': return entry.transfer ? transferPurposeLabel(entry.transferPurpose || 'transfer') : '';
     case 'feeBudget': return entry.transfer ? (entry.feeInBudget === false ? '否' : '是') : '';
     case 'tags': return (entry.tagNames || []).join('|');

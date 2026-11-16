@@ -1,3 +1,5 @@
+import { FxEntrySnapshot, parseFxEntry } from '../../domain/model/FxEntrySnapshot';
+import { currencyUnit } from '../../core/money/Currencies';
 import { isSpendingNatureColor, isCustomNatureColor } from '../../domain/model/SpendingNature';
 import { CurrencyUnit } from '../../core/money/CurrencyUnit';
 import { Money } from '../../core/money/Money';
@@ -14,6 +16,8 @@ export interface CsvTable {
 }
 
 export interface CsvColumnMapping {
+  fx?: number;
+  currency?: number;
   date: number;
   time: number;
   type: number;
@@ -42,6 +46,7 @@ export interface CsvColumnMapping {
 }
 
 export interface CsvPreviewRow {
+  fx?: FxEntrySnapshot;
   rowNumber: number;
   raw: string[];
   date: string;
@@ -119,6 +124,7 @@ function column(headers: string[], aliases: string[]): number {
 
 export function detectCsvMapping(headers: string[]): CsvColumnMapping {
   return {
+    fx: column(headers, ['多币种快照']), currency: column(headers, ['币种', 'currency']),
     date: column(headers, ['日期', '交易时间', '交易日期', 'date', 'time']),
     time: column(headers, ['时间', '交易时刻', 'clock', 'timeonly']),
     type: column(headers, ['类型', '收支类型', '收/支', '方向', 'type']),
@@ -383,7 +389,7 @@ export function previewCsv(table: CsvTable, mapping: CsvColumnMapping, snapshot:
   const expenseCategoryIds = categoryPathMap(snapshot.categories);
   const incomeCategoryIds = categoryPathMap(snapshot.incomeCategories);
   const accountIds: Map<string, string> = new Map();
-  snapshot.accounts.forEach((account) => { accountIds.set(normalizeHeader(account.name), account.id); });
+  snapshot.accounts.forEach((account) => { accountIds.set(account.currencyId + ':' + normalizeHeader(account.name), account.id); });
   const result: CsvPreviewRow[] = [];
   const seenIds: Set<string> = new Set();
   const existingIds: Set<string> = new Set(options.existingIds);
@@ -454,6 +460,13 @@ export function previewCsv(table: CsvTable, mapping: CsvColumnMapping, snapshot:
     if (recovery && originalEntryId.length === 0) { issues.push('报销或退款必须填写关联支出ID'); }
     if (!recovery && originalEntryId.length > 0) { issues.push('关联支出ID仅用于报销或退款'); }
     if (reimbursementPending && kind !== 'expense') { issues.push('只有支出可以标记待报销'); }
+    let fx: FxEntrySnapshot | undefined = undefined;
+    const fxText = (mapping.fx ?? -1) >= 0 ? (raw[mapping.fx ?? -1] || '').trim() : '';
+    const codeText = (mapping.currency ?? -1) >= 0 ? (raw[mapping.currency ?? -1] || '').trim().toUpperCase() : '';
+    if (fxText) {
+      try { fx = parseFxEntry(fxText); if (codeText && codeText !== fx.currencyId) { issues.push('币种与多币种快照不一致'); } }
+      catch (_) { issues.push('多币种快照无效，请保留完整导出字段'); }
+    } else if (codeText && codeText !== 'CNY' && codeText !== '人民币') { issues.push('外币导入需要多币种快照，不能按人民币导入'); }
     let paid = '';
     let negative = false;
     let transferFee = '0.00';
@@ -461,13 +474,17 @@ export function previewCsv(table: CsvTable, mapping: CsvColumnMapping, snapshot:
     const transferPurpose = transferPurposeFromText(rawPurpose || rawType);
     try {
       const parsed = amount(effectiveRawAmount);
-      paid = parsed.decimal;
+      if (fx !== undefined && Money.parse(currencyUnit(fx.currencyId).scale === 0 ? parsed.decimal.replace(/\.00$/, '') : parsed.decimal, currencyUnit(fx.currencyId)).minor.toString() !== fx.paidMinor) { issues.push('金额与多币种快照不一致'); }
+      paid = fx === undefined ? parsed.decimal : Money.fromMinorText(fx.paidMinor, currencyUnit(fx.currencyId)).toDecimalString();
       negative = parsed.negative;
       if (recovery && negative) { issues.push('报销或退款金额须为正数'); }
       if (kind.length === 0) { kind = negative ? 'expense' : 'income'; }
       if (kind === 'transfer') {
         transferFee = optionalAmount(rawFee);
         transferCoupon = optionalAmount(rawCoupon);
+        if (fx !== undefined && currencyUnit(fx.currencyId).scale === 0) {
+          transferFee = transferFee.replace(/\.00$/, ''); transferCoupon = transferCoupon.replace(/\.00$/, '');
+        }
         const paidMoney = Money.parse(paid, new CurrencyUnit('CNY', 'CNY', 2));
         const couponMoney = Money.parse(transferCoupon, new CurrencyUnit('CNY', 'CNY', 2));
         if (couponMoney.minor > paidMoney.minor) { issues.push('转账优惠不能大于转账金额'); }
@@ -499,10 +516,10 @@ export function previewCsv(table: CsvTable, mapping: CsvColumnMapping, snapshot:
     const mappedAccountText = kind !== 'transfer' && rawAccount.trim().length === 0 ? rawToAccount : rawAccount;
     const accountText = ['不使用账户', '无'].includes(mappedAccountText.trim()) ? '' : mappedAccountText;
     const accountId = accountText.trim().length === 0 ? '' :
-      accountIds.get(normalizeHeader(accountText)) || '';
+      accountIds.get((kind === 'transfer' ? fx?.currencyId || 'CNY' : fx?.accountCurrencyId || 'CNY') + ':' + normalizeHeader(accountText)) || '';
     const createAccount = accountText.trim().length > 0 && accountId.length === 0 && options.createMissingAccounts;
     const toAccountId = rawToAccount.trim().length === 0 ? '' :
-      accountIds.get(normalizeHeader(rawToAccount)) || '';
+      accountIds.get((fx?.receivedCurrencyId || fx?.currencyId || 'CNY') + ':' + normalizeHeader(rawToAccount)) || '';
     const createToAccount = rawToAccount.trim().length > 0 && toAccountId.length === 0 && options.createMissingAccounts;
     if (recovery && accountText.trim().length > 0 && !['不使用账户', '无'].includes(accountText.trim()) && accountId.length === 0 && !createAccount) { issues.push('到账账户未匹配'); }
     if (parsedDate.localDate.length === 0) { issues.push('日期无效'); }
@@ -529,7 +546,7 @@ export function previewCsv(table: CsvTable, mapping: CsvColumnMapping, snapshot:
     }
     if (sourceId.length > 0) { seenIds.add(sourceId); }
     result.push({ rowNumber: table.rowNumbers?.[index] || index + 2, raw: raw, date: parsedDate.localDate, time: parsedDate.time,
-      timeKnown: parsedDate.timeKnown, type: kind, amount: paid,
+      timeKnown: parsedDate.timeKnown, type: kind, amount: paid, fx: fx,
       categoryId: categoryId, categoryName: categoryName, createCategory: createCategory,
       accountId: accountId, accountName: accountId.length > 0 || createAccount ? accountText.trim() : '',
       createAccount: createAccount, toAccountId: toAccountId,

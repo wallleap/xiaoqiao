@@ -17,7 +17,7 @@ export class AccountCalibration {
   readonly delta: Money;
   constructor(command: AccountCalibrationCommand) {
     requireAccountRevision(command.expectedRevision);
-    const currency = new CurrencyUnit('CNY', 'CNY', 2);
+    const currency = command.before.currency;
     if (!command.id.trim() || !command.accountId.trim() || command.reason.trim().length > 200) { throw new Error('INVALID_CALIBRATION'); }
     if (!command.before.currency.matches(currency) || !command.after.currency.matches(currency)) { throw new Error('UNSUPPORTED_ACCOUNT_CURRENCY'); }
     this.delta = command.after.subtract(command.before);

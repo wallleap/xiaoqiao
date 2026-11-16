@@ -163,9 +163,9 @@ export class RdbStatisticsRepository {
     const rows = await this.store.querySql(
       "SELECT t.id,t.kind,COALESCE(t.note,''),COALESCE(t.category_id,''),COALESCE(raw.spending_nature_id,'')," +
       "t.include_in_budget,CAST(COALESCE(t.book_minor,0) AS TEXT),CAST(COALESCE(t.paid_minor,0) AS TEXT)," +
-      "t.occurred_local_date,CAST(COALESCE(d.fee_minor,0) AS TEXT),COALESCE(d.fee_in_expense,1)," +
+      "t.occurred_local_date,CAST(COALESCE(d.book_fee_minor,0) AS TEXT),COALESCE(d.fee_in_expense,1)," +
       "COALESCE(d.fee_in_budget,1),t.occurred_at_ms " +
-      "FROM v_posted_transactions t JOIN transactions raw ON raw.id=t.id LEFT JOIN transfer_details d ON d.transaction_id=t.id " +
+      "FROM v_posted_transactions t JOIN transactions raw ON raw.id=t.id LEFT JOIN v_transfer_details d ON d.transaction_id=t.id " +
       "WHERE t.book_id=? AND t.occurred_local_date>=? AND t.occurred_local_date<? " +
       "ORDER BY t.occurred_at_ms DESC,t.created_at_ms DESC,t.id DESC",
       [bookId, startDate, endDateExclusive]);
@@ -178,7 +178,7 @@ export class RdbStatisticsRepository {
           occurredAtMs: rows.getLong(12) });
       }
     } finally { rows.close(); }
-    const receipts = await this.store.querySql("SELECT id,transaction_id,kind,note,category_id,COALESCE(spending_nature_id,''),include_in_budget,CAST(amount_minor AS TEXT),local_date,occurred_at_ms FROM v_expense_recoveries WHERE book_id=? AND local_date>=? AND local_date<?", [bookId, startDate, endDateExclusive]);
+    const receipts = await this.store.querySql("SELECT id,transaction_id,kind,note,category_id,COALESCE(spending_nature_id,''),include_in_budget,CAST(book_minor AS TEXT),local_date,occurred_at_ms FROM v_expense_recoveries WHERE book_id=? AND local_date>=? AND local_date<?", [bookId, startDate, endDateExclusive]);
     try {
       while (receipts.goToNextRow()) {
         const minor = '-' + receipts.getString(7);

@@ -1,3 +1,7 @@
+import { CURRENCIES, CurrencyDefinition, currencyUnit, currencyDefinition } from '../core/money/Currencies';
+import { ExchangeRate } from '../core/money/ExchangeRate';
+import { FxConversion } from '../core/money/FxConversion';
+import { OfficialExchangeRates } from '../data/exchange/OfficialExchangeRates';
 import { LedgerLocation, locationFromDegrees } from '../domain/model/LedgerLocation';
 import { HdsNavigation, HdsNavigationTitleMode, DividerShowType, hdsMaterial } from '@kit.UIDesignKit';
 import { sceneMap } from '@kit.MapKit';
@@ -43,7 +47,16 @@ export struct ExpenseEditor {
   // The material is an immutable native instance supplied when the editor opens.
   sheetMaterial: SystemUiMaterial | undefined = undefined;
   workspace: LedgerWorkspace | undefined = undefined;
-  private readonly currency: CurrencyUnit = new CurrencyUnit('CNY', 'CNY', 2);
+  @State private currencyCode: string = 'CNY';
+  private amountCurrency(): CurrencyUnit { return currencyUnit(this.currencyCode); }
+  @State private bookRate: string = '';
+  @State private settlementRate: string = '';
+  @State private actualSettlement: string = '';
+  @State private quoteDate: string = '';
+  @State private quoteSource: string = 'manual';
+  @State private quoteBusy: boolean = false;
+  private quoteVersion: number = 0;
+
   bookId: string = '';
   editingEntry: EntryDetail | undefined = undefined;
   @Prop @Watch('categoryChoicesChanged') categories: ExpenseCategory[] = [];
@@ -124,13 +137,21 @@ export struct ExpenseEditor {
     this.selectedKinds = [this.isTransfer ? 2 : this.isIncome ? 1 : 0];
     this.selectedId = this.activeCategories().length > 0 ? this.activeCategories()[0].id : '';
     if (entry !== undefined) {
+      this.currencyCode = entry.currencyId;
+      this.bookRate = entry.bookFx?.rate || '';
+      this.settlementRate = entry.accountFx?.rate || '';
+      this.quoteDate = entry.bookFx?.date || entry.accountFx?.date || '';
+      this.quoteSource = entry.bookFx?.source || entry.accountFx?.source || 'manual';
+      if (entry.accountCurrencyId !== undefined && entry.accountCurrencyId !== entry.currencyId && entry.accountMinor !== undefined) {
+        this.actualSettlement = Money.fromMinorText(entry.accountMinor, currencyUnit(entry.accountCurrencyId)).toDecimalString();
+      }
       this.transferPurpose = entry.transferPurpose || 'transfer';
-      this.transferFee = Money.fromMinorText(entry.transferFeeMinor || '0', this.currency).toDecimalString();
-      this.transferCoupon = Money.fromMinorText(entry.transferCouponMinor || '0', this.currency).toDecimalString();
+      this.transferFee = Money.fromMinorText(entry.transferFeeMinor || '0', this.amountCurrency()).toDecimalString();
+      this.transferCoupon = Money.fromMinorText(entry.transferCouponMinor || '0', this.amountCurrency()).toDecimalString();
       this.feeBudget = entry.feeInBudget !== false;
       this.saveId = entry.id;
-      this.expression = Money.fromMinorText(entry.grossMinor, this.currency).toDecimalString();
-      this.discount = Money.fromMinorText(entry.discountMinor, this.currency).toDecimalString();
+      this.expression = Money.fromMinorText(entry.grossMinor, this.amountCurrency()).toDecimalString();
+      this.discount = Money.fromMinorText(entry.discountMinor, this.amountCurrency()).toDecimalString();
       this.selectedId = entry.categoryId; this.accountId = entry.accountId; this.toAccountId = entry.toAccountId || '';
       this.selectedNatureId = entry.spendingNatureId || '';
       this.selectedTagIds = (entry.tags || []).map((tag: TagChoice) => tag.id);
@@ -151,7 +172,7 @@ export struct ExpenseEditor {
   }
 
   aboutToDisappear(): void {
-    this.active = false;
+    this.active = false; this.quoteVersion++;
     this.mapRequestVersion++; this.mapBusy = false;
     clearTimeout(this.amountFocusTimer);
     this.amountController.stopEditing();
@@ -503,9 +524,9 @@ export struct ExpenseEditor {
   private transferOutgoing(expression: string = this.expression, fee: string = this.transferFee,
     coupon: string = this.transferCoupon, pending: boolean = false): Money {
     const normalize = (text: string): string => pending && /[+−]$/.test(text) ? text.slice(0, -1) : text;
-    const principal = ExpenseAmountInput.evaluate(normalize(expression), this.currency);
-    const feeMoney = ExpenseAmountInput.evaluateDiscount(normalize(fee), this.currency);
-    const couponMoney = ExpenseAmountInput.evaluateDiscount(normalize(coupon), this.currency);
+    const principal = ExpenseAmountInput.evaluate(normalize(expression), this.amountCurrency());
+    const feeMoney = ExpenseAmountInput.evaluateDiscount(normalize(fee), this.amountCurrency());
+    const couponMoney = ExpenseAmountInput.evaluateDiscount(normalize(coupon), this.amountCurrency());
     if (couponMoney.minor > principal.minor || (!this.isRepayment() && couponMoney.minor > BigInt(0))) { throw new Error('INVALID_TRANSFER_COUPON'); }
     const outgoing = principal.add(feeMoney).subtract(couponMoney);
     outgoing.toSafeMinorNumber();
@@ -524,15 +545,15 @@ export struct ExpenseEditor {
 
   private paidText(): string {
     try {
-      return ExpenseAmountInput.paidAmount(this.expression, this.effectiveDiscount(), this.currency).toDecimalString();
+      return ExpenseAmountInput.paidAmount(this.expression, this.effectiveDiscount(), this.amountCurrency()).toDecimalString();
     } catch (_) { return '—'; }
   }
 
   private canSaveAmounts(expression: string, discount: string): boolean {
     try {
       if (this.isTransfer) { this.transferOutgoing(expression); }
-      return ExpenseAmountInput.evaluate(expression, this.currency).minor > BigInt(0) &&
-        ExpenseAmountInput.paidAmount(expression, this.isIncome || this.isTransfer ? '0' : discount, this.currency).minor > BigInt(0);
+      return ExpenseAmountInput.evaluate(expression, this.amountCurrency()).minor > BigInt(0) &&
+        ExpenseAmountInput.paidAmount(expression, this.isIncome || this.isTransfer ? '0' : discount, this.amountCurrency()).minor > BigInt(0);
     } catch (_) { return false; }
   }
 
@@ -558,7 +579,7 @@ export struct ExpenseEditor {
     if (this.isTransfer) {
       const current = this.transferTarget === 1 ? this.transferFee : this.transferTarget === 2 ? this.transferCoupon : this.expression;
       try {
-        const next = key === '清空' ? '0' : this.transferTarget === 0 ? ExpenseAmountInput.append(current, key, this.currency.scale) : ExpenseAmountInput.appendDiscount(current, key, this.currency.scale);
+        const next = key === '清空' ? '0' : this.transferTarget === 0 ? ExpenseAmountInput.append(current, key, this.amountCurrency().scale) : ExpenseAmountInput.appendDiscount(current, key, this.amountCurrency().scale);
         if (key !== '⌫' && key !== '清空') {
           this.transferOutgoing(this.transferTarget === 0 ? next : this.expression, this.transferTarget === 1 ? next : this.transferFee, this.transferTarget === 2 ? next : this.transferCoupon, true);
         }
@@ -576,16 +597,112 @@ export struct ExpenseEditor {
       return;
     }
     try {
-      const next = ExpenseAmountInput.appendChecked(this.expression, this.effectiveDiscount(), key, this.currency, this.editingDiscount);
+      const next = ExpenseAmountInput.appendChecked(this.expression, this.effectiveDiscount(), key, this.amountCurrency(), this.editingDiscount);
       if (this.editingDiscount) { this.discount = next; } else { this.expression = next; }
-    } catch (_) {
-      this.showError(this.editingDiscount ? ExpenseErrorField.Discount : ExpenseErrorField.Amount,
-        this.editingDiscount ? '优惠金额无法计算或超出范围，请修改输入' : '金额无法计算或超出范围，请修改输入');
+    } catch (error) {
+      const code = (error as Error).message;
+      let message = this.editingDiscount ? '优惠金额无法计算或超出范围，请修改输入' : '金额无法计算或超出范围，请修改输入';
+      if (code === 'CURRENCY_MISMATCH' || code === 'INVALID_CURRENCY' || code === 'UNSUPPORTED_CURRENCY') {
+        message = '金额币种配置异常，请重新选择币种';
+      } else if (code === 'AMOUNT_PRECISION_EXCEEDED') { message = this.currencyCode + ' 最多支持 ' + this.amountCurrency().scale.toString() + ' 位小数'; }
+      this.showError(this.editingDiscount ? ExpenseErrorField.Discount : ExpenseErrorField.Amount, message);
     }
   }
 
+  private fxDate(): string { return this.localDate(); }
+  private settlementCode(): string {
+    const id = this.isTransfer ? this.toAccountId : this.accountId;
+    return this.accounts.find((item: LedgerAccount) => item.id === id)?.currencyId ||
+      (id && id === (this.isTransfer ? this.editingEntry?.toAccountId : this.editingEntry?.accountId) ? this.editingEntry?.accountCurrencyId : undefined) || this.currencyCode;
+  }
+  private bookAmountText(): string {
+    try {
+      const paid = ExpenseAmountInput.paidAmount(this.expression, this.effectiveDiscount(), this.amountCurrency());
+      return '折合人民币 ¥' + this.converted(paid, 'CNY', this.bookRate).toDecimalString();
+    } catch (_) { return '填写汇率后显示人民币折算金额'; }
+  }
+  private fxQuote(rate: string, actual: boolean = false): FxConversion {
+    return { rate: rate, date: this.quoteDate || this.fxDate(), source: actual ? 'manual' : this.quoteSource, actual: actual };
+  }
+  private converted(amount: Money, code: string, rate: string): Money {
+    const target = currencyUnit(code);
+    if (amount.currency.matches(target)) { return amount; }
+    return new ExchangeRate(amount.currency, target, rate).convert(amount);
+  }
+  private settlementAmount(amount: Money): Money {
+    const code = this.settlementCode();
+    if (code !== this.currencyCode && this.actualSettlement.length > 0) { return Money.parse(this.actualSettlement, currencyUnit(code)); }
+    return this.converted(amount, code, this.settlementRate);
+  }
+  private selectCurrency(): void {
+    if (this.saving || this.editingEntry !== undefined || this.quoteBusy) { return; }
+    this.amountController.stopEditing();
+    this.getUIContext().showTextPickerDialog({ range: CURRENCIES.map((item: CurrencyDefinition) => item.code + ' · ' + item.name),
+      selectedTextStyle: { color: $r('app.color.xq_font_emphasize') },
+      acceptButtonStyle: { fontColor: $r('app.color.xq_font_emphasize') },
+      cancelButtonStyle: { fontColor: $r('app.color.xq_font_secondary') },
+      selected: Math.max(0, CURRENCIES.findIndex((item: CurrencyDefinition) => item.code === this.currencyCode)),
+      onAccept: (result: TextPickerResult) => {
+        const index = typeof result.index === 'number' ? result.index : result.index[0];
+        this.currencyCode = CURRENCIES[index].code;
+        this.expression = '0'; this.discount = '0'; this.transferFee = '0'; this.transferCoupon = '0';
+        this.bookRate = ''; this.settlementRate = ''; this.actualSettlement = ''; this.quoteDate = ''; this.quoteSource = 'manual';
+        this.quoteVersion++;
+        if (this.isTransfer) { this.accountId = ''; }
+      }
+    });
+  }
+  private async loadRates(): Promise<void> {
+    if (this.quoteBusy || this.saving) { return; }
+    this.quoteBusy = true;
+    const version = ++this.quoteVersion;
+    const source = this.currencyCode; const target = this.settlementCode(); const date = this.fxDate();
+    try {
+      const book = await OfficialExchangeRates.quote(source, 'CNY', date);
+      const settlement = await OfficialExchangeRates.quote(source, target, date);
+      if (this.active && version === this.quoteVersion && source === this.currencyCode && target === this.settlementCode() && date === this.fxDate()) {
+        this.bookRate = book.rate; this.settlementRate = settlement.rate;
+        this.quoteDate = book.source === 'same_currency' ? settlement.date : book.date;
+        this.quoteSource = book.source === 'ECB_CACHE' || settlement.source === 'ECB_CACHE' ? 'ECB_CACHE' : 'ECB';
+        this.actualSettlement = '';
+      }
+    } catch (_) { if (this.active) { this.showError(ExpenseErrorField.Amount, '参考汇率暂不可用，可手动填写汇率后保存'); } }
+    finally { if (this.active) { this.quoteBusy = false; } }
+  }
+  @Builder
+  private fxCard() {
+    Column({ space: 12 }) {
+      Row() {
+        Text('币种').fontSize('14fp').fontColor($r('app.color.xq_font_secondary'))
+        Blank()
+        Button(this.currencyCode + ' · ' + currencyDefinition(this.currencyCode).name).fontSize('14fp')
+          .backgroundColor(Color.Transparent).fontColor($r('app.color.xq_font_primary'))
+          .enabled(!this.saving && this.editingEntry === undefined).onClick(() => { this.selectCurrency(); })
+      }.width('100%')
+      if (this.currencyCode !== 'CNY' || this.settlementCode() !== this.currencyCode) {
+        if (this.currencyCode !== 'CNY') {
+          TextInput({ text: this.bookRate, placeholder: '1 ' + this.currencyCode + ' = ? CNY' }).fontSize('14fp').type(InputType.NUMBER_DECIMAL)
+            .enabled(!this.saving && !this.quoteBusy).onChange((value: string) => { this.bookRate = value; this.quoteSource = 'manual'; this.quoteDate = this.fxDate(); })
+        }
+        if (this.settlementCode() !== this.currencyCode) {
+          TextInput({ text: this.settlementRate, placeholder: '到账汇率：1 ' + this.currencyCode + ' = ? ' + this.settlementCode() })
+            .fontSize('14fp').type(InputType.NUMBER_DECIMAL).enabled(!this.saving && !this.quoteBusy)
+            .onChange((value: string) => { this.settlementRate = value; this.quoteSource = 'manual'; this.quoteDate = this.fxDate(); })
+          TextInput({ text: this.actualSettlement, placeholder: '实际到账／扣款金额 ' + this.settlementCode() + '（可选）' })
+            .fontSize('14fp').type(InputType.NUMBER_DECIMAL).enabled(!this.saving && !this.quoteBusy)
+            .onChange((value: string) => { this.actualSettlement = value; })
+        }
+        Text(this.bookAmountText()).fontSize('14fp').fontColor($r('app.color.xq_font_primary')).width('100%')
+        Button(this.quoteBusy ? '读取汇率中…' : '获取官方参考汇率').fontSize('13fp').backgroundColor(Color.Transparent)
+          .fontColor($r('app.color.xq_font_emphasize')).enabled(!this.saving && !this.quoteBusy).onClick(() => { this.loadRates(); })
+        Text((this.quoteDate ? this.quoteDate + ' · ' : '') + (this.quoteSource === 'manual' ? '手动汇率' : '欧洲中央银行 ECB · 官网免费参考汇率') + '，保存后固定此笔折算金额')
+          .fontSize('12fp').fontColor($r('app.color.xq_font_tertiary')).width('100%')
+      }
+    }.width('100%').padding(16).borderRadius(20).backgroundColor($r('app.color.xq_app_surface_card')).margin({ bottom: 12 })
+  }
+
   private async save(): Promise<void> {
-    if (this.mapBusy || this.attachmentBusy || this.saving || this.saved || this.conflicted) { return; }
+    if (this.quoteBusy || this.mapBusy || this.attachmentBusy || this.saving || this.saved || this.conflicted) { return; }
     this.errorText = '';
     let command: ExpenseCommand;
     try {
@@ -595,9 +712,9 @@ export struct ExpenseEditor {
           this.showError(ExpenseErrorField.Accounts, '请选择负债账户作为还款账户'); return;
         }
       }
-      const gross = ExpenseAmountInput.evaluate(this.expression, this.currency);
-      const reduction = ExpenseAmountInput.evaluateDiscount(this.effectiveDiscount() || '0', this.currency);
-      const paid = ExpenseAmountInput.paidAmount(this.expression, this.effectiveDiscount(), this.currency);
+      const gross = ExpenseAmountInput.evaluate(this.expression, this.amountCurrency());
+      const reduction = ExpenseAmountInput.evaluateDiscount(this.effectiveDiscount() || '0', this.amountCurrency());
+      const paid = ExpenseAmountInput.paidAmount(this.expression, this.effectiveDiscount(), this.amountCurrency());
       if (gross.minor <= BigInt(0) || reduction.minor < BigInt(0) || paid.minor <= BigInt(0)) {
         const field = !this.isIncome && !this.isTransfer && gross.minor > BigInt(0) ?
           ExpenseErrorField.Discount : ExpenseErrorField.Amount;
@@ -609,7 +726,10 @@ export struct ExpenseEditor {
       }
       const account = this.accountId.length > 0 ? this.accountId : undefined;
       command = { id: this.saveId, bookId: this.bookId, categoryId: this.isTransfer ? 'transfer' : this.selectedId, gross: gross,
-        discount: reduction, bookPaid: paid, accountId: account, accountPaid: account === undefined ? undefined : paid,
+        discount: reduction, bookPaid: this.converted(paid, 'CNY', this.bookRate),
+        bookFx: this.fxQuote(this.bookRate), accountFx: this.fxQuote(this.settlementRate, this.actualSettlement.length > 0),
+        accountId: this.isTransfer ? undefined : account,
+        accountPaid: this.isTransfer || account === undefined ? undefined : this.settlementAmount(paid),
         reimbursementPending: !this.isIncome && !this.isTransfer && this.reimbursementPending,
         includeInAssets: this.includeAssets, includeInBudget: !this.isIncome && !this.isTransfer && this.includeBudget,
         spendingNatureId: !this.isIncome && !this.isTransfer && this.selectedNatureId.length > 0 ? this.selectedNatureId : undefined,
@@ -620,7 +740,7 @@ export struct ExpenseEditor {
         occurredAtMs: new Date(this.occurredAtMs).getTime(), localDate: this.localDate(),
         timezone: this.editingEntry !== undefined && !this.dateEdited ? this.editingEntry.timezone : Intl.DateTimeFormat().resolvedOptions().timeZone,
         offsetMinutes: this.editingEntry !== undefined && !this.dateEdited ? this.editingEntry.offsetMinutes : -new Date(this.occurredAtMs).getTimezoneOffset() };
-    } catch (_) { this.showError(ExpenseErrorField.Amount, '请检查金额是否完整、精度及范围是否正确'); return; }
+    } catch (_) { this.showError(ExpenseErrorField.Amount, '请检查金额、小数位和汇率；外币须填写汇率后保存'); return; }
     this.saving = true;
     this.onSavingChange(true);
     try {
@@ -629,8 +749,11 @@ export struct ExpenseEditor {
       if (this.isTransfer) {
         const transfer: TransferCommand = { id: command.id, bookId: command.bookId, fromAccountId: this.accountId,
           toAccountId: this.toAccountId, amount: command.gross, purpose: this.transferPurpose,
-          fee: ExpenseAmountInput.evaluateDiscount(this.transferFee, this.currency),
-          coupon: ExpenseAmountInput.evaluateDiscount(this.transferCoupon, this.currency), feeInBudget: this.feeBudget, includeInAssets: command.includeInAssets,
+          received: this.settlementAmount(command.gross), bookAmount: command.bookPaid, bookFx: command.bookFx,
+          settlementFx: this.fxQuote(this.settlementRate, this.actualSettlement.length > 0),
+          bookFee: this.converted(ExpenseAmountInput.evaluateDiscount(this.transferFee, this.amountCurrency()), 'CNY', this.bookRate),
+          fee: ExpenseAmountInput.evaluateDiscount(this.transferFee, this.amountCurrency()),
+          coupon: ExpenseAmountInput.evaluateDiscount(this.transferCoupon, this.amountCurrency()), feeInBudget: this.feeBudget, includeInAssets: command.includeInAssets,
           tagIds: this.selectedTagIds, attachments: command.attachments,
           merchantName: command.merchantName, addressText: command.addressText, location: command.location,
           note: command.note, occurredAtMs: command.occurredAtMs, localDate: command.localDate,
@@ -639,7 +762,7 @@ export struct ExpenseEditor {
         else { await workspace.saveTransfer(transfer); }
       } else if (this.isIncome) {
         const income: IncomeCommand = { id: command.id, bookId: command.bookId, categoryId: command.categoryId,
-          amount: command.gross, bookAmount: command.bookPaid, accountId: command.accountId, accountAmount: command.accountPaid,
+          amount: command.gross, bookAmount: command.bookPaid, bookFx: command.bookFx, accountFx: command.accountFx, accountId: command.accountId, accountAmount: command.accountPaid,
           includeInAssets: command.includeInAssets, tagIds: this.selectedTagIds,
           merchantName: command.merchantName, addressText: command.addressText, location: command.location,
           attachments: command.attachments, note: command.note, occurredAtMs: command.occurredAtMs,
@@ -1048,6 +1171,7 @@ export struct ExpenseEditor {
   @Builder
   private form() {
     Column({ space: 12 }) {
+      this.fxCard()
       if (this.isTransfer) {
         Row() {
           Text('用途').fontSize('14fp').fontColor($r('app.color.xq_font_secondary'))
@@ -1162,7 +1286,7 @@ export struct ExpenseEditor {
   }
 
   private accountOptions(): LedgerAccount[] {
-    return this.accounts.filter((item: LedgerAccount) => item.currencyId === this.currency.id &&
+    return this.accounts.filter((item: LedgerAccount) =>
       (!this.isTransfer || this.optionKind !== 2 || !this.isRepayment() || item.kind === 'liability') &&
       (!this.isTransfer || item.id !== (this.optionKind === 2 ? this.accountId : this.toAccountId)));
   }
@@ -1179,9 +1303,9 @@ export struct ExpenseEditor {
   private accountCardBalance(id: string): string {
     const profile = this.accountCardProfile(id);
     if (profile === undefined) { return '余额暂不可用'; }
-    const balance = Money.fromMinorText(profile.balanceMinor, this.currency);
+    const balance = Money.fromMinorText(profile.balanceMinor, currencyUnit(profile.currencyId));
     const parts = (balance.minor < BigInt(0) ? balance.negate() : balance).toDecimalString().split('.');
-    return (balance.minor < BigInt(0) ? '−' : '') + parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',') + '.' + parts[1];
+    return (balance.minor < BigInt(0) ? '−' : '') + parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',') + (parts.length > 1 ? '.' + parts[1] : '') + ' ' + profile.currencyId;
   }
 
   @Builder
@@ -1225,6 +1349,11 @@ export struct ExpenseEditor {
       .id('expense-account-option-' + (id || 'none'))
       .onClick(() => {
         if (this.optionKind === 2) { this.toAccountId = id; } else { this.accountId = id; }
+        if (this.isTransfer && this.optionKind !== 2 && id.length > 0) {
+          const code = this.accounts.find((item: LedgerAccount) => item.id === id)?.currencyId;
+          if (code !== undefined && code !== this.currencyCode) { this.currencyCode = code; this.bookRate = ''; }
+        }
+        this.settlementRate = ''; this.actualSettlement = ''; this.quoteVersion++;
         this.clearFieldError(ExpenseErrorField.Accounts);
         this.showOptions = false;
       })
@@ -1476,7 +1605,7 @@ export struct ExpenseEditor {
         Row({ space: 8 }) {
           Column() {
             Row({ space: 8 }) {
-              Text('¥').fontSize('14fp').fontColor($r('app.color.xq_font_tertiary'))
+              Text(currencyDefinition(this.currencyCode).symbol).fontSize('14fp').fontColor($r('app.color.xq_font_tertiary'))
               TextInput({ text: this.expression, controller: this.amountController })
                 .fontFamily('XiaoQiaoDINBold').fontWeight(FontWeight.Bold).fontSize('38fp').minFontSize('20fp').maxFontSize('38fp')
                 .fontColor($r('app.color.xq_font_primary')).caretColor($r('app.color.xq_brand'))
@@ -1494,7 +1623,7 @@ export struct ExpenseEditor {
                 })
                 .onWillDelete((): boolean => { this.press('⌫'); return false; })
             }.height(48).width('100%')
-            Text(this.isTransfer ? '实际转出 ¥' + this.transferOutgoingText() + ' · 转入 ¥' + this.paidText() : (this.isIncome ? '到账 ¥' : '实付 ¥') + this.paidText()).fontSize('12fp').fontFamily('XiaoQiaoDINRegular').id('expense-paid')
+            Text((this.isTransfer ? '实际转出 ' + this.transferOutgoingText() : (this.isIncome ? '收入 ' : '实付 ') + this.paidText()) + ' ' + this.currencyCode).fontSize('12fp').fontFamily('XiaoQiaoDINRegular').id('expense-paid')
               .width('100%').height(24).maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis }).textAlign(TextAlign.Start)
               .accessibilityDescription(this.isIncome ? '点击编辑上方收入金额' : '点击编辑上方原金额').onClick(() => { this.focusAmountFromPaid(); })
             if (this.errorText.length > 0 && (this.errorField === ExpenseErrorField.Amount ||

@@ -1,3 +1,4 @@
+import { FxEntrySnapshot } from '../../domain/model/FxEntrySnapshot';
 import { CurrencyUnit } from '../../core/money/CurrencyUnit';
 import { Money } from '../../core/money/Money';
 import { SavedLedgerEntry } from '../../domain/model/LedgerSnapshot';
@@ -23,6 +24,7 @@ export function navigationHandoff(offset: number, filterStart: number, titleHeig
 }
 
 export interface LedgerEntry {
+  fx?: FxEntrySnapshot;
   id: string;
   title: string;
   category: string;
@@ -55,7 +57,7 @@ export function displayAmount(minor: string): string {
 /** Badges describe the original expense; receipt rows already name their own type. */
 function expenseRecoveryBadges(entry: SavedLedgerEntry): string[] {
   if (entry.income || entry.transfer || entry.recoveryKind) { return []; }
-  const paid = BigInt(entry.minor);
+  const paid = BigInt(entry.fx?.paidMinor || entry.minor);
   const reimbursed = BigInt(entry.reimbursedMinor || '0');
   const refunded = BigInt(entry.refundedMinor || '0');
   const recovered = BigInt(entry.recoveredMinor || (reimbursed + refunded).toString());
@@ -68,9 +70,9 @@ function expenseRecoveryBadges(entry: SavedLedgerEntry): string[] {
 
 export function presentEntry(entry: SavedLedgerEntry): LedgerEntry {
   const local = new Date(entry.occurredAtMs + entry.offsetMinutes * 60000);
-  return { id: entry.id, title: entry.recoveryKind ? (entry.recoveryKind === 'refund' ? '退款' : '报销到账') + (entry.note ? ' · ' + entry.note : '') : entry.note.length > 0 ? entry.note : entry.category, category: entry.category,
+  return { fx: entry.fx, id: entry.id, title: entry.recoveryKind ? (entry.recoveryKind === 'refund' ? '退款' : '报销到账') + (entry.note ? ' · ' + entry.note : '') : entry.note.length > 0 ? entry.note : entry.category, category: entry.category,
     account: entry.account, date: entry.date, time: String(local.getUTCHours()).padStart(2, '0') + ':' +
-      String(local.getUTCMinutes()).padStart(2, '0'), income: entry.income, recoveryKind: entry.recoveryKind, reimbursementPending: entry.reimbursementPending === true && BigInt(entry.recoveredMinor || '0') < BigInt(entry.minor), transfer: entry.transfer, toAccount: entry.toAccount, minor: entry.minor,
+      String(local.getUTCMinutes()).padStart(2, '0'), income: entry.income, recoveryKind: entry.recoveryKind, reimbursementPending: entry.reimbursementPending === true && BigInt(entry.recoveredMinor || '0') < BigInt(entry.fx?.paidMinor || entry.minor), transfer: entry.transfer, toAccount: entry.toAccount, minor: entry.minor,
     expenseMinor: entry.expenseMinor, transferFeeMinor: entry.transferFeeMinor, transferCouponMinor: entry.transferCouponMinor,
     grossMinor: entry.grossMinor, discountMinor: entry.discountMinor, tags: entry.tagNames || [],
     tagIds: entry.tagIds || [], recoveryBadges: expenseRecoveryBadges(entry),

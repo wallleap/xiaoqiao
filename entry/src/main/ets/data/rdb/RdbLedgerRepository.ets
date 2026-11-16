@@ -1,3 +1,4 @@
+import { RdbFxSnapshots } from './RdbFxSnapshots';
 import { relationalStore } from '@kit.ArkData';
 import { util } from '@kit.ArkTS';
 import { CurrencyUnit } from '../../core/money/CurrencyUnit';
@@ -48,7 +49,7 @@ export class RdbLedgerRepository implements LedgerRepository, ExpenseUpdateRepos
       if (command.accountId !== undefined) {
         const account = await store.querySql('SELECT currency_id FROM accounts WHERE id=? AND archived_at_ms IS NULL AND deleted_at_ms IS NULL', [command.accountId]);
         try {
-          if (!account.goToFirstRow() || account.getString(0) !== record.paid.currency.id) { throw new Error('ACCOUNT_UNAVAILABLE'); }
+          if (!account.goToFirstRow() || account.getString(0) !== command.accountPaid?.currency.id) { throw new Error('ACCOUNT_UNAVAILABLE'); }
         } finally { account.close(); }
       }
       const values: relationalStore.ValuesBucket = {
@@ -65,6 +66,7 @@ export class RdbLedgerRepository implements LedgerRepository, ExpenseUpdateRepos
       if (command.spendingNatureId !== undefined) { values.spending_nature_id = command.spendingNatureId; }
       await store.insert('transactions', values);
       await RdbMerchantFields.apply(store, command.id, command.merchantName, command.addressText, command.location);
+      await RdbFxSnapshots.insert(store, command.id, record.paid, command.bookPaid, command.bookFx);
       const accountId = command.accountId;
       const accountPaid = command.accountPaid;
       if (accountId !== undefined && accountPaid !== undefined) {
@@ -74,6 +76,7 @@ export class RdbLedgerRepository implements LedgerRepository, ExpenseUpdateRepos
           occurred_at_ms: command.occurredAtMs
         };
         await store.insert('account_movements', movement);
+        await RdbFxSnapshots.insert(store, command.id, record.paid, accountPaid, command.accountFx, movement.id as string);
       }
       await this.replaceTags(store, command.id, command.bookId, command.tagIds);
       await RdbAttachmentLinks.replace(store, command.id, command.attachments);
@@ -116,8 +119,7 @@ export class RdbLedgerRepository implements LedgerRepository, ExpenseUpdateRepos
       let oldNature: string;
       try {
         if (!source.goToFirstRow()) { throw new Error('TRANSACTION_CHANGED'); }
-        if (source.getString(1) !== record.paid.currency.id || source.getString(2) !== command.bookPaid.currency.id ||
-          source.getLong(3) !== 0 || source.getLong(4) !== 0) { throw new Error('UNSUPPORTED_EXPENSE_EDIT'); }
+        if (source.getString(1) !== record.paid.currency.id || source.getString(2) !== command.bookPaid.currency.id) { throw new Error('UNSUPPORTED_EXPENSE_EDIT'); }
         oldCategory = source.getString(0); oldAccount = source.getString(5); oldNature = source.getString(6);
       } finally { source.close(); }
       if (kind === 'expense') {
@@ -138,7 +140,7 @@ export class RdbLedgerRepository implements LedgerRepository, ExpenseUpdateRepos
         const account = await db.querySql('SELECT currency_id FROM accounts WHERE id=? AND deleted_at_ms IS NULL AND (archived_at_ms IS NULL OR id=?)',
           [command.accountId, oldAccount]);
         try {
-          if (!account.goToFirstRow() || account.getString(0) !== record.paid.currency.id) { throw new Error('ACCOUNT_UNAVAILABLE'); }
+          if (!account.goToFirstRow() || account.getString(0) !== command.accountPaid?.currency.id) { throw new Error('ACCOUNT_UNAVAILABLE'); }
         } finally { account.close(); }
       }
       const changed = await db.update({ posting_state: 'draft', revision: expectedRevision + 1, updated_at_ms: Date.now() },
@@ -157,11 +159,15 @@ export class RdbLedgerRepository implements LedgerRepository, ExpenseUpdateRepos
         await db.update({ reimbursement_status: command.reimbursementPending ? 'pending' : 'none' }, new relationalStore.RdbPredicates('transactions').equalTo('id', command.id));
       }
       await RdbMerchantFields.apply(db, command.id, command.merchantName, command.addressText, command.location);
+      await db.delete(new relationalStore.RdbPredicates('fx_snapshots').equalTo('transaction_id', command.id));
+      await RdbFxSnapshots.insert(db, command.id, record.paid, command.bookPaid, command.bookFx);
       await db.delete(new relationalStore.RdbPredicates('account_movements').equalTo('transaction_id', command.id));
       if (command.accountId !== undefined && command.accountPaid !== undefined) {
-        await db.insert('account_movements', { id: util.generateRandomUUID(), transaction_id: command.id,
+        const movementId = util.generateRandomUUID();
+        await db.insert('account_movements', { id: movementId, transaction_id: command.id,
           account_id: command.accountId, currency_id: command.accountPaid.currency.id, leg: kind,
           delta_minor: (kind === 'income' ? 1 : -1) * command.accountPaid.toSafeMinorNumber(), occurred_at_ms: command.occurredAtMs });
+        await RdbFxSnapshots.insert(db, command.id, record.paid, command.accountPaid, command.accountFx, movementId);
       }
       await this.replaceTags(db, command.id, command.bookId, command.tagIds);
       await RdbAttachmentLinks.replace(db, command.id, command.attachments);

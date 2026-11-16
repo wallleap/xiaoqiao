@@ -1,3 +1,4 @@
+import { CURRENCIES, CurrencyDefinition, currencyUnit } from '../core/money/Currencies';
 import { AccountCalibrationPage } from './AccountCalibrationPage';
 import { AccountAdjustmentHistoryPage } from './AccountAdjustmentHistoryPage';
 import { HdsNavigation, HdsNavigationTitleMode, hdsMaterial, DividerShowType, ScrollEffectType } from '@kit.UIDesignKit';
@@ -34,11 +35,13 @@ export struct AccountEditor {
   @State private error: string = '';
   private readonly draftId: string = util.generateRandomUUID();
   private readonly scroller: Scroller = new Scroller();
-  private readonly currency: CurrencyUnit = new CurrencyUnit('CNY', 'CNY', 2);
+  @State private currencyCode: string = 'CNY';
+  private get currency(): CurrencyUnit { return currencyUnit(this.currencyCode); }
   private readonly openingController: TextInputController = new TextInputController();
 
   aboutToAppear(): void {
     if (this.original !== undefined) {
+      this.currencyCode = this.original.currencyId;
       this.name = this.original.name; this.kind = this.original.kind; this.styleKey = this.original.iconKey;
       this.includeNet = this.original.includeInNetAssets;
     }
@@ -72,7 +75,7 @@ export struct AccountEditor {
         includeInNetAssets: this.includeNet, opening: opening };
       if (this.name.trim().length === 0) { this.error = '请填写账户名称'; return; }
       new AccountDraft(command);
-    } catch (_) { this.error = '金额最多两位小数，请检查输入及范围'; return; }
+    } catch (_) { this.error = '金额小数位须符合 ' + this.currencyCode + '，请检查输入及范围'; return; }
     if (this.original === undefined) { this.openingController.stopEditing(); }
     this.busy = true; this.onBusy(true);
     try {
@@ -125,6 +128,21 @@ export struct AccountEditor {
               TextInput({ text: this.name, placeholder: '账户名称，如：微信零钱' }).fontSize('16fp').height(48)
                 .backgroundColor($r('app.color.xq_app_surface_keyboard')).borderRadius(12).maxLength(40)
                 .id('account-name').onChange((value: string) => { this.name = value; })
+              Button('币种 · ' + this.currencyCode).fontSize('14fp').width('100%')
+                .fontColor($r('app.color.xq_font_primary')).backgroundColor($r('app.color.xq_app_surface_keyboard'))
+                .enabled(this.original === undefined && !this.busy).onClick(() => {
+                  this.openingController.stopEditing();
+                  this.getUIContext().showTextPickerDialog({ range: CURRENCIES.map((item: CurrencyDefinition) => item.code + ' · ' + item.name),
+                    selectedTextStyle: { color: $r('app.color.xq_font_emphasize') },
+                    acceptButtonStyle: { fontColor: $r('app.color.xq_font_emphasize') },
+                    cancelButtonStyle: { fontColor: $r('app.color.xq_font_secondary') },
+                    selected: CURRENCIES.findIndex((item: CurrencyDefinition) => item.code === this.currencyCode),
+                    onAccept: (result: TextPickerResult) => {
+                      const index = typeof result.index === 'number' ? result.index : result.index[0];
+                      this.currencyCode = CURRENCIES[index].code; this.opening = '0';
+                    }
+                  });
+                })
               if (this.original === undefined) {
                 ChipGroup({ items: [{ label: { text: '资产账户' } }, { label: { text: '负债账户' } }],
                   selectedIndexes: [this.kind === 'asset' ? 0 : 1], multiple: false,
@@ -134,11 +152,11 @@ export struct AccountEditor {
                   onChange: (values: number[]) => { this.kind = values[0] === 1 ? 'liability' : 'asset'; }
                 }).width(260).id('account-kind')
               } else {
-                Text((this.kind === 'asset' ? '资产账户' : '负债账户') + ' · CNY').fontSize('14fp').fontColor($r('app.color.xq_font_secondary'))
+                Text((this.kind === 'asset' ? '资产账户' : '负债账户') + ' · ' + this.currency.code).fontSize('14fp').fontColor($r('app.color.xq_font_secondary'))
               }
             }.padding(20).width('100%').borderRadius(20).backgroundColor($r('app.color.xq_app_surface_card'))
             Column({ space: 12 }) {
-              Text(this.original === undefined ? (this.kind === 'liability' ? '期初待还金额 · CNY' : '期初余额 · CNY') : '当前余额 · CNY')
+              Text(this.original === undefined ? (this.kind === 'liability' ? '期初待还金额 · ' + this.currency.code : '期初余额 · ' + this.currencyCode) : '当前余额 · ' + this.currency.code)
                 .fontSize('14fp').fontColor($r('app.color.xq_font_secondary')).width('100%').id('account-opening-label')
               if (this.original === undefined) {
                 MoneyAmountField({ value: $opening, fieldId: 'account-opening', currency: this.currency,

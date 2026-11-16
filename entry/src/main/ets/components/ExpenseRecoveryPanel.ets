@@ -1,3 +1,6 @@
+import { currencyUnit } from '../core/money/Currencies';
+import { ExchangeRate } from '../core/money/ExchangeRate';
+import { OfficialExchangeRates } from '../data/exchange/OfficialExchangeRates';
 import { util } from '@kit.ArkTS';
 import { EntryDetail } from '../domain/model/EntryDetail';
 import { LedgerAccount } from '../domain/model/LedgerSnapshot';
@@ -33,6 +36,10 @@ export struct ExpenseRecoveryPanel {
   @State private dateText: string = '';
   @State private timeText: string = '';
   @State private noteText: string = '';
+  @State private accountRate: string = '';
+  @State private actualAccount: string = '';
+  @State private rateDate: string = '';
+  @State private rateSource: string = 'manual';
   @State private accountId: string = '';
   @State private formError: string = '';
   @State private amountError: string = '';
@@ -58,7 +65,7 @@ export struct ExpenseRecoveryPanel {
   private stopInputs(): void { this.amountController.stopEditing(); this.noteController.stopEditing(); }
 
   private decimal(minor: string): string {
-    return Money.fromMinorText(minor, new CurrencyUnit('CNY', 'CNY', 2)).toDecimalString();
+    return Money.fromMinorText(minor, currencyUnit(this.entry.currencyId)).toDecimalString();
   }
 
   private total(kind: string = ''): bigint {
@@ -74,8 +81,8 @@ export struct ExpenseRecoveryPanel {
 
   private options(): SelectOption[] {
     const values: SelectOption[] = [{ value: '不使用账户' }];
-    for (const account of this.accounts.filter((item: LedgerAccount) => item.currencyId === 'CNY')) {
-      values.push({ value: account.name });
+    for (const account of this.accounts) {
+      values.push({ value: account.name + ' · ' + account.currencyId });
     }
     if (this.editing !== undefined && this.editing.accountId.length > 0 &&
       !this.accounts.some((item: LedgerAccount) => item.id === this.editing?.accountId)) {
@@ -86,7 +93,7 @@ export struct ExpenseRecoveryPanel {
 
   private accountIds(): string[] {
     const ids = [''];
-    for (const account of this.accounts.filter((item: LedgerAccount) => item.currencyId === 'CNY')) { ids.push(account.id); }
+    for (const account of this.accounts) { ids.push(account.id); }
     if (this.editing !== undefined && this.editing.accountId.length > 0 && !ids.includes(this.editing.accountId)) {
       ids.push(this.editing.accountId);
     }
@@ -102,6 +109,8 @@ export struct ExpenseRecoveryPanel {
     this.dateText = local.toISOString().substring(0, 10); this.timeText = local.toISOString().substring(11, 16);
     this.accountId = item === undefined ? this.entry.accountId || '' : item.accountId;
     if (!this.accountIds().includes(this.accountId)) { this.accountId = ''; }
+    this.accountRate = item?.accountFx?.rate || ''; this.rateDate = item?.accountFx?.date || ''; this.rateSource = item?.accountFx?.source || 'manual';
+    this.actualAccount = item?.accountMinor !== undefined && item.accountCurrencyId !== undefined && item.accountCurrencyId !== this.entry.currencyId ? Money.fromMinorText(item.accountMinor, currencyUnit(item.accountCurrencyId)).toDecimalString() : '';
     this.noteText = item?.note || ''; this.formError = ''; this.amountError = ''; this.showForm = true;
   }
 
@@ -130,7 +139,7 @@ export struct ExpenseRecoveryPanel {
       onAccept: (result: TextPickerResult) => {
         if (!this.active || !this.showForm) { return; }
         const index = typeof result.index === 'number' ? result.index : result.index[0];
-        this.accountId = ids[index] || '';
+        this.accountId = ids[index] || ''; this.accountRate = ''; this.actualAccount = '';
       }
     });
   }
@@ -168,15 +177,27 @@ export struct ExpenseRecoveryPanel {
   private validateAmount(): Money | undefined {
     this.amountError = '';
     try {
-      const amount = Money.parse(this.amountText, new CurrencyUnit('CNY', 'CNY', 2));
+      const amount = Money.parse(this.amountText, currencyUnit(this.entry.currencyId));
       amount.toSafeMinorNumber();
       if (amount.minor <= BigInt(0)) { this.amountError = '请输入大于 0 的到账金额'; return undefined; }
       if (amount.minor > this.available()) {
-        this.amountError = `本次最多可${this.kind === 'refund' ? '退' : '报销'} ¥${this.decimal(this.available().toString())}`;
+        this.amountError = `本次最多可${this.kind === 'refund' ? '退' : '报销'} ${this.entry.currencyCode} ${this.decimal(this.available().toString())}`;
         return undefined;
       }
       return amount;
-    } catch (_) { this.amountError = '请输入有效金额，最多保留两位小数'; return undefined; }
+    } catch (_) { this.amountError = '请输入有效金额，小数位须符合原支出币种'; return undefined; }
+  }
+
+  private async loadAccountRate(): Promise<void> {
+    if (this.working) { return; }
+    const target = this.accounts.find((item: LedgerAccount) => item.id === this.accountId)?.currencyId;
+    if (target === undefined) { return; }
+    this.working = true;
+    try {
+      const quote = await OfficialExchangeRates.quote(this.entry.currencyId, target, this.dateText);
+      if (this.active) { this.accountRate = quote.rate; this.rateDate = quote.date; this.rateSource = quote.source; }
+    } catch (_) { if (this.active) { this.formError = '参考汇率暂不可用，可手动填写'; } }
+    finally { if (this.active) { this.working = false; } }
   }
 
   private async save(): Promise<void> {
@@ -195,6 +216,12 @@ export struct ExpenseRecoveryPanel {
         kind: this.kind, amountMinor: amount.minor.toString(), accountId: this.accountId,
         occurredAtMs: date.getTime(), localDate: this.dateText, offsetMinutes: -date.getTimezoneOffset(), note: this.noteText,
         expectedRevision: this.editing?.revision };
+      const target = this.accounts.find((item: LedgerAccount) => item.id === this.accountId)?.currencyId || this.editing?.accountCurrencyId || this.entry.currencyId;
+      if (target !== this.entry.currencyId) {
+        command.accountMinor = (this.actualAccount ? Money.parse(this.actualAccount, currencyUnit(target)) :
+          new ExchangeRate(currencyUnit(this.entry.currencyId), currencyUnit(target), this.accountRate).convert(amount)).minor.toString();
+        command.accountFx = { rate: this.accountRate, source: this.rateSource, date: this.rateDate || this.dateText, actual: this.actualAccount.length > 0 };
+      }
       await workspace.saveRecovery(command);
       this.showForm = false;
       await this.refresh();
@@ -214,7 +241,7 @@ export struct ExpenseRecoveryPanel {
     let confirmed = false;
     try {
       const choice = await this.getUIContext().getPromptAction().showDialog({ title: '删除回款',
-        message: `删除这笔${item.kind === 'refund' ? '退款' : '报销'} ¥${this.decimal(item.amountMinor)}？账户余额、支出和预算会同步恢复。`,
+        message: `删除这笔${item.kind === 'refund' ? '退款' : '报销'} ${this.entry.currencyCode} ${this.decimal(item.amountMinor)}？账户余额、支出和预算会同步恢复。`,
         buttons: [{ text: '取消', color: '#666666' }, { text: '删除', color: '#E84026' }] });
       confirmed = choice.index === 1;
     } catch (_) { return; }
@@ -275,9 +302,9 @@ export struct ExpenseRecoveryPanel {
             this.typeOption('reimbursement', '报销')
           }.padding(4).width('100%').borderRadius(24).backgroundColor($r('app.color.xq_app_surface_page'))
           Column({ space: 8 }) {
-            Text('本次到账金额').fontSize('13fp').fontColor($r('app.color.xq_font_secondary')).width('100%')
+            Text('本次收回原支出金额 · ' + this.entry.currencyCode).fontSize('13fp').fontColor($r('app.color.xq_font_secondary')).width('100%')
             Row({ space: 8 }) {
-              Text('¥').fontSize('22fp').fontColor($r('app.color.xq_font_primary')).padding({ bottom: 8 })
+              Text(this.entry.currencySymbol).fontSize('22fp').fontColor($r('app.color.xq_font_primary')).padding({ bottom: 8 })
               TextInput({ text: this.amountText, placeholder: '0.00', controller: this.amountController })
                 .layoutWeight(1).height(60).fontSize('36fp').fontFamily('XiaoQiaoDINBold')
                 .fontColor($r('app.color.xq_font_primary')).placeholderColor($r('app.color.xq_font_tertiary'))
@@ -287,12 +314,20 @@ export struct ExpenseRecoveryPanel {
                 .onSubmit(() => { this.amountController.stopEditing(); }).id('recovery-amount')
             }.width('100%').alignItems(VerticalAlign.Bottom)
             Row({ space: 8 }) {
-              Text(`最多可${this.kind === 'refund' ? '退' : '报销'} ¥${this.decimal(this.available().toString())}`)
+              Text(`最多可${this.kind === 'refund' ? '退' : '报销'} ${this.entry.currencyCode} ${this.decimal(this.available().toString())}`)
                 .fontSize('12fp').fontColor($r('app.color.xq_font_secondary')).layoutWeight(1)
               Button('全部剩余', { type: ButtonType.Capsule }).height(32).padding({ left: 10, right: 10 }).fontSize('12fp')
                 .fontColor($r('app.color.xq_font_emphasize')).backgroundColor($r('app.color.xq_app_surface_page'))
                 .onClick(() => { this.amountText = this.decimal(this.available().toString()); this.amountError = ''; this.formError = ''; })
             }.width('100%')
+            if (this.accountId && (this.accounts.find((item: LedgerAccount) => item.id === this.accountId)?.currencyId || this.editing?.accountCurrencyId) !== this.entry.currencyId) {
+              TextInput({ text: this.accountRate, placeholder: '原币 → 到账币种汇率' }).fontSize('14fp').type(InputType.NUMBER_DECIMAL)
+                .enabled(!this.working).onChange((value: string) => { this.accountRate = value; this.rateSource = 'manual'; this.rateDate = this.dateText; })
+              TextInput({ text: this.actualAccount, placeholder: '实际到账金额（可选）' }).fontSize('14fp').type(InputType.NUMBER_DECIMAL)
+                .enabled(!this.working).onChange((value: string) => { this.actualAccount = value; })
+              Button('获取官方参考汇率').fontSize('13fp').backgroundColor(Color.Transparent).fontColor($r('app.color.xq_font_emphasize'))
+                .enabled(!this.working).onClick(() => { this.loadAccountRate(); })
+            }
             if (this.amountError.length > 0) {
               Text(this.amountError).fontSize('12fp').fontColor($r('app.color.xq_warning')).width('100%').id('recovery-amount-error')
             }
@@ -360,7 +395,7 @@ export struct ExpenseRecoveryPanel {
             }.layoutWeight(1).alignItems(HorizontalAlign.Start)
             Column({ space: 5 }) {
               Row({ space: 4 }) {
-                Text('+ ¥').fontSize('12fp').fontColor($r('app.color.xq_app_income')).margin({ bottom: 1 }).flexShrink(0)
+                Text('+ ' + this.entry.currencySymbol).fontSize('12fp').fontColor($r('app.color.xq_app_income')).margin({ bottom: 1 }).flexShrink(0)
                 Text(this.decimal(item.amountMinor)).fontFamily('XiaoQiaoDINMedium').fontSize('17fp')
                   .fontColor($r('app.color.xq_app_income')).maxLines(1).minFontSize('12fp').maxFontSize('17fp').flexShrink(1)
               }.alignItems(VerticalAlign.Bottom).justifyContent(FlexAlign.End)

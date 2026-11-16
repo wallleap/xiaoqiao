@@ -1,3 +1,4 @@
+import { currencyUnit } from '../core/money/Currencies';
 import { ExpenseRecoveryController, ExpenseRecoveryPanel, RecoveryMenuAction } from './ExpenseRecoveryPanel';
 import { LedgerWorkspace } from '../data/rdb/LedgerWorkspace';
 import { LedgerAccount } from '../domain/model/LedgerSnapshot';
@@ -232,13 +233,23 @@ export struct EntryDetailPage {
           }.width('100%').padding({ left: 0, right: 0 })
         }.width('calc(100% + 64vp)').height(16).margin({ top: 20, bottom: 8 })
         this.field('账本', this.entry.bookName)
+        if (this.entry.currencyCode !== 'CNY') {
+          this.field('折合人民币', '¥' + Money.fromMinorText(this.entry.bookMinor,currencyUnit('CNY')).toDecimalString())
+        }
+        if (this.entry.bookFx !== undefined) {
+          this.field('入账汇率', '1 ' + this.entry.currencyCode + ' = ' + this.entry.bookFx.rate + ' CNY')
+          this.field('汇率来源', (this.entry.bookFx.source === 'manual' ? '手动' : 'ECB 参考汇率') + ' · ' + this.entry.bookFx.date)
+        }
+        if (this.entry.kind !== 'transfer' && this.entry.accountCurrencyId !== undefined && this.entry.accountCurrencyId !== this.entry.currencyId && this.entry.accountMinor !== undefined) {
+          this.field('实际账户金额', this.entry.accountCurrencyId + ' ' + Money.fromMinorText(this.entry.accountMinor,currencyUnit(this.entry.accountCurrencyId)).toDecimalString())
+        }
         if (this.entry.kind === 'transfer') {
           this.transferAccount(true)
           this.transferAccount(false)
-          this.field('转入金额', '¥' + this.amount(this.entry.transferInMinor || this.entry.paidMinor))
-          this.field('手续费', '¥' + this.amount(this.entry.transferFeeMinor || '0'))
+          this.field('转入金额', (this.entry.accountCurrencyId || this.entry.currencyCode) + ' ' + Money.fromMinorText(this.entry.transferInMinor || this.entry.paidMinor, currencyUnit(this.entry.accountCurrencyId || this.entry.currencyCode)).toDecimalString())
+          this.field('手续费', this.entry.currencySymbol + this.amount(this.entry.transferFeeMinor || '0'))
           if (BigInt(this.entry.transferCouponMinor || '0') > BigInt(0)) {
-            this.field('还款优惠', '¥' + this.amount(this.entry.transferCouponMinor || '0'))
+            this.field('还款优惠', this.entry.currencySymbol + this.amount(this.entry.transferCouponMinor || '0'))
           }
           if (BigInt(this.entry.transferFeeMinor || '0') > BigInt(0)) {
             this.field('手续费预算', this.entry.feeInBudget ? '计入' : '不计入')

@@ -1,3 +1,4 @@
+import { currencyUnit, currencyDefinition } from '../core/money/Currencies';
 import { recoveryError } from '../domain/model/ExpenseRecovery';
 import { transferPurposeLabel } from '../domain/model/TransferRecord';
 import { ChipGroup, ChipSize, curves, window } from '@kit.ArkUI';
@@ -175,7 +176,7 @@ struct Index {
       const code = (error as Error).message;
       this.upgradeRequired = code === 'LEDGER_UPGRADE_REQUIRED';
       if (code === 'BACKUP_RECOVERY_REQUIRED') { this.showRecoveryError(); }
-      else { this.loadError = this.upgradeRequired ? '升级本地账本后，可使用报销、退款及预算分类自定义颜色' : '账本暂时无法读取，已有数据不会被覆盖。请重试'; }
+      else { this.loadError = this.upgradeRequired ? '升级本地账本后，可使用多币种记账与换汇转账' : '账本暂时无法读取，已有数据不会被覆盖。请重试'; }
     } finally { this.loading = false; }
   }
 
@@ -312,7 +313,7 @@ struct Index {
   private confirmDatabaseUpgrade(): void {
     if (this.loading) { return; }
     this.getUIContext().getPromptAction().showDialog({ title: '升级本地账本？',
-      message: '先在本机备份，再升级报销、退款和预算分类自定义颜色支持。原账目及余额会保留；升级失败会回滚，并保留升级前备份。',
+      message: '先在本机备份，再升级多币种收支、账户、转账及回款支持。原账目及余额会保留；升级失败会回滚，并保留升级前备份。',
       buttons: [{ text: '取消', color: $r('app.color.xq_font_primary') }, { text: '备份并升级', color: $r('app.color.xq_font_emphasize') }]
     }).then(async (result) => {
       if (result.index !== 1) { return; }
@@ -890,22 +891,26 @@ struct Index {
   @Builder
   private entryAmount(entry: LedgerEntry, pageKind: LedgerKind) {
     Column({ space: 3 }) {
-      AmountText({ amount: displayAmount(entry.recoveryKind ? (-BigInt(entry.minor)).toString() : entry.transfer && pageKind === LedgerKind.Expense ? (entry.expenseMinor || '0') : entry.minor), amountSize: 16, bold: true, currencyBottom: 0,
+      AmountText({ currencySymbol: entry.fx !== undefined && !(entry.transfer && pageKind === LedgerKind.Expense) ? currencyDefinition(entry.fx.currencyId).symbol : '¥',
+        amount: entry.fx !== undefined && !(entry.transfer && pageKind === LedgerKind.Expense) ? Money.fromMinorText(entry.transfer ? entry.minor : entry.fx.paidMinor, currencyUnit(entry.fx.currencyId)).toDecimalString() : displayAmount(entry.recoveryKind ? (-BigInt(entry.minor)).toString() : entry.transfer && pageKind === LedgerKind.Expense ? (entry.expenseMinor || '0') : entry.minor), amountSize: 16, bold: true, currencyBottom: 0,
         sign: entry.recoveryKind ? '+' : entry.transfer && pageKind !== LedgerKind.Expense ? '' : entry.income ? '+' : '−',
         onOpen: () => { this.openDetail(entry.id); },
         color: entry.recoveryKind ? $r('app.color.xq_app_income') : entry.transfer && pageKind !== LedgerKind.Expense ? $r('app.color.xq_font_primary') : entry.income ? $r('app.color.xq_app_income') : $r('app.color.xq_brand') })
+      if (!entry.transfer && entry.fx !== undefined && entry.fx.currencyId !== 'CNY') {
+        Text('≈ ¥' + displayAmount(entry.recoveryKind ? (-BigInt(entry.minor)).toString() : entry.minor)).fontSize('12fp').fontColor($r('app.color.xq_font_tertiary'))
+      }
       if (entry.transfer && BigInt(entry.transferFeeMinor || '0') > BigInt(0)) {
-        Text(pageKind === LedgerKind.Expense ? '转出 ' + displayAmount(entry.minor) : '手续费 ' + displayAmount(entry.transferFeeMinor || '0')).fontSize('12fp')
+        Text(pageKind === LedgerKind.Expense ? '转出 ' + displayAmount(entry.minor) : '手续费 ' + Money.fromMinorText(entry.transferFeeMinor || '0',currencyUnit(entry.fx?.currencyId || 'CNY')).toDecimalString() + ' ' + (entry.fx?.currencyId || 'CNY')).fontSize('12fp')
           .fontColor($r('app.color.xq_font_secondary')).maxLines(1).id(`ledger-transfer-fee-${entry.id}`)
       }
       if (!entry.income && BigInt(entry.discountMinor) > BigInt(0)) {
         Row({ space: 6 }) {
-          Text('¥' + displayAmount(entry.grossMinor)).fontFamily('XiaoQiaoDINRegular').fontSize('12fp')
+          Text(currencyDefinition(entry.fx?.currencyId || 'CNY').symbol + Money.fromMinorText(entry.grossMinor,currencyUnit(entry.fx?.currencyId || 'CNY')).toDecimalString()).fontFamily('XiaoQiaoDINRegular').fontSize('12fp')
             .fontColor($r('app.color.xq_font_tertiary')).decoration({ type: TextDecorationType.LineThrough })
             .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis }).flexShrink(1).id(`ledger-original-${entry.id}`)
           Text() {
             Span('优惠 ')
-            Span(displayAmount(entry.discountMinor)).fontFamily('XiaoQiaoDINRegular')
+            Span(Money.fromMinorText(entry.discountMinor,currencyUnit(entry.fx?.currencyId || 'CNY')).toDecimalString()).fontFamily('XiaoQiaoDINRegular')
           }.fontSize('12fp').fontColor($r('app.color.xq_font_secondary')).maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis }).flexShrink(1).id(`ledger-discount-value-${entry.id}`)
         }.justifyContent(FlexAlign.End).id(`ledger-discount-${entry.id}`)

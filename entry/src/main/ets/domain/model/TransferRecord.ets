@@ -1,3 +1,4 @@
+import { FxConversion, validateConversion } from '../../core/money/FxConversion';
 import { LedgerLocation } from './LedgerLocation';
 import { Money } from '../../core/money/Money';
 import { CurrencyUnit } from '../../core/money/CurrencyUnit';
@@ -20,6 +21,11 @@ export interface TransferCommand {
   fromAccountId: string;
   toAccountId: string;
   amount: Money;
+  received?: Money;
+  bookAmount?: Money;
+  bookFee?: Money;
+  bookFx?: FxConversion;
+  settlementFx?: FxConversion;
   purpose?: string;
   fee?: Money;
   coupon?: Money;
@@ -44,13 +50,21 @@ export class TransferRecord {
   readonly outgoing: Money;
   readonly fee: Money;
   readonly coupon: Money;
+  readonly received: Money;
+  readonly bookAmount: Money;
+  readonly bookFee: Money;
   readonly purpose: string;
   readonly feeInExpense: boolean;
   readonly feeInBudget: boolean;
   constructor(command: TransferCommand) {
     if (command.fromAccountId.trim().length === 0 || command.toAccountId.trim().length === 0 ||
       command.fromAccountId === command.toAccountId) { throw new Error('INVALID_TRANSFER_ACCOUNTS'); }
-    if (!command.amount.currency.matches(new CurrencyUnit('CNY', 'CNY', 2))) { throw new Error('UNSUPPORTED_TRANSFER_CURRENCY'); }
+    this.received = command.received || command.amount;
+    this.bookAmount = command.bookAmount || command.amount;
+    validateConversion(command.amount, this.received, command.settlementFx);
+    validateConversion(command.amount, this.bookAmount, command.bookFx);
+    if (this.received.minor <= BigInt(0)) { throw new Error('INVALID_TRANSFER_EXTRAS'); }
+    this.received.toSafeMinorNumber(); this.bookAmount.toSafeMinorNumber();
     // Reuse exact positive amount, persistence-boundary and captured-local-date validation.
     const validated = new ExpenseRecord({ id: command.id, bookId: command.bookId, categoryId: 'transfer',
       gross: command.amount, discount: Money.fromMinorText('0', command.amount.currency), bookPaid: command.amount,
@@ -66,10 +80,15 @@ export class TransferRecord {
       (this.coupon.minor > BigInt(0) && !purpose.repayment)) { throw new Error('INVALID_TRANSFER_EXTRAS'); }
     this.outgoing = command.amount.add(this.fee).subtract(this.coupon);
     this.fee.toSafeMinorNumber(); this.coupon.toSafeMinorNumber(); this.outgoing.toSafeMinorNumber();
+    this.bookFee = command.bookFee || this.fee;
+    if (this.fee.minor > BigInt(0)) { validateConversion(this.fee, this.bookFee, command.bookFx); }
+    else if (this.bookFee.minor !== BigInt(0)) { throw new Error('INVALID_TRANSFER_EXTRAS'); }
+    this.bookFee.toSafeMinorNumber();
     this.feeInExpense = true;
     this.feeInBudget = this.feeInExpense && command.feeInBudget !== false;
     this.command = { id: validated.id, bookId: validated.bookId, fromAccountId: command.fromAccountId,
-      toAccountId: command.toAccountId, amount: validated.gross, purpose: this.purpose, fee: this.fee, coupon: this.coupon,
+      toAccountId: command.toAccountId, amount: validated.gross,
+      received: this.received, bookAmount: this.bookAmount, bookFee: this.bookFee, bookFx: command.bookFx, settlementFx: command.settlementFx, purpose: this.purpose, fee: this.fee, coupon: this.coupon,
       feeInBudget: this.feeInBudget, includeInAssets: validated.includeInAssets,
       tagIds: validated.tagIds,
       attachments: validated.attachments,

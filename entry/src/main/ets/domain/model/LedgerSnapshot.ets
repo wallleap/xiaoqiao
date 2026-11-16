@@ -1,3 +1,4 @@
+import { FxEntrySnapshot } from './FxEntrySnapshot';
 import { BudgetNatureLine } from './SpendingNature';
 import { LedgerAttachmentDraft } from './LedgerAttachment';
 import { LedgerLocation } from './LedgerLocation';
@@ -29,6 +30,7 @@ export interface LedgerAccount {
 }
 
 export interface SavedLedgerEntry {
+  fx?: FxEntrySnapshot;
   id: string;
   note: string;
   category: string;

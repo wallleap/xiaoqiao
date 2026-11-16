@@ -1,3 +1,4 @@
+import { currencyUnit } from '../core/money/Currencies';
 import { SegmentButton, SegmentButtonOptions } from '@kit.ArkUI';
 import { HdsNavigation, HdsNavigationTitleMode, hdsMaterial, DividerShowType, ScrollEffectType } from '@kit.UIDesignKit';
 import { AccountOverview, AccountProfile } from '../domain/model/AccountProfile';
@@ -28,9 +29,10 @@ export struct AccountsPage {
   onRetry: () => void = () => {};
   private readonly scroller: Scroller = new Scroller();
 
-  private amount(minor: string): string {
-    const parts = Money.fromMinorText(minor, new CurrencyUnit('CNY', 'CNY', 2)).toDecimalString().split('.');
-    return parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',') + '.' + parts[1];
+  private amount(minor: string, code: string = 'CNY'): string {
+    if (!minor) { return '—'; }
+    const parts = Money.fromMinorText(minor, currencyUnit(code)).toDecimalString().split('.');
+    return parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',') + (parts.length > 1 ? '.' + parts[1] : '');
   }
   private visible(): AccountProfile[] { return this.overview?.accounts.filter((account: AccountProfile) => account.archived === this.showArchived) || []; }
 
@@ -43,7 +45,7 @@ export struct AccountsPage {
   private total(asset: boolean) {
     Column({ space: 6 }) {
       Text(asset ? '总资产' : '总负债').fontSize('12fp').fontColor($r('app.color.xq_font_secondary'))
-      Text(this.amount((asset ? this.overview?.assetsMinor : this.overview?.liabilitiesMinor) || '0'))
+      Text(this.amount((asset ? this.overview?.assetsMinor : this.overview?.liabilitiesMinor) ?? '0'))
         .fontSize('20fp').fontFamily('XiaoQiaoDINMedium').id(asset ? 'accounts-total-assets' : 'accounts-total-liabilities')
         .fontColor($r('app.color.xq_font_primary')).maxLines(1).minFontSize('14fp').maxFontSize('20fp')
     }.layoutWeight(1).alignItems(HorizontalAlign.Start)
@@ -60,14 +62,17 @@ export struct AccountsPage {
             Button('重新读取').onClick(() => { this.onRetry(); }).id('accounts-retry')
           } else {
             Column({ space: 16 }) {
-              Text('净资产 · CNY').fontSize('14fp').fontColor($r('app.color.xq_font_secondary')).width('100%')
-              Text(this.amount(this.overview?.netMinor || '0')).fontSize('36fp').fontFamily('XiaoQiaoDINBold')
+              Text('净资产 · CNY' + (this.overview?.accounts.some((item: AccountProfile) => item.currencyId !== 'CNY') ? ' · 参考汇率估值' : '')).fontSize('14fp').fontColor($r('app.color.xq_font_secondary')).width('100%')
+              Text(this.amount(this.overview?.netMinor ?? '0')).fontSize('36fp').fontFamily('XiaoQiaoDINBold')
                 .fontWeight(FontWeight.Bold).fontColor($r('app.color.xq_font_primary')).width('100%')
                 .maxLines(1).minFontSize('20fp').maxFontSize('36fp').id('accounts-net')
               Row({ space: 24 }) {
                 this.total(true)
                 this.total(false)
               }.width('100%')
+              if ((this.overview?.valuationMissing?.length || 0) > 0) {
+                Text('外币汇率暂不可用，净资产待估值：' + this.overview?.valuationMissing?.join('、')).fontSize('12fp').fontColor($r('app.color.xq_font_secondary'))
+              }
               if (this.overview?.accounts.some((item: AccountProfile) => item.archived && item.includeInNetAssets)) {
                 Text('含已归档账户余额').fontSize('12fp').fontColor($r('app.color.xq_font_tertiary')).width('100%')
               }
@@ -92,11 +97,11 @@ export struct AccountsPage {
                 AccountAvatar({ iconKey: account.iconKey, brandColor: account.brandColor, iconVariant: account.iconVariant })
                 Column({ space: 4 }) {
                   Text(account.name).fontSize('16fp').fontWeight(FontWeight.Medium).fontColor($r('app.color.xq_font_primary')).maxLines(1)
-                  Text((account.kind === 'liability' ? '负债账户' : '资产账户') + (account.includeInNetAssets ? ' · CNY' : ' · 不计总资产'))
+                  Text((account.kind === 'liability' ? '负债账户' : '资产账户') + (account.includeInNetAssets ? ' · ' + account.currencyId : ' · 不计总资产'))
                     .fontSize('12fp').fontColor($r('app.color.xq_font_secondary'))
                 }.layoutWeight(1).alignItems(HorizontalAlign.Start)
                 Column({ space: 4 }) {
-                  Text(this.amount(account.balanceMinor)).fontSize('20fp').fontFamily('XiaoQiaoDINMedium')
+                  Text(this.amount(account.balanceMinor, account.currencyId)).fontSize('20fp').fontFamily('XiaoQiaoDINMedium')
                     .fontColor($r('app.color.xq_font_primary')).maxLines(1).minFontSize('14fp').maxFontSize('20fp')
                   if (account.kind === 'liability' && BigInt(account.balanceMinor) > BigInt(0)) {
                     Text('溢缴余额').fontSize('10fp').fontColor($r('app.color.xq_font_secondary'))

@@ -14,7 +14,6 @@ export class RdbAccountRepository {
       const rows = await db.querySql("SELECT id,name,kind,currency_id,COALESCE(brand,''),COALESCE(icon_key,'bank_card'),COALESCE(icon_variant,'monochrome'),COALESCE(brand_color,'#5378B8'),include_in_net_assets,revision,archived_at_ms FROM accounts WHERE deleted_at_ms IS NULL ORDER BY sort_order,created_at_ms,id");
       try {
         while (rows.goToNextRow()) {
-          if (rows.getString(3) !== 'CNY') { throw new Error('UNSUPPORTED_ACCOUNT_CURRENCY'); }
           accounts.push({ id: rows.getString(0), name: rows.getString(1), kind: rows.getString(2), currencyId: rows.getString(3),
             brand: rows.getString(4), iconKey: rows.getString(5), iconVariant: rows.getString(6), brandColor: rows.getString(7),
             includeInNetAssets: rows.getLong(8) === 1, revision: rows.getLong(9), archived: !rows.isColumnNull(10), balanceMinor: '0' });
@@ -29,7 +28,7 @@ export class RdbAccountRepository {
       let assets: bigint = BigInt(0); let liabilities: bigint = BigInt(0);
       for (const account of accounts) {
         const balance = balances.get(account.id) || BigInt(0); account.balanceMinor = balance.toString();
-        if (account.includeInNetAssets) {
+        if (account.includeInNetAssets && account.currencyId === 'CNY') {
           if (balance >= BigInt(0)) { assets += balance; } else { liabilities -= balance; }
         }
       }
@@ -41,14 +40,14 @@ export class RdbAccountRepository {
     const draft = new AccountDraft(command); const value = draft.command;
     await this.session.write(async (db: relationalStore.RdbStore): Promise<void> => {
       const now = Date.now();
-      await db.insert('accounts', { id: value.id, name: value.name, kind: value.kind, currency_id: 'CNY',
+      await db.insert('accounts', { id: value.id, name: value.name, kind: value.kind, currency_id: value.opening.currency.id,
         brand: draft.style.brand, icon_key: draft.style.key, icon_variant: 'monochrome', brand_color: draft.style.color,
         include_in_net_assets: value.includeInNetAssets ? 1 : 0, created_at_ms: now, updated_at_ms: now });
       const adjustment = util.generateRandomUUID();
       const minor = value.opening.toSafeMinorNumber();
       await db.insert('balance_adjustments', { id: adjustment, account_id: value.id, kind: 'opening', before_minor: 0,
         after_minor: minor, delta_minor: minor, reason: '设置期初余额', occurred_at_ms: now, created_at_ms: now });
-      await db.insert('account_movements', { id: util.generateRandomUUID(), account_id: value.id, currency_id: 'CNY',
+      await db.insert('account_movements', { id: util.generateRandomUUID(), account_id: value.id, currency_id: value.opening.currency.id,
         adjustment_id: adjustment, leg: 'adjustment', delta_minor: minor, occurred_at_ms: now });
       await db.update({ posting_state: 'posted' }, new relationalStore.RdbPredicates('balance_adjustments').equalTo('id', adjustment));
     });
@@ -57,7 +56,7 @@ export class RdbAccountRepository {
   async calibrate(command: AccountCalibrationCommand): Promise<void> {
     const draft = new AccountCalibration(command); const value = draft.command;
     await this.session.write(async (db: relationalStore.RdbStore): Promise<void> => {
-      const account = await db.querySql("SELECT revision FROM accounts WHERE id=? AND currency_id='CNY' AND deleted_at_ms IS NULL AND archived_at_ms IS NULL", [value.accountId]);
+      const account = await db.querySql("SELECT revision FROM accounts WHERE id=? AND currency_id=? AND deleted_at_ms IS NULL AND archived_at_ms IS NULL", [value.accountId, value.before.currency.id]);
       try {
         if (!account.goToFirstRow() || account.getLong(0) !== value.expectedRevision) { throw new Error('ACCOUNT_CHANGED'); }
       } finally { account.close(); }
@@ -68,12 +67,12 @@ export class RdbAccountRepository {
       const now = Date.now();
       const changed = await db.update({ revision: value.expectedRevision + 1, updated_at_ms: now },
         new relationalStore.RdbPredicates('accounts').equalTo('id', value.accountId).equalTo('revision', value.expectedRevision)
-          .equalTo('currency_id', 'CNY').isNull('archived_at_ms').isNull('deleted_at_ms'));
+          .equalTo('currency_id', value.before.currency.id).isNull('archived_at_ms').isNull('deleted_at_ms'));
       if (changed !== 1) { throw new Error('ACCOUNT_CHANGED'); }
       await db.insert('balance_adjustments', { id: value.id, account_id: value.accountId, kind: 'calibration',
         before_minor: value.before.toSafeMinorNumber(), after_minor: value.after.toSafeMinorNumber(), delta_minor: draft.delta.toSafeMinorNumber(),
         reason: value.reason, occurred_at_ms: now, created_at_ms: now });
-      await db.insert('account_movements', { id: util.generateRandomUUID(), account_id: value.accountId, currency_id: 'CNY',
+      await db.insert('account_movements', { id: util.generateRandomUUID(), account_id: value.accountId, currency_id: value.before.currency.id,
         adjustment_id: value.id, leg: 'adjustment', delta_minor: draft.delta.toSafeMinorNumber(), occurred_at_ms: now });
       const published = await db.update({ posting_state: 'posted' }, new relationalStore.RdbPredicates('balance_adjustments').equalTo('id', value.id).equalTo('posting_state', 'draft'));
       if (published !== 1) { throw new Error('ACCOUNT_CHANGED'); }
@@ -83,7 +82,7 @@ export class RdbAccountRepository {
   async adjustmentHistory(accountId: string, cursor: AdjustmentCursor | undefined = undefined): Promise<AdjustmentPage> {
     if (!accountId.trim() || (cursor !== undefined && (!cursor.id.trim() || !Number.isSafeInteger(cursor.occurredAtMs) || cursor.occurredAtMs < 0))) { throw new Error('INVALID_ADJUSTMENT_QUERY'); }
     return this.session.read(async (db: relationalStore.RdbStore): Promise<AdjustmentPage> => {
-      const account = await db.querySql("SELECT id FROM accounts WHERE id=? AND currency_id='CNY' AND deleted_at_ms IS NULL", [accountId]);
+      const account = await db.querySql("SELECT id FROM accounts WHERE id=? AND deleted_at_ms IS NULL", [accountId]);
       try { if (!account.goToFirstRow()) { throw new Error('ACCOUNT_UNAVAILABLE'); } } finally { account.close(); }
       const args: relationalStore.ValueType[] = [accountId];
       let predicate: string = '';
@@ -108,7 +107,7 @@ export class RdbAccountRepository {
       const changed = await db.update({ name: draft.command.name, brand: draft.style.brand, icon_key: draft.style.key,
         icon_variant: 'monochrome', brand_color: draft.style.color, include_in_net_assets: command.includeInNetAssets ? 1 : 0,
         updated_at_ms: Date.now(), revision: revision + 1 }, new relationalStore.RdbPredicates('accounts')
-        .equalTo('id', command.id).equalTo('kind', command.kind).equalTo('currency_id', 'CNY')
+        .equalTo('id', command.id).equalTo('kind', command.kind).equalTo('currency_id', command.opening.currency.id)
         .equalTo('revision', revision).isNull('deleted_at_ms'));
       if (changed !== 1) { throw new Error('ACCOUNT_CHANGED'); }
     });
@@ -120,7 +119,7 @@ export class RdbAccountRepository {
     await this.session.write(async (db: relationalStore.RdbStore): Promise<void> => {
       const changed = await db.update({ archived_at_ms: archived ? Date.now() : null, revision: revision + 1,
         updated_at_ms: Date.now() }, new relationalStore.RdbPredicates('accounts').equalTo('id', id)
-        .equalTo('currency_id', 'CNY').equalTo('revision', revision).isNull('deleted_at_ms'));
+        .equalTo('revision', revision).isNull('deleted_at_ms'));
       if (changed !== 1) { throw new Error('ACCOUNT_CHANGED'); }
     });
   }

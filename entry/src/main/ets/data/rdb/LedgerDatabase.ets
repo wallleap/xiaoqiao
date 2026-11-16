@@ -5,6 +5,7 @@ import { REVIEW_SCHEMA_SHA256, REVIEW_SCHEMA_STATEMENTS } from './ReviewSchema';
 import { TransferMigration } from './TransferMigration';
 import { SpendingNatureMigration } from './SpendingNatureMigration';
 import { RecoveryMigration } from './RecoveryMigration';
+import { MulticurrencyMigration } from './MulticurrencyMigration';
 import { NatureColorMigration } from './NatureColorMigration';
 import { BudgetNatureMigration } from './BudgetNatureMigration';
 import { RdbSession } from './RdbSession';
@@ -53,11 +54,12 @@ export class LedgerDatabase {
           await BudgetNatureMigration.apply(db, '', false);
           await RecoveryMigration.apply(db, '', false);
           await NatureColorMigration.apply(db, '', false);
+          await MulticurrencyMigration.apply(db, '', false);
           await LedgerDatabase.ensureIncomeCategories(db);
         });
       } else {
-        let version = await session.read(async (db: relationalStore.RdbStore): Promise<number> => NatureColorMigration.status(db));
-        if (version < 6 && !allowUpgrade) { throw new Error('LEDGER_UPGRADE_REQUIRED'); }
+        let version = await session.read(async (db: relationalStore.RdbStore): Promise<number> => MulticurrencyMigration.status(db));
+        if (version < 7 && !allowUpgrade) { throw new Error('LEDGER_UPGRADE_REQUIRED'); }
         if (version === 1) {
           if (!allowUpgrade) { throw new Error('LEDGER_UPGRADE_REQUIRED'); }
           await TransferMigration.upgrade(store, name);
@@ -72,7 +74,8 @@ export class LedgerDatabase {
           version = 4;
         }
         if (version === 4) { await RecoveryMigration.upgrade(store, name); version = 5; }
-        if (version === 5) { await NatureColorMigration.upgrade(store, name); }
+        if (version === 5) { await NatureColorMigration.upgrade(store, name); version = 6; }
+        if (version === 6) { await MulticurrencyMigration.upgrade(store, name); }
         await session.write(async (db: relationalStore.RdbStore): Promise<void> => { await LedgerDatabase.ensureIncomeCategories(db); });
       }
       return store;
