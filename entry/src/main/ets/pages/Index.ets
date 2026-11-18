@@ -1,3 +1,4 @@
+import { BillDetailsPage } from '../components/BillDetailsPage';
 import { PrepaidPage } from '../components/PrepaidPage';
 import { currencyUnit, currencyDefinition } from '../core/money/Currencies';
 import { recoveryError } from '../domain/model/ExpenseRecovery';
@@ -56,6 +57,7 @@ struct Index {
   @State private showHuaweiCloud: boolean = false;
   @State private prepaidProjectId: string = '';
   @State private showPrepaid: boolean = false;
+  @State private showBillDetails: boolean = false;
   @State private prepaidCount: number = 0;
   @State private pendingPrepaidCount: number = 0;
   @State private expenseFromPrepaid: boolean = false;
@@ -771,6 +773,7 @@ struct Index {
     if (this.showAccountEditor) { if (!this.accountSaving) { this.showAccountEditor = false; this.editingAccount = undefined; } return true; }
     if (this.showExpense) { if (!this.savingExpense) { this.closeEditor(); } return true; }
     if (this.showDetail) { if (!this.deleting) { this.closeDetail(); } return true; }
+    if (this.showBillDetails) { this.showBillDetails = false; return true; }
     return false;
   }
 
@@ -1699,7 +1702,7 @@ struct Index {
           onOpenAccounts: () => { this.selectedTab = 3; },
           onOpenBudget: () => { this.openBudget(); },
           onOpenStatistics: () => { this.selectedTab = 1; },
-          onOpenRecords: () => { this.selectedTab = 0; },
+          onOpenRecords: () => { this.showBillDetails = true; },
         })
       }.tabBar(this.tabItem(4))
     }.width('100%').height(LayoutPolicy.matchParent).scrollable(false).barHeight(64)
@@ -1736,6 +1739,18 @@ struct Index {
     else if (this.showBackupRestore) { this.backupRestorePage() }
     else if (this.showSpendingNatures) { this.spendingNaturePage() }
     else if (this.showAccountEditor) { this.accountEditorPage() }
+    else if (this.showBillDetails) {
+      Stack() {
+        Column() {
+          BillDetailsPage({ workspace: this.workspace, initialMonth: this.selectedMonth, refreshToken: this.ledgerVersion,
+            onClose: () => { this.showBillDetails = false; }, onOpenEntry: (entry: LedgerEntry) => {
+              if (entry.prepaidId) { this.prepaidProjectId = entry.prepaidId; this.showPrepaid = true; }
+              else { this.openDetail(entry.id); }
+            } })
+        }.width('100%').height('100%').visibility(this.showDetail ? Visibility.Hidden : Visibility.Visible)
+        if (this.showDetail) { this.detailPage() }
+      }.width('100%').height('100%')
+    }
     else if (this.showDetail) { this.detailPage() }
     else {
       Stack({ alignContent: Alignment.Bottom }) {
