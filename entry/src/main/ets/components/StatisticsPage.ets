@@ -645,10 +645,9 @@ export struct StatisticsPage {
     Row({ space: 12 }) {
       Stack() {
         if (category.key === 'transfer_fee') {
-          Image($r('app.media.lucide_arrow_left_right1')).width(24).height(24)
-            .fillColor($r('app.color.xq_icon_emphasize'))
+          Image($r('app.media.colorful_icon00372')).width(24).height(24).objectFit(ImageFit.Contain)
         } else {
-          Image(categoryIcon(category.iconKey)).width(28).height(28).objectFit(ImageFit.Contain)
+          Image(categoryIcon(category.iconKey, kind === 'income')).width(28).height(28).objectFit(ImageFit.Contain)
         }
       }.width(44).height(44).borderRadius(22).backgroundColor($r('app.color.xq_app_surface_page'))
       Column({ space: 8 }) {
@@ -973,10 +972,9 @@ export struct StatisticsPage {
     Row({ space: 12 }) {
       Stack() {
         if (entry.categoryKey === 'transfer_fee') {
-          Image($r('app.media.lucide_arrow_left_right1')).width(22).height(22)
-            .fillColor($r('app.color.xq_icon_emphasize'))
+          Image($r('app.media.colorful_icon00372')).width(22).height(22).objectFit(ImageFit.Contain)
         } else {
-          Image(categoryIcon(entry.iconKey)).width(26).height(26).objectFit(ImageFit.Contain)
+          Image(categoryIcon(entry.iconKey, this.kind === 1)).width(26).height(26).objectFit(ImageFit.Contain)
         }
       }.width(40).height(40).borderRadius(20).backgroundColor($r('app.color.xq_app_surface_page'))
       Column({ space: 4 }) {

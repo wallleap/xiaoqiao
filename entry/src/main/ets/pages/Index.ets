@@ -1029,7 +1029,7 @@ struct Index {
     Row() {
       Stack() {
         if (entry.transfer) {
-          Image(entry.icon).width(28).height(28).fillColor($r('app.color.xq_icon_primary')).id(`ledger-category-glyph-${entry.id}`)
+          Image(entry.icon).width(28).height(28).objectFit(ImageFit.Contain).id(`ledger-category-glyph-${entry.id}`)
         } else {
           Image(entry.icon).width(28).height(28).objectFit(ImageFit.Contain).id(`ledger-category-glyph-${entry.id}`)
         }
@@ -1351,7 +1351,7 @@ struct Index {
     if (!this.preview && this.prepaidCount > 0 && !this.upgradeRequired) {
       Button({ type: ButtonType.Normal }) {
         Row({ space: 10 }) {
-          Image($r('app.media.icon00350')).width(24).height(24).objectFit(ImageFit.Contain).flexShrink(0)
+          Image($r('app.media.colorful_icon00350')).width(24).height(24).objectFit(ImageFit.Contain).flexShrink(0)
           Text('预付款与核销').fontSize('14fp').fontWeight(FontWeight.Medium)
             .fontColor($r('app.color.xq_font_primary')).maxLines(1).layoutWeight(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis })

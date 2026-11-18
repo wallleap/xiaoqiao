@@ -782,7 +782,7 @@ export class LedgerWorkspace {
       const now = Date.now();
       id = util.generateRandomUUID();
       await db.insert('categories', { id: id, book_id: bookId, kind: kind, parent_id: parentId,
-        name: name, name_key: name, icon_key: 'other', sort_order: sortOrder, created_at_ms: now, updated_at_ms: now });
+        name: name, name_key: name, icon_key: kind === 'income' ? 'icon00373' : 'other', sort_order: sortOrder, created_at_ms: now, updated_at_ms: now });
       parentId = id;
     }
     return parentId || '';

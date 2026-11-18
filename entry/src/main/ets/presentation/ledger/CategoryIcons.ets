@@ -50,13 +50,14 @@ function semanticCategoryIconKey(key: string): string {
   }
 }
 
-export function categoryIconKey(key: string): string {
+export function categoryIconKey(key: string, income: boolean = false): string {
+  if (income && key === 'other') { return 'icon00373'; }
   const legacyKey = semanticCategoryIconKey(key);
   return LEGACY_COLORFUL_ICON_KEYS[legacyKey] || legacyKey;
 }
 
-export function categoryIcon(key: string): Resource {
-  const resolvedKey = categoryIconKey(key);
+export function categoryIcon(key: string, income: boolean = false): Resource {
+  const resolvedKey = categoryIconKey(key, income);
   return COLORFUL_CATEGORY_ICONS.find((option: ColorfulCategoryIcon) => option.key === resolvedKey)?.resource ||
-    $r('app.media.icon00204');
+    $r('app.media.colorful_icon00204');
 }

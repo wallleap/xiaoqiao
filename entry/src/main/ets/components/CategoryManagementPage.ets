@@ -388,18 +388,18 @@ export struct CategoryManagementPage {
             Button({ type: ButtonType.Normal }) {
               Stack({ alignContent: Alignment.Center }) {
                 Image(option.resource).width(32).height(32).objectFit(ImageFit.Contain)
-                if (categoryIconKey(this.iconKey) === option.key) {
+                if (categoryIconKey(this.iconKey, this.kind === 'income') === option.key) {
                   Image($r('app.media.lucide_check1')).width(12).height(12)
                     .fillColor($r('app.color.xq_font_on_primary')).padding(2).backgroundColor($r('app.color.xq_brand'))
                     .borderRadius(8).align(Alignment.BottomEnd)
                 }
               }.width('100%').height('100%')
             }.width('100%').height(52).padding(8).borderRadius(12)
-              .backgroundColor(categoryIconKey(this.iconKey) === option.key ? $r('app.color.xq_comp_emphasize_tertiary') : Color.Transparent)
-              .border({ width: 1.5, color: categoryIconKey(this.iconKey) === option.key ? $r('app.color.xq_brand') : Color.Transparent })
+              .backgroundColor(categoryIconKey(this.iconKey, this.kind === 'income') === option.key ? $r('app.color.xq_comp_emphasize_tertiary') : Color.Transparent)
+              .border({ width: 1.5, color: categoryIconKey(this.iconKey, this.kind === 'income') === option.key ? $r('app.color.xq_brand') : Color.Transparent })
               .onClick(() => { this.iconKey = option.key; }).id('category-icon-' + option.key)
               .accessibilityText('分类图标 ' + option.key.replace(/^icon0*/, ''))
-              .accessibilityDescription(categoryIconKey(this.iconKey) === option.key ? '已选中' : '未选中')
+              .accessibilityDescription(categoryIconKey(this.iconKey, this.kind === 'income') === option.key ? '已选中' : '未选中')
           }
         }, (option: ColorfulCategoryIcon) => option.key)
       }.columnsTemplate('1fr 1fr 1fr 1fr 1fr').columnsGap(8).rowsGap(8).cachedCount(2)
@@ -422,7 +422,7 @@ export struct CategoryManagementPage {
   private categoryRow(item: CategoryProfile) {
     Row({ space: 10 }) {
       Row({ space: 10 }) {
-        Image(categoryIcon(item.iconKey)).width(30).height(30).flexShrink(0)
+        Image(categoryIcon(item.iconKey, item.kind === 'income')).width(30).height(30).flexShrink(0)
         Column({ space: 4 }) {
           Text(item.name).fontSize('16fp').fontWeight(FontWeight.Medium)
             .fontColor($r('app.color.xq_font_primary')).maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })

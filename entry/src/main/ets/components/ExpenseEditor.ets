@@ -869,7 +869,7 @@ export struct ExpenseEditor {
   private categoryItem(item: ExpenseCategory, compact: boolean = false, secondRow: boolean = false) {
     Column({ space: compact ? 2 : 6 }) {
       Stack({ alignContent: Alignment.TopEnd }) {
-        Image(categoryIcon(item.iconKey)).width(compact ? 28 : 32).height(compact ? 28 : 32)
+        Image(categoryIcon(item.iconKey, this.isIncome)).width(compact ? 28 : 32).height(compact ? 28 : 32)
         if (this.activeCategories().some((child: ExpenseCategory) => child.parentId === item.id)) {
           Image($r('app.media.lucide_ellipsis1')).width(14).height(14)
             .fillColor($r('app.color.xq_icon_emphasize')).offset({ x: 8, y: -4 })
@@ -1719,8 +1719,8 @@ export struct ExpenseEditor {
             }
           }.layoutWeight(1).alignItems(HorizontalAlign.Start)
           if (this.isTransfer) {
-            Image($r('app.media.lucide_arrow_left_right1')).width(32).height(32).fillColor($r('app.color.xq_icon_primary'))
-          } else { Image(categoryIcon(this.selected()?.iconKey || 'food')).width(32).height(32) }
+            Image($r('app.media.colorful_icon00372')).width(32).height(32).objectFit(ImageFit.Contain)
+          } else { Image(categoryIcon(this.selected()?.iconKey || (this.isIncome ? 'other' : 'food'), this.isIncome)).width(32).height(32) }
         }.padding(16).width('100%').borderRadius(20).backgroundColor($r('app.color.xq_app_surface_card'))
           .outlineWidth(2).outlineRadius(20)
           .outlineColor(this.amountFocusHighlight ? $r('app.color.xq_brand') : Color.Transparent)

@@ -82,7 +82,7 @@ export function presentEntry(entry: SavedLedgerEntry): LedgerEntry {
     expenseMinor: entry.expenseMinor, transferFeeMinor: entry.transferFeeMinor, transferCouponMinor: entry.transferCouponMinor,
     grossMinor: entry.grossMinor, discountMinor: entry.discountMinor, tags: entry.tagNames || [],
     tagIds: entry.tagIds || [], recoveryBadges: expenseRecoveryBadges(entry),
-    icon: entry.prepaidId ? $r('app.media.icon00350') : entry.transfer ? $r('app.media.lucide_arrow_left_right1') : categoryIcon(entry.iconKey) };
+    icon: entry.prepaidId ? $r('app.media.colorful_icon00350') : entry.transfer ? $r('app.media.colorful_icon00372') : categoryIcon(entry.iconKey, entry.income) };
 }
 
 export function filterEntries(entries: LedgerEntry[], kind: LedgerKind, query: string,
