@@ -225,6 +225,18 @@
       "value": "#FF202224"
     },
     {
+      "name": "xq_ledger_prepaid_entry_background",
+      "value": "#FF202224"
+    },
+    {
+      "name": "xq_ledger_category_disc_background",
+      "value": "#FF202224"
+    },
+    {
+      "name": "xq_ledger_status_badge_background",
+      "value": "#FF202224"
+    },
+    {
       "name": "xq_app_surface_keyboard",
       "value": "#FF2E3033"
     },

@@ -666,6 +666,20 @@ struct Index {
     return displayAmount((remaining < BigInt(0) ? -remaining : remaining).toString());
   }
 
+  private dailyAvailable(): string {
+    const now = new Date();
+    const currentMonth = now.getFullYear().toString() + '-' + (now.getMonth() + 1).toString().padStart(2, '0');
+    if (!this.preview && this.ledger === undefined) { return '—'; }
+    if (this.selectedMonth < currentMonth) { return '—'; }
+    const parts = this.selectedMonth.split('-');
+    const daysInMonth = new Date(Number(parts[0]), Number(parts[1]), 0).getDate();
+    const days = this.selectedMonth === currentMonth ? daysInMonth - now.getDate() + 1 : daysInMonth;
+    if (!Number.isInteger(days) || days <= 0) { return '—'; }
+    const remaining = BigInt(this.budgetProgress().remainingMinor);
+    const daily = remaining > BigInt(0) ? remaining / BigInt(days) : BigInt(0);
+    return '¥' + displayAmount(daily.toString());
+  }
+
   private openBudget(): void {
     if (this.preview) { this.notify('预览样例不修改预算'); return; }
     const workspace = this.workspace;
@@ -884,10 +898,49 @@ struct Index {
       .hitTestBehavior(this.navigationTitleOpacity > 0 ? HitTestMode.Default : HitTestMode.None)
   }
 
+  private chooseLedgerMonth(): void {
+    if (this.loading || this.bookBusy || this.backupBusy) { return; }
+    if (this.preview) { this.notify('预览样例使用固定月份'); return; }
+    const parts = this.selectedMonth.split('-');
+    const selectedYear = Number(parts[0]);
+    const firstYear = Math.min(1900, selectedYear);
+    const lastYear = Math.max(2100, selectedYear);
+    const years: string[] = [];
+    const months: string[] = [];
+    for (let year = firstYear; year <= lastYear; year++) { years.push(year.toString() + '年'); }
+    for (let month = 1; month <= 12; month++) { months.push(month.toString() + '月'); }
+    this.getUIContext().getFocusController().clearFocus();
+    this.getUIContext().showTextPickerDialog({
+      range: [years, months], selected: [selectedYear - firstYear, Number(parts[1]) - 1], canLoop: false,
+      selectedTextStyle: { color: $r('app.color.xq_font_emphasize') },
+      acceptButtonStyle: { fontColor: $r('app.color.xq_font_emphasize') },
+      cancelButtonStyle: { fontColor: $r('app.color.xq_font_secondary') },
+      onAccept: (result: TextPickerResult) => {
+        if (typeof result.index === 'number' || result.index.length !== 2) { return; }
+        const year = firstYear + result.index[0];
+        const month = result.index[1] + 1;
+        if (year < firstYear || year > lastYear || month < 1 || month > 12) { return; }
+        const key = year.toString() + '-' + month.toString().padStart(2, '0');
+        if (key === this.selectedMonth || this.loading || this.bookBusy || this.backupBusy) { return; }
+        this.selectedMonth = key;
+        this.activeSwipeId = '';
+        this.bodyScroller.scrollTo({ xOffset: 0, yOffset: 0 });
+        this.loadLedger();
+      }
+    });
+  }
+
   @Builder
   private header() {
     Row({ space: 8 }) {
-      Text(this.month()).fontSize('12fp').fontColor($r('app.color.xq_font_secondary'))
+      Button({ type: ButtonType.Normal }) {
+        Row({ space: 4 }) {
+          Text(this.month()).fontSize('12fp').fontColor($r('app.color.xq_font_secondary'))
+          Image($r('app.media.lucide_chevron_down1')).width(12).height(12).fillColor($r('app.color.xq_icon_tertiary'))
+        }
+      }.padding(0).height(28).backgroundColor(Color.Transparent).enabled(!this.loading && !this.bookBusy && !this.backupBusy)
+        .accessibilityText('选择账单月份，当前' + this.month()).id('ledger-month-selector')
+        .onClick(() => { this.chooseLedgerMonth(); })
       Text('·').fontSize('12fp').fontColor($r('app.color.xq_font_tertiary'))
       Text('CNY').fontSize('12fp').fontColor($r('app.color.xq_font_secondary'))
     }.id('ledger-period').width('100%').margin({ top: 2, bottom: 16 })
@@ -903,9 +956,9 @@ struct Index {
   private summaryFigure(income: boolean) {
     Text(this.preview ? (income ? '8,600.00' : '2,486.00') :
       displayAmount((income ? this.ledger?.incomeMinor : this.ledger?.expenseMinor) || '0'))
-      .fontFamily('XiaoQiaoDINRegular').fontSize('14fp').fontWeight(FontWeight.Regular)
+      .fontFamily('XiaoQiaoDINRegular').fontSize('12fp').fontWeight(FontWeight.Regular)
       .id(income ? 'ledger-income-total' : 'ledger-expense-total')
-      .minFontSize('12fp').maxFontSize('14fp').maxLines(1).constraintSize({ maxWidth: 92 })
+      .minFontSize('10fp').maxFontSize('12fp').maxLines(1).constraintSize({ maxWidth: 92 })
       .fontColor($r('app.color.xq_font_on_secondary'))
       .accessibilityText('人民币' + (this.preview ? (income ? '8,600.00' : '2,486.00') :
         displayAmount((income ? this.ledger?.incomeMinor : this.ledger?.expenseMinor) || '0')) + '元')
@@ -921,7 +974,7 @@ struct Index {
   private summary() {
     Column({ space: 16 }) {
       Row() {
-        Text(this.budgetProgress().overBudget ? '本月预算超支' : '本月预算剩余').fontSize('14fp')
+        Text(this.budgetProgress().overBudget ? '本月预算超支' : '本月预算剩余').fontSize('12fp')
           .fontColor($r('app.color.xq_font_on_secondary'))
         Blank()
         Button({ type: ButtonType.Normal }) {
@@ -935,13 +988,20 @@ struct Index {
             Image($r('app.media.lucide_pencil1')).width(14).height(14)
               .fillColor($r('app.color.xq_icon_on_secondary'))
           }
-        }.height(32).padding(0).backgroundColor(Color.Transparent)
+        }.height(20).padding(0).backgroundColor(Color.Transparent)
         .id('ledger-edit-budget').accessibilityText('修改本月预算')
         .onClick(() => { this.openBudget(); })
       }.width('100%')
       Row({ space: 12 }) {
         if (this.preview || this.ledger !== undefined) {
-          AmountText({ amount: this.budgetRemaining(), amountSize: 38, fractionSize: 24, bold: true, color: $r('app.color.xq_font_on_primary') }).layoutWeight(1)
+          Column({ space: 12 }) {
+            AmountText({ amount: this.budgetRemaining(), amountSize: 38, fractionSize: 24, bold: true, color: $r('app.color.xq_font_on_primary') })
+            Text() {
+              Span('日平均可用 ')
+              Span(this.dailyAvailable()).fontFamily('XiaoQiaoDINRegular')
+            }.fontSize('10fp').fontColor($r('app.color.xq_font_on_secondary')).width('100%')
+              .maxLines(1).minFontSize('8fp').maxFontSize('10fp').id('ledger-daily-available')
+          }.layoutWeight(1).alignItems(HorizontalAlign.Start).justifyContent(FlexAlign.Start)
           Stack() {
             Progress({ value: this.budgetProgress().ringValue, total: 100, type: ProgressType.Ring })
               .width(64).height(64).color($r('app.color.xq_app_summary_accent'))
@@ -962,7 +1022,7 @@ struct Index {
         } else {
           Text('—').fontSize('38fp').fontColor($r('app.color.xq_font_on_primary'))
         }
-      }.width('100%').constraintSize({ minHeight: 64 })
+      }.width('100%').alignItems(VerticalAlign.Center).constraintSize({ minHeight: 64 })
       Row({ space: 16 }) {
         Row({ space: 6 }) {
           Image($r('app.media.lucide_arrow_down1')).width(16).height(16).fillColor('#55C9A5')
@@ -974,7 +1034,7 @@ struct Index {
           Text('支出').fontSize('12fp').fontColor($r('app.color.xq_font_on_secondary'))
           this.summaryFigure(false)
         }.layoutWeight(1).justifyContent(FlexAlign.End).accessibilityText('本月支出')
-      }.width('100%')
+      }.width('100%').height(20).alignItems(VerticalAlign.Center)
     }.id('ledger-summary').padding(16).width('100%').borderRadius(20).backgroundColor($r('app.color.xq_app_surface_summary'))
       .linearGradient({ angle: 122, colors: [[$r('app.color.xq_app_surface_summary'), 0],
         [$r('app.color.xq_app_summary_gradient_end'), 1]] })
@@ -1033,7 +1093,7 @@ struct Index {
         } else {
           Image(entry.icon).width(28).height(28).objectFit(ImageFit.Contain).id(`ledger-category-glyph-${entry.id}`)
         }
-      }.width(48).height(48).borderRadius(24).backgroundColor($r('app.color.xq_app_surface_page'))
+      }.width(48).height(48).borderRadius(24).backgroundColor($r('app.color.xq_ledger_category_disc_background'))
         .id(`ledger-category-disc-${entry.id}`)
     }.width(68).height(48).padding({ left: 12, right: 8 })
   }
@@ -1051,7 +1111,7 @@ struct Index {
             Text(label).fontSize('10fp').fontWeight(FontWeight.Medium)
               .fontColor(label === '待报销' ? $r('app.color.xq_font_emphasize') :
                 label.startsWith('部分') ? $r('app.color.xq_font_secondary') : $r('app.color.xq_app_income'))
-              .backgroundColor($r('app.color.xq_app_surface_page')).borderRadius(4)
+              .backgroundColor($r('app.color.xq_ledger_status_badge_background')).borderRadius(4)
               .padding({ left: 6, right: 6, top: 2, bottom: 2 }).margin({ right: 4, top: 2, bottom: 2 })
               .maxLines(1).accessibilityText(label).id('ledger-recovery-badge-' + entry.id + '-' + label)
           }, (label: string) => label)
@@ -1365,7 +1425,7 @@ struct Index {
             .fillColor($r('app.color.xq_icon_tertiary')).flexShrink(0)
         }.width('100%')
       }.width('100%').height(52).padding({ left: 14, right: 14 }).borderRadius(16)
-        .backgroundColor($r('app.color.xq_app_surface_card')).margin({ top: 12 })
+        .backgroundColor($r('app.color.xq_ledger_prepaid_entry_background')).margin({ top: 12 })
         .enabled(!this.loading).id('ledger-prepaid-entry')
         .onClick(() => { this.prepaidProjectId = ''; this.showPrepaid = true; })
     }
