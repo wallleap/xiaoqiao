@@ -9,6 +9,9 @@ export struct MoneyAmountField {
   @Prop disabled: boolean = false;
   @Prop canSubmit: boolean = true;
   fieldId: string = 'amount';
+  placeholder: string = '';
+  allowEmpty: boolean = false;
+  onChange: (value: string) => void = () => {};
   fontSize: string = '28fp';
   fontFamily: string = 'XiaoQiaoDINMedium';
   submitLabel: string = '保存';
@@ -19,6 +22,7 @@ export struct MoneyAmountField {
   @State private inputError: string = '';
 
   private complete(): boolean {
+    if (this.allowEmpty && this.value.length === 0) { return true; }
     try { ExpenseAmountInput.nonnegative(this.value, this.currency); return true; }
     catch (_) { return false; }
   }
@@ -34,7 +38,9 @@ export struct MoneyAmountField {
     }
     this.inputError = '';
     try {
-      this.value = key === '清空' ? '0' : ExpenseAmountInput.appendNonnegative(this.value, key, this.currency);
+      this.value = this.allowEmpty && (key === '清空' || (key === '⌫' && this.value.length <= 1)) ? '' :
+        key === '清空' ? '0' : ExpenseAmountInput.appendNonnegative(this.value, key, this.currency);
+      this.onChange(this.value);
     } catch (_) { this.inputError = '请输入符合币种小数位的非负金额，且不能超出金额上限'; }
   }
 
@@ -59,7 +65,7 @@ export struct MoneyAmountField {
 
   build() {
     Column({ space: 4 }) {
-      TextInput({ text: this.value, controller: this.controller }).fontSize(this.fontSize).fontFamily(this.fontFamily)
+      TextInput({ text: this.value, placeholder: this.placeholder, controller: this.controller }).fontSize(this.fontSize).fontFamily(this.fontFamily)
         .minFontSize('16fp').maxFontSize(this.fontSize).height(this.fieldHeight).width('100%')
         .fontColor($r('app.color.xq_font_primary')).caretColor($r('app.color.xq_brand'))
         .backgroundColor(Color.Transparent).padding(0).copyOption(CopyOptions.None).selectionMenuHidden(true)

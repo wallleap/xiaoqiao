@@ -24,6 +24,8 @@ export function navigationHandoff(offset: number, filterStart: number, titleHeig
 }
 
 export interface LedgerEntry {
+  prepaidId?: string;
+  prepaidKind?: string;
   fx?: FxEntrySnapshot;
   id: string;
   title: string;
@@ -56,6 +58,7 @@ export function displayAmount(minor: string): string {
 
 /** Badges describe the original expense; receipt rows already name their own type. */
 function expenseRecoveryBadges(entry: SavedLedgerEntry): string[] {
+  if (entry.prepaidId) { return [entry.prepaidStatus || '待核销']; }
   if (entry.income || entry.transfer || entry.recoveryKind) { return []; }
   const paid = BigInt(entry.fx?.paidMinor || entry.minor);
   const reimbursed = BigInt(entry.reimbursedMinor || '0');
@@ -70,20 +73,23 @@ function expenseRecoveryBadges(entry: SavedLedgerEntry): string[] {
 
 export function presentEntry(entry: SavedLedgerEntry): LedgerEntry {
   const local = new Date(entry.occurredAtMs + entry.offsetMinutes * 60000);
-  return { fx: entry.fx, id: entry.id, title: entry.recoveryKind ? (entry.recoveryKind === 'refund' ? '退款' : '报销到账') + (entry.note ? ' · ' + entry.note : '') : entry.note.length > 0 ? entry.note : entry.category, category: entry.category,
+  const label = entry.recoveryKind ? (entry.recoveryKind === 'refund' ? '退款' : '报销到账') : entry.category.trim();
+  const note = entry.note.trim().replace(/\s+/g, ' ');
+  const title = note.length > 0 && note !== label ? (label.length > 0 ? label + ' (' + note + ')' : note) : label;
+  return { prepaidId: entry.prepaidId, prepaidKind: entry.prepaidKind, fx: entry.fx, id: entry.id, title: title, category: entry.category,
     account: entry.account, date: entry.date, time: String(local.getUTCHours()).padStart(2, '0') + ':' +
       String(local.getUTCMinutes()).padStart(2, '0'), income: entry.income, recoveryKind: entry.recoveryKind, reimbursementPending: entry.reimbursementPending === true && BigInt(entry.recoveredMinor || '0') < BigInt(entry.fx?.paidMinor || entry.minor), transfer: entry.transfer, toAccount: entry.toAccount, minor: entry.minor,
     expenseMinor: entry.expenseMinor, transferFeeMinor: entry.transferFeeMinor, transferCouponMinor: entry.transferCouponMinor,
     grossMinor: entry.grossMinor, discountMinor: entry.discountMinor, tags: entry.tagNames || [],
     tagIds: entry.tagIds || [], recoveryBadges: expenseRecoveryBadges(entry),
-    icon: entry.transfer ? $r('app.media.lucide_arrow_left_right1') : categoryIcon(entry.iconKey) };
+    icon: entry.prepaidId ? $r('app.media.icon00350') : entry.transfer ? $r('app.media.lucide_arrow_left_right1') : categoryIcon(entry.iconKey) };
 }
 
 export function filterEntries(entries: LedgerEntry[], kind: LedgerKind, query: string,
   account: string, tagIds: string[] = []): LedgerEntry[] {
   const keyword = query.trim().toLowerCase();
   return entries.filter((entry: LedgerEntry) =>
-    (kind === LedgerKind.All || (entry.transfer ? kind === LedgerKind.Expense && BigInt(entry.expenseMinor || '0') > BigInt(0) : entry.income === (kind === LedgerKind.Income))) &&
+    (kind === LedgerKind.All || (!entry.prepaidId && (entry.transfer ? kind === LedgerKind.Expense && BigInt(entry.expenseMinor || '0') > BigInt(0) : entry.income === (kind === LedgerKind.Income)))) &&
     (account.length === 0 || entry.account === account || entry.toAccount === account) &&
     tagIds.every((tagId: string) => (entry.tagIds || []).includes(tagId)) &&
     (keyword.length === 0 || (entry.title + entry.category + entry.account + (entry.toAccount || '') +
@@ -118,7 +124,7 @@ export function dailyTotals(entries: LedgerEntry[], date: string): DailyTotals {
   let income = BigInt(0);
   let expense = BigInt(0);
   for (const entry of entries) {
-    if (entry.date === date) {
+    if (entry.date === date && !entry.prepaidId) {
       if (entry.transfer) { expense += BigInt(entry.expenseMinor || '0'); }
       else if (entry.income) { income += BigInt(entry.minor); } else { expense += BigInt(entry.minor); }
     }

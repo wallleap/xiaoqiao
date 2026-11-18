@@ -1,3 +1,4 @@
+import { PrepaidPage } from '../components/PrepaidPage';
 import { currencyUnit, currencyDefinition } from '../core/money/Currencies';
 import { recoveryError } from '../domain/model/ExpenseRecovery';
 import { transferPurposeLabel } from '../domain/model/TransferRecord';
@@ -27,7 +28,7 @@ import { util } from '@kit.ArkTS';
 import { FilterMaterials } from '../presentation/materials/FilterMaterials';
 import { LedgerDatabase } from '../data/rdb/LedgerDatabase';
 import { LedgerWorkspace } from '../data/rdb/LedgerWorkspace';
-import { LedgerSnapshot, LedgerUsageSummary, ExpenseCategory, LedgerAccount, SpendingNatureChoice, TagChoice } from '../domain/model/LedgerSnapshot';
+import { SavedLedgerEntry, LedgerSnapshot, LedgerUsageSummary, ExpenseCategory, LedgerAccount, SpendingNatureChoice, TagChoice } from '../domain/model/LedgerSnapshot';
 import { LedgerBook } from '../domain/model/LedgerBook';
 import { EntryDetail } from '../domain/model/EntryDetail';
 import { MonthlyBudget, BudgetProgress, DEFAULT_MONTHLY_BUDGET_MINOR } from '../domain/model/MonthlyBudget';
@@ -53,6 +54,13 @@ struct Index {
   @State private showTags: boolean = false;
   @State private showDataExchange: boolean = false;
   @State private showHuaweiCloud: boolean = false;
+  @State private prepaidProjectId: string = '';
+  @State private showPrepaid: boolean = false;
+  @State private prepaidCount: number = 0;
+  @State private pendingPrepaidCount: number = 0;
+  @State private expenseFromPrepaid: boolean = false;
+  @State private prepaidBusy: boolean = false;
+  private prepaidBackHandler: () => boolean = () => false;
   @State private showBackupRestore: boolean = false;
   @State private accountOverview: AccountOverview | undefined = undefined;
   @State private accountError: string = '';
@@ -78,6 +86,7 @@ struct Index {
   @State private bookError: string = '';
   @State private viewportWidth: number = 390;
   @State private recordWidth: number = 358;
+  @State private entryAmountWidths: Map<string, number> = new Map();
   @State private bodyViewportHeight: number = 0;
   @State private headerScrolled: boolean = false;
   @State private periodOpacity: number = 1;
@@ -117,6 +126,9 @@ struct Index {
   private workspace: LedgerWorkspace | undefined = undefined;
   private readonly bodyScroller: ListScroller = new ListScroller();
   private snackBar: HdsSnackBar | undefined = undefined;
+  @State private prepaidNoticeId: string = '';
+  @State private prepaidNoticeProgress: number = 100;
+  private prepaidNoticeTimer: number = -1;
   private readonly labels: string[] = ['账目', '统计', '记一笔', '资产', '我的'];
   private readonly tabIcons: Resource[] = [$r('app.media.lucide_house1'),
     $r('app.media.lucide_chart_no_axes_combined1'), $r('app.media.lucide_plus1'),
@@ -160,6 +172,7 @@ struct Index {
 
   private async loadLedger(): Promise<void> {
     this.loading = true;
+    this.prepaidCount = 0; this.pendingPrepaidCount = 0;
     this.loadError = ''; this.upgradeRequired = false;
     try {
       const context = this.getUIContext().getHostContext() as common.UIAbilityContext;
@@ -172,11 +185,16 @@ struct Index {
       this.ledgerVersion++;
       await this.refreshAccountOverview(this.workspace);
       await this.refreshUsage(this.workspace);
+      const projects = await this.workspace.prepaidProjects();
+      this.prepaidCount = projects.length;
+      let pending = 0;
+      for (const project of projects) { if (BigInt(project.remainingMinor) > BigInt(0)) { pending++; } }
+      this.pendingPrepaidCount = pending;
     } catch (error) {
       const code = (error as Error).message;
       this.upgradeRequired = code === 'LEDGER_UPGRADE_REQUIRED';
       if (code === 'BACKUP_RECOVERY_REQUIRED') { this.showRecoveryError(); }
-      else { this.loadError = this.upgradeRequired ? '升级本地账本后，可使用多币种记账与换汇转账' : '账本暂时无法读取，已有数据不会被覆盖。请重试'; }
+      else { this.loadError = this.upgradeRequired ? '升级本地账本后，可使用预付款与核销' : '账本暂时无法读取，已有数据不会被覆盖。请重试'; }
     } finally { this.loading = false; }
   }
 
@@ -313,7 +331,7 @@ struct Index {
   private confirmDatabaseUpgrade(): void {
     if (this.loading) { return; }
     this.getUIContext().getPromptAction().showDialog({ title: '升级本地账本？',
-      message: '先在本机备份，再升级多币种收支、账户、转账及回款支持。原账目及余额会保留；升级失败会回滚，并保留升级前备份。',
+      message: '先在本机备份，再升级预付款与核销支持。原账目及余额会保留；升级失败会回滚，并保留升级前备份。',
       buttons: [{ text: '取消', color: $r('app.color.xq_font_primary') }, { text: '备份并升级', color: $r('app.color.xq_font_emphasize') }]
     }).then(async (result) => {
       if (result.index !== 1) { return; }
@@ -424,6 +442,18 @@ struct Index {
   }
 
   @Builder
+  private prepaidPage() {
+    PrepaidPage({initialProjectId:this.prepaidProjectId,workspace:this.workspace,accounts:this.ledger?.accounts || [],categories:this.ledger?.categories || [],incomeCategories:this.ledger?.incomeCategories || [],spendingNatures:this.ledger?.spendingNatures || [],
+      sheetMaterial:this.materialReady && !this.forceLegacyMaterials ? this.filterMaterials?.menu : undefined,
+      onRegisterBack:(handler:()=>boolean)=>{this.prepaidBackHandler=handler;},
+      onBusy:(value:boolean)=>{this.prepaidBusy=value;},
+      onClose:()=>{if (!this.prepaidBusy) {this.showPrepaid=false;this.prepaidBackHandler=()=>false;}},
+      onCreate:()=>{this.openExpense(true);},
+      onChanged:async ():Promise<void>=>{await this.loadLedger();}
+    })
+  }
+
+  @Builder
   private backupRestorePage() {
     BackupRestorePage({
       getBackup: () => this.workspace?.backup,
@@ -478,7 +508,7 @@ struct Index {
       onArchive: () => { this.archiveAccount(); } })
   }
 
-  private openExpense(): void {
+  private openExpense(fromPrepaid: boolean = false): void {
     if (this.backupBusy) { return; }
     if (this.preview) { this.notify('预览样例不写入数据库，请关闭预览后记账'); return; }
     if (this.loading || this.workspace === undefined || this.loadError.length > 0 || this.ledger === undefined) {
@@ -486,12 +516,16 @@ struct Index {
     }
     this.editingEntry = undefined;
     this.showDetail = false;
+    this.expenseFromPrepaid = fromPrepaid;
+    if (fromPrepaid) { this.showPrepaid = false; }
     this.showExpense = true;
   }
 
   private async openDetail(id: string, edit: boolean = false): Promise<void> {
     if (this.preview) { this.notify('预览样例不打开真实账目'); return; }
     if (this.workspace === undefined || this.detailLoading || this.deleting) { return; }
+    const prepaid=this.ledger?.entries.find((item:SavedLedgerEntry)=>item.id===id)?.prepaidId;
+    if (prepaid) { this.prepaidProjectId=prepaid; this.showPrepaid=true; return; }
     this.activeSwipeId = ''; this.detailId = id; this.detail = undefined;
     this.showDetail = true; this.detailLoading = true; this.detailError = '';
     const request = ++this.detailRequest;
@@ -517,11 +551,19 @@ struct Index {
 
   private closeEditor(): void {
     this.showExpense = false; this.editingEntry = undefined;
+    if (this.expenseFromPrepaid) {
+      this.expenseFromPrepaid = false; this.showPrepaid = true; return;
+    }
     if (this.showDetail) { this.openDetail(this.detailId); }
   }
 
   private async expenseSaved(date: string): Promise<void> {
     const edited = this.editingEntry !== undefined;
+    if (this.expenseFromPrepaid) {
+      this.showExpense = false; this.editingEntry = undefined; this.expenseFromPrepaid = false;
+      await this.loadLedger(); this.showPrepaid = true;
+      return;
+    }
     this.selectedTab = 0;
     this.showExpense = false; this.editingEntry = undefined;
     this.selectedMonth = date.substring(0, 7);
@@ -589,6 +631,8 @@ struct Index {
     if (this.preview) { this.notify('预览样例不删除数据'); return; }
     const workspace = this.workspace;
     if (this.deleting || this.deletePromptOpen || workspace === undefined || this.loading) { return; }
+    const prepaid = this.ledger?.entries.find((item: SavedLedgerEntry) => item.id === entry.id)?.prepaidId;
+    if (prepaid) { this.showPrepaidNotice(prepaid); return; }
     this.deletePromptOpen = true;
     try {
       const choice = await this.getUIContext().getPromptAction().showDialog({
@@ -698,7 +742,7 @@ struct Index {
   @Builder
   private expensePage() {
     if (this.workspace !== undefined && this.ledger !== undefined) {
-      ExpenseEditor({ workspace: this.workspace, bookId: this.ledger.bookId,
+      ExpenseEditor({ workspace: this.workspace, bookId: this.ledger.bookId, initialPrepaid: this.expenseFromPrepaid,
         chipMaterial: this.materialReady && !this.forceLegacyMaterials ? this.filterMaterials?.chip : undefined,
         actionMaterial: this.materialReady && !this.forceLegacyMaterials ? this.filterMaterials?.action : undefined,
         sheetMaterial: this.materialReady && !this.forceLegacyMaterials ? this.filterMaterials?.menu : undefined,
@@ -713,6 +757,7 @@ struct Index {
   }
 
   onBackPress(): boolean {
+    if (this.showPrepaid) { if (!this.prepaidBusy) { this.prepaidBackHandler(); } return true; }
     if (this.showHuaweiCloud) { if (!this.backupBusy) { this.showHuaweiCloud = false; } return true; }
     if (this.showBackupRestore) { if (!this.backupBusy) { this.showBackupRestore = false; } return true; }
     if (this.showBudgetPage) { this.showBudgetPage = false; this.loadLedger(); return true; }
@@ -730,13 +775,57 @@ struct Index {
   }
 
   aboutToDisappear(): void {
+    this.dismissPrepaidNotice();
     this.snackBar?.dismiss();
+  }
+
+  private dismissPrepaidNotice(): void {
+    if (this.prepaidNoticeTimer !== -1) { clearInterval(this.prepaidNoticeTimer); this.prepaidNoticeTimer = -1; }
+    this.prepaidNoticeId = '';
+  }
+
+  private showPrepaidNotice(projectId: string): void {
+    this.dismissPrepaidNotice(); this.snackBar?.dismiss();
+    this.prepaidNoticeId = projectId; this.prepaidNoticeProgress = 100;
+    const started = Date.now();
+    this.prepaidNoticeTimer = setInterval(() => {
+      this.prepaidNoticeProgress = Math.max(0, 100 * (1 - (Date.now() - started) / 5000));
+      if (this.prepaidNoticeProgress <= 0) { this.dismissPrepaidNotice(); }
+    }, 50);
+  }
+
+  @Builder
+  private prepaidNotice() {
+    Stack({ alignContent: Alignment.Start }) {
+      Row() {}.width('100%').height('100%').backgroundColor('#D9141414').hitTestBehavior(HitTestMode.None)
+      Row() {}.width(this.prepaidNoticeProgress.toString() + '%').height('100%')
+        .backgroundColor($r('app.color.xq_brand')).opacity(0.9)
+        .animation({ duration: 50, curve: Curve.Linear }).hitTestBehavior(HitTestMode.None)
+      Row({ space: 8 }) {
+        Text('请在预付款项目中撤销对应流水').fontSize('14fp')
+          .fontColor(Color.White).layoutWeight(1).maxLines(2)
+        Button('前往', { type: ButtonType.Capsule }).fontSize('14fp').height(36)
+          .fontColor(Color.White).backgroundColor('#26FFFFFF').padding({ left: 10, right: 10 })
+          .onClick(() => {
+            const projectId = this.prepaidNoticeId;
+            this.dismissPrepaidNotice(); this.prepaidProjectId = projectId; this.showPrepaid = true;
+          }).id('prepaid-notice-go')
+        Button({ type: ButtonType.Circle }) {
+          Image($r('app.media.lucide_x1')).width(18).height(18).fillColor(Color.White)
+        }.width(32).height(32).padding(0).backgroundColor(Color.Transparent)
+          .accessibilityText('关闭提示').onClick(() => { this.dismissPrepaidNotice(); })
+      }.width('100%').padding({ left: 16, right: 12, top: 10, bottom: 10 })
+    }.width('100%').height(72).borderRadius(20).clip(true)
+      .systemMaterial(this.materialReady && !this.forceLegacyMaterials ? this.filterMaterials?.menu : undefined)
+      .shadow({ radius: 16, color: '#18000000', offsetY: 4 }).id('prepaid-notice')
+      .accessibilityDescription('橙色背景表示剩余停留时间，五秒后自动关闭')
   }
 
   private notify(message: string): void {
     if (this.snackBar === undefined) {
       this.snackBar = new HdsSnackBar(this.getUIContext());
     }
+    this.dismissPrepaidNotice();
     this.snackBar.dismiss();
     this.snackBar.show({}, { content: message }, {
       operationType: SnackBarOperationType.CLOSE_BUTTON_ONLY,
@@ -893,9 +982,9 @@ struct Index {
     Column({ space: 3 }) {
       AmountText({ currencySymbol: entry.fx !== undefined && !(entry.transfer && pageKind === LedgerKind.Expense) ? currencyDefinition(entry.fx.currencyId).symbol : '¥',
         amount: entry.fx !== undefined && !(entry.transfer && pageKind === LedgerKind.Expense) ? Money.fromMinorText(entry.transfer ? entry.minor : entry.fx.paidMinor, currencyUnit(entry.fx.currencyId)).toDecimalString() : displayAmount(entry.recoveryKind ? (-BigInt(entry.minor)).toString() : entry.transfer && pageKind === LedgerKind.Expense ? (entry.expenseMinor || '0') : entry.minor), amountSize: 16, bold: true, currencyBottom: 0,
-        sign: entry.recoveryKind ? '+' : entry.transfer && pageKind !== LedgerKind.Expense ? '' : entry.income ? '+' : '−',
+        sign: entry.prepaidId ? (entry.prepaidKind==='refund' ? '+' : '−') : entry.recoveryKind ? '+' : entry.transfer && pageKind !== LedgerKind.Expense ? '' : entry.income ? '+' : '−',
         onOpen: () => { this.openDetail(entry.id); },
-        color: entry.recoveryKind ? $r('app.color.xq_app_income') : entry.transfer && pageKind !== LedgerKind.Expense ? $r('app.color.xq_font_primary') : entry.income ? $r('app.color.xq_app_income') : $r('app.color.xq_brand') })
+        color: entry.prepaidId ? $r('app.color.xq_font_primary') : entry.recoveryKind ? $r('app.color.xq_app_income') : entry.transfer && pageKind !== LedgerKind.Expense ? $r('app.color.xq_font_primary') : entry.income ? $r('app.color.xq_app_income') : $r('app.color.xq_brand') })
       if (!entry.transfer && entry.fx !== undefined && entry.fx.currencyId !== 'CNY') {
         Text('≈ ¥' + displayAmount(entry.recoveryKind ? (-BigInt(entry.minor)).toString() : entry.minor)).fontSize('12fp').fontColor($r('app.color.xq_font_tertiary'))
       }
@@ -917,6 +1006,13 @@ struct Index {
       }
     }.alignItems(HorizontalAlign.End).padding({ top: 8, bottom: 8, right: 16 })
       .constraintSize({ maxWidth: 160 })
+      .onAreaChange((_oldArea: Area, area: Area) => {
+        const width = Number(area.width);
+        const key = entry.id + ':' + pageKind.toString();
+        if (width > 0 && Math.abs((this.entryAmountWidths.get(key) || 0) - width) > 1) {
+          this.entryAmountWidths.set(key, width);
+        }
+      })
   }
 
   private entrySubtitle(entry: LedgerEntry): string {
@@ -940,7 +1036,7 @@ struct Index {
   }
 
   @Builder
-  private entryContent(entry: LedgerEntry) {
+  private entryContent(entry: LedgerEntry, pageKind: LedgerKind) {
     Row({ space: 0 }) {
       this.categoryBadge(entry)
       Column({ space: 4 }) {
@@ -958,9 +1054,9 @@ struct Index {
           }, (label: string) => label)
         }.width('100%')
         Text(this.entrySubtitle(entry)).fontSize('12fp').fontColor($r('app.color.xq_font_secondary'))
-          .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis }).id(`ledger-entry-subtitle-${entry.id}`)
+          .width('100%').maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis }).id(`ledger-entry-subtitle-${entry.id}`)
       }.layoutWeight(1).alignItems(HorizontalAlign.Start)
-    }.width(Math.max(120, this.recordWidth - 176)).padding({ top: 8, bottom: 8 })
+    }.width(Math.max(120, this.recordWidth - 32 - 8 - (this.entryAmountWidths.get(entry.id + ':' + pageKind.toString()) || 136))).padding({ top: 8, bottom: 8 })
       .alignItems(VerticalAlign.Center)
   }
 
@@ -971,7 +1067,7 @@ struct Index {
       cardWidth: this.recordWidth, cardBorderRadius: 16,
       cardPrefixMargin: 16, cardSuffixMargin: 16,
       cardBackgroundColor: $r('app.color.xq_comp_common_contrary'),
-      prefixItem: new PrefixCustomBuilder(() => { this.entryContent(entry); }),
+      prefixItem: new PrefixCustomBuilder(() => { this.entryContent(entry, pageKind); }),
       suffixItem: new SuffixCustomBuilder(() => { this.entryAmount(entry, pageKind); })
     }).id(entry.id).width('100%').onClick(() => { this.openDetail(entry.id); })
   }
@@ -1248,12 +1344,37 @@ struct Index {
   }
 
   @Builder
+  private prepaidEntry() {
+    if (!this.preview && this.prepaidCount > 0 && !this.upgradeRequired) {
+      Button({ type: ButtonType.Normal }) {
+        Row({ space: 10 }) {
+          Image($r('app.media.icon00350')).width(24).height(24).objectFit(ImageFit.Contain).flexShrink(0)
+          Text('预付款与核销').fontSize('14fp').fontWeight(FontWeight.Medium)
+            .fontColor($r('app.color.xq_font_primary')).maxLines(1).layoutWeight(1)
+            .textOverflow({ overflow: TextOverflow.Ellipsis })
+          Text(this.prepaidCount.toString() + ' 笔').fontSize('12fp').fontColor($r('app.color.xq_font_secondary')).flexShrink(0)
+          if (this.pendingPrepaidCount > 0) {
+            Text('待核销 ' + this.pendingPrepaidCount.toString()).fontSize('11fp')
+              .fontColor($r('app.color.xq_font_emphasize')).backgroundColor($r('app.color.xq_app_surface_page'))
+              .padding({ left: 8, right: 8, top: 4, bottom: 4 }).borderRadius(8).flexShrink(0)
+          }
+          Image($r('app.media.lucide_chevron_right1')).width(14).height(14)
+            .fillColor($r('app.color.xq_icon_tertiary')).flexShrink(0)
+        }.width('100%')
+      }.width('100%').height(52).padding({ left: 14, right: 14 }).borderRadius(16)
+        .backgroundColor($r('app.color.xq_app_surface_card')).margin({ top: 12 })
+        .enabled(!this.loading).id('ledger-prepaid-entry')
+        .onClick(() => { this.prepaidProjectId = ''; this.showPrepaid = true; })
+    }
+  }
+
+  @Builder
   private overview() {
     List({ scroller: this.bodyScroller }) {
       ListItem() {
         Column({ space: 0 }) {
         this.header()
-          if (this.viewportWidth < 720 && !this.upgradeRequired) { this.summary() }
+          if (this.viewportWidth < 720 && !this.upgradeRequired) { this.summary(); this.prepaidEntry(); }
         }.width('100%').padding({ top: 12, bottom: 24 })
           .onAreaChange((_previous: Area, current: Area) => {
             this.filterStartOffset = Number(current.height);
@@ -1269,7 +1390,7 @@ struct Index {
         ListItem() {
           if (this.viewportWidth >= 720) {
             Row({ space: 24 }) {
-              Column() { if (!this.upgradeRequired) { this.summary() } }.width(320).alignSelf(ItemAlign.Start)
+              Column() { if (!this.upgradeRequired) { this.summary(); this.prepaidEntry(); } }.width(320).alignSelf(ItemAlign.Start)
               Column() { this.animatedRecords() }.layoutWeight(1)
             }.width('100%').alignItems(VerticalAlign.Top)
           } else { this.animatedRecords() }
@@ -1611,10 +1732,18 @@ struct Index {
     else if (this.showTags) { this.tagManagementPage() }
     else if (this.showDataExchange) { this.dataExchangePage() }
     else if (this.showHuaweiCloud) { this.huaweiCloudPage() }
+    else if (this.showPrepaid) { this.prepaidPage() }
     else if (this.showBackupRestore) { this.backupRestorePage() }
     else if (this.showSpendingNatures) { this.spendingNaturePage() }
     else if (this.showAccountEditor) { this.accountEditorPage() }
     else if (this.showDetail) { this.detailPage() }
-    else { this.homeTabs() }
+    else {
+      Stack({ alignContent: Alignment.Bottom }) {
+        this.homeTabs()
+        if (this.prepaidNoticeId.length > 0) {
+          Column() { this.prepaidNotice() }.width('100%').padding({ left: 16, right: 16, bottom: 104 }).zIndex(10)
+        }
+      }.width('100%').height('100%')
+    }
   }
 }

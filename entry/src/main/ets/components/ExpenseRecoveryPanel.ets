@@ -1,3 +1,5 @@
+import { ExpenseAmountInput } from '../presentation/ledger/ExpenseAmountInput';
+import { MoneyAmountField } from './MoneyAmountField';
 import { currencyUnit } from '../core/money/Currencies';
 import { ExchangeRate } from '../core/money/ExchangeRate';
 import { OfficialExchangeRates } from '../data/exchange/OfficialExchangeRates';
@@ -177,7 +179,7 @@ export struct ExpenseRecoveryPanel {
   private validateAmount(): Money | undefined {
     this.amountError = '';
     try {
-      const amount = Money.parse(this.amountText, currencyUnit(this.entry.currencyId));
+      const amount = ExpenseAmountInput.nonnegative(this.amountText, currencyUnit(this.entry.currencyId));
       amount.toSafeMinorNumber();
       if (amount.minor <= BigInt(0)) { this.amountError = '请输入大于 0 的到账金额'; return undefined; }
       if (amount.minor > this.available()) {
@@ -218,7 +220,7 @@ export struct ExpenseRecoveryPanel {
         expectedRevision: this.editing?.revision };
       const target = this.accounts.find((item: LedgerAccount) => item.id === this.accountId)?.currencyId || this.editing?.accountCurrencyId || this.entry.currencyId;
       if (target !== this.entry.currencyId) {
-        command.accountMinor = (this.actualAccount ? Money.parse(this.actualAccount, currencyUnit(target)) :
+        command.accountMinor = (this.actualAccount ? ExpenseAmountInput.nonnegative(this.actualAccount, currencyUnit(target)) :
           new ExchangeRate(currencyUnit(this.entry.currencyId), currencyUnit(target), this.accountRate).convert(amount)).minor.toString();
         command.accountFx = { rate: this.accountRate, source: this.rateSource, date: this.rateDate || this.dateText, actual: this.actualAccount.length > 0 };
       }
@@ -305,13 +307,10 @@ export struct ExpenseRecoveryPanel {
             Text('本次收回原支出金额 · ' + this.entry.currencyCode).fontSize('13fp').fontColor($r('app.color.xq_font_secondary')).width('100%')
             Row({ space: 8 }) {
               Text(this.entry.currencySymbol).fontSize('22fp').fontColor($r('app.color.xq_font_primary')).padding({ bottom: 8 })
-              TextInput({ text: this.amountText, placeholder: '0.00', controller: this.amountController })
-                .layoutWeight(1).height(60).fontSize('36fp').fontFamily('XiaoQiaoDINBold')
-                .fontColor($r('app.color.xq_font_primary')).placeholderColor($r('app.color.xq_font_tertiary'))
-                .backgroundColor(Color.Transparent).padding(0).type(InputType.NUMBER_DECIMAL).maxLength(18)
-                .caretColor($r('app.color.xq_brand')).enterKeyType(EnterKeyType.Done)
-                .onChange((value: string) => { this.amountText = value; this.amountError = ''; this.formError = ''; })
-                .onSubmit(() => { this.amountController.stopEditing(); }).id('recovery-amount')
+              MoneyAmountField({ value: $amountText, fieldId: 'recovery-amount', currency: currencyUnit(this.entry.currencyId),
+                controller: this.amountController, fontSize: '36fp', fontFamily: 'XiaoQiaoDINBold', fieldHeight: 60,
+                placeholder: '0.00', disabled: this.working,
+                onChange: () => { this.amountError = ''; this.formError = ''; } }).layoutWeight(1)
             }.width('100%').alignItems(VerticalAlign.Bottom)
             Row({ space: 8 }) {
               Text(`最多可${this.kind === 'refund' ? '退' : '报销'} ${this.entry.currencyCode} ${this.decimal(this.available().toString())}`)
@@ -323,8 +322,9 @@ export struct ExpenseRecoveryPanel {
             if (this.accountId && (this.accounts.find((item: LedgerAccount) => item.id === this.accountId)?.currencyId || this.editing?.accountCurrencyId) !== this.entry.currencyId) {
               TextInput({ text: this.accountRate, placeholder: '原币 → 到账币种汇率' }).fontSize('14fp').type(InputType.NUMBER_DECIMAL)
                 .enabled(!this.working).onChange((value: string) => { this.accountRate = value; this.rateSource = 'manual'; this.rateDate = this.dateText; })
-              TextInput({ text: this.actualAccount, placeholder: '实际到账金额（可选）' }).fontSize('14fp').type(InputType.NUMBER_DECIMAL)
-                .enabled(!this.working).onChange((value: string) => { this.actualAccount = value; })
+              MoneyAmountField({ value: $actualAccount, fieldId: 'recovery-actual-account',
+                currency: currencyUnit(this.accounts.find((item: LedgerAccount) => item.id === this.accountId)?.currencyId || this.editing?.accountCurrencyId || this.entry.currencyId),
+                fontSize: '14fp', allowEmpty: true, placeholder: '实际到账金额（可选）', disabled: this.working })
               Button('获取官方参考汇率').fontSize('13fp').backgroundColor(Color.Transparent).fontColor($r('app.color.xq_font_emphasize'))
                 .enabled(!this.working).onClick(() => { this.loadAccountRate(); })
             }

@@ -59,4 +59,5 @@ export interface EntryDetail {
   reimbursementPending?: boolean;
   recoveries?: ExpenseRecovery[];
   canEdit: boolean;
+  prepaidLinked?: boolean;
 }

@@ -1,3 +1,5 @@
+import { RdbPrepaidRepository } from './RdbPrepaidRepository';
+import { PrepaidProject, PrepaidDetail, PrepaidProjectCommand, PrepaidEventCommand, prepaidEntryContext } from '../../domain/model/Prepaid';
 import { FxConversion } from '../../core/money/FxConversion';
 import { parseFxEntry } from '../../domain/model/FxEntrySnapshot';
 import { validateConversion } from '../../core/money/FxConversion';
@@ -380,6 +382,7 @@ export class LedgerWorkspace {
       const now = Date.now();
       const createdCategories: Map<string, string> = new Map();
       const createdAccounts: Map<string, string> = new Map();
+      const insertedAccountTypes: Map<string, string> = new Map();
       const createdMerchants: Map<string, string> = new Map();
       await db.insert('import_batches', { id: batchId, book_id: this.activeBookId, file_sha256: fileSha256,
         file_name: fileName, sheet_name: metadata.sheetName, header_row: Math.max(1, metadata.headerRow),
@@ -419,7 +422,7 @@ export class LedgerWorkspace {
           const key = accountCode + ":" + row.accountName.trim().toLowerCase();
           accountId = createdAccounts.get(key) || '';
           if (accountId.length === 0) {
-            accountId = await this.ensureCsvAccount(db, row.accountName, accountCode);
+            accountId = await this.ensureCsvAccount(db, row.accountName, accountCode, insertedAccountTypes);
             createdAccounts.set(key, accountId);
           }
         }
@@ -452,15 +455,15 @@ export class LedgerWorkspace {
           const key = incomingCode + ':' + (row.toAccountName || '').trim().toLowerCase();
           toAccountId = createdAccounts.get(key) || '';
           if (toAccountId.length === 0) {
-            toAccountId = await this.ensureCsvAccount(db, row.toAccountName || '', incomingCode);
+            toAccountId = await this.ensureCsvAccount(db, row.toAccountName || '', incomingCode, insertedAccountTypes);
             createdAccounts.set(key, toAccountId);
           }
         }
-        await this.validateCsvAccount(db, accountId, false, row.type === 'transfer', accountCode);
+        await this.validateCsvAccount(db, accountId, false, row.type === 'transfer', accountCode, insertedAccountTypes);
         await this.validateCsvAccount(db, toAccountId,
           row.type === 'transfer' &&
             (row.transferPurpose === 'credit_repayment' || row.transferPurpose === 'loan_repayment'),
-          row.type === 'transfer', incomingCode);
+          row.type === 'transfer', incomingCode, insertedAccountTypes);
         if (row.type === 'transfer') {
           if (accountId.length === 0 || toAccountId.length === 0 || accountId === toAccountId) {
             throw new Error('CSV_TRANSFER_ACCOUNT_INVALID');
@@ -785,7 +788,8 @@ export class LedgerWorkspace {
     return parentId || '';
   }
 
-  private async ensureCsvAccount(db: relationalStore.RdbStore, name: string, currency: string = 'CNY'): Promise<string> {
+  private async ensureCsvAccount(db: relationalStore.RdbStore, name: string, currency: string,
+    insertedAccountTypes: Map<string, string>): Promise<string> {
     const accountName = name.trim();
     if (accountName.length === 0) { return ''; }
     let id = '';
@@ -814,17 +818,29 @@ export class LedgerWorkspace {
     await db.insert('accounts', { id: id, name: accountName, kind: liability ? 'liability' : 'asset',
       currency_id: currency, brand: 'cash', icon_key: 'cash', icon_variant: 'monochrome',
       brand_color: '#D49A38', include_in_net_assets: 1, sort_order: sortOrder, created_at_ms: now, updated_at_ms: now });
+    insertedAccountTypes.set(id, currency + ':' + (liability ? 'liability' : 'asset'));
     return id;
   }
 
   private async validateCsvAccount(db: relationalStore.RdbStore, id: string, requireLiability: boolean,
-    required: boolean, currency: string = 'CNY'): Promise<void> {
+    required: boolean, currency: string, insertedAccountTypes: Map<string, string>): Promise<void> {
     if (id.length === 0) {
       if (required) { throw new Error('CSV_ACCOUNT_INVALID'); }
       return;
     }
-    const account = await db.querySql("SELECT kind FROM accounts WHERE id=? AND currency_id=? AND deleted_at_ms IS NULL",
-      [id, currency]);
+    // Only successful inserts in this transaction enter the cache. Separate readers may
+    // not see those rows until commit, so validate against their exact inserted metadata.
+    const inserted = insertedAccountTypes.get(id);
+    if (inserted !== undefined) {
+      if (inserted !== currency + ':asset' && inserted !== currency + ':liability') {
+        throw new Error('CSV_ACCOUNT_INVALID');
+      }
+      if (requireLiability && inserted !== currency + ':liability') {
+        throw new Error('CSV_TRANSFER_REPAYMENT_ACCOUNT_INVALID');
+      }
+      return;
+    }
+    const account = await db.querySql('SELECT kind FROM accounts WHERE id=? AND currency_id=? AND deleted_at_ms IS NULL', [id, currency]);
     try {
       if (!account.goToFirstRow() || (requireLiability && account.getString(0) !== 'liability')) {
         throw new Error(requireLiability ? 'CSV_TRANSFER_REPAYMENT_ACCOUNT_INVALID' : 'CSV_ACCOUNT_INVALID');
@@ -863,7 +879,7 @@ export class LedgerWorkspace {
 
   async usageSummary(): Promise<LedgerUsageSummary> {
     return this.session.read(async (db: relationalStore.RdbStore): Promise<LedgerUsageSummary> => {
-      const rows = await db.querySql("SELECT MIN(occurred_local_date),CAST(COUNT(*) AS TEXT) FROM v_posted_transactions WHERE kind IN ('expense','income','transfer')");
+      const rows = await db.querySql("SELECT MIN(local_day),CAST(COUNT(*) AS TEXT) FROM (SELECT occurred_local_date AS local_day FROM v_posted_transactions WHERE kind IN ('expense','income','transfer') UNION ALL SELECT local_date AS local_day FROM v_prepaid_events WHERE kind IN ('fund','refund'))");
       try {
         if (!rows.goToFirstRow()) { return { firstEntryDate: '', entryCount: '0' }; }
         return { firstEntryDate: rows.isColumnNull(0) ? '' : rows.getString(0), entryCount: rows.getString(1) };
@@ -1103,9 +1119,32 @@ export class LedgerWorkspace {
     await this.updater.execute(command, expectedRevision);
   }
 
+  async prepaidProjects(): Promise<PrepaidProject[]> { return new RdbPrepaidRepository(this.store).list(this.activeBookId); }
+  async prepaidDetail(id: string): Promise<PrepaidDetail> { return new RdbPrepaidRepository(this.store).detail(this.activeBookId,id); }
+  async createPrepaid(project: PrepaidProjectCommand, payment: PrepaidEventCommand): Promise<void> {
+    await this.validateAttachmentFiles(payment.attachments);
+    if (project.bookId!==this.activeBookId) { throw new Error('PREPAID_CHANGED'); }
+    await new RdbPrepaidRepository(this.store).create(project,payment);
+  }
+  async editPrepaid(project: PrepaidProjectCommand): Promise<void> {
+    if (project.bookId!==this.activeBookId) { throw new Error('PREPAID_CHANGED'); }
+    await new RdbPrepaidRepository(this.store).update(project);
+  }
+  async savePrepaidEvent(command: PrepaidEventCommand): Promise<void> {
+    await this.validateAttachmentFiles(command.attachments);
+    if (command.bookId!==this.activeBookId) { throw new Error('PREPAID_CHANGED'); }
+    await new RdbPrepaidRepository(this.store).save(command);
+  }
+  async undoPrepaid(id: string, eventId: string, revision: number): Promise<void> { await new RdbPrepaidRepository(this.store).undo(this.activeBookId,id,eventId,revision); }
+
   async accountOverview(): Promise<AccountOverview> {
     const result = await this.accountRepository.snapshot();
     let assets = BigInt(result.assetsMinor); let liabilities = BigInt(result.liabilitiesMinor);
+    const prepaid = await this.session.read((db: relationalStore.RdbStore) => RdbPrepaidRepository.projects(db));
+    let prepaidMinor = BigInt(0);
+    for (const project of prepaid) { if (project.includeInNetAssets) { prepaidMinor += BigInt(project.remainingBookMinor); } }
+    assets += prepaidMinor;
+    result.prepaidMinor = prepaidMinor.toString();
     const missing: string[] = [];
     const now = new Date();
     const date = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
@@ -1189,6 +1228,8 @@ export class LedgerWorkspace {
           feeInExpense: rows.getLong(38) === 1, feeInBudget: rows.getLong(39) === 1, accountKind: rows.getString(40), toAccountKind: rows.getString(41),
           spendingNatureId: rows.getString(42), spendingNatureName: rows.getString(43), spendingNatureColor: rows.getString(44), canEdit: canEdit };
       } finally { rows.close(); }
+      const prepaidLink = await db.querySql('SELECT id FROM v_prepaid_events WHERE transaction_id=?',[detail.id]);
+      try { if (prepaidLink.goToFirstRow()) { detail.canEdit=false; detail.prepaidLinked=true; } } finally { prepaidLink.close(); }
       detail.bookFx = await RdbFxSnapshots.read(db, detail.id, 'book');
       detail.accountFx = await RdbFxSnapshots.read(db, detail.id, 'settlement');
       const settlement = await db.querySql("SELECT currency_id,CAST(abs(delta_minor) AS TEXT) FROM account_movements WHERE transaction_id=? AND leg=?", [detail.id, detail.kind === 'transfer' ? 'transfer_in' : detail.kind]);
@@ -1397,7 +1438,22 @@ export class LedgerWorkspace {
             location: receipts.isColumnNull(14) || receipts.isColumnNull(15) ? undefined : { latitudeE6: receipts.getLong(14), longitudeE6: receipts.getLong(15) } });
         }
       } finally { receipts.close(); }
+      const prepaidRows=await db.querySql("SELECT e.id,p.id,e.kind,p.name,p.currency_id,CAST(e.amount_minor AS TEXT),CAST(e.book_minor AS TEXT),COALESCE(e.account_id,''),COALESCE(a.name,''),e.local_date,e.occurred_at_ms,e.offset_minutes,p.merchant,e.quote_json,CAST(p.remaining_minor AS TEXT),e.account_currency_id,CAST(e.cash_minor AS TEXT) FROM v_prepaid_events e JOIN v_prepaid_balances p ON p.id=e.project_id LEFT JOIN accounts a ON a.id=e.account_id WHERE p.book_id=? AND e.kind IN ('fund','refund') AND substr(e.local_date,1,7)=?",[this.activeBookId,month]);
+      try { while (prepaidRows.goToNextRow()) {
+        const context=prepaidEntryContext(prepaidRows.getString(13));
+        const original=prepaidRows.getString(5); const book=prepaidRows.getString(6); const code=prepaidRows.getString(4);
+        entries.push({ id:prepaidRows.getString(0),prepaidId:prepaidRows.getString(1),prepaidKind:prepaidRows.getString(2),
+          prepaidStatus:prepaidRows.getString(2)==='refund' ? '预付款退款' : BigInt(prepaidRows.getString(14))===BigInt(0) ? '已结清' : '待核销',
+          note:prepaidRows.getString(3),category:prepaidRows.getString(2)==='refund' ? '预付款退款' : '预付款',iconKey:'other',
+          account:prepaidRows.getString(8),accountId:prepaidRows.getString(7),date:prepaidRows.getString(9),occurredAtMs:prepaidRows.getLong(10),offsetMinutes:prepaidRows.getLong(11),
+          income:false,minor:book,grossMinor:context?.grossMinor || original,discountMinor:context?.discountMinor || '0',merchant:prepaidRows.getString(12),
+          tagIds:context?.tagIds || [],tagNames:context?.tagNames || [],address:context?.addressText || '',location:context?.location,
+          fx:{ currencyId:code,paidMinor:original,grossMinor:context?.grossMinor || original,discountMinor:context?.discountMinor || '0',bookMinor:book,
+            accountCurrencyId:prepaidRows.getString(15),accountMinor:prepaidRows.getString(16) }
+        });
+      } } finally { prepaidRows.close(); }
       for (const entry of entries) {
+        if (entry.prepaidId) { continue; }
         if (entry.recoveryKind) {
           const recovery = await db.querySql('SELECT transaction_id,currency_id,CAST(amount_minor AS TEXT),CAST(book_minor AS TEXT),account_currency_id,CAST(account_minor AS TEXT),fx_snapshot FROM v_expense_recoveries WHERE id=?', [entry.id]);
           try { if (recovery.goToFirstRow()) {
@@ -1441,6 +1497,7 @@ export class LedgerWorkspace {
         }
       } finally { entryTagRows.close(); }
       for (const entry of entries) {
+        if (entry.prepaidId) { continue; }
         entry.tagIds = tagIds.get(entry.originalEntryId || entry.id) || [];
         entry.tagNames = tagNames.get(entry.originalEntryId || entry.id) || [];
         entry.attachments = [];

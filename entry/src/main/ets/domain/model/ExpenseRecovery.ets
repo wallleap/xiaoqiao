@@ -42,6 +42,7 @@ export interface RecoveryCommand {
 
 export function recoveryError(error: Error): string {
   const code = error.message || '';
+  if (code.includes('PREPAID_LINKED_TRANSACTION')) { return '这笔账目关联预付款，请到“预付款与核销”项目中撤销对应流水'; }
   if (code.includes('RECOVERY_EXCEEDS_PAID')) { return '报销与退款合计不能超过原支出实付金额'; }
   if (code.includes('EXPENSE_HAS_RECOVERIES')) { return '请先删除关联的报销和退款记录，再删除原支出'; }
   if (code.includes('ACCOUNT_UNAVAILABLE')) { return '到账账户不可用，请重新选择'; }

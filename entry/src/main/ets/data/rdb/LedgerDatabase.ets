@@ -5,6 +5,7 @@ import { REVIEW_SCHEMA_SHA256, REVIEW_SCHEMA_STATEMENTS } from './ReviewSchema';
 import { TransferMigration } from './TransferMigration';
 import { SpendingNatureMigration } from './SpendingNatureMigration';
 import { RecoveryMigration } from './RecoveryMigration';
+import { PrepaidMigration } from './PrepaidMigration';
 import { MulticurrencyMigration } from './MulticurrencyMigration';
 import { NatureColorMigration } from './NatureColorMigration';
 import { BudgetNatureMigration } from './BudgetNatureMigration';
@@ -55,11 +56,12 @@ export class LedgerDatabase {
           await RecoveryMigration.apply(db, '', false);
           await NatureColorMigration.apply(db, '', false);
           await MulticurrencyMigration.apply(db, '', false);
+          await PrepaidMigration.apply(db, '', false);
           await LedgerDatabase.ensureIncomeCategories(db);
         });
       } else {
-        let version = await session.read(async (db: relationalStore.RdbStore): Promise<number> => MulticurrencyMigration.status(db));
-        if (version < 7 && !allowUpgrade) { throw new Error('LEDGER_UPGRADE_REQUIRED'); }
+        let version = await session.read(async (db: relationalStore.RdbStore): Promise<number> => PrepaidMigration.status(db));
+        if (version < 8 && !allowUpgrade) { throw new Error('LEDGER_UPGRADE_REQUIRED'); }
         if (version === 1) {
           if (!allowUpgrade) { throw new Error('LEDGER_UPGRADE_REQUIRED'); }
           await TransferMigration.upgrade(store, name);
@@ -75,7 +77,8 @@ export class LedgerDatabase {
         }
         if (version === 4) { await RecoveryMigration.upgrade(store, name); version = 5; }
         if (version === 5) { await NatureColorMigration.upgrade(store, name); version = 6; }
-        if (version === 6) { await MulticurrencyMigration.upgrade(store, name); }
+        if (version === 6) { await MulticurrencyMigration.upgrade(store, name); version = 7; }
+        if (version === 7) { await PrepaidMigration.upgrade(store, name); }
         await session.write(async (db: relationalStore.RdbStore): Promise<void> => { await LedgerDatabase.ensureIncomeCategories(db); });
       }
       return store;

@@ -1,4 +1,6 @@
-import { CURRENCIES, CurrencyDefinition, currencyUnit, currencyDefinition } from '../core/money/Currencies';
+import { MoneyAmountField } from './MoneyAmountField';
+import { PrepaidEventCommand } from '../domain/model/Prepaid';
+import { CURRENCIES, CurrencyDefinition, currencyUnit, currencyDefinition, crossRate } from '../core/money/Currencies';
 import { ExchangeRate } from '../core/money/ExchangeRate';
 import { FxConversion } from '../core/money/FxConversion';
 import { OfficialExchangeRates } from '../data/exchange/OfficialExchangeRates';
@@ -86,6 +88,10 @@ export struct ExpenseEditor {
   @State private note: string = '';
   @State private merchantName: string = '';
   @State private addressText: string = '';
+  initialPrepaid: boolean = false;
+  @State private prepaid: boolean = false;
+  @State private prepaidName: string = '';
+  private readonly prepaidEventId: string = util.generateRandomUUID();
   @State private reimbursementPending: boolean = false;
   @State private location: LedgerLocation | undefined = undefined;
   @State private mapBusy: boolean = false;
@@ -132,6 +138,7 @@ export struct ExpenseEditor {
 
   aboutToAppear(): void {
     const entry = this.editingEntry;
+    this.prepaid = entry === undefined && this.initialPrepaid;
     this.isIncome = entry?.kind === 'income';
     this.isTransfer = entry?.kind === 'transfer';
     this.selectedKinds = [this.isTransfer ? 2 : this.isIncome ? 1 : 0];
@@ -318,6 +325,7 @@ export struct ExpenseEditor {
   private selectKind(selected: number[]): void {
     if (selected.length !== 1 || this.saving || this.editingEntry !== undefined) { return; }
     if (selected[0] === this.selectedKinds[0]) { return; }
+    this.prepaid = false;
     this.isIncome = selected[0] === 1; this.isTransfer = selected[0] === 2;
     this.selectedKinds = [selected[0]];
     this.editingDiscount = false; this.transferTarget = 0; this.errorText = ''; this.parentId = ''; this.showOptions = false;
@@ -631,7 +639,7 @@ export struct ExpenseEditor {
   }
   private settlementAmount(amount: Money): Money {
     const code = this.settlementCode();
-    if (code !== this.currencyCode && this.actualSettlement.length > 0) { return Money.parse(this.actualSettlement, currencyUnit(code)); }
+    if (code !== this.currencyCode && this.actualSettlement.length > 0) { return ExpenseAmountInput.nonnegative(this.actualSettlement, currencyUnit(code)); }
     return this.converted(amount, code, this.settlementRate);
   }
   private selectCurrency(): void {
@@ -688,9 +696,9 @@ export struct ExpenseEditor {
           TextInput({ text: this.settlementRate, placeholder: '到账汇率：1 ' + this.currencyCode + ' = ? ' + this.settlementCode() })
             .fontSize('14fp').type(InputType.NUMBER_DECIMAL).enabled(!this.saving && !this.quoteBusy)
             .onChange((value: string) => { this.settlementRate = value; this.quoteSource = 'manual'; this.quoteDate = this.fxDate(); })
-          TextInput({ text: this.actualSettlement, placeholder: '实际到账／扣款金额 ' + this.settlementCode() + '（可选）' })
-            .fontSize('14fp').type(InputType.NUMBER_DECIMAL).enabled(!this.saving && !this.quoteBusy)
-            .onChange((value: string) => { this.actualSettlement = value; })
+          MoneyAmountField({ value: $actualSettlement, fieldId: 'expense-actual-settlement', currency: currencyUnit(this.settlementCode()),
+            fontSize: '14fp', allowEmpty: true, placeholder: '实际到账／扣款金额 ' + this.settlementCode() + '（可选）',
+            disabled: this.saving || this.quoteBusy })
         }
         Text(this.bookAmountText()).fontSize('14fp').fontColor($r('app.color.xq_font_primary')).width('100%')
         Button(this.quoteBusy ? '读取汇率中…' : '获取官方参考汇率').fontSize('13fp').backgroundColor(Color.Transparent)
@@ -698,7 +706,62 @@ export struct ExpenseEditor {
         Text((this.quoteDate ? this.quoteDate + ' · ' : '') + (this.quoteSource === 'manual' ? '手动汇率' : '欧洲中央银行 ECB · 官网免费参考汇率') + '，保存后固定此笔折算金额')
           .fontSize('12fp').fontColor($r('app.color.xq_font_tertiary')).width('100%')
       }
-    }.width('100%').padding(16).borderRadius(20).backgroundColor($r('app.color.xq_app_surface_card')).margin({ bottom: 12 })
+    }.width('100%').padding(16).borderRadius(20).backgroundColor($r('app.color.xq_app_surface_card'))
+  }
+
+  private prepaidMode(): boolean { return this.prepaid && !this.isIncome && !this.isTransfer && this.editingEntry === undefined; }
+  private prepaidCost(amount: Money): Money {
+    const cash = this.settlementAmount(amount);
+    if (cash.currency.code === 'CNY') { return cash; }
+    const book = this.currencyCode === 'CNY' ? '1' : this.bookRate;
+    const rate = cash.currency.code === this.currencyCode ? '1' : this.settlementRate;
+    return new ExchangeRate(cash.currency,currencyUnit('CNY'),crossRate(book,rate)).convert(cash);
+  }
+  private async savePrepaid(workspace: LedgerWorkspace, command: ExpenseCommand): Promise<void> {
+    if (command.accountPaid === undefined || command.accountId === undefined) { throw new Error('ACCOUNT_UNAVAILABLE'); }
+    const paid = command.gross.subtract(command.discount);
+    const payment: PrepaidEventCommand = {
+      id: this.prepaidEventId, projectId: command.id, bookId: command.bookId, expectedRevision: 1, kind: 'fund',
+      amount: paid, accountId: command.accountId, cash: command.accountPaid, cashBook: command.bookPaid,
+      rateSource: this.actualSettlement ? 'manual' : this.quoteSource, rateDate: this.quoteDate || command.localDate,
+      bookRate: this.currencyCode === 'CNY' ? '1' : this.bookRate, cashRate: this.settlementCode() === this.currencyCode ? '1' : this.settlementRate,
+      categoryId: this.selectedId, incomeCategoryId: '', spendingNatureId: this.selectedNatureId, includeInBudget: this.includeBudget,
+      occurredAtMs: command.occurredAtMs, localDate: command.localDate, offsetMinutes: command.offsetMinutes, note: command.note, attachments: command.attachments,
+      entryContext: { categoryId: this.selectedId, categoryName: this.selected()?.name || '', spendingNatureId: this.selectedNatureId,
+        includeInBudget: this.includeBudget, grossMinor: command.gross.minor.toString(), discountMinor: command.discount.minor.toString(),
+        addressText: this.addressText.trim(), location: this.location, tagIds: this.selectedTagIds.slice(),
+        tagNames: this.tags.filter((item: TagChoice) => this.selectedTagIds.includes(item.id)).map((item: TagChoice) => item.name) }
+    };
+    await workspace.createPrepaid({ id: command.id, bookId: command.bookId,
+      name: this.prepaidName.trim() || this.merchantName.trim() || this.selected()?.name || '预付款', merchant: this.merchantName.trim(),
+      currencyId: this.currencyCode, expiryDate: '', note: this.note.trim(), includeInNetAssets: this.includeAssets },payment);
+    this.getUIContext().getPromptAction().showToast({ message: '已保存预付款，核销时计支出；可在账目页“预付款与核销”入口管理' });
+  }
+
+  @Builder
+  private prepaidMarker() {
+    if (!this.isIncome && !this.isTransfer && this.editingEntry === undefined) {
+      Column({space:8}) {
+        Row() {
+          Text('预付款／待核销').fontSize('14fp').fontColor($r('app.color.xq_font_primary')).layoutWeight(1)
+          Toggle({type:ToggleType.Switch,isOn:this.prepaid}).selectedColor($r('app.color.xq_brand')).enabled(!this.saving&&!this.saved&&!this.conflicted)
+            .onChange((value:boolean)=>{this.prepaid=value;if (value) {this.reimbursementPending=false;}this.errorText='';}).id('expense-prepaid')
+        }.width('100%')
+        if (this.prepaidMode()) {
+          TextInput({text:this.prepaidName,placeholder:'预付项目名称（选填）'}).fontSize('14fp').maxLength(40).backgroundColor($r('app.color.xq_app_surface_page')).borderRadius(12)
+            .enabled(!this.saving&&!this.saved&&!this.conflicted).onChange((value:string)=>{this.prepaidName=value;}).onFocus(()=>{this.keyboardVisible=false;})
+          Text('本次只付款并保留预付余额，核销时才计支出和预算；下方分类为核销预设。到期日可在项目中设置。')
+            .fontSize('12fp').fontColor($r('app.color.xq_font_secondary')).width('100%')
+        }
+      }.width('100%')
+    }
+  }
+  @Builder
+  private prepaidRules() {
+    Column({space:12}) {
+      Row() { Text('核销时计入预算').fontSize('14fp').layoutWeight(1); Toggle({type:ToggleType.Switch,isOn:this.includeBudget}).selectedColor($r('app.color.xq_brand')).enabled(!this.saving).onChange((value:boolean)=>{this.includeBudget=value;}) }.width('100%')
+      Row() { Text('预付款计入净资产').fontSize('14fp').layoutWeight(1); Toggle({type:ToggleType.Switch,isOn:this.includeAssets}).selectedColor($r('app.color.xq_brand')).enabled(!this.saving).onChange((value:boolean)=>{this.includeAssets=value;}) }.width('100%')
+    }.padding(16).width('100%').borderRadius(16).backgroundColor($r('app.color.xq_app_surface_card'))
   }
 
   private async save(): Promise<void> {
@@ -720,13 +783,20 @@ export struct ExpenseEditor {
           ExpenseErrorField.Discount : ExpenseErrorField.Amount;
         this.showError(field, field === ExpenseErrorField.Discount ? '优惠须小于原金额' : '金额须大于 0'); return;
       }
-      if (!this.isTransfer && this.selectedId.length === 0) { this.showError(ExpenseErrorField.Category, '请选择收支分类'); return; }
+      if (!this.isTransfer && !this.prepaidMode() && this.selectedId.length === 0) { this.showError(ExpenseErrorField.Category, '请选择收支分类'); return; }
       if (this.isTransfer && (!this.accountId || !this.toAccountId || this.accountId === this.toAccountId)) {
         this.showError(ExpenseErrorField.Accounts, '请选择两个不同的转出和转入账户'); return;
       }
+      if (this.prepaidMode() && !this.accountId) {
+        this.showError(ExpenseErrorField.Accounts, '预付款需要选择付款账户');
+        this.keyboardVisible = false;
+        this.optionKind = 1;
+        this.showOptions = true;
+        return;
+      }
       const account = this.accountId.length > 0 ? this.accountId : undefined;
       command = { id: this.saveId, bookId: this.bookId, categoryId: this.isTransfer ? 'transfer' : this.selectedId, gross: gross,
-        discount: reduction, bookPaid: this.converted(paid, 'CNY', this.bookRate),
+        discount: reduction, bookPaid: this.prepaidMode() ? this.prepaidCost(paid) : this.converted(paid, 'CNY', this.bookRate),
         bookFx: this.fxQuote(this.bookRate), accountFx: this.fxQuote(this.settlementRate, this.actualSettlement.length > 0),
         accountId: this.isTransfer ? undefined : account,
         accountPaid: this.isTransfer || account === undefined ? undefined : this.settlementAmount(paid),
@@ -746,7 +816,8 @@ export struct ExpenseEditor {
     try {
       const workspace = this.workspace;
       if (workspace === undefined) { throw new Error('WORKSPACE_UNAVAILABLE'); }
-      if (this.isTransfer) {
+      if (this.prepaidMode()) { await this.savePrepaid(workspace,command); }
+      else if (this.isTransfer) {
         const transfer: TransferCommand = { id: command.id, bookId: command.bookId, fromAccountId: this.accountId,
           toAccountId: this.toAccountId, amount: command.gross, purpose: this.transferPurpose,
           received: this.settlementAmount(command.gross), bookAmount: command.bookPaid, bookFx: command.bookFx,
@@ -774,6 +845,7 @@ export struct ExpenseEditor {
       this.saved = true;
       this.onSaved(command.localDate);
     } catch (error) {
+      if (this.prepaidMode()) { this.showError(ExpenseErrorField.Save,'预付款保存未确认，请到“预付款与核销”中检查，避免重复付款'); return; }
       if (this.editingEntry !== undefined && (error as Error).message === 'TRANSACTION_CHANGED') {
         this.conflicted = true;
         this.showError(ExpenseErrorField.Save, '账目已变更或删除，请返回详情刷新后再编辑');
@@ -818,7 +890,7 @@ export struct ExpenseEditor {
     Stack({ alignContent: Alignment.TopEnd }) {
       Column() {
         Row() {
-          Text(this.isIncome ? '收入分类' : '支出分类').fontSize('14fp').fontWeight(FontWeight.Medium)
+          Text(this.prepaidMode() ? '核销分类（预设）' : this.isIncome ? '收入分类' : '支出分类').fontSize('14fp').fontWeight(FontWeight.Medium)
             .fontColor($r('app.color.xq_font_primary')).margin({ left: 8 }).id('expense-category-title')
           Blank()
           this.managementButton('管理分类', 'categories', 'expense-manage-categories')
@@ -1213,11 +1285,14 @@ export struct ExpenseEditor {
             Text(this.isIncome ? '收款账户' : '付款账户').fontSize('14fp').fontColor($r('app.color.xq_font_secondary'))
               .id('expense-account-label')
             Blank()
-            Text(this.accounts.find((item: LedgerAccount) => item.id === this.accountId)?.name || '不使用账户')
+            Text(this.accounts.find((item: LedgerAccount) => item.id === this.accountId)?.name || (this.prepaidMode() ? '请选择付款账户' : '不使用账户'))
               .fontSize('14fp').maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
               .fontColor($r('app.color.xq_font_primary')).constraintSize({ maxWidth: '70%' }).id('expense-account-value')
             Image($r('app.media.lucide_chevron_down1')).width(14).height(14).fillColor($r('app.color.xq_icon_tertiary'))
           }.height(48).width('100%').onClick(() => { this.optionKind = 1; this.showOptions = true; })
+          if (this.errorText.length > 0 && this.errorField === ExpenseErrorField.Accounts) {
+            this.errorMessage()
+          }
           Divider().color($r('app.color.xq_comp_background_tertiary'))
         }
         Row({ space: 10 }) {
@@ -1262,16 +1337,28 @@ export struct ExpenseEditor {
             .id('expense-map-location').onClick(() => { this.chooseMapLocation(); })
         }.width('100%')
       }.padding({ left: 16, right: 16 }).width('100%').borderRadius(16).backgroundColor($r('app.color.xq_app_surface_card'))
+      if (!this.isIncome && !this.isTransfer) { this.spendingNatureSelector() }
       if (!this.isIncome && !this.isTransfer) {
-        Row() {
-          Text('待报销').fontSize('14fp').fontWeight(FontWeight.Regular).fontColor($r('app.color.xq_font_primary'))
-          Blank()
-          Toggle({ type: ToggleType.Switch, isOn: this.reimbursementPending })
-            .selectedColor($r('app.color.xq_brand')).onChange((value: boolean) => { this.reimbursementPending = value; })
-            .id('expense-reimbursement-pending')
+        Column({ space: 12 }) {
+          this.prepaidMarker()
+          if (this.editingEntry === undefined) {
+            Divider().color($r('app.color.xq_app_surface_page'))
+          }
+          Row() {
+            Text('待报销').fontSize('14fp').fontWeight(FontWeight.Regular).fontColor($r('app.color.xq_font_primary'))
+            Blank()
+            Toggle({ type: ToggleType.Switch, isOn: this.reimbursementPending })
+              .selectedColor($r('app.color.xq_brand'))
+              .enabled(!this.saving && !this.saved && !this.conflicted)
+              .onChange((value: boolean) => {
+                this.reimbursementPending = value;
+                if (value) { this.prepaid = false; }
+                this.errorText = '';
+              })
+              .id('expense-reimbursement-pending')
+          }.width('100%')
         }.padding(16).width('100%').borderRadius(16).backgroundColor($r('app.color.xq_app_surface_card'))
       }
-      if (!this.isIncome && !this.isTransfer) { this.spendingNatureSelector() }
       if (this.isTransfer) {
         Row() {
           Text('手续费计入预算').fontSize('14fp').fontColor($r('app.color.xq_font_primary'))
@@ -1280,7 +1367,7 @@ export struct ExpenseEditor {
             .onChange((value: boolean) => { this.feeBudget = value; }).id('transfer-fee-budget')
         }.padding(16).width('100%').borderRadius(16).backgroundColor($r('app.color.xq_app_surface_card'))
       }
-      this.rules()
+      if (this.prepaidMode()) { this.prepaidRules() } else { this.rules() }
       this.supplementaryCard()
     }.width('100%').padding({ bottom: 24 })
   }
@@ -1427,12 +1514,12 @@ export struct ExpenseEditor {
       } else {
         Scroll() {
           Column({ space: 8 }) {
-            if (!this.isTransfer) { this.accountOption('', '不使用账户') }
+            if (!this.isTransfer && !this.prepaidMode()) { this.accountOption('', '不使用账户') }
             ForEach(this.accountOptions(), (item: LedgerAccount) => {
               this.accountOption(item.id, item.name)
             }, (item: LedgerAccount) => item.id)
             if (this.accountOptions().length === 0) {
-              Text(this.isTransfer ? '暂无可选账户，请新增账户或检查转出、转入账户是否不同。' : '暂无账户，可点击上方新增账户，也可以不使用账户记账。')
+              Text(this.prepaidMode() ? '预付款需要付款账户，请点击上方新增账户后继续保存。' : this.isTransfer ? '暂无可选账户，请新增账户或检查转出、转入账户是否不同。' : '暂无账户，可点击上方新增账户，也可以不使用账户记账。')
                 .fontSize('12fp').fontWeight(FontWeight.Regular).fontColor($r('app.color.xq_font_secondary'))
                 .padding(12).width('100%')
             }
@@ -1557,7 +1644,7 @@ export struct ExpenseEditor {
       prefix: 'expense',
       disabled: this.saving || this.saved || this.conflicted,
       canSubmit: !this.mapBusy && !this.attachmentBusy && this.canSaveAmounts(this.expression, this.discount),
-      submitLabel: this.saving ? '保存中' : '保存',
+      submitLabel: this.saving ? '保存中' : this.prepaidMode() ? '保存预付' : '保存',
       accessory: () => { this.keyboardToolbar() },
       footer: () => { this.keyboardFooter() },
       onKey: (key: string) => { this.press(key); }
@@ -1660,7 +1747,7 @@ export struct ExpenseEditor {
               Row({ space: 12 }) {
                 Column() { this.resumeAmountButton() }.layoutWeight(1)
                 if (!this.saved && !this.conflicted && this.canSaveAmounts(this.expression, this.discount)) {
-                  Button(this.saving ? '保存中' : this.editingEntry !== undefined ? '保存修改' : '保存账目',
+                  Button(this.saving ? '保存中' : this.editingEntry !== undefined ? '保存修改' : this.prepaidMode() ? '保存预付款' : '保存账目',
                     { type: ButtonType.Capsule }).height(40).layoutWeight(1)
                     .fontSize('14fp').fontWeight(FontWeight.Medium)
                     .fontColor($r('app.color.xq_font_on_primary')).backgroundColor($r('app.color.xq_brand'))

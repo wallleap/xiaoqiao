@@ -30,6 +30,9 @@ export interface LedgerAccount {
 }
 
 export interface SavedLedgerEntry {
+  prepaidId?: string;
+  prepaidKind?: string;
+  prepaidStatus?: string;
   fx?: FxEntrySnapshot;
   id: string;
   note: string;

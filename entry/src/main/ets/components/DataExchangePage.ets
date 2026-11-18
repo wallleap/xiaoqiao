@@ -588,6 +588,10 @@ export struct DataExchangePage {
     return values.join(' · ');
   }
 
+  private importFileDisplayName(name: string): string {
+    try { return decodeURIComponent(name); } catch (_) { return name; }
+  }
+
   private batchStatusText(status: string): string {
     return status === 'committed' ? '已完成' : status === 'committing' ? '导入中' :
       status === 'failed' ? '失败' : status === 'validated' ? '已校验' : '待确认';
@@ -1058,18 +1062,18 @@ export struct DataExchangePage {
         Column({ space: 4 }) {
           Button({ type: ButtonType.Normal }) {
             Column({ space: 5 }) {
-              Row() {
-                Text(batch.fileName).fontSize('14fp').fontWeight(FontWeight.Medium)
-                  .fontColor($r('app.color.xq_font_primary')).maxLines(1)
+              Row({ space: 8 }) {
+                Text(this.importFileDisplayName(batch.fileName)).fontSize('14fp').fontWeight(FontWeight.Medium)
+                  .fontColor($r('app.color.xq_font_primary')).maxLines(1).layoutWeight(1)
                   .textOverflow({ overflow: TextOverflow.Ellipsis })
-                Blank()
-                Text(this.batchStatusText(batch.status)).fontSize('12fp')
+                Text(this.batchStatusText(batch.status)).fontSize('12fp').maxLines(1).flexShrink(0)
                   .fontColor(batch.status === 'committed' ? $r('app.color.xq_confirm') : $r('app.color.xq_warning'))
               }.width('100%')
               Text(`导入 ${batch.selectedCount} · 跳过 ${batch.skippedCount} · 问题 ${batch.issueCount}`)
                 .fontSize('11fp').fontColor($r('app.color.xq_font_secondary')).width('100%')
               if (batch.sheetName.length > 0) {
-                Text(`工作表：${batch.sheetName}`).fontSize('11fp')
+                Text(`工作表：${batch.sheetName}`).fontSize('11fp').maxLines(1)
+                  .textOverflow({ overflow: TextOverflow.Ellipsis })
                   .fontColor($r('app.color.xq_font_tertiary')).width('100%')
               }
             }.width('100%').alignItems(HorizontalAlign.Start)

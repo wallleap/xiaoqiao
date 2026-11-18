@@ -70,6 +70,9 @@ export struct AccountsPage {
                 this.total(true)
                 this.total(false)
               }.width('100%')
+              if (BigInt(this.overview?.prepaidMinor || '0') > BigInt(0)) {
+                Text('含预付款资产 ¥' + this.amount(this.overview?.prepaidMinor || '0')).fontSize('12fp').fontColor($r('app.color.xq_font_secondary')).width('100%')
+              }
               if ((this.overview?.valuationMissing?.length || 0) > 0) {
                 Text('外币汇率暂不可用，净资产待估值：' + this.overview?.valuationMissing?.join('、')).fontSize('12fp').fontColor($r('app.color.xq_font_secondary'))
               }

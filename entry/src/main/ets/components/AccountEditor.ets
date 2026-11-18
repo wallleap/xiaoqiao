@@ -36,7 +36,7 @@ export struct AccountEditor {
   private readonly draftId: string = util.generateRandomUUID();
   private readonly scroller: Scroller = new Scroller();
   @State private currencyCode: string = 'CNY';
-  private get currency(): CurrencyUnit { return currencyUnit(this.currencyCode); }
+  private amountCurrency(): CurrencyUnit { return currencyUnit(this.currencyCode); }
   private readonly openingController: TextInputController = new TextInputController();
 
   aboutToAppear(): void {
@@ -54,10 +54,6 @@ export struct AccountEditor {
     return host === undefined ? '#E5000000' : '#' + (host.resourceManager.getColorSync($r('app.color.xq_font_primary').id) >>> 0).toString(16).padStart(8, '0');
   }
   private style(): AccountStyle | undefined { return ACCOUNT_STYLES.find((item: AccountStyle) => item.key === this.styleKey); }
-  private validOpening(): boolean {
-    if (this.original !== undefined) { return true; }
-    try { ExpenseAmountInput.nonnegative(this.opening, this.currency); return true; } catch (_) { return false; }
-  }
   private sheetOptions(): SheetOptions {
     const options: SheetOptions = { height: 440, showClose: true };
     if (this.sheetMaterial !== undefined) { options.systemMaterial = this.sheetMaterial; }
@@ -67,18 +63,33 @@ export struct AccountEditor {
   private async save(): Promise<void> {
     if (this.busy || this.operationBusy || this.conflict) { return; }
     this.error = '';
+    if (this.name.trim().length === 0) {
+      this.error = '请填写账户名称';
+      this.getUIContext().getPromptAction().showToast({ message: this.error });
+      this.getUIContext().getFocusController().requestFocus('account-name');
+      return;
+    }
     let command: AccountCommand;
     try {
-      let opening = ExpenseAmountInput.nonnegative(this.original === undefined ? this.opening : '0', this.currency);
-      if (this.kind === 'liability') { opening = Money.fromMinorText((-opening.minor).toString(), this.currency); }
+      let opening = ExpenseAmountInput.nonnegative(this.original === undefined ? this.opening : '0', this.amountCurrency());
+      if (this.kind === 'liability') { opening = Money.fromMinorText((-opening.minor).toString(), this.amountCurrency()); }
       command = { id: this.original?.id || this.draftId, name: this.name, kind: this.kind, styleKey: this.styleKey,
         includeInNetAssets: this.includeNet, opening: opening };
-      if (this.name.trim().length === 0) { this.error = '请填写账户名称'; return; }
       new AccountDraft(command);
-    } catch (_) { this.error = '金额小数位须符合 ' + this.currencyCode + '，请检查输入及范围'; return; }
-    if (this.original === undefined) { this.openingController.stopEditing(); }
-    this.busy = true; this.onBusy(true);
+    } catch (_) {
+      this.error = '请检查期初金额：须为完整的非负金额，' + this.currencyCode + ' 最多支持 ' + this.amountCurrency().scale.toString() + ' 位小数，且不能超出金额上限';
+      this.getUIContext().getPromptAction().showToast({ message: this.error });
+      if (this.original === undefined) {
+        this.getUIContext().getFocusController().requestFocus('account-opening');
+      }
+      return;
+    }
+    // A keyboard controller may be unattached when the opening amount was never focused.
+    // Dismissing input is best-effort and must not prevent a valid account from being saved.
+    try { this.getUIContext().getFocusController().clearFocus(); } catch (_) {}
+    this.busy = true;
     try {
+      this.onBusy(true);
       if (this.workspace === undefined) { throw new Error('WORKSPACE_UNAVAILABLE'); }
       if (this.original === undefined) { await this.workspace.createAccount(command); this.onCreated(command.id); }
       else { await this.workspace.updateAccount(command, this.original.revision); }
@@ -87,6 +98,7 @@ export struct AccountEditor {
       if ((error as Error).message === 'ACCOUNT_CHANGED') {
         this.conflict = true; this.error = '账户已变更，请返回刷新后再编辑';
       } else { this.error = '保存未确认，请返回检查账户，避免重复添加'; }
+      this.getUIContext().getPromptAction().showToast({ message: this.error });
     } finally { this.busy = false; this.onBusy(false); }
   }
 
@@ -152,20 +164,20 @@ export struct AccountEditor {
                   onChange: (values: number[]) => { this.kind = values[0] === 1 ? 'liability' : 'asset'; }
                 }).width(260).id('account-kind')
               } else {
-                Text((this.kind === 'asset' ? '资产账户' : '负债账户') + ' · ' + this.currency.code).fontSize('14fp').fontColor($r('app.color.xq_font_secondary'))
+                Text((this.kind === 'asset' ? '资产账户' : '负债账户') + ' · ' + this.amountCurrency().code).fontSize('14fp').fontColor($r('app.color.xq_font_secondary'))
               }
             }.padding(20).width('100%').borderRadius(20).backgroundColor($r('app.color.xq_app_surface_card'))
             Column({ space: 12 }) {
-              Text(this.original === undefined ? (this.kind === 'liability' ? '期初待还金额 · ' + this.currency.code : '期初余额 · ' + this.currencyCode) : '当前余额 · ' + this.currency.code)
+              Text(this.original === undefined ? (this.kind === 'liability' ? '期初待还金额 · ' + this.amountCurrency().code : '期初余额 · ' + this.currencyCode) : '当前余额 · ' + this.amountCurrency().code)
                 .fontSize('14fp').fontColor($r('app.color.xq_font_secondary')).width('100%').id('account-opening-label')
               if (this.original === undefined) {
-                MoneyAmountField({ value: $opening, fieldId: 'account-opening', currency: this.currency,
+                MoneyAmountField({ value: $opening, fieldId: 'account-opening', currency: this.amountCurrency(),
                   controller: this.openingController, disabled: this.busy || this.operationBusy || this.conflict,
                   onSubmit: () => { this.save(); } })
                 Text(this.kind === 'liability' ? '输入待还金额，按负余额计入净资产' : '期初余额不计入收入或预算')
                   .fontSize('12fp').fontColor($r('app.color.xq_font_tertiary')).width('100%')
               } else {
-                Text(Money.fromMinorText(this.original.balanceMinor, this.currency).toDecimalString()).fontSize('28fp')
+                Text(Money.fromMinorText(this.original.balanceMinor, this.amountCurrency()).toDecimalString()).fontSize('28fp')
                   .fontFamily('XiaoQiaoDINMedium').fontColor($r('app.color.xq_font_primary')).width('100%').id('account-current-balance')
                 Text('余额随记账变化，校准会单独保留调整记录').fontSize('12fp').fontColor($r('app.color.xq_font_tertiary')).width('100%')
                 Row({ space: 12 }) {
@@ -200,7 +212,7 @@ export struct AccountEditor {
           }
           Button(this.busy ? '保存中' : '保存账户', { type: ButtonType.Capsule }).height(48).layoutWeight(2)
             .fontSize('16fp').fontColor(Color.White).backgroundColor($r('app.color.xq_brand'))
-            .enabled(!this.busy && !this.operationBusy && !this.conflict && this.validOpening()).id('account-save').onClick(() => { this.save(); })
+            .enabled(!this.busy && !this.operationBusy && !this.conflict).id('account-save').onClick(() => { this.save(); })
         }.padding({ left: 16, right: 16, top: 12, bottom: 8 }).width('100%')
           .backgroundColor($r('app.color.xq_app_surface_page')).zIndex(1)
           .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.BOTTOM])

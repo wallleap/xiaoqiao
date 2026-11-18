@@ -49,6 +49,7 @@ export interface AccountOverview {
   assetsMinor: string;
   liabilitiesMinor: string;
   netMinor: string;
+  prepaidMinor?: string;
   valuationMissing?: string[];
   valuationDate?: string;
 }

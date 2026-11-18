@@ -233,6 +233,7 @@ export struct EntryDetailPage {
           }.width('100%').padding({ left: 0, right: 0 })
         }.width('calc(100% + 64vp)').height(16).margin({ top: 20, bottom: 8 })
         this.field('账本', this.entry.bookName)
+        if (this.entry.prepaidLinked) { this.field('来源', '预付款核销／退款差额，请在预付款项目中撤销') }
         if (this.entry.currencyCode !== 'CNY') {
           this.field('折合人民币', '¥' + Money.fromMinorText(this.entry.bookMinor,currencyUnit('CNY')).toDecimalString())
         }
@@ -261,12 +262,12 @@ export struct EntryDetailPage {
           }
           this.field('资金账户', this.entry.accountName || '不使用账户')
         }
-        if ((this.entry.kind === 'expense' && !this.entry.includeInBudget) || !this.entry.includeInAssets) {
+        if ((this.entry.kind === 'expense' && !this.entry.includeInBudget) || (!this.entry.includeInAssets && !this.entry.prepaidLinked)) {
           Flex({ wrap: FlexWrap.Wrap }) {
             if (this.entry.kind === 'expense' && !this.entry.includeInBudget) {
               this.exclusionBadge('不计入预算', 'entry-detail-budget-excluded')
             }
-            if (!this.entry.includeInAssets) {
+            if (!this.entry.includeInAssets && !this.entry.prepaidLinked) {
               this.exclusionBadge('不计入资产', 'entry-detail-assets-excluded')
             }
           }.width('100%').padding({ top: 4, bottom: 4 })
@@ -327,7 +328,7 @@ export struct EntryDetailPage {
           Row({ space: 12 }) {
             Button('删除账目', { type: ButtonType.Capsule }).height(48).layoutWeight(1)
               .fontSize('16fp').fontColor($r('app.color.xq_warning')).backgroundColor($r('app.color.xq_app_surface_card'))
-              .enabled(!this.busy && !this.recoveryWorking).onClick(() => { this.onDelete(); }).id('entry-detail-delete')
+              .enabled(!this.busy && !this.recoveryWorking && !this.entry.prepaidLinked).onClick(() => { this.onDelete(); }).id('entry-detail-delete')
             Button('编辑账目', { type: ButtonType.Capsule }).height(48).layoutWeight(2)
               .fontSize('16fp').fontColor(Color.White).backgroundColor($r('app.color.xq_brand'))
               .enabled(!this.busy && !this.recoveryWorking && this.entry.canEdit).onClick(() => { this.onEdit(); }).id('entry-detail-edit')

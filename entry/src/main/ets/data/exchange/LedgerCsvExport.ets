@@ -74,6 +74,7 @@ export function ledgerExportValue(entry: SavedLedgerEntry, key: string): string 
 export function filterLedgerEntries(entries: SavedLedgerEntry[], kind: string = 'all',
   accountName: string = ''): SavedLedgerEntry[] {
   return entries.filter((entry: SavedLedgerEntry) => {
+    if (entry.prepaidId) { return false; }
     if (kind === 'income' && (entry.transfer || !entry.income)) { return false; }
     if (kind === 'expense' && (entry.transfer || entry.income)) { return false; }
     if (accountName.length > 0 && entry.account !== accountName &&
@@ -89,6 +90,7 @@ export function exportLedgerCsv(snapshot: LedgerSnapshot,
   if (selected.length === 0) { throw new Error('EXPORT_NO_FIELDS'); }
   const lines: string[] = [selected.map((column) => csvCell(column.label)).join(',')];
   for (const entry of snapshot.entries) {
+    if (entry.prepaidId) { continue; }
     lines.push(selected.map((column) => csvCell(ledgerExportValue(entry, column.key))).join(','));
   }
   return '\uFEFF' + lines.join('\r\n') + '\r\n';
