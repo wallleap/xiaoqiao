@@ -1,4 +1,6 @@
 import { CategoryIconBadge } from './CategoryIconBadge';
+import { AccountAvatar } from './AccountAvatar';
+import { AccountProfile } from '../domain/model/AccountProfile';
 import { currencyUnit } from '../core/money/Currencies';
 import { ExpenseRecoveryController, ExpenseRecoveryPanel, RecoveryMenuAction } from './ExpenseRecoveryPanel';
 import { LedgerWorkspace } from '../data/rdb/LedgerWorkspace';
@@ -21,6 +23,7 @@ export struct EntryDetailPage {
   @Prop busy: boolean = false;
   workspace: LedgerWorkspace | undefined = undefined;
   accounts: LedgerAccount[] = [];
+  accountProfiles: AccountProfile[] = [];
   onRecoveryChanged: () => Promise<void> = async () => {};
   onClose: () => void = () => {};
   onEdit: () => void = () => {};
@@ -119,13 +122,36 @@ export struct EntryDetailPage {
   }
 
   @Builder
+  private accountValue(accountId: string, name: string, fieldId: string) {
+    Row({ space: 6 }) {
+      if (this.accountProfiles.find((item: AccountProfile) => item.id === accountId) !== undefined) {
+        AccountAvatar({ iconKey: this.accountProfiles.find((item: AccountProfile) => item.id === accountId)!.iconKey,
+          brandColor: this.accountProfiles.find((item: AccountProfile) => item.id === accountId)!.brandColor,
+          iconVariant: this.accountProfiles.find((item: AccountProfile) => item.id === accountId)!.iconVariant,
+          diameter: 18 }).flexShrink(0)
+      }
+      Text(name).fontSize('14fp').fontColor($r('app.color.xq_font_primary')).textAlign(TextAlign.End)
+        .maxLines(3).textOverflow({ overflow: TextOverflow.Ellipsis }).flexShrink(1)
+    }.constraintSize({ maxWidth: '68%' }).alignItems(VerticalAlign.Center).id(fieldId).accessibilityText(name)
+  }
+
+  @Builder
+  private fundsAccount() {
+    Row({ space: 16 }) {
+      Text('资金账户').fontSize('14fp').fontColor($r('app.color.xq_font_secondary'))
+      Blank()
+      this.accountValue(this.entry?.accountId || '', this.entry?.accountName || '不使用账户', 'entry-detail-funds-account')
+    }.width('100%').padding({ top: 9, bottom: 9 })
+  }
+
+  @Builder
   private transferAccount(outgoing: boolean) {
     Row({ space: 16 }) {
       Text(outgoing ? '转出账户' : '转入账户').fontSize('14fp').fontColor($r('app.color.xq_font_secondary'))
       Blank()
-      Text((outgoing ? this.entry?.accountName : this.entry?.toAccountName) || '—').fontSize('14fp')
-        .fontColor($r('app.color.xq_font_primary')).textAlign(TextAlign.End).maxLines(3).constraintSize({ maxWidth: '68%' })
-        .id(outgoing ? 'entry-detail-from-account' : 'entry-detail-to-account')
+      this.accountValue((outgoing ? this.entry?.accountId : this.entry?.toAccountId) || '',
+        (outgoing ? this.entry?.accountName : this.entry?.toAccountName) || '—',
+        outgoing ? 'entry-detail-from-account' : 'entry-detail-to-account')
     }.width('100%').padding({ top: 9, bottom: 9 })
   }
 
@@ -261,7 +287,7 @@ export struct EntryDetailPage {
           if (this.entry.spendingNatureName !== undefined && this.entry.spendingNatureName.length > 0) {
             this.field('预算分类', this.entry.spendingNatureName)
           }
-          this.field('资金账户', this.entry.accountName || '不使用账户')
+          this.fundsAccount()
         }
         if ((this.entry.kind === 'expense' && !this.entry.includeInBudget) || (!this.entry.includeInAssets && !this.entry.prepaidLinked)) {
           Flex({ wrap: FlexWrap.Wrap }) {

@@ -1,4 +1,5 @@
 import { CategoryIconBadge } from '../components/CategoryIconBadge';
+import { AccountAvatar } from '../components/AccountAvatar';
 import { LedgerSearchPage } from '../components/LedgerSearchPage';
 import { BillDetailsPage } from '../components/BillDetailsPage';
 import { PrepaidPage } from '../components/PrepaidPage';
@@ -6,8 +7,8 @@ import { currencyUnit, currencyDefinition } from '../core/money/Currencies';
 import { recoveryError } from '../domain/model/ExpenseRecovery';
 import { transferPurposeLabel } from '../domain/model/TransferRecord';
 import { ChipGroup, ChipSize, curves, window } from '@kit.ArkUI';
-import { HdsTabs, hdsMaterial, HdsNavigation, HdsNavigationTitleMode, HdsListItemCard,
-  PrefixCustomBuilder, SuffixCustomBuilder, HdsSnackBar, SnackBarOperationType, ScrollEffectType, DividerShowType } from '@kit.UIDesignKit';
+import { HdsTabs, hdsMaterial, HdsNavigation, HdsNavigationTitleMode,
+  HdsSnackBar, SnackBarOperationType, ScrollEffectType, DividerShowType } from '@kit.UIDesignKit';
 import { AccountsPage } from '../components/AccountsPage';
 import { LocalBackupPage } from '../components/LocalBackupPage';
 import { BackupRestorePage } from '../components/BackupRestorePage';
@@ -90,7 +91,6 @@ struct Index {
   @State private bookError: string = '';
   @State private viewportWidth: number = 390;
   @State private recordWidth: number = 358;
-  @State private entryAmountWidths: Map<string, number> = new Map();
   @State private bodyViewportHeight: number = 0;
   @State private headerScrolled: boolean = false;
   @State private periodOpacity: number = 1;
@@ -621,6 +621,7 @@ struct Index {
   @Builder
   private detailPage() {
     EntryDetailPage({ workspace: this.workspace, accounts: this.editAccounts(),
+      accountProfiles: this.accountError.length === 0 ? this.accountOverview?.accounts || [] : [],
       onRecoveryChanged: async (): Promise<void> => { await this.loadLedger(); if (this.workspace !== undefined) { await this.refreshAccountOverview(this.workspace); } if (this.showDetail) { await this.openDetail(this.detailId); } },
       entry: this.detail, loading: this.detailLoading, error: this.detailError, busy: this.deleting,
       onClose: () => { this.closeDetail(); }, onEdit: () => { this.editDetail(); },
@@ -943,12 +944,15 @@ struct Index {
   @Builder
   private header() {
     Row({ space: 8 }) {
-      Button({ type: ButtonType.Normal }) {
-        Row({ space: 4 }) {
-          Text(this.month()).fontSize('12fp').fontColor($r('app.color.xq_font_secondary'))
-          Image($r('app.media.lucide_chevron_down1')).width(12).height(12).fillColor($r('app.color.xq_icon_tertiary'))
+      Button({ type: ButtonType.Capsule }) {
+        Row({ space: 8 }) {
+          Image($r('app.media.lucide_calendar_check1')).width(18).height(18).fillColor($r('app.color.xq_icon_primary'))
+          Text(this.month()).fontSize('14fp').fontWeight(FontWeight.Medium).fontColor($r('app.color.xq_font_primary'))
+          Image($r('app.media.lucide_chevron_down1')).width(14).height(14).fillColor($r('app.color.xq_icon_primary'))
         }
-      }.padding(0).height(28).backgroundColor(Color.Transparent).enabled(!this.loading && !this.bookBusy && !this.backupBusy)
+      }.padding({ left: 14, right: 14 }).height(36).backgroundColor($r('app.color.xq_app_surface_card'))
+        .border({ width: 1, color: $r('app.color.xq_app_divider_subtle') })
+        .enabled(!this.loading && !this.bookBusy && !this.backupBusy)
         .accessibilityText('选择账单月份，当前' + this.month()).id('ledger-month-selector')
         .onClick(() => { this.chooseLedgerMonth(); })
       Text('·').fontSize('12fp').fontColor($r('app.color.xq_font_tertiary'))
@@ -1046,6 +1050,56 @@ struct Index {
         [$r('app.color.xq_app_summary_gradient_end'), 1]] })
   }
 
+  private entryAccountProfile(entry: LedgerEntry, incoming: boolean = false): AccountProfile | undefined {
+    if (this.accountError.length > 0) { return undefined; }
+    const accounts = this.accountOverview?.accounts || [];
+    const accountId = incoming ? '' : this.ledger?.entries.find((item: SavedLedgerEntry) => item.id === entry.id)?.accountId || '';
+    if (accountId) { return accounts.find((item: AccountProfile) => item.id === accountId); }
+    const name = incoming ? entry.toAccount || '' : entry.account;
+    if (!name || name === '不使用账户') { return undefined; }
+    const matches = accounts.filter((item: AccountProfile) => item.name === name);
+    return matches.length === 1 ? matches[0] : undefined;
+  }
+
+  @Builder
+  private entryAccountAvatar(profile: AccountProfile, transfer: boolean = false) {
+    Row({ space: 3 }) {
+      AccountAvatar({ iconKey: profile.iconKey, brandColor: profile.brandColor,
+        iconVariant: profile.iconVariant, diameter: 14 }).flexShrink(0)
+      Text(profile.name).fontSize('10fp').fontColor($r('app.color.xq_font_secondary'))
+        .constraintSize({ maxWidth: transfer ? 33 : 98 })
+        .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis }).flexShrink(1)
+    }.constraintSize({ maxWidth: transfer ? 50 : 115 }).flexShrink(1).accessibilityText(profile.name)
+  }
+
+  @Builder
+  private entryAccountIcons(entry: LedgerEntry) {
+    if (this.entryAccountProfile(entry) !== undefined || (entry.transfer && this.entryAccountProfile(entry, true) !== undefined)) {
+      Row({ space: 3 }) {
+        if (this.entryAccountProfile(entry) !== undefined) { this.entryAccountAvatar(this.entryAccountProfile(entry)!, entry.transfer === true) }
+        if (entry.transfer && this.entryAccountProfile(entry, true) !== undefined) {
+          if (this.entryAccountProfile(entry) !== undefined) {
+            Image($r('app.media.lucide_arrow_right1')).width(8).height(8).fillColor($r('app.color.xq_icon_tertiary')).flexShrink(0)
+          }
+          this.entryAccountAvatar(this.entryAccountProfile(entry, true)!, true)
+        }
+      }.height(20).constraintSize({ maxWidth: 128 }).padding({ left: 3, right: 6, top: 3, bottom: 3 })
+        .borderRadius(10).backgroundColor($r('app.color.xq_background_secondary'))
+        .clip(true)
+        .justifyContent(FlexAlign.End).margin({ top: 3 })
+        .accessibilityText(entry.transfer ? '转出账户：' + entry.account + '，转入账户：' + (entry.toAccount || '') : '账户：' + entry.account)
+        .id('ledger-entry-account-icons-' + entry.id)
+    }
+  }
+
+  private entryAmountHasDetails(entry: LedgerEntry): boolean {
+    return (!entry.transfer && entry.fx !== undefined && entry.fx.currencyId !== 'CNY') ||
+      (entry.transfer === true && BigInt(entry.transferFeeMinor || '0') > BigInt(0)) ||
+      (!entry.income && BigInt(entry.discountMinor) > BigInt(0)) ||
+      this.entryAccountProfile(entry) !== undefined ||
+      (entry.transfer === true && this.entryAccountProfile(entry, true) !== undefined);
+  }
+
   @Builder
   private entryAmount(entry: LedgerEntry, pageKind: LedgerKind) {
     Column({ space: 3 }) {
@@ -1073,21 +1127,21 @@ struct Index {
             .textOverflow({ overflow: TextOverflow.Ellipsis }).flexShrink(1).id(`ledger-discount-value-${entry.id}`)
         }.justifyContent(FlexAlign.End).id(`ledger-discount-${entry.id}`)
       }
+      this.entryAccountIcons(entry)
     }.alignItems(HorizontalAlign.End).padding({ top: 8, bottom: 8, right: 16 })
       .constraintSize({ maxWidth: 160 })
-      .onAreaChange((_oldArea: Area, area: Area) => {
-        const width = Number(area.width);
-        const key = entry.id + ':' + pageKind.toString();
-        if (width > 0 && Math.abs((this.entryAmountWidths.get(key) || 0) - width) > 1) {
-          this.entryAmountWidths.set(key, width);
-        }
-      })
+      .alignSelf(this.entryAmountHasDetails(entry) ? ItemAlign.Start : ItemAlign.Center)
+
   }
 
   private entrySubtitle(entry: LedgerEntry): string {
-    // The existing read model uses this label for a missing account; suppress it only in the card display.
-    const account = entry.transfer ? entry.account + ' → ' + (entry.toAccount || '转入账户') : entry.account.trim();
-    return account.length > 0 && account !== '不使用账户' ? `${entry.time} · ${account}` : entry.time;
+    const note = this.ledger?.entries.find((item: SavedLedgerEntry) => item.id === entry.id)?.note.trim().replace(/\s+/g, ' ') || '';
+    return entry.time + (note ? ' ' + note : '');
+  }
+
+  private entryCategoryTitle(entry: LedgerEntry): string {
+    if (entry.recoveryKind) { return entry.recoveryKind === 'refund' ? '退款' : '报销到账'; }
+    return entry.category;
   }
 
   @Builder
@@ -1104,7 +1158,7 @@ struct Index {
       this.categoryBadge(entry)
       Column({ space: 4 }) {
         Flex({ wrap: FlexWrap.Wrap, alignItems: ItemAlign.Center }) {
-          Text(entry.title).fontSize('16fp').fontWeight(FontWeight.Medium)
+          Text(this.entryCategoryTitle(entry)).fontSize('16fp').fontWeight(FontWeight.Medium)
             .fontColor($r('app.color.xq_font_primary')).maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
             .constraintSize({ maxWidth: '100%' }).margin({ right: (entry.recoveryBadges || []).length > 0 ? 6 : 0 })
           ForEach(entry.recoveryBadges || [], (label: string) => {
@@ -1118,21 +1172,20 @@ struct Index {
         }.width('100%')
         Text(this.entrySubtitle(entry)).fontSize('12fp').fontColor($r('app.color.xq_font_secondary'))
           .width('100%').maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis }).id(`ledger-entry-subtitle-${entry.id}`)
-      }.layoutWeight(1).alignItems(HorizontalAlign.Start)
-    }.width(Math.max(120, this.recordWidth - 32 - 8 - (this.entryAmountWidths.get(entry.id + ':' + pageKind.toString()) || 136))).padding({ top: 8, bottom: 8 })
+      }.layoutWeight(1).alignItems(HorizontalAlign.Start).justifyContent(FlexAlign.Center)
+        .constraintSize({ minHeight: 48 }).padding({ left: 4 })
+    }.layoutWeight(1).padding({ top: 8, bottom: 8 })
       .alignItems(VerticalAlign.Center)
   }
 
   @Builder
   private ledgerRow(entry: LedgerEntry, pageKind: LedgerKind) {
-    HdsListItemCard({
-      cardId: entry.id,
-      cardWidth: this.recordWidth, cardBorderRadius: 16,
-      cardPrefixMargin: 16, cardSuffixMargin: 16,
-      cardBackgroundColor: $r('app.color.xq_comp_common_contrary'),
-      prefixItem: new PrefixCustomBuilder(() => { this.entryContent(entry, pageKind); }),
-      suffixItem: new SuffixCustomBuilder(() => { this.entryAmount(entry, pageKind); })
-    }).id(entry.id).width('100%').onClick(() => { this.openDetail(entry.id); })
+    Row({ space: 8 }) {
+      this.entryContent(entry, pageKind)
+      this.entryAmount(entry, pageKind)
+    }.width('100%').alignItems(VerticalAlign.Top).borderRadius(16)
+      .backgroundColor($r('app.color.xq_comp_common_contrary'))
+      .id(entry.id).onClick(() => { this.openDetail(entry.id); })
   }
 
   @Builder

@@ -1,4 +1,5 @@
 import { CategoryIconBadge } from './CategoryIconBadge';
+import { AccountAvatar } from './AccountAvatar';
 import { MoneyAmountField } from './MoneyAmountField';
 import { PrepaidEventCommand } from '../domain/model/Prepaid';
 import { CURRENCIES, CurrencyDefinition, currencyUnit, currencyDefinition, crossRate } from '../core/money/Currencies';
@@ -1167,6 +1168,14 @@ export struct ExpenseEditor {
       Text(outgoing ? '转出账户' : '转入账户').fontSize('12fp').fontColor($r('app.color.xq_font_secondary'))
         .id(outgoing ? 'expense-account-label' : 'expense-to-account-label')
       Row({ space: 8 }) {
+        // Read selection state here instead of passing a captured ID through a Builder.
+        if (this.accountProfiles.find((item: AccountProfile) => item.id === (outgoing ? this.accountId : this.toAccountId)) !== undefined) {
+          AccountAvatar({
+            iconKey: this.accountProfiles.find((item: AccountProfile) => item.id === (outgoing ? this.accountId : this.toAccountId))!.iconKey,
+            brandColor: this.accountProfiles.find((item: AccountProfile) => item.id === (outgoing ? this.accountId : this.toAccountId))!.brandColor,
+            iconVariant: this.accountProfiles.find((item: AccountProfile) => item.id === (outgoing ? this.accountId : this.toAccountId))!.iconVariant,
+            diameter: 18 }).flexShrink(0)
+        }
         Text(this.accounts.find((item: LedgerAccount) => item.id === (outgoing ? this.accountId : this.toAccountId))?.name || '选择账户')
           .fontSize('16fp').fontWeight(FontWeight.Medium).fontColor($r('app.color.xq_font_primary'))
           .layoutWeight(1).maxLines(2).textOverflow({ overflow: TextOverflow.Ellipsis })
@@ -1286,9 +1295,17 @@ export struct ExpenseEditor {
             Text(this.isIncome ? '收款账户' : '付款账户').fontSize('14fp').fontColor($r('app.color.xq_font_secondary'))
               .id('expense-account-label')
             Blank()
-            Text(this.accounts.find((item: LedgerAccount) => item.id === this.accountId)?.name || (this.prepaidMode() ? '请选择付款账户' : '不使用账户'))
-              .fontSize('14fp').maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
-              .fontColor($r('app.color.xq_font_primary')).constraintSize({ maxWidth: '70%' }).id('expense-account-value')
+            Row({ space: 6 }) {
+              if (this.accountProfiles.find((item: AccountProfile) => item.id === this.accountId) !== undefined) {
+                AccountAvatar({ iconKey: this.accountProfiles.find((item: AccountProfile) => item.id === this.accountId)!.iconKey,
+                  brandColor: this.accountProfiles.find((item: AccountProfile) => item.id === this.accountId)!.brandColor,
+                  iconVariant: this.accountProfiles.find((item: AccountProfile) => item.id === this.accountId)!.iconVariant,
+                  diameter: 18 }).flexShrink(0)
+              }
+              Text(this.accounts.find((item: LedgerAccount) => item.id === this.accountId)?.name || (this.prepaidMode() ? '请选择付款账户' : '不使用账户'))
+                .fontSize('14fp').maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
+                .fontColor($r('app.color.xq_font_primary')).flexShrink(1).id('expense-account-value')
+            }.constraintSize({ maxWidth: '70%' }).alignItems(VerticalAlign.Center)
             Image($r('app.media.lucide_chevron_down1')).width(14).height(14).fillColor($r('app.color.xq_icon_tertiary'))
           }.height(48).width('100%').onClick(() => { this.optionKind = 1; this.showOptions = true; })
           if (this.errorText.length > 0 && this.errorField === ExpenseErrorField.Accounts) {

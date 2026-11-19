@@ -21,9 +21,15 @@ export struct AmountText {
       Text() {
         if (this.fractionSize > 0 && this.amount.indexOf('.') >= 0) {
           Span(this.amount.substring(0, this.amount.indexOf('.')))
+            .fontFamily(this.bold ? 'XiaoQiaoDINBold' : 'XiaoQiaoDINRegular')
+            .fontWeight(this.bold ? FontWeight.Bold : FontWeight.Regular)
           Span(this.amount.substring(this.amount.indexOf('.'))).fontSize(`${this.fractionSize}fp`)
+            .fontFamily(this.bold ? 'XiaoQiaoDINBold' : 'XiaoQiaoDINRegular')
+            .fontWeight(this.bold ? FontWeight.Bold : FontWeight.Regular)
         } else {
           Span(this.amount)
+            .fontFamily(this.bold ? 'XiaoQiaoDINBold' : 'XiaoQiaoDINRegular')
+            .fontWeight(this.bold ? FontWeight.Bold : FontWeight.Regular)
         }
       }
         .fontFamily(this.bold ? 'XiaoQiaoDINBold' : 'XiaoQiaoDINRegular')
