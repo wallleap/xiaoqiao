@@ -1,3 +1,5 @@
+import { LedgerSearchCursor, LedgerSearchPageResult, LedgerFlowQuery, LedgerFlowPage } from '../../domain/model/LedgerSearch';
+import { RdbLedgerSearch } from './RdbLedgerSearch';
 import { RdbPrepaidRepository } from './RdbPrepaidRepository';
 import { PrepaidProject, PrepaidDetail, PrepaidProjectCommand, PrepaidEventCommand, prepaidEntryContext } from '../../domain/model/Prepaid';
 import { FxConversion } from '../../core/money/FxConversion';
@@ -1352,6 +1354,21 @@ export class LedgerWorkspace {
           period_start_date: period.start, period_end_date_exclusive: period.endExclusive,
           total_minor: amount.toSafeMinorNumber(), created_at_ms: now, updated_at_ms: now });
       }
+    });
+  }
+
+  async flowEntries(query: LedgerFlowQuery, cursor: LedgerSearchCursor | undefined = undefined): Promise<LedgerFlowPage> {
+    return this.session.read(async (db: relationalStore.RdbStore): Promise<LedgerFlowPage> => {
+      const bookId = await this.activeBookFromMeta(db);
+      return RdbLedgerSearch.flow(db, bookId, query, cursor);
+    });
+  }
+
+  async searchEntries(keyword: string, cursor: LedgerSearchCursor | undefined = undefined,
+    pageSize: number = 50, accountId: string = ''): Promise<LedgerSearchPageResult> {
+    return this.session.read(async (db: relationalStore.RdbStore): Promise<LedgerSearchPageResult> => {
+      this.activeBookId = await this.activeBookFromMeta(db);
+      return RdbLedgerSearch.search(db, this.activeBookId, keyword, cursor, pageSize, accountId);
     });
   }
 

@@ -1,3 +1,4 @@
+import { LedgerSearchPage } from '../components/LedgerSearchPage';
 import { BillDetailsPage } from '../components/BillDetailsPage';
 import { PrepaidPage } from '../components/PrepaidPage';
 import { currencyUnit, currencyDefinition } from '../core/money/Currencies';
@@ -58,6 +59,7 @@ struct Index {
   @State private prepaidProjectId: string = '';
   @State private showPrepaid: boolean = false;
   @State private showBillDetails: boolean = false;
+  @State private showSearchPage: boolean = false;
   @State private prepaidCount: number = 0;
   @State private pendingPrepaidCount: number = 0;
   @State private expenseFromPrepaid: boolean = false;
@@ -73,7 +75,6 @@ struct Index {
   @State private displayedKind: LedgerKind = LedgerKind.All;
   @State private kindDirection: number = 1;
   @State private keyword: string = '';
-  @State private showSearch: boolean = false;
   @State private showSelection: boolean = false;
   @State private selectionKind: number = 0;
   @State private account: string = '';
@@ -244,7 +245,7 @@ struct Index {
     try {
       await this.workspace.selectBook(book.id);
       this.kind = LedgerKind.All; this.displayedKind = LedgerKind.All;
-      this.account = ''; this.selectedTagIds = []; this.keyword = ''; this.showSearch = false;
+      this.account = ''; this.selectedTagIds = []; this.keyword = '';
       this.bodyScroller.scrollTo({ xOffset: 0, yOffset: 0 });
       await this.loadLedger();
       this.showSelection = false;
@@ -466,7 +467,7 @@ struct Index {
       onRecoveryRequired: () => { this.showRecoveryError(); },
       onRestored: async (): Promise<boolean> => {
         this.kind = LedgerKind.All; this.displayedKind = LedgerKind.All;
-        this.account = ''; this.selectedTagIds = []; this.keyword = ''; this.showSearch = false;
+        this.account = ''; this.selectedTagIds = []; this.keyword = '';
         await this.loadLedger();
         return this.loadError.length === 0 && this.accountError.length === 0;
       }
@@ -483,7 +484,7 @@ struct Index {
       onRecoveryRequired: () => { this.showRecoveryError(); },
       onRestored: async (): Promise<boolean> => {
         this.kind = LedgerKind.All; this.displayedKind = LedgerKind.All;
-        this.account = ''; this.selectedTagIds = []; this.keyword = ''; this.showSearch = false;
+        this.account = ''; this.selectedTagIds = []; this.keyword = '';
         await this.loadLedger();
         return this.loadError.length === 0 && this.accountError.length === 0;
       }
@@ -570,7 +571,7 @@ struct Index {
     this.showExpense = false; this.editingEntry = undefined;
     this.selectedMonth = date.substring(0, 7);
     this.kind = LedgerKind.All; this.displayedKind = LedgerKind.All;
-    this.account = ''; this.selectedTagIds = []; this.keyword = ''; this.showSearch = false;
+    this.account = ''; this.selectedTagIds = []; this.keyword = '';
     this.bodyScroller.scrollTo({ xOffset: 0, yOffset: 0 });
     await this.loadLedger();
     if (edited) { await this.openDetail(this.detailId); this.notify('账目已更新'); }
@@ -787,6 +788,9 @@ struct Index {
     if (this.showAccountEditor) { if (!this.accountSaving) { this.showAccountEditor = false; this.editingAccount = undefined; } return true; }
     if (this.showExpense) { if (!this.savingExpense) { this.closeEditor(); } return true; }
     if (this.showDetail) { if (!this.deleting) { this.closeDetail(); } return true; }
+    if (this.showSearchPage) {
+      this.getUIContext().getFocusController().clearFocus(); this.showSearchPage = false; return true;
+    }
     if (this.showBillDetails) { this.showBillDetails = false; return true; }
     return false;
   }
@@ -862,18 +866,23 @@ struct Index {
       Button({ type: ButtonType.Circle }) { this.searchGlyph() }
         .width(40).height(40).padding(0).backgroundColor(Color.Transparent)
         .systemMaterial(this.filterMaterials?.action)
-        .id('搜索账目').accessibilityText('搜索账目').onClick(() => { this.toggleSearch(); })
+        .id('搜索账目').accessibilityText('搜索账目').onClick(() => { this.openLedgerSearch(); })
     } else {
       Button({ type: ButtonType.Circle }) { this.searchGlyph() }
         .width(40).height(40).padding(0).backgroundColor($r('app.color.xq_app_surface_card'))
-        .id('搜索账目').accessibilityText('搜索账目').onClick(() => { this.toggleSearch(); })
+        .id('搜索账目').accessibilityText('搜索账目').onClick(() => { this.openLedgerSearch(); })
     }
   }
 
-  private toggleSearch(): void {
-    if (this.showSearch) { this.keyword = ''; }
-    this.showSearch = !this.showSearch;
-    this.bodyScroller.scrollTo({ xOffset: 0, yOffset: 0 });
+  private openLedgerSearch(): void {
+    if (this.preview) { this.notify('预览样例不搜索真实账单'); return; }
+    if (this.loading || this.workspace === undefined || this.backupBusy) { return; }
+    this.dismissPrepaidNotice(); this.snackBar?.dismiss();
+    this.showSearchPage = true;
+  }
+
+  private searchCovered(): boolean {
+    return this.showExpense || this.showPrepaid || this.showAccountEditor;
   }
 
   @Builder
@@ -945,11 +954,7 @@ struct Index {
       Text('CNY').fontSize('12fp').fontColor($r('app.color.xq_font_secondary'))
     }.id('ledger-period').width('100%').margin({ top: 2, bottom: 16 })
       .opacity(this.periodOpacity).visibility(this.periodOpacity > 0 ? Visibility.Visible : Visibility.Hidden)
-    if (this.showSearch) {
-      Search({ value: this.keyword, placeholder: '搜索备注、收支分类、账户或标签' })
-        .id('ledger-search').onChange((value: string) => { this.keyword = value; })
-        .height(48).margin({ bottom: 16 })
-    }
+
   }
 
   @Builder
@@ -1394,6 +1399,8 @@ struct Index {
                 this.confirmDelete({ id: entry.id, category: entry.recoveryKind ? (entry.recoveryKind === 'refund' ? '退款' : '报销到账') : entry.category, minor: entry.recoveryKind ? (-BigInt(entry.minor)).toString() : entry.minor });
               } }).width('100%')
           }, (entry: LedgerEntry) => entry.id + ':' + (entry.recoveryBadges || []).join(','))
+          Text('没有更多了').fontSize('12fp').fontColor($r('app.color.xq_font_tertiary'))
+            .width('100%').textAlign(TextAlign.Center).padding({ top: 24, bottom: 16 })
         }.width('100%')
       }
     }.width('100%')
@@ -1788,7 +1795,8 @@ struct Index {
       .onAreaChange((_oldArea: Area, newArea: Area) => { this.viewportWidth = Number(newArea.width); })
   }
 
-  build() {
+  @Builder
+  private routedPage() {
     if (this.showExpense) { this.expenseWithManagement() }
     else if (this.showBudgetPage) { this.budgetPage() }
     else if (this.showCategories) { this.categoryManagementPage() }
@@ -1802,16 +1810,18 @@ struct Index {
     else if (this.showBillDetails) {
       Stack() {
         Column() {
-          BillDetailsPage({ workspace: this.workspace, initialMonth: this.selectedMonth, refreshToken: this.ledgerVersion,
+          BillDetailsPage({ workspace: this.workspace, refreshToken: this.ledgerVersion,
+            rangeMaterial: this.materialReady && !this.forceLegacyMaterials ? this.filterMaterials?.segment : undefined,
+            onSearch: () => { this.openLedgerSearch(); },
             onClose: () => { this.showBillDetails = false; }, onOpenEntry: (entry: LedgerEntry) => {
               if (entry.prepaidId) { this.prepaidProjectId = entry.prepaidId; this.showPrepaid = true; }
               else { this.openDetail(entry.id); }
             } })
-        }.width('100%').height('100%').visibility(this.showDetail ? Visibility.Hidden : Visibility.Visible)
-        if (this.showDetail) { this.detailPage() }
+        }.width('100%').height('100%').visibility(this.showDetail && !this.showSearchPage ? Visibility.Hidden : Visibility.Visible)
+        if (this.showDetail && !this.showSearchPage) { this.detailPage() }
       }.width('100%').height('100%')
     }
-    else if (this.showDetail) { this.detailPage() }
+    else if (this.showDetail && !this.showSearchPage) { this.detailPage() }
     else {
       Stack({ alignContent: Alignment.Bottom }) {
         this.homeTabs()
@@ -1821,4 +1831,27 @@ struct Index {
       }.width('100%').height('100%')
     }
   }
+
+  build() {
+    Stack() {
+      Column() { this.routedPage() }.width('100%').height('100%')
+        .visibility(this.showSearchPage && !this.searchCovered() ? Visibility.Hidden : Visibility.Visible)
+      if (this.showSearchPage) {
+        Stack() {
+          Column() {
+            LedgerSearchPage({ workspace: this.workspace, refreshToken: this.ledgerVersion,
+              accounts: this.accountOverview?.accounts || [],
+              chipMaterial: this.materialReady && !this.forceLegacyMaterials ? this.filterMaterials?.searchControl : undefined,
+              menuMaterial: this.materialReady && !this.forceLegacyMaterials ? this.filterMaterials?.menu : undefined,
+              onClose: () => { this.showSearchPage = false; }, onOpenEntry: (entry: LedgerEntry) => {
+                if (entry.prepaidId) { this.prepaidProjectId = entry.prepaidId; this.showPrepaid = true; }
+                else { this.openDetail(entry.id); }
+              } })
+          }.width('100%').height('100%').visibility(this.showDetail ? Visibility.Hidden : Visibility.Visible)
+          if (this.showDetail && !this.searchCovered()) { this.detailPage() }
+        }.width('100%').height('100%').visibility(this.searchCovered() ? Visibility.Hidden : Visibility.Visible)
+      }
+    }.width('100%').height('100%')
+  }
+
 }

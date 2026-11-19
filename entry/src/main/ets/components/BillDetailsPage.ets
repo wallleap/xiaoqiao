@@ -3,7 +3,10 @@ import { HdsNavigation, HdsNavigationTitleMode, hdsMaterial, DividerShowType, Sc
 import { LedgerWorkspace } from '../data/rdb/LedgerWorkspace';
 import { LedgerEntry, LedgerKind, DailyTotals, presentEntry, filterEntries, dailyTotals, displayAmount } from '../presentation/ledger/LedgerOverview';
 import { currencyUnit, currencyDefinition } from '../core/money/Currencies';
+import { LedgerFlowQuery, LedgerFlowDay, LedgerSearchCursor } from '../domain/model/LedgerSearch';
+import { currentRange, shiftedRange, rangeTitle, StatisticsDateRange, StatisticsRange, localDate, parseLocalDate } from '../presentation/statistics/StatisticsPeriod';
 import { Money } from '../core/money/Money';
+import { ItemRestriction, SegmentButton, SegmentButtonOptions, SegmentButtonTextItem } from '@kit.ArkUI';
 
 interface BillCalendarCell {
   day: BillCalendarDay;
@@ -14,30 +17,154 @@ interface BillCalendarCell {
 @Component
 export struct BillDetailsPage {
   workspace: LedgerWorkspace | undefined = undefined;
-  initialMonth: string = '';
+  rangeMaterial: SystemUiMaterial | undefined = undefined;
   @Prop @Watch('reload') refreshToken: number = 0;
   onClose: () => void = () => {};
+  onSearch: () => void = () => {};
   onOpenEntry: (entry: LedgerEntry) => void = () => {};
   @State private month: string = '';
+  @State @Watch('viewChanged') private viewSelection: number[] = [1];
+  @State private showTitleSearch: boolean = false;
+  private searchBottom: number = 0;
+  @State private viewOptions: SegmentButtonOptions = SegmentButtonOptions.tab({
+    buttons: [{ text: '流水' }, { text: '日历' }] as ItemRestriction<SegmentButtonTextItem>,
+    fontSize: '13fp', selectedFontSize: '13fp',
+    fontColor: $r('sys.color.font_primary'), selectedFontColor: $r('app.color.xq_font_on_primary'),
+    backgroundColor: Color.Transparent, selectedBackgroundColor: $r('app.color.xq_brand')
+  });
   @State private entries: LedgerEntry[] = [];
+  @State private flowRange: number = 0;
+  @State private showRangeSheet: boolean = false;
+  @State private draftStart: string = '';
+  @State private draftEnd: string = '';
+  @State private flowPeriod: StatisticsDateRange = currentRange('month');
+  @State private flowDays: LedgerFlowDay[] = [];
+  @State private hasMore: boolean = false;
+  @State private loadingMore: boolean = false;
+  private flowCursor: LedgerSearchCursor | undefined = undefined;
+  private active: boolean = false;
   @State private calendar: BillCalendarCell[] = [];
   @State private selectedDate: string = '';
   @State private calendarWidth: number = 320;
   @State private kind: number = LedgerKind.All;
-  @State private keyword: string = '';
   @State private loading: boolean = false;
   @State private error: string = '';
   private request: number = 0;
   private readonly scroller: Scroller = new Scroller();
 
+  private updateTitleSearch(): void {
+    // Search is inside the first ListItem; use its measured end, not a fixed calendar height.
+    this.showTitleSearch = this.searchBottom > 0 && this.scroller.currentOffset().yOffset >= this.searchBottom;
+  }
+
   aboutToAppear(): void {
+    this.active = true;
+    if (this.rangeMaterial !== undefined) { this.viewOptions.backgroundSystemMaterial = this.rangeMaterial; }
     const now = new Date();
-    this.month = this.initialMonth || now.getFullYear().toString() + '-' + (now.getMonth() + 1).toString().padStart(2, '0');
-    this.selectedDate = billDateKey(now).startsWith(this.month + '-') ? billDateKey(now) : this.month + '-01';
+    this.month = now.getFullYear().toString() + '-' + (now.getMonth() + 1).toString().padStart(2, '0');
+    this.selectedDate = '';
     this.rebuildCalendar(); this.reload();
   }
-  aboutToDisappear(): void { this.request++; }
+  aboutToDisappear(): void { this.active = false; this.request++; }
+  private isFlow(): boolean { return this.viewSelection[0] === 0; }
+  private viewChanged(): void {
+    this.selectedDate = ''; this.entries = []; this.searchBottom = 0; this.showTitleSearch = false;
+    this.scroller.scrollTo({ xOffset: 0, yOffset: 0 }); this.reload();
+  }
+  private flowRangeName(): StatisticsRange {
+    return this.flowRange === 1 ? 'year' : this.flowRange === 2 ? 'month' : this.flowRange === 3 ? 'week' : 'custom';
+  }
+  private selectFlowRange(index: number): void {
+    if (index === 4) { this.pickCustomStart(); return; }
+    this.flowRange = index;
+    if (index !== 0) { this.flowPeriod = currentRange(this.flowRangeName()); }
+    this.resetFlow();
+  }
+  private pickCustomStart(): void {
+    this.draftStart = this.flowPeriod.startDate;
+    const end = parseLocalDate(this.flowPeriod.endDateExclusive); end.setDate(end.getDate() - 1);
+    this.draftEnd = localDate(end); this.showRangeSheet = true;
+  }
+  private pickRangeDate(start: boolean): void {
+    this.getUIContext().showDatePickerDialog({ selected: parseLocalDate(start ? this.draftStart : this.draftEnd),
+      selectedTextStyle: { color: $r('app.color.xq_font_emphasize') },
+      acceptButtonStyle: { fontColor: $r('app.color.xq_font_emphasize') },
+      cancelButtonStyle: { fontColor: $r('app.color.xq_font_secondary') },
+      onDateAccept: (date: Date) => {
+        if (!this.active || !this.isFlow() || !this.showRangeSheet) { return; }
+        if (start) { this.draftStart = localDate(date); } else { this.draftEnd = localDate(date); }
+      } });
+  }
+  @Builder
+  private customRangeSheet() {
+    Column({ space: 20 }) {
+      Text('自定义日期').fontSize('20fp').fontWeight(FontWeight.Bold).fontColor($r('app.color.xq_font_primary'))
+        .width('100%').padding({ right: 48 })
+      Row({ space: 12 }) {
+        Column({ space: 8 }) {
+          Text('开始日期').fontSize('12fp').fontColor($r('app.color.xq_font_secondary'))
+          Button(this.draftStart.replace(/-/g, '/')).fontSize('14fp').height(44).width('100%')
+            .backgroundColor($r('app.color.xq_app_surface_card')).fontColor($r('app.color.xq_font_primary'))
+            .onClick(() => { this.pickRangeDate(true); })
+        }.layoutWeight(1)
+        Column({ space: 8 }) {
+          Text('结束日期').fontSize('12fp').fontColor($r('app.color.xq_font_secondary'))
+          Button(this.draftEnd.replace(/-/g, '/')).fontSize('14fp').height(44).width('100%')
+            .backgroundColor($r('app.color.xq_app_surface_card')).fontColor($r('app.color.xq_font_primary'))
+            .onClick(() => { this.pickRangeDate(false); })
+        }.layoutWeight(1)
+      }.width('100%')
+      Button('确定', { type: ButtonType.Capsule }).width('100%').height(44)
+        .backgroundColor($r('app.color.xq_brand')).fontColor($r('app.color.xq_font_on_primary'))
+        .onClick(() => {
+          this.flowPeriod = currentRange('custom', new Date(), this.draftStart, this.draftEnd);
+          this.flowRange = 4; this.showRangeSheet = false; this.resetFlow();
+        })
+    }.width('100%').padding({ top: 28, left: 24, right: 24, bottom: 24 }).alignItems(HorizontalAlign.Start)
+  }
+  private resetFlow(): void {
+    this.scroller.scrollTo({ xOffset: 0, yOffset: 0 }); this.showTitleSearch = false; this.reload();
+  }
+  private async fetchFlow(append: boolean): Promise<void> {
+    if (!this.workspace || !this.active || !this.isFlow() || (append && (this.loading || this.loadingMore || !this.hasMore || !!this.error))) { return; }
+    const request = append ? this.request : ++this.request;
+    if (append) { this.loadingMore = true; } else {
+      this.entries = []; this.flowDays = []; this.flowCursor = undefined; this.hasMore = false;
+      this.loadingMore = false; this.loading = true;
+    }
+    this.error = '';
+    const query: LedgerFlowQuery = { startDate: this.flowRange === 0 ? '' : this.flowPeriod.startDate,
+      endDateExclusive: this.flowRange === 0 ? '' : this.flowPeriod.endDateExclusive, kind: this.kind };
+    try {
+      const page = await this.workspace.flowEntries(query, append ? this.flowCursor : undefined);
+      if (!this.active || request !== this.request) { return; }
+      this.entries = append ? this.entries.concat(page.entries.map(presentEntry)) : page.entries.map(presentEntry);
+      const days: LedgerFlowDay[] = append ? this.flowDays.filter((day: LedgerFlowDay) => !page.days.some((next: LedgerFlowDay) => next.date === day.date)) : [];
+      this.flowDays = days.concat(page.days); this.hasMore = page.hasMore; this.flowCursor = page.nextCursor;
+    } catch (_) { if (this.active && request === this.request) { this.error = '流水暂时无法读取，请重试'; } }
+    finally { if (this.active && request === this.request) { this.loading = false; this.loadingMore = false; } }
+  }
+  private totals(date: string): DailyTotals {
+    if (!this.isFlow()) { return dailyTotals(this.visible(), date); }
+    const day = this.flowDays.find((item: LedgerFlowDay) => item.date === date);
+    return { incomeMinor: day?.incomeMinor || '0', expenseMinor: day?.expenseMinor || '0' };
+  }
+  private periodLabel(): string {
+    if (!this.isFlow()) { return this.month.replace('-', '年') + '月'; }
+    if (this.flowRange === 0) { return '全部时间'; }
+    if (this.flowRange === 1 || this.flowRange === 2) { return rangeTitle(this.flowRangeName(), this.flowPeriod); }
+    const end = parseLocalDate(this.flowPeriod.endDateExclusive); end.setDate(end.getDate() - 1);
+    return this.flowPeriod.startDate.replace(/-/g, '/') + ' — ' + localDate(end).replace(/-/g, '/');
+  }
+  private selectKind(index: number): void {
+    if (this.kind === index) { return; }
+    this.kind = index;
+    if (this.isFlow()) { this.resetFlow(); }
+  }
+
   private async reload(): Promise<void> {
+    if (this.isFlow()) { await this.fetchFlow(false); return; }
+    this.hasMore = false; this.loadingMore = false;
     if (!this.workspace || !this.month) { return; }
     const request = ++this.request;
     this.loading = true; this.error = '';
@@ -47,13 +174,17 @@ export struct BillDetailsPage {
     } catch (_) { if (request === this.request) { this.error = '账单暂时无法读取，请重试'; } }
     finally { if (request === this.request) { this.loading = false; } }
   }
-  private visible(): LedgerEntry[] { return filterEntries(this.entries, this.kind, this.keyword, '').filter((entry: LedgerEntry) => !this.selectedDate || entry.date === this.selectedDate); }
+  private visible(): LedgerEntry[] { return filterEntries(this.entries, this.kind, '', '').filter((entry: LedgerEntry) => !this.selectedDate || entry.date === this.selectedDate); }
   private dates(): string[] { return Array.from(new Set(this.visible().map((entry: LedgerEntry) => entry.date))).sort().reverse(); }
   private shift(offset: number): void {
+    if (this.isFlow()) {
+      if (this.flowRange === 0 || this.flowRange === 4) { return; }
+      this.flowPeriod = shiftedRange(this.flowRangeName(), this.flowPeriod, offset); this.resetFlow(); return;
+    }
     const parts = this.month.split('-');
     const date = new Date(Number(parts[0]), Number(parts[1]) - 1 + offset, 1);
     this.month = date.getFullYear().toString() + '-' + (date.getMonth() + 1).toString().padStart(2, '0');
-    this.selectedDate = this.month + '-01'; this.entries = []; this.rebuildCalendar();
+    this.selectedDate = ''; this.entries = []; this.rebuildCalendar();
     this.scroller.scrollTo({ xOffset: 0, yOffset: 0 }); this.reload();
   }
   private rebuildCalendar(): void {
@@ -84,7 +215,7 @@ export struct BillDetailsPage {
     if (!day.inMonth) {
       this.month = day.date.substring(0, 7); this.entries = []; this.rebuildCalendar(); this.reload();
     }
-    this.selectedDate = day.date;
+    this.selectedDate = this.selectedDate === day.date ? '' : day.date;
     this.scroller.scrollTo({ xOffset: 0, yOffset: 0 });
   }
   @Builder
@@ -161,37 +292,106 @@ export struct BillDetailsPage {
         .maxLines(1).constraintSize({ maxWidth: '42%' })
     }.width('100%').padding({ top: 16, bottom: 16 }).onClick(() => { this.onOpenEntry(entry); })
   }
+  @Builder
+  private viewAction() {
+    Row() {
+      if (this.showTitleSearch) {
+        Button({ type: ButtonType.Circle }) {
+          Image($r('app.media.lucide_search1')).width(20).height(20).fillColor($r('app.color.xq_icon_primary'))
+        }.width(40).height(40).padding(0)
+          .backgroundColor(this.rangeMaterial !== undefined ? Color.Transparent : $r('app.color.xq_app_surface_card'))
+          .systemMaterial(this.rangeMaterial).accessibilityText('搜索账单')
+          .onClick(() => { this.onSearch(); }).id('bill-details-title-search')
+      } else {
+        SegmentButton({ options: this.viewOptions, selectedIndexes: $viewSelection })
+          .width(148).constraintSize({ maxWidth: '100%' }).id('bill-details-view')
+      }
+    }.width('100%').justifyContent(FlexAlign.End).padding({ left: 176, right: 16 })
+      .hitTestBehavior(HitTestMode.Transparent)
+  }
+  @Builder
+  private monthButton(direction: number) {
+    Button({ type: ButtonType.Circle }) {
+      Image(direction < 0 ? $r('app.media.lucide_chevron_left1') : $r('app.media.lucide_chevron_right1'))
+        .width(20).height(20).fillColor($r('app.color.xq_icon_secondary'))
+    }.width(40).height(40).padding(0)
+      .backgroundColor(this.rangeMaterial !== undefined ? Color.Transparent : $r('app.color.xq_app_surface_card'))
+      .systemMaterial(this.rangeMaterial)
+      .enabled(!this.isFlow() || (this.flowRange !== 0 && this.flowRange !== 4))
+      .opacity(this.isFlow() && (this.flowRange === 0 || this.flowRange === 4) ? 0.35 : 1)
+      .accessibilityText(direction < 0 ? '上一周期' : '下一周期').onClick(() => { this.shift(direction); })
+  }
+  @Builder
+  private monthNavigator() {
+    Column() {
+      Row({ space: 8 }) {
+        this.monthButton(-1)
+        Text(this.periodLabel()).fontSize('14fp').fontWeight(FontWeight.Medium)
+          .fontColor($r('app.color.xq_font_primary')).layoutWeight(1).textAlign(TextAlign.Center)
+          .maxLines(2).textOverflow({ overflow: TextOverflow.Ellipsis })
+          .onClick(() => { if (this.isFlow() && this.flowRange === 4) { this.pickCustomStart(); } })
+        this.monthButton(1)
+      }.width('100%').constraintSize({ maxWidth: 400 })
+    }.width('100%').height(56).padding({ left: 32, right: 32, top: 8, bottom: 8 })
+      .backgroundColor(Color.Transparent)
+  }
+  @Builder
+  private fixedPeriodControls() {
+    Column() {
+      if (this.isFlow()) { this.flowRangeControls() }
+      this.monthNavigator()
+    }.width('100%').height(this.isFlow() ? 104 : 56)
+  }
+  @Builder
+  private flowRangeControls() {
+    Row({ space: 4 }) {
+      ForEach(['全部', '年', '月', '周', '自定义'], (label: string, index: number) => {
+        if (this.flowRange === index) {
+          Button(label, { type: ButtonType.Capsule }).layoutWeight(1).height(32).fontSize('12fp').padding({ left: 4, right: 4 })
+            .backgroundColor($r('app.color.xq_brand')).fontColor($r('app.color.xq_font_on_primary'))
+            .onClick(() => { this.selectFlowRange(index); })
+        } else {
+        Button(label, { type: ButtonType.Capsule }).layoutWeight(1).height(32).fontSize('12fp').padding({ left: 4, right: 4 })
+          .backgroundColor(this.rangeMaterial !== undefined ? Color.Transparent : $r('app.color.xq_app_surface_card'))
+          .systemMaterial(this.rangeMaterial)
+          .fontColor($r('app.color.xq_font_secondary'))
+          .onClick(() => { this.selectFlowRange(index); })
+        }
+      }, (label: string) => label)
+    }.width('100%').height(48).padding({ left: 16, right: 16, top: 8, bottom: 8 })
+  }
   build() {
     HdsNavigation() {
-      Column({ space: 12 }) {
-        Row({ space: 12 }) {
-          Button('‹', { type: ButtonType.Circle }).width(36).height(36).backgroundColor($r('app.color.xq_app_surface_card'))
-            .fontColor($r('app.color.xq_font_primary')).accessibilityText('上个月').onClick(() => { this.shift(-1); })
-          Text(this.month.replace('-', '年') + '月').fontSize('16fp').fontWeight(FontWeight.Medium).layoutWeight(1).textAlign(TextAlign.Center)
-          Button('›', { type: ButtonType.Circle }).width(36).height(36).backgroundColor($r('app.color.xq_app_surface_card'))
-            .fontColor($r('app.color.xq_font_primary')).accessibilityText('下个月').onClick(() => { this.shift(1); })
-        }.width('100%')
-        this.monthCalendar()
-        TextInput({ text: this.keyword, placeholder: '搜索分类、备注、账户、标签' }).fontSize('14fp').height(44)
-          .backgroundColor($r('app.color.xq_app_surface_card')).borderRadius(12).onChange((value: string) => { this.keyword = value; })
+      List({ scroller: this.scroller }) {
+        ListItem() {
+          Column({ space: 12 }) {
+        if (!this.isFlow()) { this.monthCalendar() }
+        Button({ type: ButtonType.Normal }) {
+          Row({ space: 10 }) {
+            Image($r('app.media.lucide_search1')).width(18).height(18).fillColor($r('app.color.xq_icon_secondary'))
+            Text('搜索备注、收支分类、账户或标签').fontSize('14fp').fontColor($r('app.color.xq_font_secondary'))
+              .layoutWeight(1).maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis }).textAlign(TextAlign.Start)
+          }.width('100%')
+        }.height(44).width('100%').padding({ left: 16, right: 16 }).borderRadius(22)
+          .backgroundColor($r('app.color.xq_app_surface_card')).id('bill-details-search')
+          .onAreaChange((_oldArea: Area, area: Area) => {
+            this.searchBottom = Number(area.position.y) + Number(area.height);
+            this.updateTitleSearch();
+          })
+          .accessibilityText('搜索账单').onClick(() => { this.onSearch(); })
         Row({ space: 8 }) {
           ForEach(['全部', '支出', '收入'], (label: string, index: number) => {
             Button(label, { type: ButtonType.Capsule }).height(36).fontSize('14fp')
               .backgroundColor(this.kind === index ? $r('app.color.xq_brand') : $r('app.color.xq_app_surface_card'))
-              .fontColor(this.kind === index ? Color.White : $r('app.color.xq_font_secondary')).onClick(() => { this.kind = index; })
+              .fontColor(this.kind === index ? Color.White : $r('app.color.xq_font_secondary')).onClick(() => { this.selectKind(index); })
           }, (label: string) => label)
           Blank()
-          Text(this.visible().length.toString() + ' 笔').fontSize('12fp').fontColor($r('app.color.xq_font_secondary'))
+          Text(this.visible().length.toString() + (this.isFlow() && this.hasMore ? '+ 笔' : ' 笔')).fontSize('12fp').fontColor($r('app.color.xq_font_secondary'))
         }.width('100%')
-        Row({ space: 8 }) {
-          Text(this.selectedDate ? this.selectedDate.replace(/-/g, '/') : '本月账单').fontSize('13fp')
-            .fontColor($r('app.color.xq_font_secondary')).layoutWeight(1)
-          Button('整月', { type: ButtonType.Capsule }).height(28).fontSize('12fp').backgroundColor(Color.Transparent)
-            .fontColor($r('app.color.xq_font_emphasize')).onClick(() => { this.selectedDate = ''; })
-        }.width('100%')
-        List({ scroller: this.scroller }) {
+          }.width('100%').padding({ top: 12, bottom: 12 })
+        }
           if (this.loading) { ListItem() { Text('正在读取账单…').fontSize('14fp').padding(24) } }
-          else if (this.error) {
+          else if (this.error && this.entries.length === 0) {
             ListItem() { Button(this.error + ' · 重试').fontSize('14fp').onClick(() => { this.reload(); }) }
           } else if (this.visible().length === 0) {
             ListItem() { Text('暂无符合条件的账单').fontSize('14fp').fontColor($r('app.color.xq_font_secondary')).width('100%').textAlign(TextAlign.Center).padding(32) }
@@ -201,9 +401,9 @@ export struct BillDetailsPage {
                 Column({ space: 0 }) {
                   Row() {
                     Text(date.replace(/-/g, '/')).fontSize('13fp').fontWeight(FontWeight.Medium).layoutWeight(1)
-                    Text('收 ' + displayAmount(dailyTotals(this.visible(), date).incomeMinor) + '  支 ' + displayAmount(dailyTotals(this.visible(), date).expenseMinor))
+                    Text('收 ' + displayAmount(this.totals(date).incomeMinor) + '  支 ' + displayAmount(this.totals(date).expenseMinor))
                       .fontSize('11fp').fontColor($r('app.color.xq_font_secondary'))
-                  }.width('100%').padding({ top: 16, bottom: 8 })
+                  }.width('100%').padding({ top: 24, bottom: 12 })
                   Column() {
                     ForEach(this.visible().filter((entry: LedgerEntry) => entry.date === date), (entry: LedgerEntry) => {
                       this.entryRow(entry)
@@ -213,11 +413,27 @@ export struct BillDetailsPage {
                 }.width('100%')
               }
             }, (date: string) => date)
+            if (this.loadingMore) {
+              ListItem() { Text('正在加载…').fontSize('12fp').width('100%').textAlign(TextAlign.Center).padding(24) }
+            } else if (this.error) {
+              ListItem() { Button('加载失败，点击重试').onClick(() => { this.error = ''; this.fetchFlow(true); }) }
+            } else if (!this.hasMore) {
+            ListItem() {
+              Text('没有更多了').fontSize('12fp').fontColor($r('app.color.xq_font_tertiary'))
+                .width('100%').textAlign(TextAlign.Center).padding({ top: 24, bottom: 16 })
+            }
+            }
           }
-        }.layoutWeight(1).width('100%').scrollBar(BarState.Auto).edgeEffect(EdgeEffect.Spring).contentEndOffset(24)
-      }.padding({ left: 16, right: 16, top: 12 }).width('100%').height('100%')
+      }.padding({ left: 16, right: 16 }).width('100%').height('100%')
+        .onDidScroll(() => { this.updateTitleSearch(); })
+        .onReachEnd(() => { if (this.isFlow()) { this.fetchFlow(true); } })
+        .scrollBar(BarState.Off).edgeEffect(EdgeEffect.Spring, { alwaysEnabled: true }).contentEndOffset(24).clip(false)
     }.mode(NavigationMode.Stack).titleMode(HdsNavigationTitleMode.MINI)
-      .titleBar({ enableComponentSafeArea: true, content: { title: { mainTitle: '账单明细' }, divider: { showType: DividerShowType.OFF }, backIcon: { action: () => { this.onClose(); } } },
+      .dynamicHideTitleBar({ hideTitleArea: false, hideBottomBuilder: false, hideStatusBar: false })
+      .titleBar({ enableComponentSafeArea: true, content: { title: { mainTitle: '账单明细' },
+        stackBuilder: this.viewAction.bind(this),
+        bottomBuilder: { builder: this.fixedPeriodControls.bind(this), height: this.isFlow() ? 104 : 56 },
+        divider: { showType: DividerShowType.OFF }, backIcon: { action: () => { this.onClose(); } } },
         style: { originalStyle: { contentStyle: { titleStyle: { mainTitleColor: $r('app.color.xq_font_primary') }, backIconStyle: { iconColor: $r('app.color.xq_icon_primary') } } },
           scrollEffectStyle: { contentStyle: { titleStyle: { mainTitleColor: $r('app.color.xq_font_primary') }, backIconStyle: { iconColor: $r('app.color.xq_icon_primary') } } },
           systemMaterialEffect: { materialType: hdsMaterial.MaterialType.IMMERSIVE, materialLevel: hdsMaterial.MaterialLevel.ADAPTIVE },
@@ -225,5 +441,7 @@ export struct BillDetailsPage {
       .bindToScrollable([this.scroller]).backgroundColor($r('app.color.xq_app_surface_page'))
       .ignoreLayoutSafeArea([LayoutSafeAreaType.SYSTEM], [LayoutSafeAreaEdge.TOP])
       .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM])
+      .bindSheet($$this.showRangeSheet, this.customRangeSheet(), { height: 320, showClose: true,
+        backgroundColor: $r('app.color.xq_app_surface_page') })
   }
 }
