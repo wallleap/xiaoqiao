@@ -1,3 +1,4 @@
+import { CategoryIconBadge } from './CategoryIconBadge';
 import { MoneyAmountField } from './MoneyAmountField';
 import { PrepaidEventCommand } from '../domain/model/Prepaid';
 import { CURRENCIES, CurrencyDefinition, currencyUnit, currencyDefinition, crossRate } from '../core/money/Currencies';
@@ -869,12 +870,12 @@ export struct ExpenseEditor {
   private categoryItem(item: ExpenseCategory, compact: boolean = false, secondRow: boolean = false) {
     Column({ space: compact ? 2 : 6 }) {
       Stack({ alignContent: Alignment.TopEnd }) {
-        Image(categoryIcon(item.iconKey, this.isIncome)).width(compact ? 28 : 32).height(compact ? 28 : 32)
+        CategoryIconBadge({ icon: categoryIcon(item.iconKey, this.isIncome), badgeSize: compact ? 36 : 44, glyphSize: compact ? 26 : 30 })
         if (this.activeCategories().some((child: ExpenseCategory) => child.parentId === item.id)) {
           Image($r('app.media.lucide_ellipsis1')).width(14).height(14)
             .fillColor($r('app.color.xq_icon_emphasize')).offset({ x: 8, y: -4 })
         }
-      }.padding(6).borderRadius(24)
+      }
       if (!compact) {
         Text(item.name).fontSize('12fp').maxLines(1)
           .fontColor(this.selectedId === item.id ? $r('app.color.xq_font_emphasize') : $r('app.color.xq_font_secondary'))
@@ -1719,8 +1720,8 @@ export struct ExpenseEditor {
             }
           }.layoutWeight(1).alignItems(HorizontalAlign.Start)
           if (this.isTransfer) {
-            Image($r('app.media.colorful_icon00372')).width(32).height(32).objectFit(ImageFit.Contain)
-          } else { Image(categoryIcon(this.selected()?.iconKey || (this.isIncome ? 'other' : 'food'), this.isIncome)).width(32).height(32) }
+            CategoryIconBadge({ icon: $r('app.media.colorful_icon00372'), badgeSize: 48, glyphSize: 32 })
+          } else { CategoryIconBadge({ icon: categoryIcon(this.selected()?.iconKey || (this.isIncome ? 'other' : 'food'), this.isIncome), badgeSize: 48, glyphSize: 32 }) }
         }.padding(16).width('100%').borderRadius(20).backgroundColor($r('app.color.xq_app_surface_card'))
           .outlineWidth(2).outlineRadius(20)
           .outlineColor(this.amountFocusHighlight ? $r('app.color.xq_brand') : Color.Transparent)

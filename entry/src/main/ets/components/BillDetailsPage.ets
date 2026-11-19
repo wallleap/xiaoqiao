@@ -1,3 +1,4 @@
+import { CategoryIconBadge } from './CategoryIconBadge';
 import { BillCalendarDay, billCalendarDays, billDateKey, trimBillDecimal, compactBillAmount } from '../presentation/ledger/BillCalendar';
 import { HdsNavigation, HdsNavigationTitleMode, hdsMaterial, DividerShowType, ScrollEffectType } from '@kit.UIDesignKit';
 import { LedgerWorkspace } from '../data/rdb/LedgerWorkspace';
@@ -277,7 +278,7 @@ export struct BillDetailsPage {
   @Builder
   private entryRow(entry: LedgerEntry) {
     Row({ space: 12 }) {
-      Image(entry.icon).width(36).height(36).objectFit(ImageFit.Contain).flexShrink(0)
+      CategoryIconBadge({ icon: entry.icon, badgeSize: 44, glyphSize: 28 })
       Column({ space: 5 }) {
         Text(entry.title).fontSize('15fp').fontWeight(FontWeight.Medium).fontColor($r('app.color.xq_font_primary'))
           .width('100%').maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })

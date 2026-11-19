@@ -1,3 +1,4 @@
+import { CategoryIconBadge } from './CategoryIconBadge';
 import { currencyUnit } from '../core/money/Currencies';
 import { ExpenseRecoveryController, ExpenseRecoveryPanel, RecoveryMenuAction } from './ExpenseRecoveryPanel';
 import { LedgerWorkspace } from '../data/rdb/LedgerWorkspace';
@@ -196,9 +197,9 @@ export struct EntryDetailPage {
     if (this.entry !== undefined) {
       Column({ space: 0 }) {
         if (this.entry.kind === 'transfer') {
-          Image($r('app.media.colorful_icon00372')).width(32).height(32).objectFit(ImageFit.Contain)
+          CategoryIconBadge({ icon: $r('app.media.colorful_icon00372'), badgeSize: 48, glyphSize: 32 })
             .margin({ top: 4, bottom: 10 })
-        } else { Image(categoryIcon(this.entry.iconKey, this.entry.kind === 'income')).width(32).height(32).margin({ top: 4, bottom: 10 }) }
+        } else { CategoryIconBadge({ icon: categoryIcon(this.entry.iconKey, this.entry.kind === 'income'), badgeSize: 48, glyphSize: 32 }).margin({ top: 4, bottom: 10 }) }
         Text(this.entry.kind === 'transfer' ? transferPurposeLabel(this.entry.transferPurpose || 'transfer') : this.entry.categoryName).fontSize('18fp').fontWeight(FontWeight.Medium)
           .fontColor($r('app.color.xq_font_primary')).maxLines(2).textAlign(TextAlign.Center)
         if (this.entry.kind !== 'expense') {

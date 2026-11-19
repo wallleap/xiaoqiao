@@ -1,3 +1,4 @@
+import { CategoryIconBadge } from './CategoryIconBadge';
 import { HdsNavigation, HdsNavigationTitleMode, hdsMaterial, DividerShowType, ScrollEffectType } from '@kit.UIDesignKit';
 import { ChipGroup, ChipSize, ItemRestriction, SegmentButton, SegmentButtonOptions, SegmentButtonTextItem } from '@kit.ArkUI';
 import { util } from '@kit.ArkTS';
@@ -387,7 +388,7 @@ export struct CategoryManagementPage {
           GridItem() {
             Button({ type: ButtonType.Normal }) {
               Stack({ alignContent: Alignment.Center }) {
-                Image(option.resource).width(32).height(32).objectFit(ImageFit.Contain)
+                CategoryIconBadge({ icon: option.resource, badgeSize: 36, glyphSize: 26 })
                 if (categoryIconKey(this.iconKey, this.kind === 'income') === option.key) {
                   Image($r('app.media.lucide_check1')).width(12).height(12)
                     .fillColor($r('app.color.xq_font_on_primary')).padding(2).backgroundColor($r('app.color.xq_brand'))
@@ -422,7 +423,7 @@ export struct CategoryManagementPage {
   private categoryRow(item: CategoryProfile) {
     Row({ space: 10 }) {
       Row({ space: 10 }) {
-        Image(categoryIcon(item.iconKey, item.kind === 'income')).width(30).height(30).flexShrink(0)
+        CategoryIconBadge({ icon: categoryIcon(item.iconKey, item.kind === 'income'), badgeSize: 44, glyphSize: 30 })
         Column({ space: 4 }) {
           Text(item.name).fontSize('16fp').fontWeight(FontWeight.Medium)
             .fontColor($r('app.color.xq_font_primary')).maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })

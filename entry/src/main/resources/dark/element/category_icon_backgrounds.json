@@ -1,0 +1,1496 @@
+{
+  "color": [
+    {
+      "name": "xq_category_bg_icon00001",
+      "value": "#2E757BF2"
+    },
+    {
+      "name": "xq_category_bg_icon00002",
+      "value": "#2E2595E8"
+    },
+    {
+      "name": "xq_category_bg_icon00003",
+      "value": "#2EFF8E12"
+    },
+    {
+      "name": "xq_category_bg_icon00004",
+      "value": "#2E6C6CEA"
+    },
+    {
+      "name": "xq_category_bg_icon00005",
+      "value": "#2EBD50D3"
+    },
+    {
+      "name": "xq_category_bg_icon00006",
+      "value": "#2EFC7032"
+    },
+    {
+      "name": "xq_category_bg_icon00007",
+      "value": "#2E757BF2"
+    },
+    {
+      "name": "xq_category_bg_icon00008",
+      "value": "#2EFF8E12"
+    },
+    {
+      "name": "xq_category_bg_icon00009",
+      "value": "#2EFC7032"
+    },
+    {
+      "name": "xq_category_bg_icon00010",
+      "value": "#2E6C6CEA"
+    },
+    {
+      "name": "xq_category_bg_icon00011",
+      "value": "#2EFF8E12"
+    },
+    {
+      "name": "xq_category_bg_icon00012",
+      "value": "#2EBD50D3"
+    },
+    {
+      "name": "xq_category_bg_icon00013",
+      "value": "#2E757BF2"
+    },
+    {
+      "name": "xq_category_bg_icon00014",
+      "value": "#2EFF7E3E"
+    },
+    {
+      "name": "xq_category_bg_icon00015",
+      "value": "#2E6C6CEA"
+    },
+    {
+      "name": "xq_category_bg_icon00016",
+      "value": "#2E2595E8"
+    },
+    {
+      "name": "xq_category_bg_icon00017",
+      "value": "#2E757BF2"
+    },
+    {
+      "name": "xq_category_bg_icon00018",
+      "value": "#2E59ADF8"
+    },
+    {
+      "name": "xq_category_bg_icon00019",
+      "value": "#2E6D6DF2"
+    },
+    {
+      "name": "xq_category_bg_icon00020",
+      "value": "#2E2595E8"
+    },
+    {
+      "name": "xq_category_bg_icon00021",
+      "value": "#2EBD50D3"
+    },
+    {
+      "name": "xq_category_bg_icon00022",
+      "value": "#2E55B5F3"
+    },
+    {
+      "name": "xq_category_bg_icon00023",
+      "value": "#2E3A9CED"
+    },
+    {
+      "name": "xq_category_bg_icon00024",
+      "value": "#2E6C6CEA"
+    },
+    {
+      "name": "xq_category_bg_icon00025",
+      "value": "#2E6C6CEA"
+    },
+    {
+      "name": "xq_category_bg_icon00026",
+      "value": "#2E6C6CEA"
+    },
+    {
+      "name": "xq_category_bg_icon00027",
+      "value": "#2EFC7032"
+    },
+    {
+      "name": "xq_category_bg_icon00028",
+      "value": "#2EBD50D3"
+    },
+    {
+      "name": "xq_category_bg_icon00029",
+      "value": "#2EFC7032"
+    },
+    {
+      "name": "xq_category_bg_icon00030",
+      "value": "#2EBD50D3"
+    },
+    {
+      "name": "xq_category_bg_icon00031",
+      "value": "#2EFF3369"
+    },
+    {
+      "name": "xq_category_bg_icon00032",
+      "value": "#2E757BF2"
+    },
+    {
+      "name": "xq_category_bg_icon00033",
+      "value": "#2EF23D4F"
+    },
+    {
+      "name": "xq_category_bg_icon00034",
+      "value": "#2EFC7032"
+    },
+    {
+      "name": "xq_category_bg_icon00035",
+      "value": "#2EFF3369"
+    },
+    {
+      "name": "xq_category_bg_icon00036",
+      "value": "#2E1DCE75"
+    },
+    {
+      "name": "xq_category_bg_icon00037",
+      "value": "#2E757BF2"
+    },
+    {
+      "name": "xq_category_bg_icon00038",
+      "value": "#2E6C6CEA"
+    },
+    {
+      "name": "xq_category_bg_icon00039",
+      "value": "#2EC65EDB"
+    },
+    {
+      "name": "xq_category_bg_icon00040",
+      "value": "#2E1DCE75"
+    },
+    {
+      "name": "xq_category_bg_icon00041",
+      "value": "#2E3A9CED"
+    },
+    {
+      "name": "xq_category_bg_icon00042",
+      "value": "#2EFCA315"
+    },
+    {
+      "name": "xq_category_bg_icon00043",
+      "value": "#2E757BF2"
+    },
+    {
+      "name": "xq_category_bg_icon00044",
+      "value": "#2E05C46D"
+    },
+    {
+      "name": "xq_category_bg_icon00045",
+      "value": "#2E6C6CEA"
+    },
+    {
+      "name": "xq_category_bg_icon00046",
+      "value": "#2E2595E8"
+    },
+    {
+      "name": "xq_category_bg_icon00047",
+      "value": "#2EFF4D7C"
+    },
+    {
+      "name": "xq_category_bg_icon00048",
+      "value": "#2E757BF2"
+    },
+    {
+      "name": "xq_category_bg_icon00049",
+      "value": "#2EFF8E12"
+    },
+    {
+      "name": "xq_category_bg_icon00050",
+      "value": "#2EFF8E12"
+    },
+    {
+      "name": "xq_category_bg_icon00051",
+      "value": "#2EFF3369"
+    },
+    {
+      "name": "xq_category_bg_icon00052",
+      "value": "#2EF23D4F"
+    },
+    {
+      "name": "xq_category_bg_icon00053",
+      "value": "#2E2595E8"
+    },
+    {
+      "name": "xq_category_bg_icon00054",
+      "value": "#2EFF4D7C"
+    },
+    {
+      "name": "xq_category_bg_icon00055",
+      "value": "#2E2595E8"
+    },
+    {
+      "name": "xq_category_bg_icon00056",
+      "value": "#2EFF8E12"
+    },
+    {
+      "name": "xq_category_bg_icon00057",
+      "value": "#2EFC7032"
+    },
+    {
+      "name": "xq_category_bg_icon00058",
+      "value": "#2E2595E8"
+    },
+    {
+      "name": "xq_category_bg_icon00059",
+      "value": "#2E05C46D"
+    },
+    {
+      "name": "xq_category_bg_icon00060",
+      "value": "#2E2595E8"
+    },
+    {
+      "name": "xq_category_bg_icon00061",
+      "value": "#2E30CE77"
+    },
+    {
+      "name": "xq_category_bg_icon00062",
+      "value": "#2E2595E8"
+    },
+    {
+      "name": "xq_category_bg_icon00063",
+      "value": "#2EFC7032"
+    },
+    {
+      "name": "xq_category_bg_icon00064",
+      "value": "#2EF23D4F"
+    },
+    {
+      "name": "xq_category_bg_icon00065",
+      "value": "#2EF23D4F"
+    },
+    {
+      "name": "xq_category_bg_icon00066",
+      "value": "#2EBD50D3"
+    },
+    {
+      "name": "xq_category_bg_icon00067",
+      "value": "#2EFF7E3E"
+    },
+    {
+      "name": "xq_category_bg_icon00068",
+      "value": "#2E6C6CEA"
+    },
+    {
+      "name": "xq_category_bg_icon00069",
+      "value": "#2E8486F8"
+    },
+    {
+      "name": "xq_category_bg_icon00070",
+      "value": "#2EC65EDB"
+    },
+    {
+      "name": "xq_category_bg_icon00071",
+      "value": "#2E05C46D"
+    },
+    {
+      "name": "xq_category_bg_icon00072",
+      "value": "#2E2595E8"
+    },
+    {
+      "name": "xq_category_bg_icon00073",
+      "value": "#2E05C46D"
+    },
+    {
+      "name": "xq_category_bg_icon00074",
+      "value": "#2E6C6CEA"
+    },
+    {
+      "name": "xq_category_bg_icon00075",
+      "value": "#2EFF7E3E"
+    },
+    {
+      "name": "xq_category_bg_icon00076",
+      "value": "#2E757BF2"
+    },
+    {
+      "name": "xq_category_bg_icon00077",
+      "value": "#2EBF5CD6"
+    },
+    {
+      "name": "xq_category_bg_icon00078",
+      "value": "#2E05C46D"
+    },
+    {
+      "name": "xq_category_bg_icon00079",
+      "value": "#2E6C6CEA"
+    },
+    {
+      "name": "xq_category_bg_icon00080",
+      "value": "#2EFC7032"
+    },
+    {
+      "name": "xq_category_bg_icon00081",
+      "value": "#2E3A9CED"
+    },
+    {
+      "name": "xq_category_bg_icon00082",
+      "value": "#2EF23D4F"
+    },
+    {
+      "name": "xq_category_bg_icon00083",
+      "value": "#2EFF8E12"
+    },
+    {
+      "name": "xq_category_bg_icon00084",
+      "value": "#2EFC7032"
+    },
+    {
+      "name": "xq_category_bg_icon00085",
+      "value": "#2EFCA315"
+    },
+    {
+      "name": "xq_category_bg_icon00086",
+      "value": "#2E05C46D"
+    },
+    {
+      "name": "xq_category_bg_icon00087",
+      "value": "#2E2298E0"
+    },
+    {
+      "name": "xq_category_bg_icon00088",
+      "value": "#2E6C6CEA"
+    },
+    {
+      "name": "xq_category_bg_icon00089",
+      "value": "#2EFF8E12"
+    },
+    {
+      "name": "xq_category_bg_icon00090",
+      "value": "#2EFF7E3E"
+    },
+    {
+      "name": "xq_category_bg_icon00091",
+      "value": "#2E00A0E9"
+    },
+    {
+      "name": "xq_category_bg_icon00092",
+      "value": "#2EFF4D7C"
+    },
+    {
+      "name": "xq_category_bg_icon00093",
+      "value": "#2E05C46D"
+    },
+    {
+      "name": "xq_category_bg_icon00094",
+      "value": "#2E6C6CEA"
+    },
+    {
+      "name": "xq_category_bg_icon00095",
+      "value": "#2EFC7032"
+    },
+    {
+      "name": "xq_category_bg_icon00096",
+      "value": "#2E6C6CEA"
+    },
+    {
+      "name": "xq_category_bg_icon00097",
+      "value": "#2E05C46D"
+    },
+    {
+      "name": "xq_category_bg_icon00098",
+      "value": "#2E05C46D"
+    },
+    {
+      "name": "xq_category_bg_icon00099",
+      "value": "#2EF23D4F"
+    },
+    {
+      "name": "xq_category_bg_icon00100",
+      "value": "#2E757BF2"
+    },
+    {
+      "name": "xq_category_bg_icon00101",
+      "value": "#2EFF4D7C"
+    },
+    {
+      "name": "xq_category_bg_icon00102",
+      "value": "#2EF23D4F"
+    },
+    {
+      "name": "xq_category_bg_icon00103",
+      "value": "#2EFC4956"
+    },
+    {
+      "name": "xq_category_bg_icon00104",
+      "value": "#2EFF8E12"
+    },
+    {
+      "name": "xq_category_bg_icon00105",
+      "value": "#2EFC4956"
+    },
+    {
+      "name": "xq_category_bg_icon00106",
+      "value": "#2E2595E8"
+    },
+    {
+      "name": "xq_category_bg_icon00107",
+      "value": "#2EFC7032"
+    },
+    {
+      "name": "xq_category_bg_icon00108",
+      "value": "#2EFCA315"
+    },
+    {
+      "name": "xq_category_bg_icon00109",
+      "value": "#2EFC4956"
+    },
+    {
+      "name": "xq_category_bg_icon00110",
+      "value": "#2E05C46D"
+    },
+    {
+      "name": "xq_category_bg_icon00111",
+      "value": "#2EFF8E12"
+    },
+    {
+      "name": "xq_category_bg_icon00112",
+      "value": "#2EFCB138"
+    },
+    {
+      "name": "xq_category_bg_icon00113",
+      "value": "#2E757BF2"
+    },
+    {
+      "name": "xq_category_bg_icon00114",
+      "value": "#2E2595E8"
+    },
+    {
+      "name": "xq_category_bg_icon00115",
+      "value": "#2E6BC2FC"
+    },
+    {
+      "name": "xq_category_bg_icon00116",
+      "value": "#2E05C46D"
+    },
+    {
+      "name": "xq_category_bg_icon00117",
+      "value": "#2E2595E8"
+    },
+    {
+      "name": "xq_category_bg_icon00118",
+      "value": "#2EFF8E12"
+    },
+    {
+      "name": "xq_category_bg_icon00119",
+      "value": "#2EFF3369"
+    },
+    {
+      "name": "xq_category_bg_icon00120",
+      "value": "#2EBD50D3"
+    },
+    {
+      "name": "xq_category_bg_icon00121",
+      "value": "#2EFCB138"
+    },
+    {
+      "name": "xq_category_bg_icon00122",
+      "value": "#2E757BF2"
+    },
+    {
+      "name": "xq_category_bg_icon00123",
+      "value": "#2E2595E8"
+    },
+    {
+      "name": "xq_category_bg_icon00124",
+      "value": "#2E2595E8"
+    },
+    {
+      "name": "xq_category_bg_icon00125",
+      "value": "#2E05C46D"
+    },
+    {
+      "name": "xq_category_bg_icon00126",
+      "value": "#2EFC4956"
+    },
+    {
+      "name": "xq_category_bg_icon00127",
+      "value": "#2EFC7032"
+    },
+    {
+      "name": "xq_category_bg_icon00128",
+      "value": "#2EFC7032"
+    },
+    {
+      "name": "xq_category_bg_icon00129",
+      "value": "#2EBF5CD6"
+    },
+    {
+      "name": "xq_category_bg_icon00130",
+      "value": "#2EFC7032"
+    },
+    {
+      "name": "xq_category_bg_icon00131",
+      "value": "#2EBD50D3"
+    },
+    {
+      "name": "xq_category_bg_icon00132",
+      "value": "#2EBD50D3"
+    },
+    {
+      "name": "xq_category_bg_icon00133",
+      "value": "#2EFF4D7C"
+    },
+    {
+      "name": "xq_category_bg_icon00134",
+      "value": "#2E2595E8"
+    },
+    {
+      "name": "xq_category_bg_icon00135",
+      "value": "#2EF23D4F"
+    },
+    {
+      "name": "xq_category_bg_icon00136",
+      "value": "#2E39A5E9"
+    },
+    {
+      "name": "xq_category_bg_icon00137",
+      "value": "#2E05C46D"
+    },
+    {
+      "name": "xq_category_bg_icon00138",
+      "value": "#2E3A9CED"
+    },
+    {
+      "name": "xq_category_bg_icon00139",
+      "value": "#2EFCA315"
+    },
+    {
+      "name": "xq_category_bg_icon00140",
+      "value": "#2EFC7032"
+    },
+    {
+      "name": "xq_category_bg_icon00141",
+      "value": "#2EFCA315"
+    },
+    {
+      "name": "xq_category_bg_icon00142",
+      "value": "#2E757BF2"
+    },
+    {
+      "name": "xq_category_bg_icon00143",
+      "value": "#2EFC7032"
+    },
+    {
+      "name": "xq_category_bg_icon00144",
+      "value": "#2E757BF2"
+    },
+    {
+      "name": "xq_category_bg_icon00145",
+      "value": "#2EBD50D3"
+    },
+    {
+      "name": "xq_category_bg_icon00146",
+      "value": "#2EFCA315"
+    },
+    {
+      "name": "xq_category_bg_icon00147",
+      "value": "#2EFC4956"
+    },
+    {
+      "name": "xq_category_bg_icon00148",
+      "value": "#2EF23D4F"
+    },
+    {
+      "name": "xq_category_bg_icon00149",
+      "value": "#2E757BF2"
+    },
+    {
+      "name": "xq_category_bg_icon00150",
+      "value": "#2E1DCE75"
+    },
+    {
+      "name": "xq_category_bg_icon00151",
+      "value": "#2EF23D4F"
+    },
+    {
+      "name": "xq_category_bg_icon00152",
+      "value": "#2EF23D4F"
+    },
+    {
+      "name": "xq_category_bg_icon00153",
+      "value": "#2EFCA315"
+    },
+    {
+      "name": "xq_category_bg_icon00154",
+      "value": "#2EFC7032"
+    },
+    {
+      "name": "xq_category_bg_icon00155",
+      "value": "#2EF23D4F"
+    },
+    {
+      "name": "xq_category_bg_icon00156",
+      "value": "#2EF23D4F"
+    },
+    {
+      "name": "xq_category_bg_icon00157",
+      "value": "#2E2595E8"
+    },
+    {
+      "name": "xq_category_bg_icon00158",
+      "value": "#2EFCA315"
+    },
+    {
+      "name": "xq_category_bg_icon00159",
+      "value": "#2E2595E8"
+    },
+    {
+      "name": "xq_category_bg_icon00160",
+      "value": "#2EBD50D3"
+    },
+    {
+      "name": "xq_category_bg_icon00161",
+      "value": "#2E3A9CED"
+    },
+    {
+      "name": "xq_category_bg_icon00162",
+      "value": "#2E2595E8"
+    },
+    {
+      "name": "xq_category_bg_icon00163",
+      "value": "#2EFF3369"
+    },
+    {
+      "name": "xq_category_bg_icon00164",
+      "value": "#2E1DCE75"
+    },
+    {
+      "name": "xq_category_bg_icon00165",
+      "value": "#2EF23D4F"
+    },
+    {
+      "name": "xq_category_bg_icon00166",
+      "value": "#2E05C46D"
+    },
+    {
+      "name": "xq_category_bg_icon00167",
+      "value": "#2EFF3369"
+    },
+    {
+      "name": "xq_category_bg_icon00168",
+      "value": "#2E757BF2"
+    },
+    {
+      "name": "xq_category_bg_icon00169",
+      "value": "#2E6C6CEA"
+    },
+    {
+      "name": "xq_category_bg_icon00170",
+      "value": "#2E05C46D"
+    },
+    {
+      "name": "xq_category_bg_icon00171",
+      "value": "#2EFF8E12"
+    },
+    {
+      "name": "xq_category_bg_icon00172",
+      "value": "#2E3A9CED"
+    },
+    {
+      "name": "xq_category_bg_icon00173",
+      "value": "#2EBF5CD6"
+    },
+    {
+      "name": "xq_category_bg_icon00174",
+      "value": "#2EFC7032"
+    },
+    {
+      "name": "xq_category_bg_icon00175",
+      "value": "#2EFCA315"
+    },
+    {
+      "name": "xq_category_bg_icon00176",
+      "value": "#2E757BF2"
+    },
+    {
+      "name": "xq_category_bg_icon00177",
+      "value": "#2EF23D4F"
+    },
+    {
+      "name": "xq_category_bg_icon00178",
+      "value": "#2EFC7032"
+    },
+    {
+      "name": "xq_category_bg_icon00179",
+      "value": "#2EFC7032"
+    },
+    {
+      "name": "xq_category_bg_icon00180",
+      "value": "#2E2595E8"
+    },
+    {
+      "name": "xq_category_bg_icon00181",
+      "value": "#2EFC4956"
+    },
+    {
+      "name": "xq_category_bg_icon00182",
+      "value": "#2E757BF2"
+    },
+    {
+      "name": "xq_category_bg_icon00183",
+      "value": "#2EFF7E3E"
+    },
+    {
+      "name": "xq_category_bg_icon00184",
+      "value": "#2EFCA315"
+    },
+    {
+      "name": "xq_category_bg_icon00185",
+      "value": "#2E757BF2"
+    },
+    {
+      "name": "xq_category_bg_icon00186",
+      "value": "#2EC65EDB"
+    },
+    {
+      "name": "xq_category_bg_icon00187",
+      "value": "#2EFC7032"
+    },
+    {
+      "name": "xq_category_bg_icon00188",
+      "value": "#2EC65EDB"
+    },
+    {
+      "name": "xq_category_bg_icon00189",
+      "value": "#2EF23D4F"
+    },
+    {
+      "name": "xq_category_bg_icon00190",
+      "value": "#2E3A9CED"
+    },
+    {
+      "name": "xq_category_bg_icon00191",
+      "value": "#2E2595E8"
+    },
+    {
+      "name": "xq_category_bg_icon00192",
+      "value": "#2E757BF2"
+    },
+    {
+      "name": "xq_category_bg_icon00193",
+      "value": "#2E2595E8"
+    },
+    {
+      "name": "xq_category_bg_icon00194",
+      "value": "#2EF23D4F"
+    },
+    {
+      "name": "xq_category_bg_icon00195",
+      "value": "#2E2595E8"
+    },
+    {
+      "name": "xq_category_bg_icon00196",
+      "value": "#2E05C46D"
+    },
+    {
+      "name": "xq_category_bg_icon00197",
+      "value": "#2E05C46D"
+    },
+    {
+      "name": "xq_category_bg_icon00198",
+      "value": "#2E59ADF8"
+    },
+    {
+      "name": "xq_category_bg_icon00199",
+      "value": "#2E757BF2"
+    },
+    {
+      "name": "xq_category_bg_icon00200",
+      "value": "#2EC65EDB"
+    },
+    {
+      "name": "xq_category_bg_icon00201",
+      "value": "#2EFF3369"
+    },
+    {
+      "name": "xq_category_bg_icon00202",
+      "value": "#2EC65EDB"
+    },
+    {
+      "name": "xq_category_bg_icon00203",
+      "value": "#2E757BF2"
+    },
+    {
+      "name": "xq_category_bg_icon00204",
+      "value": "#2EF23D4F"
+    },
+    {
+      "name": "xq_category_bg_icon00205",
+      "value": "#2E05C46D"
+    },
+    {
+      "name": "xq_category_bg_icon00206",
+      "value": "#2E05C46D"
+    },
+    {
+      "name": "xq_category_bg_icon00207",
+      "value": "#2EFCA315"
+    },
+    {
+      "name": "xq_category_bg_icon00208",
+      "value": "#2EFF3369"
+    },
+    {
+      "name": "xq_category_bg_icon00209",
+      "value": "#2E6C6CEA"
+    },
+    {
+      "name": "xq_category_bg_icon00210",
+      "value": "#2EC65EDB"
+    },
+    {
+      "name": "xq_category_bg_icon00211",
+      "value": "#2EFF7E3E"
+    },
+    {
+      "name": "xq_category_bg_icon00212",
+      "value": "#2E2595E8"
+    },
+    {
+      "name": "xq_category_bg_icon00213",
+      "value": "#2E1DCE75"
+    },
+    {
+      "name": "xq_category_bg_icon00214",
+      "value": "#2E05C46D"
+    },
+    {
+      "name": "xq_category_bg_icon00215",
+      "value": "#2EF23D4F"
+    },
+    {
+      "name": "xq_category_bg_icon00216",
+      "value": "#2E2595E8"
+    },
+    {
+      "name": "xq_category_bg_icon00217",
+      "value": "#2E6C6CEA"
+    },
+    {
+      "name": "xq_category_bg_icon00218",
+      "value": "#2E2595E8"
+    },
+    {
+      "name": "xq_category_bg_icon00219",
+      "value": "#2EBD50D3"
+    },
+    {
+      "name": "xq_category_bg_icon00220",
+      "value": "#2E05C46D"
+    },
+    {
+      "name": "xq_category_bg_icon00221",
+      "value": "#2E6C6CEA"
+    },
+    {
+      "name": "xq_category_bg_icon00222",
+      "value": "#2EFC7032"
+    },
+    {
+      "name": "xq_category_bg_icon00223",
+      "value": "#2E05C46D"
+    },
+    {
+      "name": "xq_category_bg_icon00224",
+      "value": "#2E2595E8"
+    },
+    {
+      "name": "xq_category_bg_icon00225",
+      "value": "#2EF23D4F"
+    },
+    {
+      "name": "xq_category_bg_icon00226",
+      "value": "#2EF23D4F"
+    },
+    {
+      "name": "xq_category_bg_icon00227",
+      "value": "#2E39A5E9"
+    },
+    {
+      "name": "xq_category_bg_icon00228",
+      "value": "#2E757BF2"
+    },
+    {
+      "name": "xq_category_bg_icon00229",
+      "value": "#2EFF3369"
+    },
+    {
+      "name": "xq_category_bg_icon00230",
+      "value": "#2E6C6CEA"
+    },
+    {
+      "name": "xq_category_bg_icon00231",
+      "value": "#2EFF7E3E"
+    },
+    {
+      "name": "xq_category_bg_icon00232",
+      "value": "#2E05C46D"
+    },
+    {
+      "name": "xq_category_bg_icon00233",
+      "value": "#2EBD50D3"
+    },
+    {
+      "name": "xq_category_bg_icon00234",
+      "value": "#2EFF3369"
+    },
+    {
+      "name": "xq_category_bg_icon00235",
+      "value": "#2E6C6CEA"
+    },
+    {
+      "name": "xq_category_bg_icon00236",
+      "value": "#2EFF3369"
+    },
+    {
+      "name": "xq_category_bg_icon00237",
+      "value": "#2EF23D4F"
+    },
+    {
+      "name": "xq_category_bg_icon00238",
+      "value": "#2E6D6DF2"
+    },
+    {
+      "name": "xq_category_bg_icon00239",
+      "value": "#2EF23D4F"
+    },
+    {
+      "name": "xq_category_bg_icon00240",
+      "value": "#2EFCA315"
+    },
+    {
+      "name": "xq_category_bg_icon00241",
+      "value": "#2EFCA315"
+    },
+    {
+      "name": "xq_category_bg_icon00242",
+      "value": "#2EFF8E12"
+    },
+    {
+      "name": "xq_category_bg_icon00243",
+      "value": "#2E6C6CEA"
+    },
+    {
+      "name": "xq_category_bg_icon00244",
+      "value": "#2E6C6CEA"
+    },
+    {
+      "name": "xq_category_bg_icon00245",
+      "value": "#2E6C6CEA"
+    },
+    {
+      "name": "xq_category_bg_icon00246",
+      "value": "#2EF23D4F"
+    },
+    {
+      "name": "xq_category_bg_icon00247",
+      "value": "#2EFF8E12"
+    },
+    {
+      "name": "xq_category_bg_icon00248",
+      "value": "#2EBF5CD6"
+    },
+    {
+      "name": "xq_category_bg_icon00249",
+      "value": "#2E3A9CED"
+    },
+    {
+      "name": "xq_category_bg_icon00250",
+      "value": "#2EC65EDB"
+    },
+    {
+      "name": "xq_category_bg_icon00251",
+      "value": "#2E1DCE75"
+    },
+    {
+      "name": "xq_category_bg_icon00252",
+      "value": "#2E05C46D"
+    },
+    {
+      "name": "xq_category_bg_icon00253",
+      "value": "#2E6C6CEA"
+    },
+    {
+      "name": "xq_category_bg_icon00254",
+      "value": "#2EBF5CD6"
+    },
+    {
+      "name": "xq_category_bg_icon00255",
+      "value": "#2E2595E8"
+    },
+    {
+      "name": "xq_category_bg_icon00256",
+      "value": "#2E6C6CEA"
+    },
+    {
+      "name": "xq_category_bg_icon00257",
+      "value": "#2EFF8E12"
+    },
+    {
+      "name": "xq_category_bg_icon00258",
+      "value": "#2EFF8E12"
+    },
+    {
+      "name": "xq_category_bg_icon00259",
+      "value": "#2E6C6CEA"
+    },
+    {
+      "name": "xq_category_bg_icon00260",
+      "value": "#2EF23D4F"
+    },
+    {
+      "name": "xq_category_bg_icon00261",
+      "value": "#2EBD50D3"
+    },
+    {
+      "name": "xq_category_bg_icon00262",
+      "value": "#2E2595E8"
+    },
+    {
+      "name": "xq_category_bg_icon00263",
+      "value": "#2E05C46D"
+    },
+    {
+      "name": "xq_category_bg_icon00264",
+      "value": "#2EFF3369"
+    },
+    {
+      "name": "xq_category_bg_icon00265",
+      "value": "#2EC65EDB"
+    },
+    {
+      "name": "xq_category_bg_icon00266",
+      "value": "#2E2595E8"
+    },
+    {
+      "name": "xq_category_bg_icon00267",
+      "value": "#2EBD50D3"
+    },
+    {
+      "name": "xq_category_bg_icon00268",
+      "value": "#2EFF3369"
+    },
+    {
+      "name": "xq_category_bg_icon00269",
+      "value": "#2EF23D4F"
+    },
+    {
+      "name": "xq_category_bg_icon00270",
+      "value": "#2E2595E8"
+    },
+    {
+      "name": "xq_category_bg_icon00271",
+      "value": "#2EFCA315"
+    },
+    {
+      "name": "xq_category_bg_icon00272",
+      "value": "#2EFF3369"
+    },
+    {
+      "name": "xq_category_bg_icon00273",
+      "value": "#2EFCA315"
+    },
+    {
+      "name": "xq_category_bg_icon00274",
+      "value": "#2EFCA315"
+    },
+    {
+      "name": "xq_category_bg_icon00275",
+      "value": "#2EFCA315"
+    },
+    {
+      "name": "xq_category_bg_icon00276",
+      "value": "#2EFF4D7C"
+    },
+    {
+      "name": "xq_category_bg_icon00277",
+      "value": "#2E6C6CEA"
+    },
+    {
+      "name": "xq_category_bg_icon00278",
+      "value": "#2EFCA315"
+    },
+    {
+      "name": "xq_category_bg_icon00279",
+      "value": "#2EFF7E3E"
+    },
+    {
+      "name": "xq_category_bg_icon00280",
+      "value": "#2EFC4956"
+    },
+    {
+      "name": "xq_category_bg_icon00281",
+      "value": "#2EFC4956"
+    },
+    {
+      "name": "xq_category_bg_icon00282",
+      "value": "#2E3A9CED"
+    },
+    {
+      "name": "xq_category_bg_icon00283",
+      "value": "#2E2595E8"
+    },
+    {
+      "name": "xq_category_bg_icon00284",
+      "value": "#2E757BF2"
+    },
+    {
+      "name": "xq_category_bg_icon00285",
+      "value": "#2EFC4956"
+    },
+    {
+      "name": "xq_category_bg_icon00286",
+      "value": "#2EFC7032"
+    },
+    {
+      "name": "xq_category_bg_icon00287",
+      "value": "#2E757BF2"
+    },
+    {
+      "name": "xq_category_bg_icon00288",
+      "value": "#2EFCA315"
+    },
+    {
+      "name": "xq_category_bg_icon00289",
+      "value": "#2EFF3369"
+    },
+    {
+      "name": "xq_category_bg_icon00290",
+      "value": "#2EFF8048"
+    },
+    {
+      "name": "xq_category_bg_icon00291",
+      "value": "#2E1DCE75"
+    },
+    {
+      "name": "xq_category_bg_icon00292",
+      "value": "#2EFF7E3E"
+    },
+    {
+      "name": "xq_category_bg_icon00293",
+      "value": "#2EFF8E12"
+    },
+    {
+      "name": "xq_category_bg_icon00294",
+      "value": "#2E2595E8"
+    },
+    {
+      "name": "xq_category_bg_icon00295",
+      "value": "#2E757BF2"
+    },
+    {
+      "name": "xq_category_bg_icon00296",
+      "value": "#2EF23D4F"
+    },
+    {
+      "name": "xq_category_bg_icon00297",
+      "value": "#2E05C46D"
+    },
+    {
+      "name": "xq_category_bg_icon00298",
+      "value": "#2EFC4956"
+    },
+    {
+      "name": "xq_category_bg_icon00299",
+      "value": "#2EFF7E3E"
+    },
+    {
+      "name": "xq_category_bg_icon00300",
+      "value": "#2EFF4D7C"
+    },
+    {
+      "name": "xq_category_bg_icon00301",
+      "value": "#2EFCA315"
+    },
+    {
+      "name": "xq_category_bg_icon00302",
+      "value": "#2E757BF2"
+    },
+    {
+      "name": "xq_category_bg_icon00303",
+      "value": "#2E3A9CED"
+    },
+    {
+      "name": "xq_category_bg_icon00304",
+      "value": "#2EFF3369"
+    },
+    {
+      "name": "xq_category_bg_icon00305",
+      "value": "#2E6C6CEA"
+    },
+    {
+      "name": "xq_category_bg_icon00306",
+      "value": "#2E6C6CEA"
+    },
+    {
+      "name": "xq_category_bg_icon00307",
+      "value": "#2EFC7032"
+    },
+    {
+      "name": "xq_category_bg_icon00308",
+      "value": "#2E05C46D"
+    },
+    {
+      "name": "xq_category_bg_icon00309",
+      "value": "#2EFCA315"
+    },
+    {
+      "name": "xq_category_bg_icon00310",
+      "value": "#2EFC7032"
+    },
+    {
+      "name": "xq_category_bg_icon00311",
+      "value": "#2E05C46D"
+    },
+    {
+      "name": "xq_category_bg_icon00312",
+      "value": "#2E6C6CEA"
+    },
+    {
+      "name": "xq_category_bg_icon00313",
+      "value": "#2EFF8E12"
+    },
+    {
+      "name": "xq_category_bg_icon00314",
+      "value": "#2EFF8E12"
+    },
+    {
+      "name": "xq_category_bg_icon00315",
+      "value": "#2EFF7E3E"
+    },
+    {
+      "name": "xq_category_bg_icon00316",
+      "value": "#2EFF8E12"
+    },
+    {
+      "name": "xq_category_bg_icon00317",
+      "value": "#2EFC4956"
+    },
+    {
+      "name": "xq_category_bg_icon00318",
+      "value": "#2EF23D4F"
+    },
+    {
+      "name": "xq_category_bg_icon00319",
+      "value": "#2E1DCE75"
+    },
+    {
+      "name": "xq_category_bg_icon00320",
+      "value": "#2E6C6CEA"
+    },
+    {
+      "name": "xq_category_bg_icon00321",
+      "value": "#2E05C46D"
+    },
+    {
+      "name": "xq_category_bg_icon00322",
+      "value": "#2E2595E8"
+    },
+    {
+      "name": "xq_category_bg_icon00323",
+      "value": "#2E3A9CED"
+    },
+    {
+      "name": "xq_category_bg_icon00324",
+      "value": "#2EFC7032"
+    },
+    {
+      "name": "xq_category_bg_icon00325",
+      "value": "#2E3A9CED"
+    },
+    {
+      "name": "xq_category_bg_icon00326",
+      "value": "#2EFF7C33"
+    },
+    {
+      "name": "xq_category_bg_icon00327",
+      "value": "#2EFC7032"
+    },
+    {
+      "name": "xq_category_bg_icon00328",
+      "value": "#2E2595E8"
+    },
+    {
+      "name": "xq_category_bg_icon00329",
+      "value": "#2E2595E8"
+    },
+    {
+      "name": "xq_category_bg_icon00330",
+      "value": "#2EFC4956"
+    },
+    {
+      "name": "xq_category_bg_icon00331",
+      "value": "#2E2595E8"
+    },
+    {
+      "name": "xq_category_bg_icon00332",
+      "value": "#2E6C6CEA"
+    },
+    {
+      "name": "xq_category_bg_icon00333",
+      "value": "#2EF23D4F"
+    },
+    {
+      "name": "xq_category_bg_icon00334",
+      "value": "#2E757BF2"
+    },
+    {
+      "name": "xq_category_bg_icon00335",
+      "value": "#2E1DCE75"
+    },
+    {
+      "name": "xq_category_bg_icon00336",
+      "value": "#2EFC4956"
+    },
+    {
+      "name": "xq_category_bg_icon00337",
+      "value": "#2E757BF2"
+    },
+    {
+      "name": "xq_category_bg_icon00338",
+      "value": "#2E2595E8"
+    },
+    {
+      "name": "xq_category_bg_icon00339",
+      "value": "#2E05C46D"
+    },
+    {
+      "name": "xq_category_bg_icon00340",
+      "value": "#2E00A0E9"
+    },
+    {
+      "name": "xq_category_bg_icon00341",
+      "value": "#2EFF7E3E"
+    },
+    {
+      "name": "xq_category_bg_icon00342",
+      "value": "#2EFF3369"
+    },
+    {
+      "name": "xq_category_bg_icon00343",
+      "value": "#2E6C6CEA"
+    },
+    {
+      "name": "xq_category_bg_icon00344",
+      "value": "#2EFCA315"
+    },
+    {
+      "name": "xq_category_bg_icon00345",
+      "value": "#2EBD50D3"
+    },
+    {
+      "name": "xq_category_bg_icon00346",
+      "value": "#2E2595E8"
+    },
+    {
+      "name": "xq_category_bg_icon00347",
+      "value": "#2E757BF2"
+    },
+    {
+      "name": "xq_category_bg_icon00348",
+      "value": "#2EFF7E3E"
+    },
+    {
+      "name": "xq_category_bg_icon00349",
+      "value": "#2EFC7032"
+    },
+    {
+      "name": "xq_category_bg_icon00350",
+      "value": "#2EFCA315"
+    },
+    {
+      "name": "xq_category_bg_icon00351",
+      "value": "#2EFCA315"
+    },
+    {
+      "name": "xq_category_bg_icon00352",
+      "value": "#2EFC7032"
+    },
+    {
+      "name": "xq_category_bg_icon00353",
+      "value": "#2E757BF2"
+    },
+    {
+      "name": "xq_category_bg_icon00354",
+      "value": "#2EF23D4F"
+    },
+    {
+      "name": "xq_category_bg_icon00355",
+      "value": "#2EFCA315"
+    },
+    {
+      "name": "xq_category_bg_icon00356",
+      "value": "#2EFC7032"
+    },
+    {
+      "name": "xq_category_bg_icon00357",
+      "value": "#2E757BF2"
+    },
+    {
+      "name": "xq_category_bg_icon00358",
+      "value": "#2EFC7032"
+    },
+    {
+      "name": "xq_category_bg_icon00359",
+      "value": "#2EFF8E12"
+    },
+    {
+      "name": "xq_category_bg_icon00360",
+      "value": "#2EFC4956"
+    },
+    {
+      "name": "xq_category_bg_icon00361",
+      "value": "#2E2595E8"
+    },
+    {
+      "name": "xq_category_bg_icon00362",
+      "value": "#2E2595E8"
+    },
+    {
+      "name": "xq_category_bg_icon00363",
+      "value": "#2E6C6CEA"
+    },
+    {
+      "name": "xq_category_bg_icon00364",
+      "value": "#2EFF3369"
+    },
+    {
+      "name": "xq_category_bg_icon00365",
+      "value": "#2EFCA315"
+    },
+    {
+      "name": "xq_category_bg_icon00366",
+      "value": "#2EFC7032"
+    },
+    {
+      "name": "xq_category_bg_icon00367",
+      "value": "#2E3A9CED"
+    },
+    {
+      "name": "xq_category_bg_icon00368",
+      "value": "#2E757BF2"
+    },
+    {
+      "name": "xq_category_bg_icon00369",
+      "value": "#2EFCB138"
+    },
+    {
+      "name": "xq_category_bg_icon00370",
+      "value": "#2EFF5C64"
+    },
+    {
+      "name": "xq_category_bg_icon00371",
+      "value": "#2ECA6EE0"
+    },
+    {
+      "name": "xq_category_bg_icon00372",
+      "value": "#2E2595E8"
+    },
+    {
+      "name": "xq_category_bg_icon00373",
+      "value": "#2E1DCE75"
+    }
+  ]
+}

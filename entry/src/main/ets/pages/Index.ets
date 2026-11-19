@@ -1,3 +1,4 @@
+import { CategoryIconBadge } from '../components/CategoryIconBadge';
 import { LedgerSearchPage } from '../components/LedgerSearchPage';
 import { BillDetailsPage } from '../components/BillDetailsPage';
 import { PrepaidPage } from '../components/PrepaidPage';
@@ -1092,13 +1093,7 @@ struct Index {
   @Builder
   private categoryBadge(entry: LedgerEntry) {
     Row() {
-      Stack() {
-        if (entry.transfer) {
-          Image(entry.icon).width(28).height(28).objectFit(ImageFit.Contain).id(`ledger-category-glyph-${entry.id}`)
-        } else {
-          Image(entry.icon).width(28).height(28).objectFit(ImageFit.Contain).id(`ledger-category-glyph-${entry.id}`)
-        }
-      }.width(48).height(48).borderRadius(24).backgroundColor($r('app.color.xq_ledger_category_disc_background'))
+      CategoryIconBadge({ icon: entry.icon, badgeSize: 48, glyphSize: 28, glyphId: `ledger-category-glyph-${entry.id}` })
         .id(`ledger-category-disc-${entry.id}`)
     }.width(68).height(48).padding({ left: 12, right: 8 })
   }
@@ -1418,7 +1413,7 @@ struct Index {
     if (!this.preview && this.prepaidCount > 0 && !this.upgradeRequired) {
       Button({ type: ButtonType.Normal }) {
         Row({ space: 10 }) {
-          Image($r('app.media.colorful_icon00350')).width(24).height(24).objectFit(ImageFit.Contain).flexShrink(0)
+          CategoryIconBadge({ icon: $r('app.media.colorful_icon00350'), badgeSize: 32, glyphSize: 24 })
           Text('预付款与核销').fontSize('14fp').fontWeight(FontWeight.Medium)
             .fontColor($r('app.color.xq_font_primary')).maxLines(1).layoutWeight(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis })

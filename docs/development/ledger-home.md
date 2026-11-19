@@ -617,3 +617,5 @@ LedgerHome 原生回归补充“月份顶部不小于标题栏底部”的断言
 首页背景使用两个专用颜色：`xq_ledger_prepaid_entry_background` 用于预付款入口，`xq_ledger_category_disc_background` 用于账目图标圆底。两者浅色均为 #F1F3F5、深色均为 #202224，保持独立以便后续分别调整；不修改全局页面色和卡片色。
 
 账目状态徽标（待核销、已结清、预付款退款及报销/退款状态）使用专用 `xq_ledger_status_badge_background`，浅色 #F1F3F5、深色 #202224，保留现有文字颜色，避免深色时徽标背景融入页面。
+
+首页彩色分类图标已统一改用 CategoryIconBadge 的同色超椭圆底，旧 xq_ledger_category_disc_background 不再作为这批图标的底色；预付款入口卡片自身背景仍沿用 xq_ledger_prepaid_entry_background。背景生成与浅深色规则见 category-management.md。

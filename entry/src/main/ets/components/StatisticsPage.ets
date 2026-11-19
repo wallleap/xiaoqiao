@@ -1,3 +1,4 @@
+import { CategoryIconBadge } from './CategoryIconBadge';
 import { ItemRestriction, SegmentButton, SegmentButtonOptions, SegmentButtonTextItem } from '@kit.ArkUI';
 import { DividerShowType, HdsNavigation, HdsNavigationTitleMode, hdsMaterial, ScrollEffectType } from '@kit.UIDesignKit';
 import { LedgerWorkspace } from '../data/rdb/LedgerWorkspace';
@@ -645,11 +646,11 @@ export struct StatisticsPage {
     Row({ space: 12 }) {
       Stack() {
         if (category.key === 'transfer_fee') {
-          Image($r('app.media.colorful_icon00372')).width(24).height(24).objectFit(ImageFit.Contain)
+          CategoryIconBadge({ icon: $r('app.media.colorful_icon00372'), badgeSize: 44, glyphSize: 28 })
         } else {
-          Image(categoryIcon(category.iconKey, kind === 'income')).width(28).height(28).objectFit(ImageFit.Contain)
+          CategoryIconBadge({ icon: categoryIcon(category.iconKey, kind === 'income'), badgeSize: 44, glyphSize: 28 })
         }
-      }.width(44).height(44).borderRadius(22).backgroundColor($r('app.color.xq_app_surface_page'))
+      }.width(44).height(44)
       Column({ space: 8 }) {
         Row({ space: 8 }) {
           Text(category.name).fontSize('16fp').fontWeight(FontWeight.Medium)
@@ -972,11 +973,11 @@ export struct StatisticsPage {
     Row({ space: 12 }) {
       Stack() {
         if (entry.categoryKey === 'transfer_fee') {
-          Image($r('app.media.colorful_icon00372')).width(22).height(22).objectFit(ImageFit.Contain)
+          CategoryIconBadge({ icon: $r('app.media.colorful_icon00372'), badgeSize: 40, glyphSize: 26 })
         } else {
-          Image(categoryIcon(entry.iconKey, this.kind === 1)).width(26).height(26).objectFit(ImageFit.Contain)
+          CategoryIconBadge({ icon: categoryIcon(entry.iconKey, this.kind === 1), badgeSize: 40, glyphSize: 26 })
         }
-      }.width(40).height(40).borderRadius(20).backgroundColor($r('app.color.xq_app_surface_page'))
+      }.width(40).height(40)
       Column({ space: 4 }) {
         Text(entry.title).fontSize('16fp').fontWeight(FontWeight.Medium)
           .fontColor($r('app.color.xq_font_primary')).maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
