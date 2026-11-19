@@ -94,7 +94,7 @@ def main() -> None:
     lines += [f"  '{key}': '{value}'," for key, value in sorted(aliases.items())]
     lines += ['};', '']
     OUTPUT.write_text('\n'.join(lines))
-    for mode, alpha in [('base', '1A'), ('dark', '2E')]:
+    for mode, alpha in [('base', '0F'), ('dark', '1F')]:
         colors = [{'name': f'xq_category_bg_{name}', 'value': '#' + alpha + icon_color(path)[1:]}
                   for name, path in zip(names, paths)]
         target = ROOT / f'entry/src/main/resources/{mode}/element/category_icon_backgrounds.json'
