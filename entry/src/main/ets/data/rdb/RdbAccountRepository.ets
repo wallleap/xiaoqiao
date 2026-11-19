@@ -41,7 +41,7 @@ export class RdbAccountRepository {
     await this.session.write(async (db: relationalStore.RdbStore): Promise<void> => {
       const now = Date.now();
       await db.insert('accounts', { id: value.id, name: value.name, kind: value.kind, currency_id: value.opening.currency.id,
-        brand: draft.style.brand, icon_key: draft.style.key, icon_variant: 'monochrome', brand_color: draft.style.color,
+        brand: draft.style.brand, icon_key: draft.style.key, icon_variant: draft.style.variant || 'monochrome', brand_color: draft.style.color,
         include_in_net_assets: value.includeInNetAssets ? 1 : 0, created_at_ms: now, updated_at_ms: now });
       const adjustment = util.generateRandomUUID();
       const minor = value.opening.toSafeMinorNumber();
@@ -105,7 +105,7 @@ export class RdbAccountRepository {
     await this.session.write(async (db: relationalStore.RdbStore): Promise<void> => {
       // Opening is immutable after creation. Metadata edits cannot move money or change the account kind/currency.
       const changed = await db.update({ name: draft.command.name, brand: draft.style.brand, icon_key: draft.style.key,
-        icon_variant: 'monochrome', brand_color: draft.style.color, include_in_net_assets: command.includeInNetAssets ? 1 : 0,
+        icon_variant: draft.style.variant || 'monochrome', brand_color: draft.style.color, include_in_net_assets: command.includeInNetAssets ? 1 : 0,
         updated_at_ms: Date.now(), revision: revision + 1 }, new relationalStore.RdbPredicates('accounts')
         .equalTo('id', command.id).equalTo('kind', command.kind).equalTo('currency_id', command.opening.currency.id)
         .equalTo('revision', revision).isNull('deleted_at_ms'));

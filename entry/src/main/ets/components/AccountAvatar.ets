@@ -8,8 +8,8 @@ export struct AccountAvatar {
   @Prop diameter: number = 44;
   build() {
     Row() {
-      Image(accountIcon(this.iconKey)).width(this.diameter * 0.58).height(this.diameter * 0.58)
+      Image(accountIcon(this.iconKey, this.iconVariant)).width(this.diameter * 0.58).height(this.diameter * 0.58)
     }.justifyContent(FlexAlign.Center).width(this.diameter).height(this.diameter).borderRadius(this.diameter / 2)
-      .backgroundColor(this.iconVariant === 'color' ? $r('app.color.xq_comp_background_primary') : this.brandColor)
+      .backgroundColor(this.iconVariant === 'color' ? Color.White : this.brandColor)
   }
 }

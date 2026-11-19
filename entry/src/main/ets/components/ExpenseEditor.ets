@@ -1425,7 +1425,8 @@ export struct ExpenseEditor {
             Image(accountIcon(this.accountCardProfile(id)?.iconKey || 'bank_card')).width(32).height(32)
               .fillColor(Color.White)
           } else {
-            Image(accountIcon(this.accountCardProfile(id)?.iconKey || 'bank_card')).width(32).height(32)
+            AccountAvatar({ iconKey: this.accountCardProfile(id)?.iconKey || 'bank_card',
+              brandColor: this.accountCardProfile(id)?.brandColor || '#5378B8', iconVariant: 'color', diameter: 44 })
           }
           Column({ space: 4 }) {
             Text(name).fontSize('14fp').fontWeight(FontWeight.Medium)

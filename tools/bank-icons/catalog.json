@@ -1,0 +1,3548 @@
+{
+  "source": "https://www.tubiao.cn/directory/finance-banking?sort=alphabetical",
+  "retrievedAt": "2026-11-19",
+  "banks": [
+    {
+      "key": "bank_30663d9c5153625c",
+      "name": "鞍山银行",
+      "sourceName": "鞍山银行",
+      "brand": "bank_30663d9c5153625c",
+      "historical": false,
+      "sourceFile": "boas.svg",
+      "sourceUrl": "https://www.tubiao.cn/library/icon-dc3d42a0aa1d043d9e2fa66e.svg",
+      "pageUrl": "https://www.tubiao.cn/svg/item-30663d9c5153625c",
+      "bankUrl": "http://www.bankofas.com/",
+      "keywords": [
+        "BOAS"
+      ],
+      "sha256": "9a16422479a47b58f59a841dab9b68ce7f71963c0e20d66568e4c3ccfb405248",
+      "viewBox": [
+        18.11770835876465,
+        17.87959686279297,
+        91.78160064697266,
+        91.78160064697266
+      ],
+      "abbreviation": "boas",
+      "resourceKey": "bank_boas"
+    },
+    {
+      "key": "bank_5927f8dbd3eca1be",
+      "name": "保定银行",
+      "sourceName": "保定银行",
+      "brand": "bank_5927f8dbd3eca1be",
+      "historical": false,
+      "sourceFile": "bobd.svg",
+      "sourceUrl": "https://www.tubiao.cn/library/icon-9b92d513bee15e9c56f0451c.svg",
+      "pageUrl": "https://www.tubiao.cn/svg/item-5927f8dbd3eca1be",
+      "bankUrl": "http://www.bd-bank.com.cn/",
+      "keywords": [
+        "BOBD"
+      ],
+      "sha256": "207063ff024a580d097d3c808c7a055c808d53729055788b91e41bd0d5e37ce1",
+      "viewBox": [
+        20.8,
+        21.05,
+        86.4,
+        86.4
+      ],
+      "abbreviation": "bobd",
+      "resourceKey": "bank_bobd"
+    },
+    {
+      "key": "bank_bc07bb9eaac7b1a2",
+      "name": "北京银行",
+      "sourceName": "北京银行",
+      "brand": "bank_bc07bb9eaac7b1a2",
+      "historical": false,
+      "sourceFile": "bob.svg",
+      "sourceUrl": "https://www.tubiao.cn/library/icon-b92d8ed13b316c716e1b4855.svg",
+      "pageUrl": "https://www.tubiao.cn/svg/item-bc07bb9eaac7b1a2",
+      "bankUrl": "https://www.bankofbeijing.com.cn/",
+      "keywords": [
+        "BOB"
+      ],
+      "sha256": "997b667cd5f3cc4770c26d702480b327d49501e6c93dea9016430267efb32232",
+      "viewBox": [
+        18.1,
+        18.1,
+        91.8,
+        91.8
+      ],
+      "abbreviation": "bob",
+      "resourceKey": "bank_bob"
+    },
+    {
+      "key": "bank_1712cdd37f1b8b22",
+      "name": "本溪市商业银行",
+      "sourceName": "本溪市商业银行",
+      "brand": "bank_1712cdd37f1b8b22",
+      "historical": false,
+      "sourceFile": "bccb.svg",
+      "sourceUrl": "https://www.tubiao.cn/library/icon-555888edbe018e84d2c179c9.svg",
+      "pageUrl": "https://www.tubiao.cn/svg/item-1712cdd37f1b8b22",
+      "bankUrl": "http://www.bankofbx.com/",
+      "keywords": [
+        "BCCB"
+      ],
+      "sha256": "078b8cbfb0e3bbbdff60fec33d2a1ad0ace65d9d9089e348b81fa1863c07ba03",
+      "viewBox": [
+        18.09999969482422,
+        18.099997787475587,
+        91.80000823974609,
+        91.80000823974609
+      ],
+      "abbreviation": "bccb",
+      "resourceKey": "bank_bccb"
+    },
+    {
+      "key": "bank_655102d0a03ba61e",
+      "name": "渤海银行",
+      "sourceName": "渤海银行",
+      "brand": "bank_655102d0a03ba61e",
+      "historical": false,
+      "sourceFile": "bohaib.svg",
+      "sourceUrl": "https://www.tubiao.cn/library/icon-d6f71efe442442c80360d658.svg",
+      "pageUrl": "https://www.tubiao.cn/svg/item-655102d0a03ba61e",
+      "bankUrl": "https://www.cbhb.com.cn/",
+      "keywords": [
+        "BOHAIB"
+      ],
+      "sha256": "1d5583a1f06637a045f2d084b7f7c20932d5261bb1763471e515fe96dc7494b5",
+      "viewBox": [
+        10.400920104980468,
+        15.07755012512207,
+        97.17515716552734,
+        97.17515716552734
+      ],
+      "abbreviation": "bohaib",
+      "resourceKey": "bank_bohaib"
+    },
+    {
+      "key": "bank_3d9675edeb7c46fa",
+      "name": "沧州银行",
+      "sourceName": "沧州银行",
+      "brand": "bank_3d9675edeb7c46fa",
+      "historical": false,
+      "sourceFile": "bocz.svg",
+      "sourceUrl": "https://www.tubiao.cn/library/icon-d027a0dac6fca2b4a12ad59f.svg",
+      "pageUrl": "https://www.tubiao.cn/svg/item-3d9675edeb7c46fa",
+      "bankUrl": "https://www.bankcz.com/",
+      "keywords": [
+        "BOCZ"
+      ],
+      "sha256": "a5305d66eeed5f2162d2a6ed52fd50dbc5b2976058a4993174cd68af1b8052a5",
+      "viewBox": [
+        20.292425231933592,
+        20.264270858764647,
+        87.36236938476563,
+        87.36236938476563
+      ],
+      "abbreviation": "bocz",
+      "resourceKey": "bank_bocz"
+    },
+    {
+      "key": "bank_28d03fcc7abb11be",
+      "name": "朝阳银行",
+      "sourceName": "朝阳银行",
+      "brand": "bank_28d03fcc7abb11be",
+      "historical": false,
+      "sourceFile": "bocy.svg",
+      "sourceUrl": "https://www.tubiao.cn/library/icon-f8acae75fe7b56c46f2ee4ae.svg",
+      "pageUrl": "https://www.tubiao.cn/svg/item-28d03fcc7abb11be",
+      "bankUrl": "https://www.cycb.com/",
+      "keywords": [
+        "BOCY"
+      ],
+      "sha256": "94c2ada32eb67b427fe4aa42accffee365620d5674f838bded581b166570cbc5",
+      "viewBox": [
+        11.620107421875,
+        11.619554290771484,
+        104.75998352050782,
+        104.75998352050782
+      ],
+      "abbreviation": "bocy",
+      "resourceKey": "bank_bocy"
+    },
+    {
+      "key": "bank_24080f94b63434ab",
+      "name": "成都银行",
+      "sourceName": "成都银行",
+      "brand": "bank_24080f94b63434ab",
+      "historical": false,
+      "sourceFile": "cdcb.svg",
+      "sourceUrl": "https://www.tubiao.cn/library/icon-d62dc8dcd94d36acd7b436e6.svg",
+      "pageUrl": "https://www.tubiao.cn/svg/item-24080f94b63434ab",
+      "bankUrl": "https://www.bocd.com.cn/",
+      "keywords": [
+        "CDCB"
+      ],
+      "sha256": "46a4d78b64516a02eb8d257855130a5f6142fe5c53ba5005905cfacb037b1bb4",
+      "viewBox": [
+        14.570001907348633,
+        14.32,
+        99.36,
+        99.36
+      ],
+      "abbreviation": "cdcb",
+      "resourceKey": "bank_cdcb"
+    },
+    {
+      "key": "bank_52356497e588963c",
+      "name": "承德银行",
+      "sourceName": "承德银行",
+      "brand": "bank_52356497e588963c",
+      "historical": false,
+      "sourceFile": "cdbank.svg",
+      "sourceUrl": "https://www.tubiao.cn/library/icon-06b11916e32075d6eaf7fa95.svg",
+      "pageUrl": "https://www.tubiao.cn/svg/item-52356497e588963c",
+      "bankUrl": "https://www.chengdebank.com/",
+      "keywords": [
+        "CDBANK"
+      ],
+      "sha256": "395b536c58a8e12105acfd19a48e5f985773ce751828662058193c1e4d95d5e6",
+      "viewBox": [
+        18.1,
+        18.1,
+        91.8,
+        91.8
+      ],
+      "abbreviation": "cdbank",
+      "resourceKey": "bank_cdbank"
+    },
+    {
+      "key": "bank_5c69bd0e678072b9",
+      "name": "重庆三峡银行",
+      "sourceName": "重庆三峡银行",
+      "brand": "bank_5c69bd0e678072b9",
+      "historical": false,
+      "sourceFile": "ccqtgb.svg",
+      "sourceUrl": "https://www.tubiao.cn/library/icon-9cde0c93e43a1c0444e3f473.svg",
+      "pageUrl": "https://www.tubiao.cn/svg/item-5c69bd0e678072b9",
+      "bankUrl": "https://www.ccqtgb.com/",
+      "keywords": [
+        "CCQTGB"
+      ],
+      "sha256": "04b6272822a286c9473634fee59eb1a70fdef59c942fcf89019dee02281b3885",
+      "viewBox": [
+        18.02499923706055,
+        18.1,
+        91.8,
+        91.8
+      ],
+      "abbreviation": "ccqtgb",
+      "resourceKey": "bank_ccqtgb"
+    },
+    {
+      "key": "bank_28cb806c4a2b4762",
+      "name": "重庆银行",
+      "sourceName": "重庆银行",
+      "brand": "bank_28cb806c4a2b4762",
+      "historical": false,
+      "sourceFile": "cqbank.svg",
+      "sourceUrl": "https://www.tubiao.cn/library/icon-a357a0263a21b2a5b27b2754.svg",
+      "pageUrl": "https://www.tubiao.cn/svg/item-28cb806c4a2b4762",
+      "bankUrl": "https://trip.cqcbank.com/",
+      "keywords": [
+        "CQBANK"
+      ],
+      "sha256": "ec5f901ab429c098fdd5ee6a2376cccce43c1de7c01c325ee8e83e4aa9f4efa1",
+      "viewBox": [
+        18.26900077819824,
+        18.093997726440428,
+        91.96200988769532,
+        91.96200988769532
+      ],
+      "abbreviation": "cqbank",
+      "resourceKey": "bank_cqbank"
+    },
+    {
+      "key": "bank_206e093ce5813475",
+      "name": "达州银行",
+      "sourceName": "达州银行",
+      "brand": "bank_206e093ce5813475",
+      "historical": false,
+      "sourceFile": "dccb.svg",
+      "sourceUrl": "https://www.tubiao.cn/library/icon-9ae038f05e36d5de9d0e415b.svg",
+      "pageUrl": "https://www.tubiao.cn/svg/item-206e093ce5813475",
+      "bankUrl": "https://dzccb.com.cn/",
+      "keywords": [
+        "DCCB"
+      ],
+      "sha256": "86982a7532aa0bcd88868fafc83851c2029562aa95b883de0ca184a9644325ec",
+      "viewBox": [
+        18.57136749267578,
+        17.599397888183592,
+        91.81955291748046,
+        91.81955291748046
+      ],
+      "abbreviation": "dccb",
+      "resourceKey": "bank_dccb"
+    },
+    {
+      "key": "bank_17a1c52f07222d53",
+      "name": "大连银行",
+      "sourceName": "大连银行",
+      "brand": "bank_17a1c52f07222d53",
+      "historical": false,
+      "sourceFile": "dlb.svg",
+      "sourceUrl": "https://www.tubiao.cn/library/icon-ef2e4e02003dc6691a4fa945.svg",
+      "pageUrl": "https://www.tubiao.cn/svg/item-17a1c52f07222d53",
+      "bankUrl": "http://www.bankofdl.com/",
+      "keywords": [
+        "DLB"
+      ],
+      "sha256": "babc457051009927af220529ff2fe65e8e72bbaf3a08bed85aa34c90032f0237",
+      "viewBox": [
+        18.1,
+        18.1,
+        91.8,
+        91.8
+      ],
+      "abbreviation": "dlb",
+      "resourceKey": "bank_dlb"
+    },
+    {
+      "key": "bank_0986964944efb395",
+      "name": "大同银行",
+      "sourceName": "大同银行",
+      "brand": "bank_0986964944efb395",
+      "historical": true,
+      "sourceFile": "dtb.svg",
+      "sourceUrl": "https://www.tubiao.cn/library/icon-5f06adc65d0e07439e48c9ef.svg",
+      "pageUrl": "https://www.tubiao.cn/svg/item-0986964944efb395",
+      "bankUrl": "http://www.dtccb.com/",
+      "keywords": [
+        "DTB"
+      ],
+      "sha256": "51360bcccf72c7ad37b22f9d0b16fc9843bc895e1b0deccbf816fa180b1314e1",
+      "viewBox": [
+        18.1,
+        18.1,
+        91.8,
+        91.8
+      ],
+      "abbreviation": "dtb",
+      "resourceKey": "bank_dtb"
+    },
+    {
+      "key": "bank_565ca720da891e1f",
+      "name": "丹东银行",
+      "sourceName": "丹东银行",
+      "brand": "bank_565ca720da891e1f",
+      "historical": false,
+      "sourceFile": "bodd.svg",
+      "sourceUrl": "https://www.tubiao.cn/library/icon-48099638eaa6f4c4d69f22a7.svg",
+      "pageUrl": "https://www.tubiao.cn/svg/item-565ca720da891e1f",
+      "bankUrl": "http://dandongbank.com/",
+      "keywords": [
+        "BODD"
+      ],
+      "sha256": "e179da50c9932fbf5a89ba1bc3e45c179b2339a7e3ff2483de15ba050a0f0d01",
+      "viewBox": [
+        18.1,
+        18.1,
+        91.8,
+        91.8
+      ],
+      "abbreviation": "bodd",
+      "resourceKey": "bank_bodd"
+    },
+    {
+      "key": "bank_dc1b501a0e1ddab9",
+      "name": "德州银行",
+      "sourceName": "德州银行",
+      "brand": "bank_dc1b501a0e1ddab9",
+      "historical": false,
+      "sourceFile": "dzbank.svg",
+      "sourceUrl": "https://www.tubiao.cn/library/icon-f92740f4da0de8a643ade943.svg",
+      "pageUrl": "https://www.tubiao.cn/svg/item-dc1b501a0e1ddab9",
+      "bankUrl": "https://www.dzbchina.com/",
+      "keywords": [
+        "DZBANK"
+      ],
+      "sha256": "b94cb9eacfd456ab2af1e13647c42c74c75c49a079c6784bfa575460d3085258",
+      "viewBox": [
+        13.10083984375,
+        18.034992446899412,
+        91.77732421875,
+        91.77732421875
+      ],
+      "abbreviation": "dzbank",
+      "resourceKey": "bank_dzbank"
+    },
+    {
+      "key": "bank_f7e3f97b06adc4a5",
+      "name": "东莞银行",
+      "sourceName": "东莞银行",
+      "brand": "bank_f7e3f97b06adc4a5",
+      "historical": false,
+      "sourceFile": "bod.svg",
+      "sourceUrl": "https://www.tubiao.cn/library/icon-00a8c91978ac67375ed17c9b.svg",
+      "pageUrl": "https://www.tubiao.cn/svg/item-f7e3f97b06adc4a5",
+      "bankUrl": "https://www.dongguanbank.cn/",
+      "keywords": [
+        "BOD"
+      ],
+      "sha256": "83979e4a86b4e16921c7795970768f7daf4e08deef9bb3bb510cafa41bc49592",
+      "viewBox": [
+        18.102003631591796,
+        18.10199981689453,
+        91.74600494384765,
+        91.74600494384765
+      ],
+      "abbreviation": "bod",
+      "resourceKey": "bank_bod"
+    },
+    {
+      "key": "bank_e67569b8d4fa217f",
+      "name": "东营银行",
+      "sourceName": "东营银行",
+      "brand": "bank_e67569b8d4fa217f",
+      "historical": false,
+      "sourceFile": "dyccb.svg",
+      "sourceUrl": "https://www.tubiao.cn/library/icon-0f3544adb197a92f6f1c38fc.svg",
+      "pageUrl": "https://www.tubiao.cn/svg/item-e67569b8d4fa217f",
+      "bankUrl": "https://www.dyccb.net/",
+      "keywords": [
+        "DYCCB"
+      ],
+      "sha256": "b7d5e40be5346711e353c21fa48555c44e3da378abb64d2dbcac37ef499419d0",
+      "viewBox": [
+        18.09999237060547,
+        18.099996185302736,
+        91.8,
+        91.8
+      ],
+      "abbreviation": "dyccb",
+      "resourceKey": "bank_dyccb"
+    },
+    {
+      "key": "bank_36bfc81423ce478c",
+      "name": "鄂尔多斯银行",
+      "sourceName": "鄂尔多斯银行",
+      "brand": "bank_36bfc81423ce478c",
+      "historical": false,
+      "sourceFile": "ordosb.svg",
+      "sourceUrl": "https://www.tubiao.cn/library/icon-851b05234756aa3439fa3438.svg",
+      "pageUrl": "https://www.tubiao.cn/svg/item-36bfc81423ce478c",
+      "bankUrl": "https://www.ordosbank.com/",
+      "keywords": [
+        "ORDOSB"
+      ],
+      "sha256": "60bf41102c46eafa1fcd2c353b4d27ce76a75260659e12f293b37a592d19db0c",
+      "viewBox": [
+        18.1,
+        18.1,
+        91.8,
+        91.8
+      ],
+      "abbreviation": "ordosb",
+      "resourceKey": "bank_ordosb"
+    },
+    {
+      "key": "bank_7206510ccdb16bba",
+      "name": "福建海峡银行",
+      "sourceName": "福建海峡银行",
+      "brand": "bank_7206510ccdb16bba",
+      "historical": false,
+      "sourceFile": "fjhxbc.svg",
+      "sourceUrl": "https://www.tubiao.cn/library/icon-41f9b646d2372562d048ed69.svg",
+      "pageUrl": "https://www.tubiao.cn/svg/item-7206510ccdb16bba",
+      "bankUrl": "https://www.fjhxbank.com/",
+      "keywords": [
+        "FJHXBC"
+      ],
+      "sha256": "a59637f574a0b6868b07e8c10e97ba77d4b62b20db2c9d93478322e7e7c55154",
+      "viewBox": [
+        18.09980339050293,
+        18.099496307373048,
+        91.81349670410157,
+        91.81349670410157
+      ],
+      "abbreviation": "fjhxbc",
+      "resourceKey": "bank_fjhxbc"
+    },
+    {
+      "key": "bank_5d6ccdb695b9dd42",
+      "name": "抚顺银行",
+      "sourceName": "抚顺银行",
+      "brand": "bank_5d6ccdb695b9dd42",
+      "historical": false,
+      "sourceFile": "fscb.svg",
+      "sourceUrl": "https://www.tubiao.cn/library/icon-27bc88e45033024c30b50973.svg",
+      "pageUrl": "https://www.tubiao.cn/svg/item-5d6ccdb695b9dd42",
+      "bankUrl": "https://www.bankoffs.com.cn/",
+      "keywords": [
+        "FSCB"
+      ],
+      "sha256": "0fdffc0611647175417dbdbf5b298f0087ab0332d8c3da6f958f201dd33851c7",
+      "viewBox": [
+        16.75094680786133,
+        16.499235916137696,
+        94.4998764038086,
+        94.4998764038086
+      ],
+      "abbreviation": "fscb",
+      "resourceKey": "bank_fscb"
+    },
+    {
+      "key": "bank_ed53b93cf82610f4",
+      "name": "阜阳银行",
+      "sourceName": "阜阳银行",
+      "brand": "bank_ed53b93cf82610f4",
+      "historical": false,
+      "sourceFile": "fxcb.svg",
+      "sourceUrl": "https://www.tubiao.cn/library/icon-7208cfeeeacd62773a97007d.svg",
+      "pageUrl": "https://www.tubiao.cn/svg/item-ed53b93cf82610f4",
+      "bankUrl": "https://www.fuxinbank.com/",
+      "keywords": [
+        "FXCB"
+      ],
+      "sha256": "4d127dce6017d76415402af4c7c331954eadbcabe31f696e03c5bf8900a4659b",
+      "viewBox": [
+        18.834740829467773,
+        19.166239929199218,
+        90.01152191162109,
+        90.01152191162109
+      ],
+      "abbreviation": "fxcb",
+      "resourceKey": "bank_fxcb"
+    },
+    {
+      "key": "bank_7d690142090615b3",
+      "name": "富滇银行",
+      "sourceName": "富滇银行",
+      "brand": "bank_7d690142090615b3",
+      "historical": false,
+      "sourceFile": "fdbank.svg",
+      "sourceUrl": "https://www.tubiao.cn/library/icon-70b2271ed74d80a90e179dcc.svg",
+      "pageUrl": "https://www.tubiao.cn/svg/item-7d690142090615b3",
+      "bankUrl": "http://www.fudian-bank.com/",
+      "keywords": [
+        "FDBANK"
+      ],
+      "sha256": "02abcb879e46abf0751cf40784147813322ba81005b246ab24c94851499dfed8",
+      "viewBox": [
+        23.499999389648437,
+        23.49946533203125,
+        81.00001647949219,
+        81.00001647949219
+      ],
+      "abbreviation": "fdbank",
+      "resourceKey": "bank_fdbank"
+    },
+    {
+      "key": "bank_73298bce8744330f",
+      "name": "甘肃银行",
+      "sourceName": "甘肃银行",
+      "brand": "bank_73298bce8744330f",
+      "historical": false,
+      "sourceFile": "bogs.svg",
+      "sourceUrl": "https://www.tubiao.cn/library/icon-dec13f7888aa65cc77b7388e.svg",
+      "pageUrl": "https://www.tubiao.cn/svg/item-73298bce8744330f",
+      "bankUrl": "https://www.gsbankchina.com/",
+      "keywords": [
+        "BOGS"
+      ],
+      "sha256": "e6b9b4c04b4bb5f37a67494c60ac3aa6c9258a68df01fabe568cd0e15923547c",
+      "viewBox": [
+        18.09999809265137,
+        18.1000057220459,
+        91.8,
+        91.8
+      ],
+      "abbreviation": "bogs",
+      "resourceKey": "bank_bogs"
+    },
+    {
+      "key": "bank_9454de529d92427c",
+      "name": "广东华兴银行",
+      "sourceName": "广东华兴银行",
+      "brand": "bank_9454de529d92427c",
+      "historical": false,
+      "sourceFile": "ghb.svg",
+      "sourceUrl": "https://www.tubiao.cn/library/icon-2be57dbf350aa25db297ddff.svg",
+      "pageUrl": "https://www.tubiao.cn/svg/item-9454de529d92427c",
+      "bankUrl": "https://www.ghbank.com.cn/",
+      "keywords": [
+        "GHB"
+      ],
+      "sha256": "99e247ab2c00541bdadb776eff4e2a1406bd865dda738cac7cea484611fc4851",
+      "viewBox": [
+        10.051999359130859,
+        10.027001647949218,
+        107.94599670410156,
+        107.94599670410156
+      ],
+      "abbreviation": "ghb",
+      "resourceKey": "bank_ghb"
+    },
+    {
+      "key": "bank_a42e935d15d46594",
+      "name": "广东南粤银行",
+      "sourceName": "广东南粤银行",
+      "brand": "bank_a42e935d15d46594",
+      "historical": false,
+      "sourceFile": "nybank.svg",
+      "sourceUrl": "https://www.tubiao.cn/library/icon-ec322e984ce1849144a158e8.svg",
+      "pageUrl": "https://www.tubiao.cn/svg/item-a42e935d15d46594",
+      "bankUrl": "https://www.gdnybank.com/",
+      "keywords": [
+        "NYBANK"
+      ],
+      "sha256": "9caa7e2a6030d340bf4879981e10b5b1f1b839f6d1b89623e59aa1ec4227c3d8",
+      "viewBox": [
+        16.476007919311524,
+        16.480001907348633,
+        95.04,
+        95.04
+      ],
+      "abbreviation": "nybank",
+      "resourceKey": "bank_nybank"
+    },
+    {
+      "key": "bank_acaaf4fe223ff584",
+      "name": "广发银行",
+      "sourceName": "广发银行",
+      "brand": "bank_acaaf4fe223ff584",
+      "historical": false,
+      "sourceFile": "gdb.svg",
+      "sourceUrl": "https://www.tubiao.cn/library/icon-0785950eddd69a3284bbc167.svg",
+      "pageUrl": "https://www.tubiao.cn/svg/item-acaaf4fe223ff584",
+      "bankUrl": "https://www.cgbchina.com.cn/",
+      "keywords": [
+        "GDB"
+      ],
+      "sha256": "e9a59a6355b6209b04f5acceec2cba98fa7d04560abe56c204bcb5b1546b405b",
+      "viewBox": [
+        18.493361206054686,
+        18.841360778808593,
+        90.8722787475586,
+        90.8722787475586
+      ],
+      "abbreviation": "gdb",
+      "resourceKey": "bank_gdb"
+    },
+    {
+      "key": "bank_7a1a906a437d728b",
+      "name": "广西北部湾银行",
+      "sourceName": "广西北部湾银行",
+      "brand": "bank_7a1a906a437d728b",
+      "historical": false,
+      "sourceFile": "bgb.svg",
+      "sourceUrl": "https://www.tubiao.cn/library/icon-2796940b14a5036f9a79fb03.svg",
+      "pageUrl": "https://www.tubiao.cn/svg/item-7a1a906a437d728b",
+      "bankUrl": "https://www.bankofbbg.com/",
+      "keywords": [
+        "BGB"
+      ],
+      "sha256": "f392522d44163983e2cb1dd57762899fe984abead194730ad6acc4c1a8f73ec2",
+      "viewBox": [
+        17.558507995605467,
+        17.533975677490233,
+        92.92028411865235,
+        92.92028411865235
+      ],
+      "abbreviation": "bgb",
+      "resourceKey": "bank_bgb"
+    },
+    {
+      "key": "bank_dde84144331f15b2",
+      "name": "广州银行",
+      "sourceName": "广州银行",
+      "brand": "bank_dde84144331f15b2",
+      "historical": false,
+      "sourceFile": "gzcb.svg",
+      "sourceUrl": "https://www.tubiao.cn/library/icon-a969a8c75f4e6b2d4e825341.svg",
+      "pageUrl": "https://www.tubiao.cn/svg/item-dde84144331f15b2",
+      "bankUrl": "http://www.gzcb.com.cn/",
+      "keywords": [
+        "GZCB"
+      ],
+      "sha256": "b37f646f744fe76d2e5f9523bd4a8d163a17af49a6a1ff400f63f0a130f0571e",
+      "viewBox": [
+        18.64,
+        18.64,
+        90.72,
+        90.72
+      ],
+      "abbreviation": "gzcb",
+      "resourceKey": "bank_gzcb"
+    },
+    {
+      "key": "bank_f938c67888eebfe7",
+      "name": "贵阳银行",
+      "sourceName": "贵阳银行",
+      "brand": "bank_f938c67888eebfe7",
+      "historical": false,
+      "sourceFile": "gyccb.svg",
+      "sourceUrl": "https://www.tubiao.cn/library/icon-d2b09a68b1c36ee8406eb70c.svg",
+      "pageUrl": "https://www.tubiao.cn/svg/item-f938c67888eebfe7",
+      "bankUrl": "https://www.bankgy.cn/",
+      "keywords": [
+        "GYCCB"
+      ],
+      "sha256": "2dda059bfd2af795852012a0c4ba5e6b128ffc260e55f6fc25cbb6750c053ee6",
+      "viewBox": [
+        17.579525146484375,
+        17.824600372314453,
+        92.35282104492188,
+        92.35282104492188
+      ],
+      "abbreviation": "gyccb",
+      "resourceKey": "bank_gyccb"
+    },
+    {
+      "key": "bank_c0e43d309fca6add",
+      "name": "贵州银行",
+      "sourceName": "贵州银行",
+      "brand": "bank_c0e43d309fca6add",
+      "historical": false,
+      "sourceFile": "bogz.svg",
+      "sourceUrl": "https://www.tubiao.cn/library/icon-4a33186879c78c5837b606ff.svg",
+      "pageUrl": "https://www.tubiao.cn/svg/item-c0e43d309fca6add",
+      "bankUrl": "https://www.bgzchina.com/",
+      "keywords": [
+        "BOGZ"
+      ],
+      "sha256": "5128b8ba028e3752863cecc60f95c10db26cb0a83aca7dc1a01921186a467f69",
+      "viewBox": [
+        18.403949432373047,
+        18.154000930786133,
+        91.69210876464844,
+        91.69210876464844
+      ],
+      "abbreviation": "bogz",
+      "resourceKey": "bank_bogz"
+    },
+    {
+      "key": "bank_3f19b30b7fa21ef9",
+      "name": "桂林银行",
+      "sourceName": "桂林银行",
+      "brand": "bank_3f19b30b7fa21ef9",
+      "historical": false,
+      "sourceFile": "glbank.svg",
+      "sourceUrl": "https://www.tubiao.cn/library/icon-3414b3649219a7198828e6fb.svg",
+      "pageUrl": "https://www.tubiao.cn/svg/item-3f19b30b7fa21ef9",
+      "bankUrl": "https://www.guilinbank.com.cn/",
+      "keywords": [
+        "GLBANK"
+      ],
+      "sha256": "578bf62c98ff1edcfe21cb0ecff014ee463452444e2499f2e9defd94ed78f858",
+      "viewBox": [
+        17.850158309936525,
+        17.878560638427736,
+        92.23299865722656,
+        92.23299865722656
+      ],
+      "abbreviation": "glbank",
+      "resourceKey": "bank_glbank"
+    },
+    {
+      "key": "bank_c122117feee62f21",
+      "name": "国家开发银行",
+      "sourceName": "国家开发银行",
+      "brand": "bank_c122117feee62f21",
+      "historical": false,
+      "sourceFile": "cdb.svg",
+      "sourceUrl": "https://www.tubiao.cn/library/icon-0911d02cfecdd755f92ee889.svg",
+      "pageUrl": "https://www.tubiao.cn/svg/item-c122117feee62f21",
+      "bankUrl": "https://www.cdb.com.cn/",
+      "keywords": [
+        "CDB"
+      ],
+      "sha256": "bf8acf0068369a26f67235839299fcbe03687c9585e37fbaf129e514cbc2654c",
+      "viewBox": [
+        20.8,
+        20.8,
+        86.4,
+        86.4
+      ],
+      "abbreviation": "cdb",
+      "resourceKey": "bank_cdb"
+    },
+    {
+      "key": "bank_5df79aeb0cff8135",
+      "name": "哈尔滨银行",
+      "sourceName": "哈尔滨银行",
+      "brand": "bank_5df79aeb0cff8135",
+      "historical": false,
+      "sourceFile": "hrbcb.svg",
+      "sourceUrl": "https://www.tubiao.cn/library/icon-3736e8accebaae328f8182f2.svg",
+      "pageUrl": "https://www.tubiao.cn/svg/item-5df79aeb0cff8135",
+      "bankUrl": "https://www.hrbb.com.cn/",
+      "keywords": [
+        "HRBCB"
+      ],
+      "sha256": "a87c021f986196ace449f76646cb3046235adcfa19dfc8a3543bce85d65f19e1",
+      "viewBox": [
+        20.8,
+        20.799998092651368,
+        86.4,
+        86.4
+      ],
+      "abbreviation": "hrbcb",
+      "resourceKey": "bank_hrbcb"
+    },
+    {
+      "key": "bank_2543e760759f5150",
+      "name": "哈密市商业银行",
+      "sourceName": "哈密市商业银行",
+      "brand": "bank_2543e760759f5150",
+      "historical": false,
+      "sourceFile": "hmccb.svg",
+      "sourceUrl": "https://www.tubiao.cn/library/icon-827725f50042fba2dd8d3b7e.svg",
+      "pageUrl": "https://www.tubiao.cn/svg/item-2543e760759f5150",
+      "bankUrl": "http://www.hmccb.com/",
+      "keywords": [
+        "HMCCB"
+      ],
+      "sha256": "cbea04d24852a732fd75b26220962dce44d53141ad7cd7bb0d7be4aad338148e",
+      "viewBox": [
+        11.082731933593749,
+        11.366881103515624,
+        105.76623779296875,
+        105.76623779296875
+      ],
+      "abbreviation": "hmccb",
+      "resourceKey": "bank_hmccb"
+    },
+    {
+      "key": "bank_0fbdea13c7ff22de",
+      "name": "海南银行",
+      "sourceName": "海南银行",
+      "brand": "bank_0fbdea13c7ff22de",
+      "historical": false,
+      "sourceFile": "hnb.svg",
+      "sourceUrl": "https://www.tubiao.cn/library/icon-14f19360b926f4fe430ce0f3.svg",
+      "pageUrl": "https://www.tubiao.cn/svg/item-0fbdea13c7ff22de",
+      "bankUrl": "https://www.hnbankchina.com.cn/",
+      "keywords": [
+        "HNB"
+      ],
+      "sha256": "8dadba52410d8619ff049d22a42922ed23e958b0d6933447dec08bfca5b3abaf",
+      "viewBox": [
+        16.479962158203126,
+        16.581991958618165,
+        95.04102172851563,
+        95.04102172851563
+      ],
+      "abbreviation": "hnb",
+      "resourceKey": "bank_hnb"
+    },
+    {
+      "key": "bank_c642c6d17544d48c",
+      "name": "邯郸银行",
+      "sourceName": "邯郸银行",
+      "brand": "bank_c642c6d17544d48c",
+      "historical": false,
+      "sourceFile": "hdbank.svg",
+      "sourceUrl": "https://www.tubiao.cn/library/icon-64af405691b52bb61c86478d.svg",
+      "pageUrl": "https://www.tubiao.cn/svg/item-c642c6d17544d48c",
+      "bankUrl": "https://www.hdcb.cn/",
+      "keywords": [
+        "HDBANK"
+      ],
+      "sha256": "5590661e434cceae54c4476fc84c712e466953653d11e7fc1f6a2dfc46d84e27",
+      "viewBox": [
+        18.100162200927734,
+        18.09969871520996,
+        91.80004943847656,
+        91.80004943847656
+      ],
+      "abbreviation": "hdbank",
+      "resourceKey": "bank_hdbank"
+    },
+    {
+      "key": "bank_28761f1a38dfbbd6",
+      "name": "汉口银行",
+      "sourceName": "汉口银行",
+      "brand": "bank_28761f1a38dfbbd6",
+      "historical": false,
+      "sourceFile": "hkb.svg",
+      "sourceUrl": "https://www.tubiao.cn/library/icon-9cf11746ec83758d7a0a8920.svg",
+      "pageUrl": "https://www.tubiao.cn/svg/item-28761f1a38dfbbd6",
+      "bankUrl": "http://www.hkbchina.com/",
+      "keywords": [
+        "HKB"
+      ],
+      "sha256": "47de1830542f7cae834450be935241b3064301addd304cec49c1d2932cbc392f",
+      "viewBox": [
+        17.005836029052734,
+        17.02,
+        93.96,
+        93.96
+      ],
+      "abbreviation": "hkb",
+      "resourceKey": "bank_hkb"
+    },
+    {
+      "key": "bank_c802cd2beb943b31",
+      "name": "杭州银行",
+      "sourceName": "杭州银行",
+      "brand": "bank_c802cd2beb943b31",
+      "historical": false,
+      "sourceFile": "hzcb.svg",
+      "sourceUrl": "https://www.tubiao.cn/library/icon-715971d7f3de4d12256c9857.svg",
+      "pageUrl": "https://www.tubiao.cn/svg/item-c802cd2beb943b31",
+      "bankUrl": "https://www.hzbank.com.cn/",
+      "keywords": [
+        "HZCB"
+      ],
+      "sha256": "b67e5f78fb6b623de9261c618a85261920ecf8c7f7bdaa48773d8643ecba278e",
+      "viewBox": [
+        18.10003402709961,
+        18.100098876953126,
+        91.79980224609375,
+        91.79980224609375
+      ],
+      "abbreviation": "hzcb",
+      "resourceKey": "bank_hzcb"
+    },
+    {
+      "key": "bank_ac22bab2fd6cdc4f",
+      "name": "河北银行",
+      "sourceName": "河北银行",
+      "brand": "bank_ac22bab2fd6cdc4f",
+      "historical": false,
+      "sourceFile": "bhb.svg",
+      "sourceUrl": "https://www.tubiao.cn/library/icon-7f5a29bdd47914000a3cd6be.svg",
+      "pageUrl": "https://www.tubiao.cn/svg/item-ac22bab2fd6cdc4f",
+      "bankUrl": "https://hebbank.com/",
+      "keywords": [
+        "BHB"
+      ],
+      "sha256": "802acffb149506c29a996476732238c98457cb64d19fa494ffbd1330d62194f2",
+      "viewBox": [
+        18.643840026855468,
+        18.688916397094726,
+        90.61631927490234,
+        90.61631927490234
+      ],
+      "abbreviation": "bhb",
+      "resourceKey": "bank_bhb"
+    },
+    {
+      "key": "bank_9534ccf9cc21fbad",
+      "name": "恒丰银行",
+      "sourceName": "恒丰银行",
+      "brand": "bank_9534ccf9cc21fbad",
+      "historical": false,
+      "sourceFile": "egbank.svg",
+      "sourceUrl": "https://www.tubiao.cn/library/icon-07dd2d602c2dcb89385d0daa.svg",
+      "pageUrl": "https://www.tubiao.cn/svg/item-9534ccf9cc21fbad",
+      "bankUrl": "https://hfcommercialbank.com/cn/homepage",
+      "keywords": [
+        "EGBANK"
+      ],
+      "sha256": "24ab408d8491536bc170a30d5ced0e21aca41a578da172d2e3233871def22574",
+      "viewBox": [
+        18.28075698852539,
+        18.020260848999023,
+        91.37448303222656,
+        91.37448303222656
+      ],
+      "abbreviation": "egbank",
+      "resourceKey": "bank_egbank"
+    },
+    {
+      "key": "bank_d0614e7f3c439282",
+      "name": "衡水银行",
+      "sourceName": "衡水银行",
+      "brand": "bank_d0614e7f3c439282",
+      "historical": false,
+      "sourceFile": "bohs.svg",
+      "sourceUrl": "https://www.tubiao.cn/library/icon-daa3f96ce15e23e623b72d4b.svg",
+      "pageUrl": "https://www.tubiao.cn/svg/item-d0614e7f3c439282",
+      "bankUrl": "http://www.hengshuibank.com/",
+      "keywords": [
+        "BOHS"
+      ],
+      "sha256": "f133b6e4bb8999f13f06ac896ecfb1a70a7afa65b1e5df45010554a766d89b48",
+      "viewBox": [
+        16.4801416015625,
+        16.952109298706056,
+        95.04009063720703,
+        95.04009063720703
+      ],
+      "abbreviation": "bohs",
+      "resourceKey": "bank_bohs"
+    },
+    {
+      "key": "bank_0ba9d0d3815741c9",
+      "name": "湖北银行",
+      "sourceName": "湖北银行",
+      "brand": "bank_0ba9d0d3815741c9",
+      "historical": false,
+      "sourceFile": "hbc.svg",
+      "sourceUrl": "https://www.tubiao.cn/library/icon-4055c8e2203118b689644e37.svg",
+      "pageUrl": "https://www.tubiao.cn/svg/item-0ba9d0d3815741c9",
+      "bankUrl": "http://www.hubeibank.cn/",
+      "keywords": [
+        "HBC"
+      ],
+      "sha256": "af27fac53a8b5b780c2e862f8fa7cc759561750cd6dea43fa8868d0d136750fd",
+      "viewBox": [
+        20.8,
+        20.8,
+        86.4,
+        86.4
+      ],
+      "abbreviation": "hbc",
+      "resourceKey": "bank_hbc"
+    },
+    {
+      "key": "bank_0bb9055be05b1f1d",
+      "name": "湖州银行",
+      "sourceName": "湖州银行",
+      "brand": "bank_0bb9055be05b1f1d",
+      "historical": false,
+      "sourceFile": "bohz.svg",
+      "sourceUrl": "https://www.tubiao.cn/library/icon-2358bf0bb3971074021caa9f.svg",
+      "pageUrl": "https://www.tubiao.cn/svg/item-0bb9055be05b1f1d",
+      "bankUrl": "http://www.hzccb.com/",
+      "keywords": [
+        "BOHZ"
+      ],
+      "sha256": "653083eb16e3a217af52c4ae5db312635e0c1d006db51e89f5df68e2f500bf7b",
+      "viewBox": [
+        18.09954620361328,
+        18.099069366455076,
+        91.80154083251954,
+        91.80154083251954
+      ],
+      "abbreviation": "bohz",
+      "resourceKey": "bank_bohz"
+    },
+    {
+      "key": "bank_14f2aa2560622a58",
+      "name": "葫芦岛银行",
+      "sourceName": "葫芦岛银行",
+      "brand": "bank_14f2aa2560622a58",
+      "historical": false,
+      "sourceFile": "bohld.svg",
+      "sourceUrl": "https://www.tubiao.cn/library/icon-df8c750d85e108e4100a86a8.svg",
+      "pageUrl": "https://www.tubiao.cn/svg/item-14f2aa2560622a58",
+      "bankUrl": "https://www.bankofhld.com/",
+      "keywords": [
+        "BOHLD"
+      ],
+      "sha256": "b01d0fb4aea54452ab033006b82151bbad4f0c67391eab8da68d32aba452df2e",
+      "viewBox": [
+        18.09997116088867,
+        18.099973068237304,
+        91.80005767822266,
+        91.80005767822266
+      ],
+      "abbreviation": "bohld",
+      "resourceKey": "bank_bohld"
+    },
+    {
+      "key": "bank_e5c35f26e0a84d32",
+      "name": "华融湘江银行",
+      "sourceName": "华融湘江银行",
+      "brand": "bank_e5c35f26e0a84d32",
+      "historical": true,
+      "sourceFile": "hrxjb.svg",
+      "sourceUrl": "https://www.tubiao.cn/library/icon-034f148a1d347e1bbe7a742f.svg",
+      "pageUrl": "https://www.tubiao.cn/svg/item-e5c35f26e0a84d32",
+      "bankUrl": "https://www.hunan-bank.com/",
+      "keywords": [
+        "HRXJB"
+      ],
+      "sha256": "0acfe6d6f98aece0e390275c28da7c59149afa855fd18c541b95bfbefedd8f89",
+      "viewBox": [
+        18.1,
+        18.1,
+        91.8,
+        91.8
+      ],
+      "abbreviation": "hrxjb",
+      "resourceKey": "bank_hrxjb"
+    },
+    {
+      "key": "bank_a347afb643e9dda2",
+      "name": "华夏银行",
+      "sourceName": "华夏银行",
+      "brand": "bank_a347afb643e9dda2",
+      "historical": false,
+      "sourceFile": "hxb.svg",
+      "sourceUrl": "https://www.tubiao.cn/library/icon-0ac11ae5df4750db1f7b8183.svg",
+      "pageUrl": "https://www.tubiao.cn/svg/item-a347afb643e9dda2",
+      "bankUrl": "https://www.hxb.com.cn/",
+      "keywords": [
+        "HXB"
+      ],
+      "sha256": "6ea0a16e4e11147b53b641d9e468a8759da09c45a3aea4e2f4057e07e0cf7975",
+      "viewBox": [
+        12.05999526977539,
+        17.55987892150879,
+        92.88002471923828,
+        92.88002471923828
+      ],
+      "abbreviation": "hxb",
+      "resourceKey": "bank_hxb"
+    },
+    {
+      "key": "bank_a68c2590a384df96",
+      "name": "徽商银行",
+      "sourceName": "徽商银行",
+      "brand": "bank_a68c2590a384df96",
+      "historical": false,
+      "sourceFile": "hsbank.svg",
+      "sourceUrl": "https://www.tubiao.cn/library/icon-50da126b97be1795a0541c9e.svg",
+      "pageUrl": "https://www.tubiao.cn/svg/item-a68c2590a384df96",
+      "bankUrl": "http://www.hsbank.com.cn/",
+      "keywords": [
+        "HSBANK"
+      ],
+      "sha256": "d349b63a9a5522245a1afa62c812f6003243132f4230852a27bb2d1211a08160",
+      "viewBox": [
+        19.72,
+        19.72,
+        88.56,
+        88.56
+      ],
+      "abbreviation": "hsbank",
+      "resourceKey": "bank_hsbank"
+    },
+    {
+      "key": "bank_f135e4805d010124",
+      "name": "吉林银行",
+      "sourceName": "吉林银行",
+      "brand": "bank_f135e4805d010124",
+      "historical": false,
+      "sourceFile": "bojl.svg",
+      "sourceUrl": "https://www.tubiao.cn/library/icon-cc3d4ba6b813bd55f809e031.svg",
+      "pageUrl": "https://www.tubiao.cn/svg/item-f135e4805d010124",
+      "bankUrl": "https://www.jlbank.com.cn/",
+      "keywords": [
+        "BOJL"
+      ],
+      "sha256": "12bdc331f5742e25afd8b25dbe047385e1025937e2eb6fef184235f3d8308ffd",
+      "viewBox": [
+        14.590433883666993,
+        14.840590286254884,
+        98.81956329345704,
+        98.81956329345704
+      ],
+      "abbreviation": "bojl",
+      "resourceKey": "bank_bojl"
+    },
+    {
+      "key": "bank_a179be324ec19312",
+      "name": "济宁银行",
+      "sourceName": "济宁银行",
+      "brand": "bank_a179be324ec19312",
+      "historical": false,
+      "sourceFile": "jnbank.svg",
+      "sourceUrl": "https://www.tubiao.cn/library/icon-0866aed310f79acf47005ebd.svg",
+      "pageUrl": "https://www.tubiao.cn/svg/item-a179be324ec19312",
+      "bankUrl": "https://www.jn-bank.com/",
+      "keywords": [
+        "JNBANK"
+      ],
+      "sha256": "6c06488a26fc49aadb7bdd4489e1b44eaacc342b97e33cf95a58db26eb12723e",
+      "viewBox": [
+        18.10200012207031,
+        18.252001647949218,
+        91.74599670410156,
+        91.74599670410156
+      ],
+      "abbreviation": "jnbank",
+      "resourceKey": "bank_jnbank"
+    },
+    {
+      "key": "bank_560b1a4519af709f",
+      "name": "嘉兴银行",
+      "sourceName": "嘉兴银行",
+      "brand": "bank_560b1a4519af709f",
+      "historical": false,
+      "sourceFile": "jxbank.svg",
+      "sourceUrl": "https://www.tubiao.cn/library/icon-14c707048f68e3b768a6c492.svg",
+      "pageUrl": "https://www.tubiao.cn/svg/item-560b1a4519af709f",
+      "bankUrl": "https://www.bojx.com/",
+      "keywords": [
+        "JXBANK"
+      ],
+      "sha256": "924eeca804b56d02c9c3f22a58ef8c7374761095afe6af9a5f25c2435739fac6",
+      "viewBox": [
+        17.6,
+        18.382135009765626,
+        91.8,
+        91.8
+      ],
+      "abbreviation": "jxbank",
+      "resourceKey": "bank_jxbank"
+    },
+    {
+      "key": "bank_1f150844afc30c68",
+      "name": "江苏银行",
+      "sourceName": "江苏银行",
+      "brand": "bank_1f150844afc30c68",
+      "historical": false,
+      "sourceFile": "jsbank.svg",
+      "sourceUrl": "https://www.tubiao.cn/library/icon-6745a6d49d1b459e1d853fe9.svg",
+      "pageUrl": "https://www.tubiao.cn/svg/item-1f150844afc30c68",
+      "bankUrl": "http://www.jsbchina.cn/",
+      "keywords": [
+        "JSBANK"
+      ],
+      "sha256": "bf267d64fc5f9eb8ab2cc4b4faa1664ce49cc8699be75fe5d4239fad4ae88d21",
+      "viewBox": [
+        18.1,
+        18.1,
+        91.8,
+        91.8
+      ],
+      "abbreviation": "jsbank",
+      "resourceKey": "bank_jsbank"
+    },
+    {
+      "key": "bank_26139358ec87b742",
+      "name": "江苏长江商业银行",
+      "sourceName": "江苏长江商业银行",
+      "brand": "bank_26139358ec87b742",
+      "historical": false,
+      "sourceFile": "jscjcb.svg",
+      "sourceUrl": "https://www.tubiao.cn/library/icon-861adb562990956993a5e7e4.svg",
+      "pageUrl": "https://www.tubiao.cn/svg/item-26139358ec87b742",
+      "bankUrl": "http://www.cjccb.com/",
+      "keywords": [
+        "JSCJCB"
+      ],
+      "sha256": "a53ea9c995addab2b565b092c9ca6307817f1dceffcfd3166e37d3b34d544ab0",
+      "viewBox": [
+        18.1,
+        18.1,
+        91.8,
+        91.8
+      ],
+      "abbreviation": "jscjcb",
+      "resourceKey": "bank_jscjcb"
+    },
+    {
+      "key": "bank_b4b77bdb41f0ba23",
+      "name": "江西银行",
+      "sourceName": "江西银行",
+      "brand": "bank_b4b77bdb41f0ba23",
+      "historical": false,
+      "sourceFile": "jxb.svg",
+      "sourceUrl": "https://www.tubiao.cn/library/icon-9fd673d396292291e2fd4b5e.svg",
+      "pageUrl": "https://www.tubiao.cn/svg/item-b4b77bdb41f0ba23",
+      "bankUrl": "https://www.jx-bank.com/",
+      "keywords": [
+        "JXB"
+      ],
+      "sha256": "9160ac5d0c1df8dc031991705766b18f540d9b6190a76e909dcbd1fdf13e5c27",
+      "viewBox": [
+        18.099446411132813,
+        18.08908950805664,
+        91.81494689941407,
+        91.81494689941407
+      ],
+      "abbreviation": "jxb",
+      "resourceKey": "bank_jxb"
+    },
+    {
+      "key": "bank_be3f0313e6049e7a",
+      "name": "交通银行",
+      "sourceName": "交通银行",
+      "brand": "bank_be3f0313e6049e7a",
+      "historical": false,
+      "sourceFile": "comm.svg",
+      "sourceUrl": "https://www.tubiao.cn/library/icon-f845d78533044adeac087059.svg",
+      "pageUrl": "https://www.tubiao.cn/svg/item-be3f0313e6049e7a",
+      "bankUrl": "https://www.bankcomm.com/",
+      "keywords": [
+        "COMM"
+      ],
+      "sha256": "e951a22024036b58a981ab36280b2e46ff36bab204826a0079fffa5992ba5994",
+      "viewBox": [
+        17.61640121459961,
+        17.056399841308593,
+        92.97720428466796,
+        92.97720428466796
+      ],
+      "abbreviation": "comm",
+      "resourceKey": "bank_comm"
+    },
+    {
+      "key": "bank_148d3a1c6b46cf0f",
+      "name": "焦作中旅银行",
+      "sourceName": "焦作中旅银行",
+      "brand": "bank_148d3a1c6b46cf0f",
+      "historical": false,
+      "sourceFile": "cts.svg",
+      "sourceUrl": "https://www.tubiao.cn/library/icon-2573f672b5bd6794b2b18939.svg",
+      "pageUrl": "https://www.tubiao.cn/svg/item-148d3a1c6b46cf0f",
+      "bankUrl": "http://www.jzctb.com/",
+      "keywords": [
+        "CTS"
+      ],
+      "sha256": "b57de0a1e57f02e67fa52500b57955da089e48c5740db8421023720441dad740",
+      "viewBox": [
+        18.250001525878908,
+        17.6,
+        91.8,
+        91.8
+      ],
+      "abbreviation": "cts",
+      "resourceKey": "bank_cts"
+    },
+    {
+      "key": "bank_037f61b4a416febd",
+      "name": "金华银行",
+      "sourceName": "金华银行",
+      "brand": "bank_037f61b4a416febd",
+      "historical": false,
+      "sourceFile": "jhccb.svg",
+      "sourceUrl": "https://www.tubiao.cn/library/icon-96bb217b947d4ef45ef4f1ea.svg",
+      "pageUrl": "https://www.tubiao.cn/svg/item-037f61b4a416febd",
+      "bankUrl": "https://www.jhccb.com.cn/",
+      "keywords": [
+        "JHCCB"
+      ],
+      "sha256": "9a0491d86893818dfe165e249e823d980cc15e83cd5a7091b289b805511d2793",
+      "viewBox": [
+        8.36,
+        8.36,
+        111.78,
+        111.78
+      ],
+      "abbreviation": "jhccb",
+      "resourceKey": "bank_jhccb"
+    },
+    {
+      "key": "bank_c003c5255e9b5f1e",
+      "name": "锦州银行",
+      "sourceName": "锦州银行",
+      "brand": "bank_c003c5255e9b5f1e",
+      "historical": false,
+      "sourceFile": "jzbank.svg",
+      "sourceUrl": "https://www.tubiao.cn/library/icon-34e960c688a24f9e7b95084c.svg",
+      "pageUrl": "https://www.tubiao.cn/svg/item-c003c5255e9b5f1e",
+      "bankUrl": "https://jinzhoubank.com/jzbank/index.html",
+      "keywords": [
+        "JZBANK"
+      ],
+      "sha256": "a2df1b4957f8f178c482463941aedabee8913391b3a7214485178a767a4c69ea",
+      "viewBox": [
+        11.620000000000001,
+        11.620000000000001,
+        104.76,
+        104.76
+      ],
+      "abbreviation": "jzbank",
+      "resourceKey": "bank_jzbank"
+    },
+    {
+      "key": "bank_407ffdc7083cd181",
+      "name": "晋城银行",
+      "sourceName": "晋城银行",
+      "brand": "bank_407ffdc7083cd181",
+      "historical": true,
+      "sourceFile": "jinchb.svg",
+      "sourceUrl": "https://www.tubiao.cn/library/icon-962705b9d425f3738e25a840.svg",
+      "pageUrl": "https://www.tubiao.cn/svg/item-407ffdc7083cd181",
+      "bankUrl": "https://www.shxibank.com/",
+      "keywords": [
+        "JINCHB"
+      ],
+      "sha256": "c88795f58f5290a8fb4ad3ed6b7d12a77668d41e16ab2f039c7b27fd6ffd9f8b",
+      "viewBox": [
+        20.259991760253907,
+        20.259991760253907,
+        87.48001647949219,
+        87.48001647949219
+      ],
+      "abbreviation": "jinchb",
+      "resourceKey": "bank_jinchb"
+    },
+    {
+      "key": "bank_e1e1ab1c91789925",
+      "name": "晋商银行",
+      "sourceName": "晋商银行",
+      "brand": "bank_e1e1ab1c91789925",
+      "historical": false,
+      "sourceFile": "jsb.svg",
+      "sourceUrl": "https://www.tubiao.cn/library/icon-4c40eaefaeb3ceb84787b23f.svg",
+      "pageUrl": "https://www.tubiao.cn/svg/item-e1e1ab1c91789925",
+      "bankUrl": "https://www.jshbank.com/",
+      "keywords": [
+        "JSB"
+      ],
+      "sha256": "bd7d6072323b72ff337b20c31d46f39328552a8a9fa6f2ea699fb0bb388e0bf9",
+      "viewBox": [
+        18.1,
+        18.1,
+        91.8,
+        91.8
+      ],
+      "abbreviation": "jsb",
+      "resourceKey": "bank_jsb"
+    },
+    {
+      "key": "bank_52dde46f7fad5e27",
+      "name": "晋中银行",
+      "sourceName": "晋中银行",
+      "brand": "bank_52dde46f7fad5e27",
+      "historical": true,
+      "sourceFile": "jzb.svg",
+      "sourceUrl": "https://www.tubiao.cn/library/icon-7f60d3f2f665d4b89dad6d9a.svg",
+      "pageUrl": "https://www.tubiao.cn/svg/item-52dde46f7fad5e27",
+      "bankUrl": "https://www.shxibank.com/",
+      "keywords": [
+        "JZB"
+      ],
+      "sha256": "e9bebbf7371916c62c9828b9c47c10203e71d3380a5e51959ded8acc773db3e5",
+      "viewBox": [
+        17.560382690429687,
+        17.560640182495117,
+        92.87934906005859,
+        92.87934906005859
+      ],
+      "abbreviation": "jzb",
+      "resourceKey": "bank_jzb"
+    },
+    {
+      "key": "bank_1ab5f0d64a489e91",
+      "name": "九江银行",
+      "sourceName": "九江银行",
+      "brand": "bank_1ab5f0d64a489e91",
+      "historical": false,
+      "sourceFile": "jjccb.svg",
+      "sourceUrl": "https://www.tubiao.cn/library/icon-52f42aaed14a4a4f9d947ede.svg",
+      "pageUrl": "https://www.tubiao.cn/svg/item-1ab5f0d64a489e91",
+      "bankUrl": "http://www.jjccb.com/",
+      "keywords": [
+        "JJCCB"
+      ],
+      "sha256": "96c3bdb08707c64cf426074cefa047019818820c0897d2632088849c55e80f32",
+      "viewBox": [
+        18.100001907348634,
+        18.1,
+        91.8,
+        91.8
+      ],
+      "abbreviation": "jjccb",
+      "resourceKey": "bank_jjccb"
+    },
+    {
+      "key": "bank_c5c28a0efe21d46f",
+      "name": "库尔勒市商业银行",
+      "sourceName": "库尔勒市商业银行",
+      "brand": "bank_c5c28a0efe21d46f",
+      "historical": false,
+      "sourceFile": "kcccb.svg",
+      "sourceUrl": "https://www.tubiao.cn/library/icon-3b0eedd68757ad064a417d49.svg",
+      "pageUrl": "https://www.tubiao.cn/svg/item-c5c28a0efe21d46f",
+      "bankUrl": "http://www.ccfccb.cn/",
+      "keywords": [
+        "KCCCB"
+      ],
+      "sha256": "10d59b926b1646cac17f0c7018ad00b7f300d3175798e54745501d5e005ee6c8",
+      "viewBox": [
+        18.09954360961914,
+        18.10226921081543,
+        91.81221954345703,
+        91.81221954345703
+      ],
+      "abbreviation": "kcccb",
+      "resourceKey": "bank_kcccb"
+    },
+    {
+      "key": "bank_ed0bb779e0611c72",
+      "name": "昆仑银行",
+      "sourceName": "昆仑银行",
+      "brand": "bank_ed0bb779e0611c72",
+      "historical": false,
+      "sourceFile": "klb.svg",
+      "sourceUrl": "https://www.tubiao.cn/library/icon-bf05dd775a5c22b38def50ac.svg",
+      "pageUrl": "https://www.tubiao.cn/svg/item-ed0bb779e0611c72",
+      "bankUrl": "https://www.klb.cn/",
+      "keywords": [
+        "KLB"
+      ],
+      "sha256": "e88453617a38e0828ac5e648c7d6611b9837cb21d046f936a519ecb62cbaabf2",
+      "viewBox": [
+        18.101008682250978,
+        18.100375442504884,
+        91.79897827148437,
+        91.79897827148437
+      ],
+      "abbreviation": "klb",
+      "resourceKey": "bank_klb"
+    },
+    {
+      "key": "bank_6bb7da5f9f9507cd",
+      "name": "莱商银行",
+      "sourceName": "莱商银行",
+      "brand": "bank_6bb7da5f9f9507cd",
+      "historical": false,
+      "sourceFile": "lsbank.svg",
+      "sourceUrl": "https://www.tubiao.cn/library/icon-700b93be229517d282b0e2f5.svg",
+      "pageUrl": "https://www.tubiao.cn/svg/item-6bb7da5f9f9507cd",
+      "bankUrl": "https://www.lsbankchina.com/",
+      "keywords": [
+        "LSBANK"
+      ],
+      "sha256": "f4230f47ce4ab3e0bd99697311b4630cc193b79b8ac745b0876cbb7eeeb26b73",
+      "viewBox": [
+        16.439999084472657,
+        16.48,
+        95.04,
+        95.04
+      ],
+      "abbreviation": "lsbank",
+      "resourceKey": "bank_lsbank"
+    },
+    {
+      "key": "bank_8f2612d537a16365",
+      "name": "兰州银行",
+      "sourceName": "兰州银行",
+      "brand": "bank_8f2612d537a16365",
+      "historical": false,
+      "sourceFile": "lzbank.svg",
+      "sourceUrl": "https://www.tubiao.cn/library/icon-7ce074a1980faeb907b89035.svg",
+      "pageUrl": "https://www.tubiao.cn/svg/item-8f2612d537a16365",
+      "bankUrl": "https://www.lzbank.com/",
+      "keywords": [
+        "LZBANK"
+      ],
+      "sha256": "8c1a8cc3f377bd8f5dc651571e83d326509a71ad30f25344a89c46b8d4accd84",
+      "viewBox": [
+        17.58683494567871,
+        17.511691131591796,
+        92.82632629394531,
+        92.82632629394531
+      ],
+      "abbreviation": "lzbank",
+      "resourceKey": "bank_lzbank"
+    },
+    {
+      "key": "bank_80f930eff48d1c1f",
+      "name": "廊坊银行",
+      "sourceName": "廊坊银行",
+      "brand": "bank_80f930eff48d1c1f",
+      "historical": false,
+      "sourceFile": "bolf.svg",
+      "sourceUrl": "https://www.tubiao.cn/library/icon-18c88b358f6383016ef7544b.svg",
+      "pageUrl": "https://www.tubiao.cn/svg/item-80f930eff48d1c1f",
+      "bankUrl": "https://www.lccb.com.cn/",
+      "keywords": [
+        "BOLF"
+      ],
+      "sha256": "0b0dd1172131e6225b0452d29bd9ce2d45330f6836ef76f0c080e1edc2d24681",
+      "viewBox": [
+        20.79874008178711,
+        20.79947250366211,
+        86.40095581054688,
+        86.40095581054688
+      ],
+      "abbreviation": "bolf",
+      "resourceKey": "bank_bolf"
+    },
+    {
+      "key": "bank_bda3c9ff9f476f68",
+      "name": "乐山市商业银行",
+      "sourceName": "乐山市商业银行",
+      "brand": "bank_bda3c9ff9f476f68",
+      "historical": false,
+      "sourceFile": "lsccb.svg",
+      "sourceUrl": "https://www.tubiao.cn/library/icon-315ac539a0b0dae443ff14b2.svg",
+      "pageUrl": "https://www.tubiao.cn/svg/item-bda3c9ff9f476f68",
+      "bankUrl": "http://www.lsccb.com/",
+      "keywords": [
+        "LSCCB"
+      ],
+      "sha256": "6f371ad2a5edf74bda7ef38281d99f56aabcb9cf2d3494bedcfa58a49f4ee3b3",
+      "viewBox": [
+        18.17427947998047,
+        18.028035430908204,
+        91.83276123046875,
+        91.83276123046875
+      ],
+      "abbreviation": "lsccb",
+      "resourceKey": "bank_lsccb"
+    },
+    {
+      "key": "bank_8fb25721a2caac67",
+      "name": "辽阳银行",
+      "sourceName": "辽阳银行",
+      "brand": "bank_8fb25721a2caac67",
+      "historical": true,
+      "sourceFile": "boly.svg",
+      "sourceUrl": "https://www.tubiao.cn/library/icon-78f842a5df336d71557a162f.svg",
+      "pageUrl": "https://www.tubiao.cn/svg/item-8fb25721a2caac67",
+      "bankUrl": "https://www.liaoshen-bank.com/",
+      "keywords": [
+        "BOLY"
+      ],
+      "sha256": "c320459a58ad544f3923153c07e0e71abb85489efa3beb95b92e69b39c0d6ceb",
+      "viewBox": [
+        18.100494995117188,
+        18.35060562133789,
+        91.79878875732422,
+        91.79878875732422
+      ],
+      "abbreviation": "boly",
+      "resourceKey": "bank_boly"
+    },
+    {
+      "key": "bank_78e2c3384f02bb48",
+      "name": "临商银行",
+      "sourceName": "临商银行",
+      "brand": "bank_78e2c3384f02bb48",
+      "historical": false,
+      "sourceFile": "lsbc.svg",
+      "sourceUrl": "https://www.tubiao.cn/library/icon-8dcac55a4d18c9904cf3a54d.svg",
+      "pageUrl": "https://www.tubiao.cn/svg/item-78e2c3384f02bb48",
+      "bankUrl": "http://www.lsbchina.com/",
+      "keywords": [
+        "LSBC"
+      ],
+      "sha256": "9d3ac95bcb962d074b5ece367790242a2f2b7c3ae047c2c72883a8956bf94e5a",
+      "viewBox": [
+        18.1,
+        18.1,
+        91.8,
+        91.8
+      ],
+      "abbreviation": "lsbc",
+      "resourceKey": "bank_lsbc"
+    },
+    {
+      "key": "bank_73999369a515d961",
+      "name": "柳州银行",
+      "sourceName": "柳州银行",
+      "brand": "bank_73999369a515d961",
+      "historical": false,
+      "sourceFile": "lzccb.svg",
+      "sourceUrl": "https://www.tubiao.cn/library/icon-e8d9b052ff31c4defeed1885.svg",
+      "pageUrl": "https://www.tubiao.cn/svg/item-73999369a515d961",
+      "bankUrl": "http://www.bolz.cn/",
+      "keywords": [
+        "LZCCB"
+      ],
+      "sha256": "1ef190767c2d879a164cc8f95d5355463c04ad4319a8672e37f579d0e803eccd",
+      "viewBox": [
+        18.02132354736328,
+        18.045998916625976,
+        91.90799835205078,
+        91.90799835205078
+      ],
+      "abbreviation": "lzccb",
+      "resourceKey": "bank_lzccb"
+    },
+    {
+      "key": "bank_c144472fd84111fe",
+      "name": "龙江银行",
+      "sourceName": "龙江银行",
+      "brand": "bank_c144472fd84111fe",
+      "historical": false,
+      "sourceFile": "ljbank.svg",
+      "sourceUrl": "https://www.tubiao.cn/library/icon-19cded12108735dbf9f2b045.svg",
+      "pageUrl": "https://www.tubiao.cn/svg/item-c144472fd84111fe",
+      "bankUrl": "https://www.lj-bank.com/",
+      "keywords": [
+        "LJBANK"
+      ],
+      "sha256": "28d52a16d24c337948b88671bde9231056b27d8e45e8e649f746510f9dea348a",
+      "viewBox": [
+        17.01968315124512,
+        17.018962173461915,
+        93.96108764648437,
+        93.96108764648437
+      ],
+      "abbreviation": "ljbank",
+      "resourceKey": "bank_ljbank"
+    },
+    {
+      "key": "bank_48152f519819602f",
+      "name": "泸州银行",
+      "sourceName": "泸州银行",
+      "brand": "bank_48152f519819602f",
+      "historical": false,
+      "sourceFile": "lzb.svg",
+      "sourceUrl": "https://www.tubiao.cn/library/icon-84ee3aed8c7e83a70f52b2f6.svg",
+      "pageUrl": "https://www.tubiao.cn/svg/item-48152f519819602f",
+      "bankUrl": "https://www.lzccb.cn/",
+      "keywords": [
+        "LZB"
+      ],
+      "sha256": "c12503773d6b24adeddb84a991ec045065c84697d266f4233325164a7327a706",
+      "viewBox": [
+        18.09999969482422,
+        18.09999206542969,
+        91.80000823974609,
+        91.80000823974609
+      ],
+      "abbreviation": "lzb",
+      "resourceKey": "bank_lzb"
+    },
+    {
+      "key": "bank_ad466c737e0c733f",
+      "name": "洛阳银行",
+      "sourceName": "洛阳银行",
+      "brand": "bank_ad466c737e0c733f",
+      "historical": false,
+      "sourceFile": "bly.svg",
+      "sourceUrl": "https://www.tubiao.cn/library/icon-7bde5608af37a16739d34f21.svg",
+      "pageUrl": "https://www.tubiao.cn/svg/item-ad466c737e0c733f",
+      "bankUrl": "",
+      "keywords": [
+        "BLY"
+      ],
+      "sha256": "68d289509e5c8b66d71f7b1650dc1a2ba572537b40791c0c7d721ffb102264da",
+      "viewBox": [
+        21.079500579833983,
+        20.826979064941405,
+        85.84604187011719,
+        85.84604187011719
+      ],
+      "abbreviation": "bly",
+      "resourceKey": "bank_bly"
+    },
+    {
+      "key": "bank_a08410c7990f951c",
+      "name": "绵阳市商业银行",
+      "sourceName": "绵阳市商业银行",
+      "brand": "bank_a08410c7990f951c",
+      "historical": false,
+      "sourceFile": "myccb.svg",
+      "sourceUrl": "https://www.tubiao.cn/library/icon-3784f0c5643c72611628857f.svg",
+      "pageUrl": "https://www.tubiao.cn/svg/item-a08410c7990f951c",
+      "bankUrl": "https://www.mycc-bank.com/",
+      "keywords": [
+        "MYCCB"
+      ],
+      "sha256": "856595b64f2043abc9c5ef33eec86f1830c736403819c0eb750d6775c384b5a5",
+      "viewBox": [
+        14.3,
+        14.05,
+        99.9,
+        99.9
+      ],
+      "abbreviation": "myccb",
+      "resourceKey": "bank_myccb"
+    },
+    {
+      "key": "bank_a332fd83d07292bf",
+      "name": "南京银行",
+      "sourceName": "南京银行",
+      "brand": "bank_a332fd83d07292bf",
+      "historical": false,
+      "sourceFile": "njcb.svg",
+      "sourceUrl": "https://www.tubiao.cn/library/icon-72679645093c9bf7a017a851.svg",
+      "pageUrl": "https://www.tubiao.cn/svg/item-a332fd83d07292bf",
+      "bankUrl": "https://www.njcb.com.cn/",
+      "keywords": [
+        "NJCB"
+      ],
+      "sha256": "7b179c5b62e8dcfb78dee287670bfd302c1fb16598f336cefdc0f94e0c075aae",
+      "viewBox": [
+        18.100213623046876,
+        18.100190734863283,
+        91.79958801269531,
+        91.79958801269531
+      ],
+      "abbreviation": "njcb",
+      "resourceKey": "bank_njcb"
+    },
+    {
+      "key": "bank_7cd9d05dfeb29d19",
+      "name": "内蒙古银行",
+      "sourceName": "内蒙古银行",
+      "brand": "bank_7cd9d05dfeb29d19",
+      "historical": false,
+      "sourceFile": "h3cb.svg",
+      "sourceUrl": "https://www.tubiao.cn/library/icon-24a8c630a1c50b783324a8cf.svg",
+      "pageUrl": "https://www.tubiao.cn/svg/item-7cd9d05dfeb29d19",
+      "bankUrl": "https://www.myrbank.com/",
+      "keywords": [
+        "H3CB"
+      ],
+      "sha256": "204f1227109e8207e4a4342484dfac97654a100fbaff7fb6e67a6044fb038b7b",
+      "viewBox": [
+        16.280003051757813,
+        16.48,
+        95.04,
+        95.04
+      ],
+      "abbreviation": "h3cb",
+      "resourceKey": "bank_h3cb"
+    },
+    {
+      "key": "bank_2eed2034612d7154",
+      "name": "宁波东海银行",
+      "sourceName": "宁波东海银行",
+      "brand": "bank_2eed2034612d7154",
+      "historical": false,
+      "sourceFile": "ndhb.svg",
+      "sourceUrl": "https://www.tubiao.cn/library/icon-02df3125aac6c4723518b304.svg",
+      "pageUrl": "https://www.tubiao.cn/svg/item-2eed2034612d7154",
+      "bankUrl": "http://www.ndhb.cn/",
+      "keywords": [
+        "NDHB"
+      ],
+      "sha256": "9b1d999f52cc422d8e3e5a9edf89ff62aa60bcdb6b450c98ec77549529277c63",
+      "viewBox": [
+        18.400184936523438,
+        18.099787063598633,
+        91.80003295898437,
+        91.80003295898437
+      ],
+      "abbreviation": "ndhb",
+      "resourceKey": "bank_ndhb"
+    },
+    {
+      "key": "bank_6ee7b110f00fed02",
+      "name": "宁波通商银行",
+      "sourceName": "宁波通商银行",
+      "brand": "bank_6ee7b110f00fed02",
+      "historical": false,
+      "sourceFile": "nbcmb.svg",
+      "sourceUrl": "https://www.tubiao.cn/library/icon-9fea5626fd961688ac73d1e0.svg",
+      "pageUrl": "https://www.tubiao.cn/svg/item-6ee7b110f00fed02",
+      "bankUrl": "https://www.ncbank.cn/",
+      "keywords": [
+        "NBCMB"
+      ],
+      "sha256": "c95bf04129b7dfdf90ef3db005faa537571f047ba1bd1c821cbd1e4feb604fa8",
+      "viewBox": [
+        18.152738647460936,
+        17.946691589355467,
+        91.61655029296875,
+        91.61655029296875
+      ],
+      "abbreviation": "nbcmb",
+      "resourceKey": "bank_nbcmb"
+    },
+    {
+      "key": "bank_3c789bc646f0b3f1",
+      "name": "宁波银行",
+      "sourceName": "宁波银行",
+      "brand": "bank_3c789bc646f0b3f1",
+      "historical": false,
+      "sourceFile": "nbcb.svg",
+      "sourceUrl": "https://www.tubiao.cn/library/icon-f18b363d94fa7bbacc0816dd.svg",
+      "pageUrl": "https://www.tubiao.cn/svg/item-3c789bc646f0b3f1",
+      "bankUrl": "https://www.nbcb.com.cn/",
+      "keywords": [
+        "NBCB"
+      ],
+      "sha256": "30bc8eac69e6554514ee02e84bf531d70e951ad7b1551e449adb1ed4d46922e6",
+      "viewBox": [
+        18.1004997253418,
+        18.1,
+        91.8,
+        91.8
+      ],
+      "abbreviation": "nbcb",
+      "resourceKey": "bank_nbcb"
+    },
+    {
+      "key": "bank_88d7586177e7513b",
+      "name": "宁夏银行",
+      "sourceName": "宁夏银行",
+      "brand": "bank_88d7586177e7513b",
+      "historical": false,
+      "sourceFile": "nxbank.svg",
+      "sourceUrl": "https://www.tubiao.cn/library/icon-6b1743173762c1fa1ff61724.svg",
+      "pageUrl": "https://www.tubiao.cn/svg/item-88d7586177e7513b",
+      "bankUrl": "http://www.bankofnx.com.cn/",
+      "keywords": [
+        "NXBANK"
+      ],
+      "sha256": "f8cb37ac4e50d4de91fc4a7068c719d5b72514814a4d8c832b9ed92e4f44d002",
+      "viewBox": [
+        19.699999694824218,
+        19.44987953186035,
+        89.10000823974609,
+        89.10000823974609
+      ],
+      "abbreviation": "nxbank",
+      "resourceKey": "bank_nxbank"
+    },
+    {
+      "key": "bank_1cd8c37c4adcf957",
+      "name": "盘锦银行",
+      "sourceName": "盘锦银行",
+      "brand": "bank_1cd8c37c4adcf957",
+      "historical": false,
+      "sourceFile": "bopj.svg",
+      "sourceUrl": "https://www.tubiao.cn/library/icon-81974c81e391bad6a2d61b29.svg",
+      "pageUrl": "https://www.tubiao.cn/svg/item-1cd8c37c4adcf957",
+      "bankUrl": "http://www.bankofpj.com/",
+      "keywords": [
+        "BOPJ"
+      ],
+      "sha256": "0a65999055914027c731e6324ed206ce5aca1e6f3ede45c3ff87584e24c8584e",
+      "viewBox": [
+        18.1,
+        18.1,
+        91.8,
+        91.8
+      ],
+      "abbreviation": "bopj",
+      "resourceKey": "bank_bopj"
+    },
+    {
+      "key": "bank_5d085ba3787c37d7",
+      "name": "平安银行",
+      "sourceName": "平安银行",
+      "brand": "bank_5d085ba3787c37d7",
+      "historical": false,
+      "sourceFile": "spabank.svg",
+      "sourceUrl": "https://www.tubiao.cn/library/icon-189ce462ff4a3ab49ae66475.svg",
+      "pageUrl": "https://www.tubiao.cn/svg/item-5d085ba3787c37d7",
+      "bankUrl": "https://bank.pingan.com/",
+      "keywords": [
+        "SPABANK"
+      ],
+      "sha256": "c1f82cfcd5e01324eb609a25373b7876c0bd5cfde54980c2375cfc09f497e1e2",
+      "viewBox": [
+        18.1,
+        17.850003814697267,
+        91.8,
+        91.8
+      ],
+      "abbreviation": "spabank",
+      "resourceKey": "bank_spabank"
+    },
+    {
+      "key": "bank_8e66776def452515",
+      "name": "平顶山银行",
+      "sourceName": "平顶山银行",
+      "brand": "bank_8e66776def452515",
+      "historical": false,
+      "sourceFile": "bop.svg",
+      "sourceUrl": "https://www.tubiao.cn/library/icon-748f0eec98d56561903cb7e4.svg",
+      "pageUrl": "https://www.tubiao.cn/svg/item-8e66776def452515",
+      "bankUrl": "http://www.pdsb.cn/",
+      "keywords": [
+        "BOP"
+      ],
+      "sha256": "c945fedd65c528b22167d4273fa26ea5e4a5c18f545ad83920e7972bb61a1c10",
+      "viewBox": [
+        18.014178314208984,
+        18.147013702392577,
+        91.90800659179688,
+        91.90800659179688
+      ],
+      "abbreviation": "bop",
+      "resourceKey": "bank_bop"
+    },
+    {
+      "key": "bank_f992e61b2440eb9f",
+      "name": "浦发银行",
+      "sourceName": "浦发银行",
+      "brand": "bank_f992e61b2440eb9f",
+      "historical": false,
+      "sourceFile": "spdb.svg",
+      "sourceUrl": "https://www.tubiao.cn/library/icon-66c886c1dfcbcf795e8766ff.svg",
+      "pageUrl": "https://www.tubiao.cn/svg/item-f992e61b2440eb9f",
+      "bankUrl": "https://www.spdb.com.cn/",
+      "keywords": [
+        "SPDB"
+      ],
+      "sha256": "72a86b25ae582d1969fa8a92943c1c54e70882ff5b2ca7d7827481b4e2e098da",
+      "viewBox": [
+        18.1,
+        18.35,
+        91.8,
+        91.8
+      ],
+      "abbreviation": "spdb",
+      "resourceKey": "bank_spdb"
+    },
+    {
+      "key": "bank_9208a36075cce97c",
+      "name": "齐鲁银行",
+      "sourceName": "齐鲁银行",
+      "brand": "bank_9208a36075cce97c",
+      "historical": false,
+      "sourceFile": "qlbank.svg",
+      "sourceUrl": "https://www.tubiao.cn/library/icon-e0a33f0df285758f6bb520cc.svg",
+      "pageUrl": "https://www.tubiao.cn/svg/item-9208a36075cce97c",
+      "bankUrl": "https://www.qlbchina.com/",
+      "keywords": [
+        "QLBANK"
+      ],
+      "sha256": "e7b8a7af8b2a6b0729ec7a707f260fae62f8c53a629ad0abac2d6815c367dcb0",
+      "viewBox": [
+        18.31554229736328,
+        18.134563522338865,
+        91.62190612792969,
+        91.62190612792969
+      ],
+      "abbreviation": "qlbank",
+      "resourceKey": "bank_qlbank"
+    },
+    {
+      "key": "bank_a7ad5a279ba0a0db",
+      "name": "齐商银行",
+      "sourceName": "齐商银行",
+      "brand": "bank_a7ad5a279ba0a0db",
+      "historical": false,
+      "sourceFile": "qsb.svg",
+      "sourceUrl": "https://www.tubiao.cn/library/icon-c44938e6251da969a59d3ba1.svg",
+      "pageUrl": "https://www.tubiao.cn/svg/item-a7ad5a279ba0a0db",
+      "bankUrl": "https://www.qsbank.cc/",
+      "keywords": [
+        "QSB"
+      ],
+      "sha256": "b8c941975c6f4be3efce5a9e46b67e4f38c810d7e68c12c00754ed1e97f70f3a",
+      "viewBox": [
+        18.1,
+        18.1,
+        91.8,
+        91.8
+      ],
+      "abbreviation": "qsb",
+      "resourceKey": "bank_qsb"
+    },
+    {
+      "key": "bank_84ceb085dcbb10f2",
+      "name": "秦皇岛银行",
+      "sourceName": "秦皇岛银行",
+      "brand": "bank_84ceb085dcbb10f2",
+      "historical": false,
+      "sourceFile": "qhdbank.svg",
+      "sourceUrl": "https://www.tubiao.cn/library/icon-a5d63ee604585ac29553cf43.svg",
+      "pageUrl": "https://www.tubiao.cn/svg/item-84ceb085dcbb10f2",
+      "bankUrl": "https://www.qhdbank.cn/",
+      "keywords": [
+        "QHDBANK"
+      ],
+      "sha256": "e956ffa0230d3d20d83d53666473d3545211d30642b47e0cb88f08102952b65a",
+      "viewBox": [
+        18.099991760253907,
+        18.091999969482423,
+        91.80001647949219,
+        91.80001647949219
+      ],
+      "abbreviation": "qhdbank",
+      "resourceKey": "bank_qhdbank"
+    },
+    {
+      "key": "bank_9b679cd19b713009",
+      "name": "青岛银行",
+      "sourceName": "青岛银行",
+      "brand": "bank_9b679cd19b713009",
+      "historical": false,
+      "sourceFile": "qdccb.svg",
+      "sourceUrl": "https://www.tubiao.cn/library/icon-540dd48680595999b62ccd45.svg",
+      "pageUrl": "https://www.tubiao.cn/svg/item-9b679cd19b713009",
+      "bankUrl": "https://www.qdccb.com/",
+      "keywords": [
+        "QDCCB"
+      ],
+      "sha256": "4969577aeb87ec5945d4d45f405d9d4ed14e30177c6e416a01bead8dd39a2b76",
+      "viewBox": [
+        18.1,
+        18.08879623413086,
+        91.8,
+        91.8
+      ],
+      "abbreviation": "qdccb",
+      "resourceKey": "bank_qdccb"
+    },
+    {
+      "key": "bank_a62ccfdd6b452be4",
+      "name": "青海银行",
+      "sourceName": "青海银行",
+      "brand": "bank_a62ccfdd6b452be4",
+      "historical": false,
+      "sourceFile": "qhbank.svg",
+      "sourceUrl": "https://www.tubiao.cn/library/icon-59a0dafb297c919fd51e1b72.svg",
+      "pageUrl": "https://www.tubiao.cn/svg/item-a62ccfdd6b452be4",
+      "bankUrl": "http://www.bankqh.com/",
+      "keywords": [
+        "QHBANK"
+      ],
+      "sha256": "08c1e19a2354af6eac5457e0d2092919f747aaaedd12e7c65185d43740853cfb",
+      "viewBox": [
+        18.099088897705077,
+        18.098993530273436,
+        91.8018374633789,
+        91.8018374633789
+      ],
+      "abbreviation": "qhbank",
+      "resourceKey": "bank_qhbank"
+    },
+    {
+      "key": "bank_f3d037d826814866",
+      "name": "曲靖市商业银行",
+      "sourceName": "曲靖市商业银行",
+      "brand": "bank_f3d037d826814866",
+      "historical": false,
+      "sourceFile": "qjcccb.svg",
+      "sourceUrl": "https://www.tubiao.cn/library/icon-a7533829e0197fb89f50845f.svg",
+      "pageUrl": "https://www.tubiao.cn/svg/item-f3d037d826814866",
+      "bankUrl": "https://www.qjccb.com/",
+      "keywords": [
+        "QJCCCB"
+      ],
+      "sha256": "e96492038b29abf0812a0bdde420c4d4dd72d94a41b41e9c21cabef772e092a8",
+      "viewBox": [
+        18.62,
+        18.37,
+        91.26,
+        91.26
+      ],
+      "abbreviation": "qjcccb",
+      "resourceKey": "bank_qjcccb"
+    },
+    {
+      "key": "bank_7576633e8748306c",
+      "name": "泉州银行",
+      "sourceName": "泉州银行",
+      "brand": "bank_7576633e8748306c",
+      "historical": false,
+      "sourceFile": "boqz.svg",
+      "sourceUrl": "https://www.tubiao.cn/library/icon-65036a4e92d057b2e67e942d.svg",
+      "pageUrl": "https://www.tubiao.cn/svg/item-7576633e8748306c",
+      "bankUrl": "https://www.qzccbank.com/",
+      "keywords": [
+        "BOQZ"
+      ],
+      "sha256": "b9178b23a79322b54b511a97c7a5ba0534fff0505ea6ff154045c5a602bcf1e4",
+      "viewBox": [
+        18.6,
+        18.6,
+        91.8,
+        91.8
+      ],
+      "abbreviation": "boqz",
+      "resourceKey": "bank_boqz"
+    },
+    {
+      "key": "bank_91265b7284430f91",
+      "name": "日照银行",
+      "sourceName": "日照银行",
+      "brand": "bank_91265b7284430f91",
+      "historical": false,
+      "sourceFile": "rzb.svg",
+      "sourceUrl": "https://www.tubiao.cn/library/icon-06efd7c470e93e932f3d944a.svg",
+      "pageUrl": "https://www.tubiao.cn/svg/item-91265b7284430f91",
+      "bankUrl": "https://www.bankofrizhao.com.cn/",
+      "keywords": [
+        "RZB"
+      ],
+      "sha256": "06146103e8895edb395a0453f4b7d8cc61c036b92fc758ed15dc92e45fc301f3",
+      "viewBox": [
+        18.099978637695312,
+        18.099675369262695,
+        91.80057678222656,
+        91.80057678222656
+      ],
+      "abbreviation": "rzb",
+      "resourceKey": "bank_rzb"
+    },
+    {
+      "key": "bank_384a0333c213a88e",
+      "name": "厦门国际银行",
+      "sourceName": "厦门国际银行",
+      "brand": "bank_384a0333c213a88e",
+      "historical": false,
+      "sourceFile": "xmintb.svg",
+      "sourceUrl": "https://www.tubiao.cn/library/icon-c57a14ed633f70118c3784ff.svg",
+      "pageUrl": "https://www.tubiao.cn/svg/item-384a0333c213a88e",
+      "bankUrl": "https://www.xib.com.cn/",
+      "keywords": [
+        "XMINTB"
+      ],
+      "sha256": "44e19948e769d58cdd1e007fdc20f356eac41596a2313115681fd76e97344e2d",
+      "viewBox": [
+        19.719008178710936,
+        19.72,
+        88.56,
+        88.56
+      ],
+      "abbreviation": "xmintb",
+      "resourceKey": "bank_xmintb"
+    },
+    {
+      "key": "bank_44e08ebec3442bae",
+      "name": "厦门银行",
+      "sourceName": "厦门银行",
+      "brand": "bank_44e08ebec3442bae",
+      "historical": false,
+      "sourceFile": "xmbank.svg",
+      "sourceUrl": "https://www.tubiao.cn/library/icon-4ecc5a93ccf1b4b199fc2266.svg",
+      "pageUrl": "https://www.tubiao.cn/svg/item-44e08ebec3442bae",
+      "bankUrl": "http://www.xmccb.com/",
+      "keywords": [
+        "XMBANK"
+      ],
+      "sha256": "5b9c866223a7bb82fa2e86e960b875cc06a9bb11e706ac61d27d50b03eb1735c",
+      "viewBox": [
+        23.1,
+        13.099996185302734,
+        91.8,
+        91.8
+      ],
+      "abbreviation": "xmbank",
+      "resourceKey": "bank_xmbank"
+    },
+    {
+      "key": "bank_231653e198c2ef26",
+      "name": "上海银行",
+      "sourceName": "上海银行",
+      "brand": "bank_231653e198c2ef26",
+      "historical": false,
+      "sourceFile": "bosc.svg",
+      "sourceUrl": "https://www.tubiao.cn/library/icon-d3055a2fb95ec4084b9c32e8.svg",
+      "pageUrl": "https://www.tubiao.cn/svg/item-231653e198c2ef26",
+      "bankUrl": "https://ibank.bankofshanghai.com/",
+      "keywords": [
+        "BOSC"
+      ],
+      "sha256": "04d24e0702e6ee2bb6d0c5362ed926680cd4c50258e374b0cb48e0a836495734",
+      "viewBox": [
+        18.063844833374024,
+        18.138796005249024,
+        91.61639373779298,
+        91.61639373779298
+      ],
+      "abbreviation": "bosc",
+      "resourceKey": "bank_bosc"
+    },
+    {
+      "key": "bank_0b67fbc1cfdff255",
+      "name": "上饶银行",
+      "sourceName": "上饶银行",
+      "brand": "bank_0b67fbc1cfdff255",
+      "historical": false,
+      "sourceFile": "srbank.svg",
+      "sourceUrl": "https://www.tubiao.cn/library/icon-871a63384260becff1b9d501.svg",
+      "pageUrl": "https://www.tubiao.cn/svg/item-0b67fbc1cfdff255",
+      "bankUrl": "https://www.srbank.cn/",
+      "keywords": [
+        "SRBANK"
+      ],
+      "sha256": "a570b183de1e3ff56f23bde2e1072f9eb105c4a51862631558f4b1948bb2c165",
+      "viewBox": [
+        16.48,
+        16.592998962402344,
+        95.04,
+        95.04
+      ],
+      "abbreviation": "srbank",
+      "resourceKey": "bank_srbank"
+    },
+    {
+      "key": "bank_b783965c4080a701",
+      "name": "绍兴银行",
+      "sourceName": "绍兴银行",
+      "brand": "bank_b783965c4080a701",
+      "historical": false,
+      "sourceFile": "sxcb.svg",
+      "sourceUrl": "https://www.tubiao.cn/library/icon-3e0ca8ddb44c95af84a8606e.svg",
+      "pageUrl": "https://www.tubiao.cn/svg/item-b783965c4080a701",
+      "bankUrl": "http://www.sxccb.com/",
+      "keywords": [
+        "SXCB"
+      ],
+      "sha256": "0520737e6e819e33f0da0881b2f981aa00c764f98b65c5ffdb7b181f3ea694da",
+      "viewBox": [
+        8.10996036529541,
+        8.109452056884766,
+        111.78109588623047,
+        111.78109588623047
+      ],
+      "abbreviation": "sxcb",
+      "resourceKey": "bank_sxcb"
+    },
+    {
+      "key": "bank_6f65c2166f85b6e1",
+      "name": "盛京银行",
+      "sourceName": "盛京银行",
+      "brand": "bank_6f65c2166f85b6e1",
+      "historical": false,
+      "sourceFile": "sjbank.svg",
+      "sourceUrl": "https://www.tubiao.cn/library/icon-9a8ffa0389d8d67c07c8f1ed.svg",
+      "pageUrl": "https://www.tubiao.cn/svg/item-6f65c2166f85b6e1",
+      "bankUrl": "https://www.shengjingbank.com.cn/",
+      "keywords": [
+        "SJBANK"
+      ],
+      "sha256": "0d458e3f202a92c2e27bde9ca5ccca30ec6538a6f9e1e7426822d4eadb103ffd",
+      "viewBox": [
+        18.1,
+        18.1,
+        91.8,
+        91.8
+      ],
+      "abbreviation": "sjbank",
+      "resourceKey": "bank_sjbank"
+    },
+    {
+      "key": "bank_d0d9a01213c85a0e",
+      "name": "石嘴山银行",
+      "sourceName": "石嘴山银行",
+      "brand": "bank_d0d9a01213c85a0e",
+      "historical": false,
+      "sourceFile": "szsbk.svg",
+      "sourceUrl": "https://www.tubiao.cn/library/icon-277ccb2e6e5bd9797922dc48.svg",
+      "pageUrl": "https://www.tubiao.cn/svg/item-d0d9a01213c85a0e",
+      "bankUrl": "http://www.szsccb.com/",
+      "keywords": [
+        "SZSBK"
+      ],
+      "sha256": "8a01a751ef5a81120d6d776e1a68b235955996dbb54eed1d013d282a43022143",
+      "viewBox": [
+        18.15400085449219,
+        17.6,
+        91.8,
+        91.8
+      ],
+      "abbreviation": "szsbk",
+      "resourceKey": "bank_szsbk"
+    },
+    {
+      "key": "bank_f5d92febbb4c19f2",
+      "name": "四川天府银行",
+      "sourceName": "四川天府银行",
+      "brand": "bank_f5d92febbb4c19f2",
+      "historical": false,
+      "sourceFile": "sctfb.svg",
+      "sourceUrl": "https://www.tubiao.cn/library/icon-a21b5ba461e518181e93cd99.svg",
+      "pageUrl": "https://www.tubiao.cn/svg/item-f5d92febbb4c19f2",
+      "bankUrl": "https://www.tf.cn/tfyh/index.html",
+      "keywords": [
+        "SCTFB"
+      ],
+      "sha256": "327713d00990678e0a802186d90ce5b1251af51a1c85b3f6460d77c415f947d0",
+      "viewBox": [
+        18.65947700500488,
+        18.640523681640623,
+        90.70586059570313,
+        90.70586059570313
+      ],
+      "abbreviation": "sctfb",
+      "resourceKey": "bank_sctfb"
+    },
+    {
+      "key": "bank_6a68708325fe2dab",
+      "name": "四川银行",
+      "sourceName": "四川银行",
+      "brand": "bank_6a68708325fe2dab",
+      "historical": false,
+      "sourceFile": "scb.svg",
+      "sourceUrl": "https://www.tubiao.cn/library/icon-8ad94bbacb61db9fbffcc44f.svg",
+      "pageUrl": "https://www.tubiao.cn/svg/item-6a68708325fe2dab",
+      "bankUrl": "https://www.scbank.cn/",
+      "keywords": [
+        "SCB"
+      ],
+      "sha256": "b0fae4844dd88a7e0876817cfe4c8e364b95c601f2140948332fd8c2d837f6d4",
+      "viewBox": [
+        16.960003356933594,
+        16.48,
+        95.04,
+        95.04
+      ],
+      "abbreviation": "scb",
+      "resourceKey": "bank_scb"
+    },
+    {
+      "key": "bank_630c2f13056faa88",
+      "name": "苏州银行",
+      "sourceName": "苏州银行",
+      "brand": "bank_630c2f13056faa88",
+      "historical": false,
+      "sourceFile": "bosz.svg",
+      "sourceUrl": "https://www.tubiao.cn/library/icon-58f8c5a910be0043bba01c30.svg",
+      "pageUrl": "https://www.tubiao.cn/svg/item-630c2f13056faa88",
+      "bankUrl": "http://www.suzhoubank.com/",
+      "keywords": [
+        "BOSZ"
+      ],
+      "sha256": "a9615972c41acb60fbd96e7ec7844cdbb057db39d8cff64f642c52c229e2803b",
+      "viewBox": [
+        18.10049201965332,
+        18.100846786499023,
+        91.79912658691406,
+        91.79912658691406
+      ],
+      "abbreviation": "bosz",
+      "resourceKey": "bank_bosz"
+    },
+    {
+      "key": "bank_901a1acc09e1f3d3",
+      "name": "遂宁银行",
+      "sourceName": "遂宁银行",
+      "brand": "bank_901a1acc09e1f3d3",
+      "historical": false,
+      "sourceFile": "snbank.svg",
+      "sourceUrl": "https://www.tubiao.cn/library/icon-81656203d4ccceefa0c791e7.svg",
+      "pageUrl": "https://www.tubiao.cn/svg/item-901a1acc09e1f3d3",
+      "bankUrl": "https://www.snccb.com/",
+      "keywords": [
+        "SNBANK"
+      ],
+      "sha256": "2309c09c847a121845fd3ee868465a712392d30bafc400d78fc5269e3c5a7b2e",
+      "viewBox": [
+        16.47916275024414,
+        16.29056411743164,
+        95.04087341308593,
+        95.04087341308593
+      ],
+      "abbreviation": "snbank",
+      "resourceKey": "bank_snbank"
+    },
+    {
+      "key": "bank_a9583d5a61155655",
+      "name": "台州银行",
+      "sourceName": "台州银行",
+      "brand": "bank_a9583d5a61155655",
+      "historical": false,
+      "sourceFile": "tzbank.svg",
+      "sourceUrl": "https://www.tubiao.cn/library/icon-b30648aaee2a423ee36afaf4.svg",
+      "pageUrl": "https://www.tubiao.cn/svg/item-a9583d5a61155655",
+      "bankUrl": "https://www.tzbank.com/",
+      "keywords": [
+        "TZBANK"
+      ],
+      "sha256": "6ad55814c72c4b28bc1fc6591b2b4cdcb2cdd7a1437b26990c72b77c7c72022d",
+      "viewBox": [
+        18.88946029663086,
+        18.639960021972655,
+        90.72107940673828,
+        90.72107940673828
+      ],
+      "abbreviation": "tzbank",
+      "resourceKey": "bank_tzbank"
+    },
+    {
+      "key": "bank_f1839dc43ed2b94a",
+      "name": "泰安银行",
+      "sourceName": "泰安银行",
+      "brand": "bank_f1839dc43ed2b94a",
+      "historical": false,
+      "sourceFile": "taccb.svg",
+      "sourceUrl": "https://www.tubiao.cn/library/icon-20b00151182f92ff1b1979db.svg",
+      "pageUrl": "https://www.tubiao.cn/svg/item-f1839dc43ed2b94a",
+      "bankUrl": "https://www.taccb.com.cn/",
+      "keywords": [
+        "TACCB"
+      ],
+      "sha256": "648ec6e1d60107d39600d5faab4faa62f069cbcc0e8fb9503996d0837836f34d",
+      "viewBox": [
+        18.099420700073242,
+        18.092205200195313,
+        91.81558959960938,
+        91.81558959960938
+      ],
+      "abbreviation": "taccb",
+      "resourceKey": "bank_taccb"
+    },
+    {
+      "key": "bank_8c865c490ced4f5c",
+      "name": "泰隆银行",
+      "sourceName": "泰隆银行",
+      "brand": "bank_8c865c490ced4f5c",
+      "historical": false,
+      "sourceFile": "tlcb.svg",
+      "sourceUrl": "https://www.tubiao.cn/library/icon-12f65b10c4ac295e0140622c.svg",
+      "pageUrl": "https://www.tubiao.cn/svg/item-8c865c490ced4f5c",
+      "bankUrl": "https://www.zjtlcb.com/",
+      "keywords": [
+        "TLCB"
+      ],
+      "sha256": "6d5853c68d678841501b81c6f1bfb6aa6d4dfec5dca295b1c9073f83ad7bbcec",
+      "viewBox": [
+        16.460919647216798,
+        15.960690765380859,
+        95.57896179199219,
+        95.57896179199219
+      ],
+      "abbreviation": "tlcb",
+      "resourceKey": "bank_tlcb"
+    },
+    {
+      "key": "bank_191b35220bfbb928",
+      "name": "唐山银行",
+      "sourceName": "唐山银行",
+      "brand": "bank_191b35220bfbb928",
+      "historical": false,
+      "sourceFile": "bots.svg",
+      "sourceUrl": "https://www.tubiao.cn/library/icon-1723bd8c9fc0fd24b2f28f40.svg",
+      "pageUrl": "https://www.tubiao.cn/svg/item-191b35220bfbb928",
+      "bankUrl": "https://www.ts-bank.cn/",
+      "keywords": [
+        "BOTS"
+      ],
+      "sha256": "3e0d97bdbb612a3acf44e764168daf8989fcb468d6234c9c80e622c1e48670c5",
+      "viewBox": [
+        16.467499237060547,
+        16.48,
+        95.04,
+        95.04
+      ],
+      "abbreviation": "bots",
+      "resourceKey": "bank_bots"
+    },
+    {
+      "key": "bank_91398f5a17e0c6ac",
+      "name": "天津银行",
+      "sourceName": "天津银行",
+      "brand": "bank_91398f5a17e0c6ac",
+      "historical": false,
+      "sourceFile": "botj.svg",
+      "sourceUrl": "https://www.tubiao.cn/library/icon-82c27ab2a52d5a3a48a38fc4.svg",
+      "pageUrl": "https://www.tubiao.cn/svg/item-91398f5a17e0c6ac",
+      "bankUrl": "https://www.bankoftianjin.com/",
+      "keywords": [
+        "BOTJ"
+      ],
+      "sha256": "b0865f5e24a89bc6fa88002ae99cc3f1ac2a177395b1038dfa2b2bc6ad418a07",
+      "viewBox": [
+        20.799959716796874,
+        20.79945617675781,
+        86.40108764648437,
+        86.40108764648437
+      ],
+      "abbreviation": "botj",
+      "resourceKey": "bank_botj"
+    },
+    {
+      "key": "bank_38d7b6a59fe6d2ff",
+      "name": "铁岭银行",
+      "sourceName": "铁岭银行",
+      "brand": "bank_38d7b6a59fe6d2ff",
+      "historical": false,
+      "sourceFile": "botl.svg",
+      "sourceUrl": "https://www.tubiao.cn/library/icon-f71374066e9b88a417800c75.svg",
+      "pageUrl": "https://www.tubiao.cn/svg/item-38d7b6a59fe6d2ff",
+      "bankUrl": "https://www.bankoftieling.com/",
+      "keywords": [
+        "BOTL"
+      ],
+      "sha256": "a81c4733a987b9c8b50b438abd0ab7b6eddd063a462ab5a3ee2e401ffe5762f5",
+      "viewBox": [
+        18.100259323120117,
+        18.099442977905273,
+        91.80036254882812,
+        91.80036254882812
+      ],
+      "abbreviation": "botl",
+      "resourceKey": "bank_botl"
+    },
+    {
+      "key": "bank_e33d629fb3fff305",
+      "name": "网商银行",
+      "sourceName": "网商银行",
+      "brand": "bank_e33d629fb3fff305",
+      "historical": false,
+      "sourceFile": "mybank.svg",
+      "sourceUrl": "https://www.tubiao.cn/library/icon-590d56685a75ecd04fbfcf7d.svg",
+      "pageUrl": "https://www.tubiao.cn/svg/item-e33d629fb3fff305",
+      "bankUrl": "https://www.mybank.cn/",
+      "keywords": [
+        "Mybank"
+      ],
+      "sha256": "b1695b10c378d53826f871b7ca92a02593095ad576f1e425a5e674c613452a8e",
+      "viewBox": [
+        -0.22144012451171902,
+        0.3520476341247556,
+        59.97888336181641,
+        59.97888336181641
+      ],
+      "abbreviation": "mybank",
+      "resourceKey": "bank_mybank"
+    },
+    {
+      "key": "bank_7582d0339c4074ee",
+      "name": "威海市商业银行",
+      "sourceName": "威海市商业银行",
+      "brand": "bank_7582d0339c4074ee",
+      "historical": false,
+      "sourceFile": "whccb.svg",
+      "sourceUrl": "https://www.tubiao.cn/library/icon-e28c859422da65b47adcff17.svg",
+      "pageUrl": "https://www.tubiao.cn/svg/item-7582d0339c4074ee",
+      "bankUrl": "https://www.whccb.com/",
+      "keywords": [
+        "WHCCB"
+      ],
+      "sha256": "81f39737d50cf576f5790b6756ce34cd67b003bfad859889c837a81191314407",
+      "viewBox": [
+        18.1,
+        17.84150085449219,
+        91.8,
+        91.8
+      ],
+      "abbreviation": "whccb",
+      "resourceKey": "bank_whccb"
+    },
+    {
+      "key": "bank_8e3a3d0242a97c5b",
+      "name": "潍坊银行",
+      "sourceName": "潍坊银行",
+      "brand": "bank_8e3a3d0242a97c5b",
+      "historical": false,
+      "sourceFile": "wfccb.svg",
+      "sourceUrl": "https://www.tubiao.cn/library/icon-c4db0fdd953ae53606ba01d7.svg",
+      "pageUrl": "https://www.tubiao.cn/svg/item-8e3a3d0242a97c5b",
+      "bankUrl": "https://www.bankwf.com/",
+      "keywords": [
+        "WFCCB"
+      ],
+      "sha256": "09edd15bb44c7e3ae60f7fc5acf58470444f88d1661463eb804c73173893472d",
+      "viewBox": [
+        8.297217636108398,
+        15.382308273315429,
+        97.27511352539062,
+        97.27511352539062
+      ],
+      "abbreviation": "wfccb",
+      "resourceKey": "bank_wfccb"
+    },
+    {
+      "key": "bank_921dfd7b670db7c7",
+      "name": "温州银行",
+      "sourceName": "温州银行",
+      "brand": "bank_921dfd7b670db7c7",
+      "historical": false,
+      "sourceFile": "wzbank.svg",
+      "sourceUrl": "https://www.tubiao.cn/library/icon-37c9e0eae6bee9498b11e564.svg",
+      "pageUrl": "https://www.tubiao.cn/svg/item-921dfd7b670db7c7",
+      "bankUrl": "http://www.wzcb.com.cn/",
+      "keywords": [
+        "WZBANK"
+      ],
+      "sha256": "6839d76bfaab1a66803ecaa14fae6dc7fcbcfa72578acc28bff3bf1dbf31f095",
+      "viewBox": [
+        17.560301513671874,
+        17.560030670166014,
+        92.87968688964844,
+        92.87968688964844
+      ],
+      "abbreviation": "wzbank",
+      "resourceKey": "bank_wzbank"
+    },
+    {
+      "key": "bank_edaba5ab68b23160",
+      "name": "乌海银行",
+      "sourceName": "乌海银行",
+      "brand": "bank_edaba5ab68b23160",
+      "historical": false,
+      "sourceFile": "whbank.svg",
+      "sourceUrl": "https://www.tubiao.cn/library/icon-44a1109b2aee166fbcd6d1f7.svg",
+      "pageUrl": "https://www.tubiao.cn/svg/item-edaba5ab68b23160",
+      "bankUrl": "https://www.wuhaicb.com/",
+      "keywords": [
+        "WHBANK"
+      ],
+      "sha256": "39d0e2cde2efb0c4f33509eb83bc3efc58a4b5e0bc9c7e9754b0fea81780eb4d",
+      "viewBox": [
+        14.58512451171875,
+        14.3431201171875,
+        98.7357568359375,
+        98.7357568359375
+      ],
+      "abbreviation": "whbank",
+      "resourceKey": "bank_whbank"
+    },
+    {
+      "key": "bank_e50f71fea8011c7b",
+      "name": "乌鲁木齐市商业银行",
+      "sourceName": "乌鲁木齐市商业银行",
+      "brand": "bank_e50f71fea8011c7b",
+      "historical": false,
+      "sourceFile": "uccb.svg",
+      "sourceUrl": "https://www.tubiao.cn/library/icon-84de2804aa2163812f83f3d2.svg",
+      "pageUrl": "https://www.tubiao.cn/svg/item-e50f71fea8011c7b",
+      "bankUrl": "http://www.uccb.com.cn/",
+      "keywords": [
+        "UCCB"
+      ],
+      "sha256": "604f873626aa4403f37ee6e590c9634a683666a7f5e3b0ef4bbab32bbd78d273",
+      "viewBox": [
+        18.119303131103514,
+        18.238647842407225,
+        91.52034301757813,
+        91.52034301757813
+      ],
+      "abbreviation": "uccb",
+      "resourceKey": "bank_uccb"
+    },
+    {
+      "key": "bank_bb7a4441fa411c18",
+      "name": "西安银行",
+      "sourceName": "西安银行",
+      "brand": "bank_bb7a4441fa411c18",
+      "historical": false,
+      "sourceFile": "xabank.svg",
+      "sourceUrl": "https://www.tubiao.cn/library/icon-f86b688ab42cac59fc9130cb.svg",
+      "pageUrl": "https://www.tubiao.cn/svg/item-bb7a4441fa411c18",
+      "bankUrl": "https://www.xacbank.com/",
+      "keywords": [
+        "XABANK"
+      ],
+      "sha256": "b806617241d4566272753f415c8cb62f1a14d1101b417a620779461bf5324fe1",
+      "viewBox": [
+        16.877499084472657,
+        16.48,
+        95.04,
+        95.04
+      ],
+      "abbreviation": "xabank",
+      "resourceKey": "bank_xabank"
+    },
+    {
+      "key": "bank_f5e054115d10192b",
+      "name": "西藏银行",
+      "sourceName": "西藏银行",
+      "brand": "bank_f5e054115d10192b",
+      "historical": false,
+      "sourceFile": "boxz.svg",
+      "sourceUrl": "https://www.tubiao.cn/library/icon-b71919fbc331ef6f97a8191c.svg",
+      "pageUrl": "https://www.tubiao.cn/svg/item-f5e054115d10192b",
+      "bankUrl": "https://www.xzbc.com.cn/",
+      "keywords": [
+        "BOXZ"
+      ],
+      "sha256": "10573ca44696cd25a92a717bf21e0b16f6d232c2c85b8f031e19a7016a7b7b8d",
+      "viewBox": [
+        16.463939666748047,
+        16.479995727539062,
+        95.04011535644531,
+        95.04011535644531
+      ],
+      "abbreviation": "boxz",
+      "resourceKey": "bank_boxz"
+    },
+    {
+      "key": "bank_72405463d7da6f93",
+      "name": "新疆汇和银行",
+      "sourceName": "新疆汇和银行",
+      "brand": "bank_72405463d7da6f93",
+      "historical": false,
+      "sourceFile": "xjhb.svg",
+      "sourceUrl": "https://www.tubiao.cn/library/icon-ecbd42133570a82a783ced96.svg",
+      "pageUrl": "https://www.tubiao.cn/svg/item-72405463d7da6f93",
+      "bankUrl": "http://www.bohuihe.com/",
+      "keywords": [
+        "XJHB"
+      ],
+      "sha256": "96496a683cdd5c5982a3ade6119bc414e778d327e3c6ef0d00b9d3e515ee1fa7",
+      "viewBox": [
+        18.1,
+        18.099996185302736,
+        91.8,
+        91.8
+      ],
+      "abbreviation": "xjhb",
+      "resourceKey": "bank_xjhb"
+    },
+    {
+      "key": "bank_2d04d78caaa3f7f4",
+      "name": "新疆银行",
+      "sourceName": "新疆银行",
+      "brand": "bank_2d04d78caaa3f7f4",
+      "historical": false,
+      "sourceFile": "xjb.svg",
+      "sourceUrl": "https://www.tubiao.cn/library/icon-f6a4c4b9f255ee86f7341b62.svg",
+      "pageUrl": "https://www.tubiao.cn/svg/item-2d04d78caaa3f7f4",
+      "bankUrl": "https://www.xjbank.com/",
+      "keywords": [
+        "XJB"
+      ],
+      "sha256": "2983fd0c75164a71ac7f81ae570c9f822eeaf79acdd48d43f304a313c7100570",
+      "viewBox": [
+        18.09999969482422,
+        18.099997787475587,
+        91.80000823974609,
+        91.80000823974609
+      ],
+      "abbreviation": "xjb",
+      "resourceKey": "bank_xjb"
+    },
+    {
+      "key": "bank_1ee9ed1c9bff6670",
+      "name": "邢台银行",
+      "sourceName": "邢台银行",
+      "brand": "bank_1ee9ed1c9bff6670",
+      "historical": false,
+      "sourceFile": "xtb.svg",
+      "sourceUrl": "https://www.tubiao.cn/library/icon-3c8f8bf335a09e6ba4ae6691.svg",
+      "pageUrl": "https://www.tubiao.cn/svg/item-1ee9ed1c9bff6670",
+      "bankUrl": "https://xtbank.com/",
+      "keywords": [
+        "XTB"
+      ],
+      "sha256": "df04c016595479e5ded51d24000652a8fdf652ab8558dcf793a9a87432bde903",
+      "viewBox": [
+        18.168200759887696,
+        18.064587860107423,
+        91.71822875976562,
+        91.71822875976562
+      ],
+      "abbreviation": "xtb",
+      "resourceKey": "bank_xtb"
+    },
+    {
+      "key": "bank_f5f4efccb216cf52",
+      "name": "兴业银行",
+      "sourceName": "兴业银行",
+      "brand": "bank_f5f4efccb216cf52",
+      "historical": false,
+      "sourceFile": "cib.svg",
+      "sourceUrl": "https://www.tubiao.cn/library/icon-47bdd0d8fb62a24c0171ab57.svg",
+      "pageUrl": "https://www.tubiao.cn/svg/item-f5f4efccb216cf52",
+      "bankUrl": "https://www.cib.com.cn/",
+      "keywords": [
+        "CIB"
+      ],
+      "sha256": "c425b87550139167f406e5178fa4085c9fdf86dac8c0b53473be28df364be553",
+      "viewBox": [
+        18.1,
+        18.1,
+        91.8,
+        91.8
+      ],
+      "abbreviation": "cib",
+      "resourceKey": "bank_cib"
+    },
+    {
+      "key": "bank_98ac51113563b082",
+      "name": "雅安市商业银行",
+      "sourceName": "雅安市商业银行",
+      "brand": "bank_98ac51113563b082",
+      "historical": false,
+      "sourceFile": "yaccb.svg",
+      "sourceUrl": "https://www.tubiao.cn/library/icon-c72e5e2c702a3a0b82a1f3db.svg",
+      "pageUrl": "https://www.tubiao.cn/svg/item-98ac51113563b082",
+      "bankUrl": "https://www.yaccb.cn/",
+      "keywords": [
+        "YACCB"
+      ],
+      "sha256": "fe17669e2c10ab8954b09d79d67138c90b897d6a5179f7320c7f82aecfa855c0",
+      "viewBox": [
+        19.158000183105468,
+        18.864087295532226,
+        90.23399505615234,
+        90.23399505615234
+      ],
+      "abbreviation": "yaccb",
+      "resourceKey": "bank_yaccb"
+    },
+    {
+      "key": "bank_d584c86cc198577a",
+      "name": "烟台银行",
+      "sourceName": "烟台银行",
+      "brand": "bank_d584c86cc198577a",
+      "historical": false,
+      "sourceFile": "ytb.svg",
+      "sourceUrl": "https://www.tubiao.cn/library/icon-6f7ef1a5bc3271cb9296ec2a.svg",
+      "pageUrl": "https://www.tubiao.cn/svg/item-d584c86cc198577a",
+      "bankUrl": "https://www.yantaibank.net/",
+      "keywords": [
+        "YTB"
+      ],
+      "sha256": "2b32a678177efad730067a89239bede23a4cc804ba948cdb472399c54f990e90",
+      "viewBox": [
+        18.099996185302736,
+        18.09999237060547,
+        91.8,
+        91.8
+      ],
+      "abbreviation": "ytb",
+      "resourceKey": "bank_ytb"
+    },
+    {
+      "key": "bank_aa5b942fbffb206a",
+      "name": "阳泉市商业银行",
+      "sourceName": "阳泉市商业银行",
+      "brand": "bank_aa5b942fbffb206a",
+      "historical": true,
+      "sourceFile": "yqccb.svg",
+      "sourceUrl": "https://www.tubiao.cn/library/icon-94bcf8f501ab3831c2488573.svg",
+      "pageUrl": "https://www.tubiao.cn/svg/item-aa5b942fbffb206a",
+      "bankUrl": "https://www.shxibank.com/",
+      "keywords": [
+        "YQCCB"
+      ],
+      "sha256": "f27abae80396edbe225c4cab1f79e2ad39b1e26c2a7d076159ee7665b5c94a2a",
+      "viewBox": [
+        14.612145233154298,
+        14.34364013671875,
+        98.72171630859376,
+        98.72171630859376
+      ],
+      "abbreviation": "yqccb",
+      "resourceKey": "bank_yqccb"
+    },
+    {
+      "key": "bank_3a5216e8b23e8f63",
+      "name": "宜宾市商业银行",
+      "sourceName": "宜宾市商业银行",
+      "brand": "bank_3a5216e8b23e8f63",
+      "historical": false,
+      "sourceFile": "ybccb.svg",
+      "sourceUrl": "https://www.tubiao.cn/library/icon-c0b9852b6d69b57c900f22dd.svg",
+      "pageUrl": "https://www.tubiao.cn/svg/item-3a5216e8b23e8f63",
+      "bankUrl": "http://www.ybccb.com/",
+      "keywords": [
+        "YBCCB"
+      ],
+      "sha256": "034b8fe571348296c932c0b0dddf207a3c079bdaeb23be8f179795534994c593",
+      "viewBox": [
+        18.103999938964844,
+        18.129505004882812,
+        91.69200164794921,
+        91.69200164794921
+      ],
+      "abbreviation": "ybccb",
+      "resourceKey": "bank_ybccb"
+    },
+    {
+      "key": "bank_aa72f268f6d514df",
+      "name": "营口沿海银行",
+      "sourceName": "营口沿海银行",
+      "brand": "bank_aa72f268f6d514df",
+      "historical": true,
+      "sourceFile": "ykyhb.svg",
+      "sourceUrl": "https://www.tubiao.cn/library/icon-904b77dbefb6b29a5adc7f61.svg",
+      "pageUrl": "https://www.tubiao.cn/svg/item-aa72f268f6d514df",
+      "bankUrl": "http://www.coastalbank.cn/",
+      "keywords": [
+        "YKYHB"
+      ],
+      "sha256": "1e1ed824bb127275d5a38a7f5e85a8b859de2466f5abbdd647b508d6ed81fd8e",
+      "viewBox": [
+        18.099211349487305,
+        18.098797454833985,
+        91.80229064941406,
+        91.80229064941406
+      ],
+      "abbreviation": "ykyhb",
+      "resourceKey": "bank_ykyhb"
+    },
+    {
+      "key": "bank_cad6f42eaa04d2c2",
+      "name": "营口银行",
+      "sourceName": "营口银行",
+      "brand": "bank_cad6f42eaa04d2c2",
+      "historical": false,
+      "sourceFile": "boyk.svg",
+      "sourceUrl": "https://www.tubiao.cn/library/icon-b6cb2340c52591df7fd63da0.svg",
+      "pageUrl": "https://www.tubiao.cn/svg/item-cad6f42eaa04d2c2",
+      "bankUrl": "http://www.bankofyk.com/",
+      "keywords": [
+        "BOYK"
+      ],
+      "sha256": "5bdea29e0b2aa5d26ef309e12d87923649081c9d36d6ecabb96c1ea8a57a0666",
+      "viewBox": [
+        12.700139617919922,
+        12.699987030029297,
+        102.60024719238281,
+        102.60024719238281
+      ],
+      "abbreviation": "boyk",
+      "resourceKey": "bank_boyk"
+    },
+    {
+      "key": "bank_3d44b968c4597ff4",
+      "name": "云南红塔银行",
+      "sourceName": "云南红塔银行",
+      "brand": "bank_3d44b968c4597ff4",
+      "historical": false,
+      "sourceFile": "ynhtbank.svg",
+      "sourceUrl": "https://www.tubiao.cn/library/icon-ff1ad596f85b5f5403ddbdc7.svg",
+      "pageUrl": "https://www.tubiao.cn/svg/item-3d44b968c4597ff4",
+      "bankUrl": "https://www.ynhtbank.com/",
+      "keywords": [
+        "YNHTBANK"
+      ],
+      "sha256": "fb328a90fbb4be6ca70933f1bbb823fe99832a3320e41e84b094a43850d64457",
+      "viewBox": [
+        20.25800018310547,
+        19.73300247192383,
+        87.53399505615235,
+        87.53399505615235
+      ],
+      "abbreviation": "ynhtbank",
+      "resourceKey": "bank_ynhtbank"
+    },
+    {
+      "key": "bank_a0dbc5a676189b16",
+      "name": "枣庄银行",
+      "sourceName": "枣庄银行",
+      "brand": "bank_a0dbc5a676189b16",
+      "historical": false,
+      "sourceFile": "zzb.svg",
+      "sourceUrl": "https://www.tubiao.cn/library/icon-c002b442c3385bd4158e24c0.svg",
+      "pageUrl": "https://www.tubiao.cn/svg/item-a0dbc5a676189b16",
+      "bankUrl": "https://www.zaozhuangbank.com/",
+      "keywords": [
+        "ZZB"
+      ],
+      "sha256": "0d6f574c2f4ab1cea832e4eaada71e3d325d3436f71db294d839b46f9fd33512",
+      "viewBox": [
+        11.94399917602539,
+        12.14399803161621,
+        104.11200164794921,
+        104.11200164794921
+      ],
+      "abbreviation": "zzb",
+      "resourceKey": "bank_zzb"
+    },
+    {
+      "key": "bank_a570d94fa548503b",
+      "name": "张家口银行",
+      "sourceName": "张家口银行",
+      "brand": "bank_a570d94fa548503b",
+      "historical": false,
+      "sourceFile": "zjkccb.svg",
+      "sourceUrl": "https://www.tubiao.cn/library/icon-2304d376535afcb62338d0f7.svg",
+      "pageUrl": "https://www.tubiao.cn/svg/item-a570d94fa548503b",
+      "bankUrl": "https://www.zjkccb.com/",
+      "keywords": [
+        "ZJKCCB"
+      ],
+      "sha256": "343e9f2b7801ef921836866fe1ce7a957aa2203515752f94c713ffd7131e6aa0",
+      "viewBox": [
+        18.098956451416015,
+        18.07992301940918,
+        91.80108764648438,
+        91.80108764648438
+      ],
+      "abbreviation": "zjkccb",
+      "resourceKey": "bank_zjkccb"
+    },
+    {
+      "key": "bank_082c95b801b821e4",
+      "name": "长安银行",
+      "sourceName": "长安银行",
+      "brand": "bank_082c95b801b821e4",
+      "historical": false,
+      "sourceFile": "cabank.svg",
+      "sourceUrl": "https://www.tubiao.cn/library/icon-99e5a4e5cd3c664135fa4243.svg",
+      "pageUrl": "https://www.tubiao.cn/svg/item-082c95b801b821e4",
+      "bankUrl": "https://www.ccabchina.com/",
+      "keywords": [
+        "CABANK"
+      ],
+      "sha256": "7929f680a9e5632b24897996cb027c8e007d889268ead7e683cd1de96cf26f4b",
+      "viewBox": [
+        25.12,
+        25.12,
+        77.76,
+        77.76
+      ],
+      "abbreviation": "cabank",
+      "resourceKey": "bank_cabank"
+    },
+    {
+      "key": "bank_d793aa2f3eb16795",
+      "name": "长城华西银行",
+      "sourceName": "长城华西银行",
+      "brand": "bank_d793aa2f3eb16795",
+      "historical": false,
+      "sourceFile": "gwb.svg",
+      "sourceUrl": "https://www.tubiao.cn/library/icon-12e88c03a732f1273769a0c9.svg",
+      "pageUrl": "https://www.tubiao.cn/svg/item-d793aa2f3eb16795",
+      "bankUrl": "https://www.gwbank.com.cn/",
+      "keywords": [
+        "GWB"
+      ],
+      "sha256": "0c1889a49eca6ffcabf37c5d11d3c5c99176105853a4b2a0853a98193e361be3",
+      "viewBox": [
+        18.076997985839842,
+        18.101995697021483,
+        91.74601318359375,
+        91.74601318359375
+      ],
+      "abbreviation": "gwb",
+      "resourceKey": "bank_gwb"
+    },
+    {
+      "key": "bank_88f2a650579da10e",
+      "name": "长沙银行",
+      "sourceName": "长沙银行",
+      "brand": "bank_88f2a650579da10e",
+      "historical": false,
+      "sourceFile": "bscb.svg",
+      "sourceUrl": "https://www.tubiao.cn/library/icon-df708bc32bcddbcee731c412.svg",
+      "pageUrl": "https://www.tubiao.cn/svg/item-88f2a650579da10e",
+      "bankUrl": "http://cscb.cn/",
+      "keywords": [
+        "BSCB"
+      ],
+      "sha256": "3b05be350cca87c9c6f438140da622b4ee78271a3bb3bcd00266231fbd151341",
+      "viewBox": [
+        11.6,
+        11.35,
+        105.3,
+        105.3
+      ],
+      "abbreviation": "bscb",
+      "resourceKey": "bank_bscb"
+    },
+    {
+      "key": "bank_fd61b4f4d046166c",
+      "name": "长治银行",
+      "sourceName": "长治银行",
+      "brand": "bank_fd61b4f4d046166c",
+      "historical": true,
+      "sourceFile": "czb.svg",
+      "sourceUrl": "https://www.tubiao.cn/library/icon-d8b02af2d5df597f2c245b09.svg",
+      "pageUrl": "https://www.tubiao.cn/svg/item-fd61b4f4d046166c",
+      "bankUrl": "https://www.czccb.com/",
+      "keywords": [
+        "CZB"
+      ],
+      "sha256": "d2cb6e42213861b003be9a4332d31832b5eea83c1c0065eeb2cc599657798585",
+      "viewBox": [
+        18.099976806640626,
+        18.09967353820801,
+        91.80021423339844,
+        91.80021423339844
+      ],
+      "abbreviation": "czb",
+      "resourceKey": "bank_czb"
+    },
+    {
+      "key": "cmb",
+      "name": "招商银行",
+      "sourceName": "招商银行",
+      "brand": "cmb",
+      "historical": false,
+      "sourceFile": "cmb.svg",
+      "sourceUrl": "https://www.tubiao.cn/library/icon-cb701fe160347ba8ea58c2c6.svg",
+      "pageUrl": "https://www.tubiao.cn/svg/item-88f6a761f76e3520",
+      "bankUrl": "https://www.cmbchina.com/",
+      "keywords": [
+        "CMB"
+      ],
+      "sha256": "7d61f1fc9ecf6e35cab4d2a187887f527aa06ee8d37a4eeefc0dfd5a90b04ded",
+      "viewBox": [
+        18.09999969482422,
+        18.099974899291993,
+        91.80000823974609,
+        91.80000823974609
+      ],
+      "abbreviation": "cmb",
+      "resourceKey": "bank_cmb"
+    },
+    {
+      "key": "bank_4e5bd3187e7c4e80",
+      "name": "浙江稠州商业银行",
+      "sourceName": "浙江稠州商业银行",
+      "brand": "bank_4e5bd3187e7c4e80",
+      "historical": false,
+      "sourceFile": "czcb.svg",
+      "sourceUrl": "https://www.tubiao.cn/library/icon-80a1a35d70beb93f4034b324.svg",
+      "pageUrl": "https://www.tubiao.cn/svg/item-4e5bd3187e7c4e80",
+      "bankUrl": "https://www.czcb.com.cn/",
+      "keywords": [
+        "CZCB"
+      ],
+      "sha256": "aefdeb62db921a0d599c2980c9c909b3afe94644bad3cc9b44eed585a7db50b4",
+      "viewBox": [
+        18.100001602172853,
+        18.09999969482422,
+        91.80000823974609,
+        91.80000823974609
+      ],
+      "abbreviation": "czcb",
+      "resourceKey": "bank_czcb"
+    },
+    {
+      "key": "bank_89f644cf2285e9c7",
+      "name": "浙江民泰商业银行",
+      "sourceName": "浙江民泰商业银行",
+      "brand": "bank_89f644cf2285e9c7",
+      "historical": false,
+      "sourceFile": "mtbank.svg",
+      "sourceUrl": "https://www.tubiao.cn/library/icon-4f511233517c07ac43e00c86.svg",
+      "pageUrl": "https://www.tubiao.cn/svg/item-89f644cf2285e9c7",
+      "bankUrl": "https://www.mintaibank.com/",
+      "keywords": [
+        "MTBANK"
+      ],
+      "sha256": "1170a26543264ac55d12c413846531c7e6da6d3776a1a70d1ac64a4acdd72847",
+      "viewBox": [
+        17.27,
+        17.02,
+        93.96,
+        93.96
+      ],
+      "abbreviation": "mtbank",
+      "resourceKey": "bank_mtbank"
+    },
+    {
+      "key": "bank_0b35a3df2f0658ed",
+      "name": "浙商银行",
+      "sourceName": "浙商银行",
+      "brand": "bank_0b35a3df2f0658ed",
+      "historical": false,
+      "sourceFile": "czbank.svg",
+      "sourceUrl": "https://www.tubiao.cn/library/icon-a52d4f690fd8854a188bbb27.svg",
+      "pageUrl": "https://www.tubiao.cn/svg/item-0b35a3df2f0658ed",
+      "bankUrl": "http://www.czbank.com/",
+      "keywords": [
+        "CZBANK"
+      ],
+      "sha256": "81adbe0e389f0c6ae909f8a5a27371ce824a133d3c6106c36aeb83a1aa445ea7",
+      "viewBox": [
+        18.09946029663086,
+        18.09895866394043,
+        91.80107940673828,
+        91.80107940673828
+      ],
+      "abbreviation": "czbank",
+      "resourceKey": "bank_czbank"
+    },
+    {
+      "key": "bank_e825183a11f81fd6",
+      "name": "郑州银行",
+      "sourceName": "郑州银行",
+      "brand": "bank_e825183a11f81fd6",
+      "historical": false,
+      "sourceFile": "zzbank.svg",
+      "sourceUrl": "https://www.tubiao.cn/library/icon-86a86de830cbe5d7b6416f69.svg",
+      "pageUrl": "https://www.tubiao.cn/svg/item-e825183a11f81fd6",
+      "bankUrl": "http://www.zzbank.cn/",
+      "keywords": [
+        "ZZBANK"
+      ],
+      "sha256": "80fcdb996ea532db396da63a3aaa60b3a87d444c10683b0ddbf814136107dccd",
+      "viewBox": [
+        18.09977600097656,
+        17.97044822692871,
+        91.80007415771485,
+        91.80007415771485
+      ],
+      "abbreviation": "zzbank",
+      "resourceKey": "bank_zzbank"
+    },
+    {
+      "key": "icbk",
+      "name": "工商银行",
+      "sourceName": "中国工商银行",
+      "brand": "icbc",
+      "historical": false,
+      "sourceFile": "icbc.svg",
+      "sourceUrl": "https://www.tubiao.cn/library/icon-c6b100cf4c351c1704565bca.svg",
+      "pageUrl": "https://www.tubiao.cn/svg/item-3fb063fe8e824ea5",
+      "bankUrl": "https://www.icbc.com.cn/",
+      "keywords": [
+        "ICBC"
+      ],
+      "sha256": "4a917733a26df3ae6c9ed95d96b24ab344e8d351560ef40cec9d93aca45daf7c",
+      "viewBox": [
+        18.1,
+        18.1,
+        91.8,
+        91.8
+      ],
+      "abbreviation": "icbc",
+      "resourceKey": "bank_icbc"
+    },
+    {
+      "key": "bank_2c94c71d0e1e5cf4",
+      "name": "中国光大银行",
+      "sourceName": "中国光大银行",
+      "brand": "bank_2c94c71d0e1e5cf4",
+      "historical": false,
+      "sourceFile": "ceb.svg",
+      "sourceUrl": "https://www.tubiao.cn/library/icon-6df8c595c5d5b3873e24e544.svg",
+      "pageUrl": "https://www.tubiao.cn/svg/item-2c94c71d0e1e5cf4",
+      "bankUrl": "https://www.cebbank.com/",
+      "keywords": [
+        "CEB"
+      ],
+      "sha256": "fac1668c4ddb7d7753cc2918d6b11c51a6cfd7be85c4a1cbfd4a2bfe3beba0ce",
+      "viewBox": [
+        16.48,
+        16.780888061523438,
+        95.04,
+        95.04
+      ],
+      "abbreviation": "ceb",
+      "resourceKey": "bank_ceb"
+    },
+    {
+      "key": "ccbc",
+      "name": "建设银行",
+      "sourceName": "中国建设银行",
+      "brand": "ccb",
+      "historical": false,
+      "sourceFile": "ccb.svg",
+      "sourceUrl": "https://www.tubiao.cn/library/icon-70c8364d4e9ec38a95ecff47.svg",
+      "pageUrl": "https://www.tubiao.cn/svg/item-01737cfc6b8559eb",
+      "bankUrl": "http://www.ccb.com/",
+      "keywords": [
+        "CCB"
+      ],
+      "sha256": "108bdf762becbe3afc38c0f8337dedb577db68889b83f4faa4142a7ef720dddb",
+      "viewBox": [
+        15.129636535644531,
+        15.380288848876953,
+        97.74074981689454,
+        97.74074981689454
+      ],
+      "abbreviation": "ccb",
+      "resourceKey": "bank_ccb"
+    },
+    {
+      "key": "bank_1aa887f9ea4c782f",
+      "name": "中国进出口银行",
+      "sourceName": "中国进出口银行",
+      "brand": "bank_1aa887f9ea4c782f",
+      "historical": false,
+      "sourceFile": "eibof.svg",
+      "sourceUrl": "https://www.tubiao.cn/library/icon-a9a460c881014422123ae39f.svg",
+      "pageUrl": "https://www.tubiao.cn/svg/item-1aa887f9ea4c782f",
+      "bankUrl": "http://www.eximbank.gov.cn/",
+      "keywords": [
+        "EIBOF"
+      ],
+      "sha256": "9373949b539c462aaaea3b02b2d25035fc233a6a6e10fb4b5b7c7eb44c5479d2",
+      "viewBox": [
+        15.4,
+        15.399994277954102,
+        97.2,
+        97.2
+      ],
+      "abbreviation": "eibof",
+      "resourceKey": "bank_eibof"
+    },
+    {
+      "key": "bank_dd14c4de90f711ad",
+      "name": "中国民生银行",
+      "sourceName": "中国民生银行",
+      "brand": "bank_dd14c4de90f711ad",
+      "historical": false,
+      "sourceFile": "cmbc.svg",
+      "sourceUrl": "https://www.tubiao.cn/library/icon-c9e57c09e8f32660f955f9c5.svg",
+      "pageUrl": "https://www.tubiao.cn/svg/item-dd14c4de90f711ad",
+      "bankUrl": "http://www.cmbc.com.cn/",
+      "keywords": [
+        "CMBC"
+      ],
+      "sha256": "ad0bb2bd9c084b7f7b410c276b86eb351002777e4e835a65ccf0619a101cbcc8",
+      "viewBox": [
+        18.107999877929686,
+        18.149000244140623,
+        91.58400329589844,
+        91.58400329589844
+      ],
+      "abbreviation": "cmbc",
+      "resourceKey": "bank_cmbc"
+    },
+    {
+      "key": "bank_af0436d4af867817",
+      "name": "中国农业发展银行",
+      "sourceName": "中国农业发展银行",
+      "brand": "bank_af0436d4af867817",
+      "historical": false,
+      "sourceFile": "adbc.svg",
+      "sourceUrl": "https://www.tubiao.cn/library/icon-b2aee04f45b8af7bb1aa33ac.svg",
+      "pageUrl": "https://www.tubiao.cn/svg/item-af0436d4af867817",
+      "bankUrl": "https://www.adbc.com.cn/",
+      "keywords": [
+        "ADBC"
+      ],
+      "sha256": "b5b5e895cf069af32a1e9af24391699ce9a44477e55bc13ded111a2c304fc864",
+      "viewBox": [
+        16.48,
+        16.327000122070313,
+        95.04,
+        95.04
+      ],
+      "abbreviation": "adbc",
+      "resourceKey": "bank_adbc"
+    },
+    {
+      "key": "aboc",
+      "name": "农业银行",
+      "sourceName": "中国农业银行",
+      "brand": "abc",
+      "historical": false,
+      "sourceFile": "abc.svg",
+      "sourceUrl": "https://www.tubiao.cn/library/icon-b347c1f43bb463f97d131a3f.svg",
+      "pageUrl": "https://www.tubiao.cn/svg/item-0c6bd3ee646141a5",
+      "bankUrl": "https://www.abchina.com/",
+      "keywords": [
+        "ABC"
+      ],
+      "sha256": "8d63fd34eef76c7b2cebfd34a280f92d0c666e5efb86befa8fc0e0d41bdc6012",
+      "viewBox": [
+        18.27842056274414,
+        18.029242630004884,
+        91.44251037597657,
+        91.44251037597657
+      ],
+      "abbreviation": "abc",
+      "resourceKey": "bank_abc"
+    },
+    {
+      "key": "bank_c278abc49ac503c0",
+      "name": "中国人民银行",
+      "sourceName": "中国人民银行",
+      "brand": "bank_c278abc49ac503c0",
+      "historical": false,
+      "sourceFile": "pboc.svg",
+      "sourceUrl": "https://www.tubiao.cn/library/icon-2acb17c7f45498de8d5a70cb.svg",
+      "pageUrl": "https://www.tubiao.cn/svg/item-c278abc49ac503c0",
+      "bankUrl": "http://www.pbc.gov.cn/",
+      "keywords": [
+        "PBOC"
+      ],
+      "sha256": "c89ecb545bfdd6161532b78b746386cc41389a6dbeef0ea4e63ebac665bbeeda",
+      "viewBox": [
+        17.800559692382812,
+        17.801112823486328,
+        92.39825500488281,
+        92.39825500488281
+      ],
+      "abbreviation": "pboc",
+      "resourceKey": "bank_pboc"
+    },
+    {
+      "key": "bkch",
+      "name": "中国银行",
+      "sourceName": "中国银行",
+      "brand": "boc",
+      "historical": false,
+      "sourceFile": "boc.svg",
+      "sourceUrl": "https://www.tubiao.cn/library/icon-86d20983d1a85c1d40e4413b.svg",
+      "pageUrl": "https://www.tubiao.cn/svg/item-81cc6f0374a6b2fb",
+      "bankUrl": "https://www.boc.cn/",
+      "keywords": [
+        "BOC"
+      ],
+      "sha256": "c3dfa9f8dee6feb28a0c3f8c95f38078e93210a09fbac790391d51923c97f0c7",
+      "viewBox": [
+        18.1,
+        18.1,
+        91.8,
+        91.8
+      ],
+      "abbreviation": "boc",
+      "resourceKey": "bank_boc"
+    },
+    {
+      "key": "bank_697f11d169df03a4",
+      "name": "中国邮政储蓄银行",
+      "sourceName": "中国邮政储蓄银行",
+      "brand": "bank_697f11d169df03a4",
+      "historical": false,
+      "sourceFile": "psbc.svg",
+      "sourceUrl": "https://www.tubiao.cn/library/icon-10517e483a4ddb14f468d9f4.svg",
+      "pageUrl": "https://www.tubiao.cn/svg/item-697f11d169df03a4",
+      "bankUrl": "https://www.psbc.com/",
+      "keywords": [
+        "PSBC"
+      ],
+      "sha256": "8a2a7838af8b641ed4a2fc62164bed58026b74f65314bd350e8143f7f3356da6",
+      "viewBox": [
+        18.1,
+        18.1,
+        91.8,
+        91.8
+      ],
+      "abbreviation": "psbc",
+      "resourceKey": "bank_psbc"
+    },
+    {
+      "key": "bank_0b4239b04615dee8",
+      "name": "中信银行",
+      "sourceName": "中信银行",
+      "brand": "bank_0b4239b04615dee8",
+      "historical": false,
+      "sourceFile": "citic.svg",
+      "sourceUrl": "https://www.tubiao.cn/library/icon-0177554706fc1704c7776a5b.svg",
+      "pageUrl": "https://www.tubiao.cn/svg/item-0b4239b04615dee8",
+      "bankUrl": "https://www.citicbank.com/",
+      "keywords": [
+        "CITIC"
+      ],
+      "sha256": "339df4b5ddc04f77a070239caa93bfe7fc6dd852716a84f3fb4b85851a8418d4",
+      "viewBox": [
+        18.1,
+        18.1,
+        91.8,
+        91.8
+      ],
+      "abbreviation": "citic",
+      "resourceKey": "bank_citic"
+    },
+    {
+      "key": "bank_2e3421d25611d8ed",
+      "name": "中原银行",
+      "sourceName": "中原银行",
+      "brand": "bank_2e3421d25611d8ed",
+      "historical": false,
+      "sourceFile": "zybank.svg",
+      "sourceUrl": "https://www.tubiao.cn/library/icon-f7e4f7a95d2dcf4c88c625fe.svg",
+      "pageUrl": "https://www.tubiao.cn/svg/item-2e3421d25611d8ed",
+      "bankUrl": "https://www.zybank.com.cn/",
+      "keywords": [
+        "ZYBANK"
+      ],
+      "sha256": "ab67e1d4d0054493dd4ea0ba6e01f0db4387bdfdee6cd8eb986743de804bfadb",
+      "viewBox": [
+        16.48003936767578,
+        16.897531280517576,
+        95.03893707275391,
+        95.03893707275391
+      ],
+      "abbreviation": "zybank",
+      "resourceKey": "bank_zybank"
+    },
+    {
+      "key": "bank_fcb70013d0f16434",
+      "name": "珠海华润银行",
+      "sourceName": "珠海华润银行",
+      "brand": "bank_fcb70013d0f16434",
+      "historical": false,
+      "sourceFile": "rboz.svg",
+      "sourceUrl": "https://www.tubiao.cn/library/icon-46d41602212a6ebb01cb4cba.svg",
+      "pageUrl": "https://www.tubiao.cn/svg/item-fcb70013d0f16434",
+      "bankUrl": "https://www.crbank.com.cn/",
+      "keywords": [
+        "RBOZ"
+      ],
+      "sha256": "de7e27480b113872d01af1ffb92a5540fa84512125e3727e48e903fe021bac09",
+      "viewBox": [
+        20.8,
+        20.8,
+        86.4,
+        86.4
+      ],
+      "abbreviation": "rboz",
+      "resourceKey": "bank_rboz"
+    },
+    {
+      "key": "bank_6f4201bb58206d21",
+      "name": "自贡银行",
+      "sourceName": "自贡银行",
+      "brand": "bank_6f4201bb58206d21",
+      "historical": false,
+      "sourceFile": "zgbank.svg",
+      "sourceUrl": "https://www.tubiao.cn/library/icon-1990a2e003be24fde515d624.svg",
+      "pageUrl": "https://www.tubiao.cn/svg/item-6f4201bb58206d21",
+      "bankUrl": "https://www.zgbank.com.cn/",
+      "keywords": [
+        "ZGBANK"
+      ],
+      "sha256": "8bf1abd6314a5dcad8668f08b3b33db344a12ace48a190c9f767cfd4c4f78bfa",
+      "viewBox": [
+        18.159997024536132,
+        17.95999816894531,
+        91.5300082397461,
+        91.5300082397461
+      ],
+      "abbreviation": "zgbank",
+      "resourceKey": "bank_zgbank"
+    }
+  ]
+}

@@ -30,6 +30,9 @@ export struct AccountEditor {
   @State private opening: string = '0';
   @State private includeNet: boolean = true;
   @State private showStyles: boolean = false;
+  @State private styleQuery: string = '';
+  @State private styleVariant: string = 'monochrome';
+  @State private showHistoricalStyles: boolean = false;
   @State private busy: boolean = false;
   @State private conflict: boolean = false;
   @State private error: string = '';
@@ -54,6 +57,17 @@ export struct AccountEditor {
     return host === undefined ? '#E5000000' : '#' + (host.resourceManager.getColorSync($r('app.color.xq_font_primary').id) >>> 0).toString(16).padStart(8, '0');
   }
   private style(): AccountStyle | undefined { return ACCOUNT_STYLES.find((item: AccountStyle) => item.key === this.styleKey); }
+  private visibleStyles(): AccountStyle[] {
+    const query = this.styleQuery.trim().toLowerCase();
+    return ACCOUNT_STYLES.filter((style: AccountStyle) =>
+      (style.variant || 'monochrome') === this.styleVariant &&
+      (this.showHistoricalStyles || style.historical !== true) &&
+      (!query || (style.name + ' ' + style.brand + ' ' + style.key + ' ' + (style.searchText || '')).toLowerCase().includes(query)));
+  }
+  private openStyleSheet(): void {
+    this.styleQuery = ''; this.styleVariant = this.style()?.variant || 'monochrome';
+    this.showHistoricalStyles = this.style()?.historical === true; this.showStyles = true;
+  }
   private sheetOptions(): SheetOptions {
     const options: SheetOptions = { height: 440, showClose: true };
     if (this.sheetMaterial !== undefined) { options.systemMaterial = this.sheetMaterial; }
@@ -105,17 +119,38 @@ export struct AccountEditor {
   @Builder
   private styleSheet() {
     Column({ space: 16 }) {
-      Text('账户图标').fontSize('20fp').fontWeight(FontWeight.Bold).width('100%')
+      Text('账户图标').fontSize('20fp').fontWeight(FontWeight.Bold).width('100%').padding({ right: 48 })
+      Search({ value: this.styleQuery, placeholder: '搜索银行或账户名称' }).height(40)
+        .textFont({ size: '14fp' }).placeholderFont({ size: '14fp' })
+        .backgroundColor($r('app.color.xq_app_surface_keyboard'))
+        .onChange((value: string) => { this.styleQuery = value; })
+      Row({ space: 8 }) {
+        ForEach(['monochrome', 'color'], (variant: string) => {
+          Button(variant === 'color' ? '彩色原标' : '单色白标', { type: ButtonType.Capsule }).fontSize('12fp').height(32)
+            .backgroundColor(this.styleVariant === variant ? $r('app.color.xq_brand') : $r('app.color.xq_background_secondary'))
+            .fontColor(this.styleVariant === variant ? $r('app.color.xq_font_on_primary') : $r('app.color.xq_font_secondary'))
+            .onClick(() => { this.styleVariant = variant; })
+        }, (variant: string) => variant)
+        Blank()
+        Button('历史标识', { type: ButtonType.Capsule }).fontSize('12fp').height(32)
+          .backgroundColor(this.showHistoricalStyles ? $r('app.color.xq_comp_emphasize_tertiary') : Color.Transparent)
+          .fontColor($r('app.color.xq_font_emphasize'))
+          .accessibilityDescription(this.showHistoricalStyles ? '已显示历史标识，点击隐藏' : '点击包含历史名称的银行标识')
+          .onClick(() => { this.showHistoricalStyles = !this.showHistoricalStyles; })
+      }.width('100%')
       Scroll() {
+        Column() {
+        if (this.visibleStyles().length === 0) { Text('没有匹配的账户图标').fontSize('14fp').fontColor($r('app.color.xq_font_secondary')).padding(24) }
         Flex({ wrap: FlexWrap.Wrap }) {
-          ForEach(ACCOUNT_STYLES, (style: AccountStyle) => {
+          ForEach(this.visibleStyles(), (style: AccountStyle) => {
             Column({ space: 8 }) {
-              AccountAvatar({ iconKey: style.key, brandColor: style.color })
-              Text(style.name).fontSize('12fp').maxLines(1)
+              AccountAvatar({ iconKey: style.key, brandColor: style.color, iconVariant: style.variant || 'monochrome' })
+              Text(style.name + (style.historical ? '（历史）' : '')).fontSize('12fp').maxLines(2).textAlign(TextAlign.Center)
                 .fontColor(this.styleKey === style.key ? $r('app.color.xq_font_emphasize') : $r('app.color.xq_font_secondary'))
             }.width('25%').height(92).id('account-style-' + style.key)
               .onClick(() => { this.styleKey = style.key; this.showStyles = false; })
           }, (style: AccountStyle) => style.key)
+        }.width('100%')
         }.width('100%')
       }.layoutWeight(1).width('100%').scrollBar(BarState.Off)
     }.padding(24).width('100%').height('100%')
@@ -133,10 +168,11 @@ export struct AccountEditor {
         Scroll(this.scroller) {
           Column({ space: 16 }) {
             Column({ space: 16 }) {
-              AccountAvatar({ iconKey: this.styleKey, brandColor: this.style()?.color || this.original?.brandColor || '#5378B8', diameter: 64 })
+              AccountAvatar({ iconKey: this.styleKey, brandColor: this.style()?.color || this.original?.brandColor || '#5378B8',
+                iconVariant: this.style()?.variant || this.original?.iconVariant || 'monochrome', diameter: 64 })
               Button('选择品牌图标', { type: ButtonType.Capsule }).fontSize('12fp')
                 .fontColor($r('app.color.xq_font_emphasize')).backgroundColor(Color.Transparent)
-                .id('account-choose-style').onClick(() => { this.showStyles = true; })
+                .id('account-choose-style').onClick(() => { this.openStyleSheet(); })
               TextInput({ text: this.name, placeholder: '账户名称，如：微信零钱' }).fontSize('16fp').height(48)
                 .backgroundColor($r('app.color.xq_app_surface_keyboard')).borderRadius(12).maxLength(40)
                 .id('account-name').onChange((value: string) => { this.name = value; })

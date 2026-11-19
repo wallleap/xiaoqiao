@@ -1,0 +1,178 @@
+{
+  "retrievedAt": "2026-11-19",
+  "tools": [
+    {
+      "key": "alipay",
+      "name": "支付宝",
+      "sourceName": "支付宝",
+      "brand": "alipay",
+      "color": "#1677FF",
+      "sourceUrl": "https://www.tubiao.cn/library/icon-00e274f25c497e9270a82565.svg",
+      "pageUrl": "https://www.tubiao.cn/svg/item-648ae4a58bf4a996",
+      "sourceFile": "alipay.svg",
+      "sha256": "defcb4de69c2698d99d3b70b4dbd83d1d7e2f2022970096818d9e992aee6a967",
+      "keywords": [
+        "支付宝",
+        "zhifubao",
+        "alipay",
+        "Alipay",
+        "支付",
+        "金融"
+      ],
+      "viewBox": [
+        -0.2400103759765635,
+        -0.24014293670654396,
+        60.48028015136719,
+        60.48028015136719
+      ],
+      "monochromeFile": "alipay_monochrome.svg",
+      "monochromeSha256": "2ccfdca3ae87d61fdb91a99f3d4296b541cd2e88fc006c66a7c52c3282dba8f3"
+    },
+    {
+      "key": "wechat_pay",
+      "name": "微信",
+      "sourceName": "微信支付",
+      "brand": "wechat",
+      "color": "#07B75A",
+      "sourceUrl": "https://www.tubiao.cn/library/icon-ee9f6271e74dc104406ff310.svg",
+      "pageUrl": "https://www.tubiao.cn/svg/item-50ca3bff18191a56",
+      "sourceFile": "wechat_pay.svg",
+      "sha256": "aaacb44a11d84bceb6bb6e383622a87e3e169dbf627b827c97dbb36e12f17ba5",
+      "keywords": [
+        "weixinpay"
+      ],
+      "viewBox": [
+        -1.8400000000000034,
+        -1.8400000000000034,
+        49.68000000000001,
+        49.68000000000001
+      ],
+      "monochromeFile": "wechat_pay_monochrome.svg",
+      "monochromeSha256": "ec04716e68700956108e63859b08db076d2682115331c4ee003da47e9ab02925"
+    },
+    {
+      "key": "yuebao",
+      "name": "余额宝",
+      "sourceName": "余额宝",
+      "brand": "yuebao",
+      "color": "#FF5B00",
+      "sourceUrl": "https://www.tubiao.cn/library/icon-d6a7811fd8a16091da0b78e3.svg",
+      "pageUrl": "https://www.tubiao.cn/svg/item-7ab16903acb6c2b2",
+      "sourceFile": "yuebao.svg",
+      "sha256": "5d4e1e8c0f37d100f2296c52e8b9a4e05c00eff2dc76284d7248ff1aa797fe7b",
+      "keywords": [
+        "yuebao"
+      ],
+      "viewBox": [
+        0.8111009216308567,
+        0.5645980453491184,
+        58.870798187255865,
+        58.870798187255865
+      ]
+    },
+    {
+      "key": "huabei",
+      "name": "花呗",
+      "sourceName": "花呗",
+      "brand": "huabei",
+      "color": "#328CDA",
+      "sourceUrl": "https://www.tubiao.cn/library/icon-b70d116c38fef355c4a228e4.svg",
+      "pageUrl": "https://www.tubiao.cn/svg/item-6b689e780607dcd7",
+      "sourceFile": "huabei.svg",
+      "sha256": "ce8895e44baccfb88fee03e093897b1375b465d3cc33f28821ad6077e6776b87",
+      "keywords": [
+        "huabei"
+      ],
+      "viewBox": [
+        2.142518138885496,
+        2.1162153244018533,
+        55.759968566894536,
+        55.759968566894536
+      ],
+      "monochromeFile": "huabei_monochrome.svg",
+      "monochromeSha256": "d1aff18b6119d05445c63579bbc48f33b56ee4927e1446476b3f7c34e67add70"
+    },
+    {
+      "key": "jiebei",
+      "name": "借呗",
+      "sourceName": "借呗",
+      "brand": "jiebei",
+      "color": "#239EB0",
+      "sourceUrl": "https://www.tubiao.cn/library/icon-78cacf4dfd585257b215f72a.svg",
+      "pageUrl": "https://www.tubiao.cn/svg/item-24105dde98ba8bb0",
+      "sourceFile": "jiebei.svg",
+      "sha256": "18c2689c353ff0e64365eab08236df7a58c4f753ecbebf3934fc457d1d82c1d9",
+      "keywords": [
+        "jiebei"
+      ],
+      "viewBox": [
+        0.4539312458038296,
+        0.26361385345458643,
+        59.49137466430665,
+        59.49137466430665
+      ],
+      "monochromeFile": "jiebei_monochrome.svg",
+      "monochromeSha256": "3f1cc67e9e48fd2976855d7fd7e9dd34b1637e344cf53fe7dcc966e63deb95b2"
+    },
+    {
+      "key": "zhima_credit",
+      "name": "芝麻信用",
+      "sourceName": "芝麻信用",
+      "brand": "zhima_credit",
+      "color": "#00A5A8",
+      "sourceUrl": "https://www.tubiao.cn/library/icon-4278bc8e550809a83b9f4581.svg",
+      "pageUrl": "https://www.tubiao.cn/svg/item-7b2e649de5885f00",
+      "sourceFile": "zhima_credit.svg",
+      "sha256": "c6ea3b7b5c14de1cf0fd3db58cc427dc2fe3fb90b63c750fc935fe8d0e55315f",
+      "keywords": [
+        "zhimaxinyong"
+      ],
+      "viewBox": [
+        1.7134551620483371,
+        1.2756104087829563,
+        57.45809371948243,
+        57.45809371948243
+      ]
+    },
+    {
+      "key": "unionpay",
+      "name": "银联",
+      "sourceName": "Union Pay",
+      "brand": "unionpay",
+      "color": "#146C9D",
+      "sourceUrl": "https://www.tubiao.cn/library/icon-d254185825cb9acf4bf322dc.svg",
+      "pageUrl": "https://www.tubiao.cn/svg/item-a589a62bed04689d",
+      "sourceFile": "unionpay.svg",
+      "sha256": "12ed0038f7754287506f5137884057239cd2c2cd62072f8da6a66b31921a0bc7",
+      "keywords": [
+        "Union Pay",
+        "UnionPay",
+        "银联",
+        "中国银联"
+      ],
+      "viewBox": [
+        -11.472246853113177,
+        -64.75433298707009,
+        319.11966430664063,
+        319.11966430664063
+      ]
+    }
+  ],
+  "missing": [
+    "零钱通",
+    "理财通",
+    "分付",
+    "微粒贷",
+    "微信支付分",
+    "网商贷",
+    "信用购",
+    "京东金融",
+    "京东白条",
+    "京东金条",
+    "云闪付",
+    "美团月付",
+    "抖音月付",
+    "翼支付",
+    "度小满"
+  ]
+}

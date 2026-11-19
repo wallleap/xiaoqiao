@@ -1,3 +1,5 @@
+import { BANK_ACCOUNT_STYLES } from './BankAccountStyles';
+import { FINANCE_ACCOUNT_STYLES } from './FinanceAccountStyles';
 import { Money } from '../../core/money/Money';
 import { currencyUnit } from '../../core/money/Currencies';
 
@@ -6,20 +8,16 @@ export interface AccountStyle {
   name: string;
   brand: string;
   color: string;
+  variant?: string;
+  historical?: boolean;
+  searchText?: string;
 }
 export const ACCOUNT_STYLES: AccountStyle[] = [
   { key: 'cash', name: '现金', brand: 'cash', color: '#D49A38' },
-  { key: 'wechat_pay', name: '微信', brand: 'wechat', color: '#07B75A' },
-  { key: 'alipay', name: '支付宝', brand: 'alipay', color: '#1677FF' },
+  ...FINANCE_ACCOUNT_STYLES,
   { key: 'bank_card', name: '银行卡', brand: 'bank', color: '#5378B8' },
-  { key: 'icbk', name: '工商银行', brand: 'icbc', color: '#C8282B' },
-  { key: 'bkch', name: '中国银行', brand: 'boc', color: '#A82433' },
-  { key: 'ccbc', name: '建设银行', brand: 'ccb', color: '#1665AE' },
-  { key: 'aboc', name: '农业银行', brand: 'abc', color: '#008779' },
-  { key: 'cmb', name: '招商银行', brand: 'cmb', color: '#C62335' },
   { key: 'credit_card', name: '信用卡', brand: 'credit', color: '#7358B5' },
-  { key: 'huabei', name: '花呗', brand: 'huabei', color: '#328CDA' },
-  { key: 'jiebei', name: '借呗', brand: 'jiebei', color: '#239EB0' }
+  ...BANK_ACCOUNT_STYLES
 ];
 
 export interface AccountCommand {
