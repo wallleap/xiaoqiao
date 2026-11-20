@@ -427,6 +427,250 @@
     {
       "name": "xq_nature_neutral_text",
       "value": "#687180"
+    },
+    {
+      "name": "xq_book_editor_panel",
+      "value": "#66FFFFFF"
+    },
+    {
+      "name": "xq_book_cover_butter_cover",
+      "value": "#FFF2B7"
+    },
+    {
+      "name": "xq_book_cover_butter_spine",
+      "value": "#F6D76F"
+    },
+    {
+      "name": "xq_book_cover_butter_accent",
+      "value": "#E8BA42"
+    },
+    {
+      "name": "xq_book_cover_butter_ink",
+      "value": "#A47B18"
+    },
+    {
+      "name": "xq_book_cover_butter_pages",
+      "value": "#FFFAE5"
+    },
+    {
+      "name": "xq_book_cover_apricot_cover",
+      "value": "#FFDAC3"
+    },
+    {
+      "name": "xq_book_cover_apricot_spine",
+      "value": "#F2B78F"
+    },
+    {
+      "name": "xq_book_cover_apricot_accent",
+      "value": "#E69360"
+    },
+    {
+      "name": "xq_book_cover_apricot_ink",
+      "value": "#B56C43"
+    },
+    {
+      "name": "xq_book_cover_apricot_pages",
+      "value": "#FFF3EA"
+    },
+    {
+      "name": "xq_book_cover_coral_cover",
+      "value": "#FFD2CD"
+    },
+    {
+      "name": "xq_book_cover_coral_spine",
+      "value": "#EEAAA4"
+    },
+    {
+      "name": "xq_book_cover_coral_accent",
+      "value": "#DF7D75"
+    },
+    {
+      "name": "xq_book_cover_coral_ink",
+      "value": "#AD5751"
+    },
+    {
+      "name": "xq_book_cover_coral_pages",
+      "value": "#FFF0EE"
+    },
+    {
+      "name": "xq_book_cover_rose_cover",
+      "value": "#F7D5E3"
+    },
+    {
+      "name": "xq_book_cover_rose_spine",
+      "value": "#E9ACC6"
+    },
+    {
+      "name": "xq_book_cover_rose_accent",
+      "value": "#D984AA"
+    },
+    {
+      "name": "xq_book_cover_rose_ink",
+      "value": "#A4577E"
+    },
+    {
+      "name": "xq_book_cover_rose_pages",
+      "value": "#FFF0F6"
+    },
+    {
+      "name": "xq_book_cover_lilac_cover",
+      "value": "#E7DDF8"
+    },
+    {
+      "name": "xq_book_cover_lilac_spine",
+      "value": "#C9B6EA"
+    },
+    {
+      "name": "xq_book_cover_lilac_accent",
+      "value": "#AD91D8"
+    },
+    {
+      "name": "xq_book_cover_lilac_ink",
+      "value": "#80639E"
+    },
+    {
+      "name": "xq_book_cover_lilac_pages",
+      "value": "#F7F3FF"
+    },
+    {
+      "name": "xq_book_cover_iris_cover",
+      "value": "#DDDEF8"
+    },
+    {
+      "name": "xq_book_cover_iris_spine",
+      "value": "#B6B9E8"
+    },
+    {
+      "name": "xq_book_cover_iris_accent",
+      "value": "#9096D5"
+    },
+    {
+      "name": "xq_book_cover_iris_ink",
+      "value": "#626AA0"
+    },
+    {
+      "name": "xq_book_cover_iris_pages",
+      "value": "#F2F3FF"
+    },
+    {
+      "name": "xq_book_cover_mist_cover",
+      "value": "#D8EAF9"
+    },
+    {
+      "name": "xq_book_cover_mist_spine",
+      "value": "#ACCEE9"
+    },
+    {
+      "name": "xq_book_cover_mist_accent",
+      "value": "#7FB1D6"
+    },
+    {
+      "name": "xq_book_cover_mist_ink",
+      "value": "#4F83AC"
+    },
+    {
+      "name": "xq_book_cover_mist_pages",
+      "value": "#F1F9FF"
+    },
+    {
+      "name": "xq_book_cover_lagoon_cover",
+      "value": "#D2EEEF"
+    },
+    {
+      "name": "xq_book_cover_lagoon_spine",
+      "value": "#A0D6D9"
+    },
+    {
+      "name": "xq_book_cover_lagoon_accent",
+      "value": "#70BABE"
+    },
+    {
+      "name": "xq_book_cover_lagoon_ink",
+      "value": "#438B90"
+    },
+    {
+      "name": "xq_book_cover_lagoon_pages",
+      "value": "#EEFCFC"
+    },
+    {
+      "name": "xq_book_cover_mint_cover",
+      "value": "#D9F1E6"
+    },
+    {
+      "name": "xq_book_cover_mint_spine",
+      "value": "#ACDBC8"
+    },
+    {
+      "name": "xq_book_cover_mint_accent",
+      "value": "#7DBFA5"
+    },
+    {
+      "name": "xq_book_cover_mint_ink",
+      "value": "#4E9379"
+    },
+    {
+      "name": "xq_book_cover_mint_pages",
+      "value": "#F1FDF7"
+    },
+    {
+      "name": "xq_book_cover_sage_cover",
+      "value": "#E4ECCD"
+    },
+    {
+      "name": "xq_book_cover_sage_spine",
+      "value": "#C3D29E"
+    },
+    {
+      "name": "xq_book_cover_sage_accent",
+      "value": "#A1B777"
+    },
+    {
+      "name": "xq_book_cover_sage_ink",
+      "value": "#738B4D"
+    },
+    {
+      "name": "xq_book_cover_sage_pages",
+      "value": "#F7FAED"
+    },
+    {
+      "name": "xq_book_cover_oat_cover",
+      "value": "#EEE2D2"
+    },
+    {
+      "name": "xq_book_cover_oat_spine",
+      "value": "#D7C3A9"
+    },
+    {
+      "name": "xq_book_cover_oat_accent",
+      "value": "#BDA17C"
+    },
+    {
+      "name": "xq_book_cover_oat_ink",
+      "value": "#8F7353"
+    },
+    {
+      "name": "xq_book_cover_oat_pages",
+      "value": "#FAF6EF"
+    },
+    {
+      "name": "xq_book_cover_graphite_cover",
+      "value": "#E1E6EB"
+    },
+    {
+      "name": "xq_book_cover_graphite_spine",
+      "value": "#BCC6D0"
+    },
+    {
+      "name": "xq_book_cover_graphite_accent",
+      "value": "#98A8B8"
+    },
+    {
+      "name": "xq_book_cover_graphite_ink",
+      "value": "#667B8F"
+    },
+    {
+      "name": "xq_book_cover_graphite_pages",
+      "value": "#F5F7FA"
     }
   ]
 }

@@ -35,7 +35,7 @@ import { UpdateExpense } from '../../domain/services/UpdateExpense';
 import { EntryDetail } from '../../domain/model/EntryDetail';
 import { validateLedgerLocation } from '../../domain/model/LedgerLocation';
 import { MonthlyBudget, DEFAULT_MONTHLY_BUDGET_MINOR } from '../../domain/model/MonthlyBudget';
-import { LedgerBook, ValidatedLedgerBook } from '../../domain/model/LedgerBook';
+import { BookAppearance, LedgerBook, ValidatedLedgerBook } from '../../domain/model/LedgerBook';
 import { BudgetNatureLine, SpendingNatureCommand, SpendingNatureProfile, ValidatedSpendingNature, isCustomNatureColor } from '../../domain/model/SpendingNature';
 import { CategoryCommand, CategoryOrderItem, CategoryProfile, ValidatedCategory } from '../../domain/model/CategoryProfile';
 import { TagCommand, TagProfile, ValidatedTag } from '../../domain/model/TagProfile';
@@ -156,10 +156,10 @@ export class LedgerWorkspace {
     return this.session.read(async (db: relationalStore.RdbStore): Promise<LedgerBook[]> => {
       this.activeBookId = await this.activeBookFromMeta(db);
       const values: LedgerBook[] = [];
-      const rows = await db.querySql('SELECT id,name,revision,archived_at_ms FROM books WHERE deleted_at_ms IS NULL ORDER BY archived_at_ms IS NOT NULL,sort_order,created_at_ms,id');
+      const rows = await db.querySql("SELECT b.id,b.name,b.revision,b.archived_at_ms,b.cover_palette,b.cover_icon,COALESCE(c.entry_count,'0') FROM books b LEFT JOIN (SELECT book_id,CAST(COUNT(*) AS TEXT) AS entry_count FROM v_posted_transactions WHERE kind IN ('expense','income','transfer') GROUP BY book_id) c ON c.book_id=b.id WHERE b.deleted_at_ms IS NULL ORDER BY b.archived_at_ms IS NOT NULL,b.sort_order,b.created_at_ms,b.id");
       try {
         while (rows.goToNextRow()) {
-          values.push({ id: rows.getString(0), name: rows.getString(1), revision: rows.getLong(2), archived: !rows.isColumnNull(3) });
+          values.push({ id: rows.getString(0), name: rows.getString(1), revision: rows.getLong(2), archived: !rows.isColumnNull(3), coverPalette: rows.getString(4), coverIcon: rows.getString(5), entryCount: rows.getString(6) });
         }
       } finally { rows.close(); }
       return values;
@@ -177,8 +177,8 @@ export class LedgerWorkspace {
     });
   }
 
-  async createBook(name: string, id: string): Promise<void> {
-    const draft = new ValidatedLedgerBook({ id: id, name: name }).draft;
+  async createBook(name: string, id: string, appearance?: BookAppearance): Promise<void> {
+    const draft = new ValidatedLedgerBook({ id: id, name: name, coverPalette: appearance?.coverPalette, coverIcon: appearance?.coverIcon }).draft;
     await this.session.write(async (db: relationalStore.RdbStore): Promise<void> => {
       const duplicate = await db.querySql('SELECT id FROM books WHERE deleted_at_ms IS NULL AND name=? LIMIT 1', [draft.name]);
       try { if (duplicate.goToFirstRow()) { throw new Error('LEDGER_BOOK_NAME_EXISTS'); } } finally { duplicate.close(); }
@@ -187,7 +187,7 @@ export class LedgerWorkspace {
       try { if (order.goToFirstRow()) { sortOrder = order.getLong(0); } } finally { order.close(); }
       const now = Date.now();
       await db.insert('books', { id: draft.id, name: draft.name, base_currency_id: 'CNY', timezone: 'Asia/Shanghai',
-        sort_order: sortOrder, created_at_ms: now, updated_at_ms: now });
+        sort_order: sortOrder, created_at_ms: now, updated_at_ms: now, cover_palette: draft.coverPalette, cover_icon: draft.coverIcon });
       const source = await db.querySql('SELECT id FROM books WHERE id=? AND deleted_at_ms IS NULL', [DEFAULT_BOOK_ID]);
       let sourceBook: string;
       try { sourceBook = source.goToFirstRow() ? source.getString(0) : this.activeBookId; } finally { source.close(); }
@@ -211,13 +211,15 @@ export class LedgerWorkspace {
     });
   }
 
-  async updateBook(id: string, name: string, revision: number): Promise<void> {
-    const draft = new ValidatedLedgerBook({ id: id, name: name }).draft;
+  async updateBook(id: string, name: string, revision: number, appearance?: BookAppearance): Promise<void> {
+    const draft = new ValidatedLedgerBook({ id: id, name: name, coverPalette: appearance?.coverPalette, coverIcon: appearance?.coverIcon }).draft;
     if (!Number.isSafeInteger(revision) || revision < 1 || revision >= Number.MAX_SAFE_INTEGER) { throw new Error('INVALID_EXPECTED_REVISION'); }
     await this.session.write(async (db: relationalStore.RdbStore): Promise<void> => {
       const duplicate = await db.querySql('SELECT id FROM books WHERE id<>? AND deleted_at_ms IS NULL AND name=? LIMIT 1', [id, draft.name]);
       try { if (duplicate.goToFirstRow()) { throw new Error('LEDGER_BOOK_NAME_EXISTS'); } } finally { duplicate.close(); }
-      const changed = await db.update({ name: draft.name, updated_at_ms: Date.now(), revision: revision + 1 },
+      const values: relationalStore.ValuesBucket = { name: draft.name, updated_at_ms: Date.now(), revision: revision + 1 };
+      if (appearance !== undefined) { values['cover_palette'] = draft.coverPalette || 'butter'; values['cover_icon'] = draft.coverIcon || 'lucide_notebook_text1'; }
+      const changed = await db.update(values,
         new relationalStore.RdbPredicates('books').equalTo('id', id).equalTo('revision', revision).isNull('deleted_at_ms'));
       if (changed !== 1) { throw new Error('LEDGER_BOOK_CHANGED'); }
     });

@@ -1,3 +1,5 @@
+import { BookCoverBadge } from '../components/BookCoverBadge';
+import { BookCoverPicker } from '../components/BookCoverPicker';
 import { LedgerAttachmentDraft } from '../domain/model/LedgerAttachment';
 import { CategoryIconBadge } from '../components/CategoryIconBadge';
 import { AccountAvatar } from '../components/AccountAvatar';
@@ -81,12 +83,15 @@ struct Index {
   @State private keyword: string = '';
   @State private showSelection: boolean = false;
   @State private selectionKind: number = 0;
+  @State private bookManagement: boolean = false;
   @State private account: string = '';
   @State private pendingAccount: string = '';
   @State private selectedTagIds: string[] = [];
   @State private pendingTagIds: string[] = [];
   @State private books: LedgerBook[] = [];
   @State private bookName: string = '';
+  @State private bookPalette: string = 'butter';
+  @State private bookIcon: string = 'lucide_notebook_text1';
   @State private editingBook: LedgerBook | undefined = undefined;
   @State private bookEditing: boolean = false;
   @State private bookBusy: boolean = false;
@@ -186,6 +191,7 @@ struct Index {
       const name = AppStorage.get<string>('ledgerDatabaseName') || 'xiaoqiao.db';
       this.workspace = await LedgerWorkspace.open(context, name);
       this.ledger = await this.workspace.snapshot(this.selectedMonth);
+      this.books = await this.workspace.books();
       const availableTags = new Set(this.ledger.tags.map((tag: TagChoice) => tag.id));
       this.selectedTagIds = this.selectedTagIds.filter((id: string) => availableTags.has(id));
       this.ledgerVersion++;
@@ -200,11 +206,12 @@ struct Index {
       const code = (error as Error).message;
       this.upgradeRequired = code === 'LEDGER_UPGRADE_REQUIRED';
       if (code === 'BACKUP_RECOVERY_REQUIRED') { this.showRecoveryError(); }
-      else { this.loadError = this.upgradeRequired ? '升级本地账本后，可使用新的账户资料与记账功能' : '账本暂时无法读取，已有数据不会被覆盖。请重试'; }
+      else { this.loadError = this.upgradeRequired ? '升级本地账本后，可使用账本封面与最新记账功能' : '账本暂时无法读取，已有数据不会被覆盖。请重试'; }
     } finally { this.loading = false; }
   }
 
-  private async openBookSheet(): Promise<void> {
+  private async openBookSheet(management: boolean = false): Promise<void> {
+    this.bookManagement = management;
     if (this.preview) {
       this.books = [{ id: 'preview-book', name: '日常账本', revision: 1, archived: false }];
       this.selectionKind = 0; this.bookEditing = false; this.editingBook = undefined;
@@ -227,6 +234,7 @@ struct Index {
     this.bookEditing = true;
     this.editingBook = undefined;
     this.bookName = '';
+    this.bookPalette = 'butter'; this.bookIcon = 'lucide_notebook_text1';
     this.bookError = '';
   }
 
@@ -235,6 +243,7 @@ struct Index {
     this.bookEditing = true;
     this.editingBook = book;
     this.bookName = book.name;
+    this.bookPalette = book.coverPalette || 'butter'; this.bookIcon = book.coverIcon || 'lucide_notebook_text1';
     this.bookError = '';
   }
 
@@ -266,9 +275,9 @@ struct Index {
     this.bookError = '';
     try {
       if (this.editingBook === undefined) {
-        await workspace.createBook(name, util.generateRandomUUID());
+        await workspace.createBook(name, util.generateRandomUUID(), { coverPalette: this.bookPalette, coverIcon: this.bookIcon });
       } else {
-        await workspace.updateBook(this.editingBook.id, name, this.editingBook.revision);
+        await workspace.updateBook(this.editingBook.id, name, this.editingBook.revision, { coverPalette: this.bookPalette, coverIcon: this.bookIcon });
       }
       this.books = await workspace.books();
       await this.loadLedger();
@@ -337,7 +346,7 @@ struct Index {
   private confirmDatabaseUpgrade(): void {
     if (this.loading) { return; }
     this.getUIContext().getPromptAction().showDialog({ title: '升级本地账本？',
-      message: '先在本机备份，再升级账户类型、卡号尾号与备注等资料支持。原账目及余额会保留；升级失败会回滚，并保留升级前备份。',
+      message: '先在本机备份，再升级账本封面、账户资料等支持。原账目及余额会保留；升级失败会回滚，并保留升级前备份。',
       buttons: [{ text: '取消', color: $r('app.color.xq_font_primary') }, { text: '备份并升级', color: $r('app.color.xq_font_emphasize') }]
     }).then(async (result) => {
       if (result.index !== 1) { return; }
@@ -901,12 +910,12 @@ struct Index {
     Row({ space: 8 }) {
       Button({ type: ButtonType.Normal }) {
         Row({ space: 6 }) {
-          Image($r('app.media.lucide_notebook_text1')).width(22).height(22)
-            .fillColor(this.headerScrolled ? $r('app.color.xq_icon_on_primary') : $r('app.color.xq_icon_primary'))
+          BookCoverBadge({ paletteKey: this.books.find((book: LedgerBook) => book.id === this.ledger?.bookId)?.coverPalette || 'butter',
+            iconKey: this.books.find((book: LedgerBook) => book.id === this.ledger?.bookId)?.coverIcon || 'lucide_notebook_text1', current: true, coverWidth: 24 })
           Text(this.preview ? '日常账本' : this.ledger?.bookName || '日常账本').fontSize('24fp').fontWeight(FontWeight.Bold)
             .fontColor(this.headerScrolled ? $r('app.color.xq_font_on_primary') : $r('app.color.xq_font_primary'))
             .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
-            .constraintSize({ maxWidth: 'calc(100% - 28vp)' })
+            .constraintSize({ maxWidth: 'calc(100% - 30vp)' })
         }.width('100%').justifyContent(FlexAlign.Start)
       }.id('ledger-book-selector').backgroundColor(Color.Transparent).padding(0).height(48)
         .stateEffect(false).layoutWeight(1)
@@ -1601,7 +1610,7 @@ struct Index {
   }
 
   private selectionSheetOptions(): SheetOptions {
-    const bookHeight = this.bookEditing ? 520 : Math.min(620, 340 + Math.max(0, this.books.length - 1) * 68);
+    const bookHeight: number | SheetSize = this.bookEditing ? SheetSize.LARGE : Math.min(620, 340 + Math.max(0, this.books.length - 1) * (this.bookManagement ? 112 : 68));
     const options: SheetOptions = {
       height: this.selectionKind === 0 ? bookHeight : this.selectionKind === 2 ? 360 : 600, showClose: true,
       keyboardAvoidMode: this.selectionKind === 2 ? SheetKeyboardAvoidMode.TRANSLATE_AND_RESIZE : SheetKeyboardAvoidMode.TRANSLATE_AND_SCROLL
@@ -1615,46 +1624,62 @@ struct Index {
   }
 
   @Builder
+  private bookContextMenu(book: LedgerBook) {
+    Menu() {
+      MenuItem({ content: '编辑账本' }).enabled(!this.bookBusy && !this.preview && !this.bookEditing)
+        .id('ledger-book-edit-' + book.id).onClick(() => { this.beginEditBook(book); })
+      MenuItem({ content: book.archived ? '恢复使用' : '归档账本' }).enabled(!this.bookBusy && !this.preview && !this.bookEditing)
+        .id('ledger-book-archive-' + book.id).onClick(() => { this.archiveBook(book); })
+    }
+  }
+
+  @Builder
   private bookRow(book: LedgerBook) {
-    Column({ space: 8 }) {
-      Row({ space: 8 }) {
-        Text(book.name).fontSize('16fp').fontWeight(FontWeight.Medium).layoutWeight(1).maxLines(1)
-          .textOverflow({ overflow: TextOverflow.Ellipsis }).fontColor($r('app.color.xq_font_primary'))
-        if (!book.archived && this.ledger?.bookId === book.id) {
-          Text('当前').fontSize('12fp').fontColor($r('app.color.xq_font_emphasize'))
-        }
+    Column({ space: 12 }) {
+      Row({ space: 16 }) {
+      BookCoverBadge({ paletteKey: book.coverPalette || 'butter', iconKey: book.coverIcon || 'lucide_notebook_text1',
+        current: !book.archived && book.id === this.ledger?.bookId, coverWidth: 46 })
+      Column({ space: 6 }) {
+        Text(book.name).fontSize('16fp').fontWeight(FontWeight.Medium).maxLines(1)
+          .textOverflow({ overflow: TextOverflow.Ellipsis }).fontColor($r('app.color.xq_font_primary')).width('100%')
+        Text('共 ' + (book.entryCount || '0') + ' 笔交易').fontSize('12fp')
+          .fontColor($r('app.color.xq_font_secondary')).width('100%')
+      }.layoutWeight(1).alignItems(HorizontalAlign.Start)
+      if (!book.archived && this.ledger?.bookId === book.id) {
+        Image($r('app.media.lucide_check1')).width(22).height(22)
+          .fillColor($r('app.color.xq_font_emphasize')).accessibilityText('当前账本')
+      }
       }.width('100%')
-      Row({ space: 8 }) {
-        if (book.archived) {
-          Text('已归档').fontSize('12fp').fontColor($r('app.color.xq_font_secondary')).layoutWeight(1)
-        } else {
-          Text(this.ledger?.bookId === book.id ? '正在使用' : '点击切换').fontSize('12fp')
-            .fontColor($r('app.color.xq_font_secondary')).layoutWeight(1)
-        }
-        Button('编辑', { type: ButtonType.Capsule }).height(32).fontSize('12fp')
-          .fontColor($r('app.color.xq_font_emphasize')).backgroundColor($r('app.color.xq_app_surface_keyboard'))
-          .enabled(!this.bookBusy).id('ledger-book-edit-' + book.id)
-          .onClick(() => { this.beginEditBook(book); })
-        Button(book.archived ? '恢复使用' : '归档', { type: ButtonType.Capsule }).height(32).fontSize('12fp')
-          .fontColor(book.archived ? $r('app.color.xq_font_emphasize') : $r('app.color.xq_font_secondary'))
-          .backgroundColor($r('app.color.xq_app_surface_keyboard')).enabled(!this.bookBusy)
-          .id('ledger-book-archive-' + book.id).onClick(() => { this.archiveBook(book); })
-      }.width('100%')
-    }.width('100%').padding(16).borderRadius(16).backgroundColor($r('app.color.xq_app_surface_card'))
+      if (this.bookManagement) {
+        Row({ space: 8 }) {
+          Blank()
+          Button('编辑', { type: ButtonType.Capsule }).height(32).fontSize('12fp')
+            .fontColor($r('app.color.xq_font_emphasize')).backgroundColor($r('app.color.xq_app_surface_keyboard'))
+            .enabled(!this.bookBusy && !this.preview && !this.bookEditing).id('ledger-book-edit-button-' + book.id)
+            .onClick(() => { this.beginEditBook(book); })
+          Button(book.archived ? '恢复使用' : '归档', { type: ButtonType.Capsule }).height(32).fontSize('12fp')
+            .fontColor($r('app.color.xq_font_secondary')).backgroundColor($r('app.color.xq_app_surface_keyboard'))
+            .enabled(!this.bookBusy && !this.preview && !this.bookEditing).id('ledger-book-archive-button-' + book.id)
+            .onClick(() => { this.archiveBook(book); })
+        }.width('100%')
+      }
+    }.width('100%').padding(16).borderRadius(16).backgroundColor($r('app.color.xq_book_editor_panel'))
       .id('ledger-book-row-' + book.id)
       .onClick(() => { if (!book.archived && !this.bookEditing) { this.switchBook(book); } })
+      .bindContextMenu(() => { this.bookContextMenu(book); }, ResponseType.LongPress, {
+        preview: MenuPreviewMode.IMAGE, previewBorderRadius: 16, borderRadius: 20,
+        mask: true, systemMaterial: this.materialReady && !this.forceLegacyMaterials ? this.filterMaterials?.menu : undefined
+      })
   }
 
   @Builder
   private bookSheet() {
     Column({ space: 16 }) {
       Row({ space: 12 }) {
-        Text('选择账本').fontSize('20fp').fontWeight(FontWeight.Bold).layoutWeight(1)
-        Button('新建账本', { type: ButtonType.Capsule }).height(36).fontSize('14fp')
-          .fontColor($r('app.color.xq_font_emphasize')).backgroundColor($r('app.color.xq_app_surface_keyboard'))
-          .enabled(!this.bookBusy && !this.bookEditing).id('ledger-book-new')
-          .onClick(() => { this.beginCreateBook(); })
+        Text(this.bookManagement ? '账本管理' : '选择账本').fontSize('20fp').fontWeight(FontWeight.Bold).layoutWeight(1)
       }.width('100%').padding({ right: 40 })
+      Scroll() {
+        Column({ space: 16 }) {
       if (this.bookEditing) {
         Column({ space: 12 }) {
           Text(this.editingBook === undefined ? '新账本' : '编辑账本').fontSize('14fp')
@@ -1663,6 +1688,8 @@ struct Index {
             .maxLength(40).borderRadius(12).backgroundColor($r('app.color.xq_app_surface_keyboard'))
             .id('ledger-book-name').onChange((value: string) => { this.bookName = value; this.bookError = ''; })
             .onSubmit(() => { this.saveBook(); })
+          BookCoverPicker({ paletteKey: $bookPalette, iconKey: $bookIcon, disabled: this.bookBusy,
+            currentBook: this.editingBook !== undefined && this.editingBook.id === this.ledger?.bookId })
           Row({ space: 12 }) {
             Button('取消', { type: ButtonType.Capsule }).layoutWeight(1).height(40).fontSize('14fp')
               .fontColor($r('app.color.xq_font_primary')).backgroundColor($r('app.color.xq_app_surface_keyboard'))
@@ -1671,12 +1698,11 @@ struct Index {
               .fontColor(Color.White).backgroundColor($r('app.color.xq_brand')).enabled(!this.bookBusy)
               .id('ledger-book-save').onClick(() => { this.saveBook(); })
           }.width('100%')
-        }.padding(16).width('100%').borderRadius(16).backgroundColor($r('app.color.xq_app_surface_card'))
+        }.padding(16).width('100%').borderRadius(16).backgroundColor($r('app.color.xq_book_editor_panel'))
       }
       if (this.bookError.length > 0) {
         Text(this.bookError).fontSize('12fp').fontColor($r('app.color.xq_warning')).width('100%').id('ledger-book-error')
       }
-      Scroll() {
         Column({ space: 10 }) {
           ForEach(this.books.filter((book: LedgerBook) => !book.archived), (book: LedgerBook) => {
             this.bookRow(book)
@@ -1689,9 +1715,17 @@ struct Index {
             }, (book: LedgerBook) => book.id)
           }
         }.width('100%')
+        if (!this.bookEditing) {
+          Button({ type: ButtonType.Normal }) {
+            Row({ space: 8 }) {
+              Image($r('app.media.lucide_plus1')).width(20).height(20).fillColor($r('app.color.xq_font_emphasize'))
+              Text('创建新账本').fontSize('15fp').fontWeight(FontWeight.Medium).fontColor($r('app.color.xq_font_primary'))
+            }.justifyContent(FlexAlign.Center)
+          }.width('100%').height(48).borderRadius(14).backgroundColor($r('app.color.xq_book_editor_panel'))
+            .enabled(!this.bookBusy && !this.preview).id('ledger-book-new').onClick(() => { this.beginCreateBook(); })
+        }
+        }.width('100%')
       }.layoutWeight(1).width('100%').align(Alignment.Top).scrollBar(BarState.Off).edgeEffect(EdgeEffect.Spring)
-      Text('资金账户和余额在各账本间共用；账目与预算独立。').fontSize('12fp')
-        .fontColor($r('app.color.xq_font_secondary')).width('100%')
     }.padding(24).width('100%').height('100%').id('ledger-book-sheet')
   }
 
@@ -1864,7 +1898,7 @@ struct Index {
           onOpenDataExchange: () => { this.showDataExchange = true; },
           onOpenBackupRestore: () => { this.showBackupRestore = true; },
           onOpenHuaweiCloud: () => { this.showHuaweiCloud = true; },
-          onOpenBooks: () => { this.openBookSheet(); },
+          onOpenBooks: () => { this.openBookSheet(true); },
           onOpenAccounts: () => { this.selectedTab = 3; },
           onOpenBudget: () => { this.openBudget(); },
           onOpenStatistics: () => { this.selectedTab = 1; },
