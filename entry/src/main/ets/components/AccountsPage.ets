@@ -61,25 +61,27 @@ export struct AccountsPage {
             Text(this.error).fontSize('14fp').fontColor($r('app.color.xq_font_secondary')).padding(16)
             Button('重新读取').onClick(() => { this.onRetry(); }).id('accounts-retry')
           } else {
-            Column({ space: 16 }) {
-              Text('净资产 · CNY' + (this.overview?.accounts.some((item: AccountProfile) => item.currencyId !== 'CNY') ? ' · 参考汇率估值' : '')).fontSize('14fp').fontColor($r('app.color.xq_font_secondary')).width('100%')
-              Text(this.amount(this.overview?.netMinor ?? '0')).fontSize('36fp').fontFamily('XiaoQiaoDINBold')
-                .fontWeight(FontWeight.Bold).fontColor($r('app.color.xq_font_primary')).width('100%')
-                .maxLines(1).minFontSize('20fp').maxFontSize('36fp').id('accounts-net')
-              Row({ space: 24 }) {
-                this.total(true)
-                this.total(false)
-              }.width('100%')
-              if (BigInt(this.overview?.prepaidMinor || '0') > BigInt(0)) {
-                Text('含预付款资产 ¥' + this.amount(this.overview?.prepaidMinor || '0')).fontSize('12fp').fontColor($r('app.color.xq_font_secondary')).width('100%')
-              }
-              if ((this.overview?.valuationMissing?.length || 0) > 0) {
-                Text('外币汇率暂不可用，净资产待估值：' + this.overview?.valuationMissing?.join('、')).fontSize('12fp').fontColor($r('app.color.xq_font_secondary'))
-              }
-              if (this.overview?.accounts.some((item: AccountProfile) => item.archived && item.includeInNetAssets)) {
-                Text('含已归档账户余额').fontSize('12fp').fontColor($r('app.color.xq_font_tertiary')).width('100%')
-              }
-            }.padding(20).width('100%').borderRadius(20).backgroundColor($r('app.color.xq_app_surface_card'))
+            Stack({ alignContent: Alignment.TopEnd }) {
+              Column({ space: 16 }) {
+                Text('净资产 · CNY' + (this.overview?.accounts.some((item: AccountProfile) => !item.archived && item.includeInNetAssets && item.currencyId !== 'CNY' && item.balanceMinor !== '0') ? ' · 参考汇率估值' : '')).fontSize('14fp').fontColor($r('app.color.xq_font_secondary')).width('100%').padding({ right: 80 })
+                Text(this.amount(this.overview?.netMinor ?? '0')).fontSize('36fp').fontFamily('XiaoQiaoDINBold')
+                  .fontWeight(FontWeight.Bold).fontColor($r('app.color.xq_font_primary')).width('100%')
+                  .maxLines(1).minFontSize('20fp').maxFontSize('36fp').padding({ right: 80 }).id('accounts-net')
+                Row({ space: 24 }) {
+                  this.total(true)
+                  this.total(false)
+                }.width('100%')
+                if ((this.overview?.valuationMissing?.length || 0) > 0) {
+                  Text('外币汇率暂不可用，净资产待估值：' + this.overview?.valuationMissing?.join('、')).fontSize('12fp').fontColor($r('app.color.xq_font_secondary'))
+                }
+              }.padding(20).width('100%')
+              Image($r('app.media.cards')).width(72).height(72).objectFit(ImageFit.Contain)
+                .fillColor($r('app.color.xq_account_summary_cards')).rotate({ angle: -12 })
+                .margin({ top: 18, right: 20 }).hitTestBehavior(HitTestMode.None).accessibilityLevel('no')
+            }.width('100%').borderRadius(20).clip(true).backgroundColor($r('app.color.xq_app_surface_card'))
+              .radialGradient({ center: ['100%', '0%'], radius: 200,
+                colors: [[$r('app.color.xq_account_summary_glow_start'), 0],
+                  [$r('app.color.xq_account_summary_glow_middle'), 0.5], [$r('app.color.xq_app_surface_card'), 1]] })
             Row() {
               Text(this.showArchived ? '已归档账户' : '我的账户').fontSize('18fp').fontWeight(FontWeight.Medium)
                 .fontColor($r('app.color.xq_font_primary'))
@@ -95,6 +97,7 @@ export struct AccountsPage {
                   .fontColor($r('app.color.xq_font_secondary'))
               }.padding({ top: 28, bottom: 32 }).width('100%')
             }
+            Column({ space: 12 }) {
             ForEach(this.visible(), (account: AccountProfile) => {
               Row({ space: 12 }) {
                 AccountAvatar({ iconKey: account.iconKey, brandColor: account.brandColor, iconVariant: account.iconVariant })
@@ -114,18 +117,21 @@ export struct AccountsPage {
               }.padding(16).width('100%').borderRadius(16).backgroundColor($r('app.color.xq_app_surface_card'))
                 .id('account-row-' + account.id).onClick(() => { this.onEdit(account); })
             }, (account: AccountProfile) => account.id + ':' + account.revision + ':' + account.balanceMinor)
-            Button('添加账户', { type: ButtonType.Capsule }).fontSize('16fp').height(48).width('100%')
-              .fontColor(Color.White).backgroundColor($r('app.color.xq_brand')).id('accounts-create')
-              .enabled(!this.loading).onClick(() => { this.onCreate(); })
+            }.width('100%')
           }
         }.width('100%').padding({ left: 16, right: 16, top: 12, bottom: 128 })
       }.width('100%').height('100%').align(Alignment.Top).scrollBar(BarState.Off).clip(false)
         .edgeEffect(EdgeEffect.Spring, { alwaysEnabled: true })
     }.mode(NavigationMode.Stack).titleMode(HdsNavigationTitleMode.MINI).hideBackButton(true)
       .titleBar({ enableComponentSafeArea: true, avoidLayoutSafeArea: true,
-        content: { title: { mainTitle: '资产' }, divider: { showType: DividerShowType.OFF } },
-        style: { originalStyle: { contentStyle: { titleStyle: { mainTitleColor: $r('app.color.xq_font_primary') } } },
-          scrollEffectStyle: { contentStyle: { titleStyle: { mainTitleColor: $r('app.color.xq_font_primary') } } },
+        content: { title: { mainTitle: '资产' }, divider: { showType: DividerShowType.OFF },
+          menu: { maxCount: 1, value: [{ content: { icon: $r('app.media.lucide_plus1'), label: '添加账户',
+            componentId: 'accounts-create', isEnabled: !this.loading && this.error.length === 0,
+            action: () => { if (!this.loading && this.error.length === 0) { this.onCreate(); } } } }] } },
+        style: { originalStyle: { contentStyle: { titleStyle: { mainTitleColor: $r('app.color.xq_font_primary') },
+          menuStyle: { iconColor: $r('app.color.xq_icon_primary') } } },
+          scrollEffectStyle: { contentStyle: { titleStyle: { mainTitleColor: $r('app.color.xq_font_primary') },
+            menuStyle: { iconColor: $r('app.color.xq_icon_primary') } } },
           systemMaterialEffect: { materialType: hdsMaterial.MaterialType.IMMERSIVE, materialLevel: hdsMaterial.MaterialLevel.ADAPTIVE },
           scrollEffectOpts: { enableScrollEffect: true, scrollEffectType: ScrollEffectType.IMMERSIVE_GRADIENT_BLUR } } })
       .systemBarStyle({ statusBarContentColor: this.statusBarColor() }, { statusBarContentColor: this.statusBarColor() })

@@ -7,6 +7,7 @@ import { RECOVERY_SCHEMA_SHA256 } from './RecoverySchema';
 import { NATURE_COLOR_SCHEMA_SHA256 } from './NatureColorSchema';
 import { MULTICURRENCY_SCHEMA_SHA256 } from './MulticurrencySchema';
 import { PREPAID_SCHEMA_SHA256 } from './PrepaidSchema';
+import { ACCOUNT_DETAILS_SCHEMA_SHA256 } from './AccountDetailsSchema';
 import { RdbSession } from './RdbSession';
 
 /** Additive extension only: original transaction and movement rows are never rewritten. */
@@ -20,7 +21,7 @@ export class TransferMigration {
     const rows = await db.querySql('SELECT version,checksum FROM schema_migrations ORDER BY version');
     let version: number = 1;
     try {
-      if ((rows.rowCount < 1 || rows.rowCount > 8) || !rows.goToFirstRow() || rows.getLong(0) !== 1 || rows.getString(1) !== REVIEW_SCHEMA_SHA256) {
+      if ((rows.rowCount < 1 || rows.rowCount > 9) || !rows.goToFirstRow() || rows.getLong(0) !== 1 || rows.getString(1) !== REVIEW_SCHEMA_SHA256) {
         throw new Error('UNSUPPORTED_LEDGER_SCHEMA');
       }
       if (rows.rowCount >= 2) {
@@ -51,9 +52,13 @@ export class TransferMigration {
         if (!rows.goToNextRow() || rows.getLong(0) !== 7 || rows.getString(1) !== MULTICURRENCY_SCHEMA_SHA256) { throw new Error('UNSUPPORTED_LEDGER_SCHEMA'); }
         version = 7;
       }
-      if (rows.rowCount === 8) {
+      if (rows.rowCount >= 8) {
         if (!rows.goToNextRow() || rows.getLong(0) !== 8 || rows.getString(1) !== PREPAID_SCHEMA_SHA256) { throw new Error('UNSUPPORTED_LEDGER_SCHEMA'); }
         version = 8;
+      }
+      if (rows.rowCount >= 9) {
+        if (!rows.goToNextRow() || rows.getLong(0) !== 9 || rows.getString(1) !== ACCOUNT_DETAILS_SCHEMA_SHA256) { throw new Error('UNSUPPORTED_LEDGER_SCHEMA'); }
+        version = 9;
       }
     } finally { rows.close(); }
     const marker = await db.querySql("SELECT value FROM db_meta WHERE key='transfer_schema_checksum'");

@@ -225,6 +225,18 @@
       "value": "#FFFFFFFF"
     },
     {
+      "name": "xq_account_summary_glow_start",
+      "value": "#FFFFE3CB"
+    },
+    {
+      "name": "xq_account_summary_glow_middle",
+      "value": "#FFFFF4EA"
+    },
+    {
+      "name": "xq_account_summary_cards",
+      "value": "#80FFFFFF"
+    },
+    {
       "name": "xq_ledger_prepaid_entry_background",
       "value": "#FFF1F3F5"
     },

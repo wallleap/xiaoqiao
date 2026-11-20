@@ -198,7 +198,7 @@ struct Index {
       const code = (error as Error).message;
       this.upgradeRequired = code === 'LEDGER_UPGRADE_REQUIRED';
       if (code === 'BACKUP_RECOVERY_REQUIRED') { this.showRecoveryError(); }
-      else { this.loadError = this.upgradeRequired ? '升级本地账本后，可使用预付款与核销' : '账本暂时无法读取，已有数据不会被覆盖。请重试'; }
+      else { this.loadError = this.upgradeRequired ? '升级本地账本后，可使用新的账户资料与记账功能' : '账本暂时无法读取，已有数据不会被覆盖。请重试'; }
     } finally { this.loading = false; }
   }
 
@@ -335,7 +335,7 @@ struct Index {
   private confirmDatabaseUpgrade(): void {
     if (this.loading) { return; }
     this.getUIContext().getPromptAction().showDialog({ title: '升级本地账本？',
-      message: '先在本机备份，再升级预付款与核销支持。原账目及余额会保留；升级失败会回滚，并保留升级前备份。',
+      message: '先在本机备份，再升级账户类型、卡号尾号与备注等资料支持。原账目及余额会保留；升级失败会回滚，并保留升级前备份。',
       buttons: [{ text: '取消', color: $r('app.color.xq_font_primary') }, { text: '备份并升级', color: $r('app.color.xq_font_emphasize') }]
     }).then(async (result) => {
       if (result.index !== 1) { return; }
@@ -367,7 +367,7 @@ struct Index {
     if (account === undefined || this.accountSaving) { return; }
     const archive = !account.archived;
     this.getUIContext().getPromptAction().showDialog({ title: archive ? '归档这个账户吗？' : '恢复使用这个账户？',
-      message: archive ? '归档后不再用于日常记账，余额和历史账目会保留。' : '恢复后可以在记账时选择这个账户。',
+      message: archive ? '归档后不再用于日常记账或资产汇总，余额和历史账目会保留。' : '恢复后可以在记账时选择这个账户，并按账户设置重新参与资产汇总。',
       buttons: [{ text: '取消', color: $r('app.color.xq_font_primary') },
         { text: archive ? '归档' : '恢复使用', color: $r('app.color.xq_font_emphasize') }]
     }).then(async (result) => {

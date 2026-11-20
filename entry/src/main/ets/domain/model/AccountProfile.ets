@@ -1,5 +1,6 @@
 import { BANK_ACCOUNT_STYLES } from './BankAccountStyles';
 import { FINANCE_ACCOUNT_STYLES } from './FinanceAccountStyles';
+import { ACCOUNT_TYPES, AccountTypeDefinition, accountType, isBankAccountType } from './AccountTypes';
 import { Money } from '../../core/money/Money';
 import { currencyUnit } from '../../core/money/Currencies';
 
@@ -17,10 +18,17 @@ export const ACCOUNT_STYLES: AccountStyle[] = [
   ...FINANCE_ACCOUNT_STYLES,
   { key: 'bank_card', name: '银行卡', brand: 'bank', color: '#5378B8' },
   { key: 'credit_card', name: '信用卡', brand: 'credit', color: '#7358B5' },
-  ...BANK_ACCOUNT_STYLES
+  ...BANK_ACCOUNT_STYLES,
+  ...ACCOUNT_TYPES.filter((item: AccountTypeDefinition) => item.styleKey.startsWith('type_')).map((item: AccountTypeDefinition): AccountStyle => {
+    return { key: item.styleKey, name: item.name, brand: item.key, color: item.color };
+  })
 ];
 
 export interface AccountCommand {
+  accountType?: string;
+  issuerKey?: string;
+  cardTail?: string;
+  note?: string;
   id: string;
   name: string;
   kind: string;
@@ -29,6 +37,10 @@ export interface AccountCommand {
   opening: Money;
 }
 export interface AccountProfile {
+  accountType?: string;
+  issuerKey?: string;
+  cardTail?: string;
+  note?: string;
   id: string;
   name: string;
   kind: string;
@@ -63,9 +75,21 @@ export class AccountDraft {
       (command.kind === 'asset' && command.opening.minor < BigInt(0)) ||
       (command.kind === 'liability' && command.opening.minor > BigInt(0))) { throw new Error('INVALID_OPENING_BALANCE'); }
     command.opening.toSafeMinorNumber();
+    const typeKey = command.accountType || (command.kind === 'liability' ? 'other_credit' : 'other_asset');
+    const type = accountType(typeKey);
+    const issuerKey = command.issuerKey || '';
+    const cardTail = (command.cardTail || '').trim();
+    const note = (command.note || '').trim();
+    if (type === undefined || type.kind !== command.kind || note.length > 500 ||
+      (cardTail !== '' && !/^[0-9]{4}$/.test(cardTail)) ||
+      (!isBankAccountType(typeKey) && (issuerKey !== '' || cardTail !== '')) ||
+      (issuerKey !== '' && issuerKey !== 'other_bank' && !BANK_ACCOUNT_STYLES.some((item: AccountStyle) => item.key === issuerKey && item.variant === 'monochrome'))) {
+      throw new Error('INVALID_ACCOUNT_DETAILS');
+    }
     this.style = style;
     this.command = { id: command.id, name: command.name.trim(), kind: command.kind, styleKey: command.styleKey,
-      includeInNetAssets: command.includeInNetAssets, opening: command.opening };
+      includeInNetAssets: command.includeInNetAssets, opening: command.opening,
+      accountType: typeKey, issuerKey: issuerKey, cardTail: cardTail, note: note };
   }
 }
 

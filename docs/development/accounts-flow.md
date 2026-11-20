@@ -8,7 +8,7 @@
 
 ## 用户行为与边界
 
-资产Tab接通正式账户列表和净资产汇总，保留现有悬浮Tab Bar、HdsNavigation和正文滚动。显示CNY净资产、总资产、总负债；汇总按有效资金变动的正负余额计算，且只包括“计入总资产”的账户。归档账户若仍计入总资产，其余额继续进入汇总，并显示说明，不将归档当成清零。
+资产Tab接通正式账户列表和净资产汇总，保留现有悬浮Tab Bar、HdsNavigation和正文滚动。显示CNY净资产、总资产、总负债；汇总按有效资金变动的正负余额计算，且只包括“计入总资产”的账户。已归档账户不进入总资产、总负债及净资产汇总，但账户余额与历史流水保留；恢复使用后按“计入总资产”设置重新参与汇总。
 
 新增页提供账户名称、资产/负债类型、品牌图标、期初余额/期初待还金额及“计入总资产”。名称去首尾空白、1–40字符；CNY最多两位小数，最小单位须在安全整数范围内。输入非负金额，资产存为正余额，负债待还金额存为负余额；资产账户暂不在创建时录入负的透支余额。零余额也保留一条完整的opening事件。
 
@@ -114,3 +114,109 @@ AccountStyle 增加可选 variant/historical/searchText，账户编辑器支持�
 来源、待补项目和不应混用的标识见 [国内金融工具图标清单](finance-tool-icon-inventory.md)。本地素材与校验摘要在 `tools/finance-tool-icons/`，运行 `python3 tools/generate-account-finance-icons.py` 重新生成资源与索引。用户已有的 `accounts_alipay_color.svg` 保留原样；本批资源使用独立的 `accounts_finance_` 前缀，避免覆盖。
 
 验证：14 个唯一图标键与资源全部匹配，SVG XML 解析通过；4 个原有白色标识与来源副本一致；重复生成结果一致。已查看浅色／深色底的静态对照。未运行应用构建或真机操作，账户选择、保存及备份恢复仍需设备验收。
+
+## 分步新增账户（V9）
+
+新增账户先选用途，按「资金账户／充值账户／信用账户／其他账户」四组展示 43 项。用途与品牌图标分离；缺乏准确独立品牌素材的类型使用通用图标。信用组使用 liability，其余使用 asset；编辑已有账户继续锁定资产／负债口径和币种。
+
+储蓄卡、信用卡按「选类型 → 选发卡行 → 账户资料（尾号选填）」逐步完成。银行页使用 ArkUI ListItemGroup + AlphabetIndexer，按显示名称拼音首字母分组（重庆为 C、厦门为 X），默认隐藏 8 个历史标识，保留 146 条银行选项及「其他银行」。支持中文名、目录中的英文简称搜索。索引栏点击／拖动定位，列表滚动同步索引。官方用法参考：https://developer.huawei.com/consumer/en/doc/harmonyos-guides/arkts-layout-development-create-list/
+
+资料步骤填写名称、币种、期初余额／待还金额、备注和净资产开关。银行卡可选填 4 位 ASCII 数字尾号，不收集完整卡号；自动生成的名称随尾号更新，自定义名称不被覆盖。返回前一步保留草稿，同一银行重新选择不清空尾号；改选另一家银行清空旧尾号。期初金额继续调用 MoneyAmountField 自定义键盘。编辑直接进入资料步骤，保留归档、余额校准与调整记录。
+
+### 保存与迁移
+
+AccountCommand/AccountProfile 增加可选 accountType、issuerKey、cardTail、note；AccountDraft 验证用途与 asset/liability 一致、发行行来自银行目录／other_bank、尾号为空或 4 位数字、备注最多 500 字符。未提供扩展字段的旧调用按 asset/liability 归为 other_asset/other_credit，保持原调用兼容。
+
+V9 新增 accounts.account_type / issuer_key / card_tail / note，不改旧名称、币种、品牌、图标、修订或金额。可明确识别的旧现金、支付宝、微信、银行卡、花呗、借呗回填用途；其余保持「其他」，不猜测。迁移源码为 docs/database/schema-v9-account-details.sql，使用 tools/generate-account-details-schema.py 生成 AccountDetailsSchema.ets 与校验值。
+
+正式数据库沿用升级确认入口，先创建 xiaoqiao_before_account_details_v9.db，再由 RdbSession 事务迁移。对比旧账户全部原字段、账目、预算、预付款及有效流水指纹，并执行外键和完整性检查，失败回滚。新库直接创建 V9。仅在代码中接入，不通过开发工具直接操作设备数据库。
+
+完整备份包 schema=9；本地、WebDAV、华为云空间共用该备份逻辑。允许读取 V2–V8 旧包，并只在恢复候选副本上逐步迁移后校验结构；V9 数据库整体备份保留新增资料。旧版本应用不能读取 V9 包。
+
+### 本轮验证
+
+- node tools/verify-account-details.mjs：43 个账户类型、元数据约束与命令快照、旧调用兼容及 146 条银行索引，通过。
+- python3 docs/database/verify_account_details.py：4 项内存 SQLite 测试覆盖旧账户与金额不变、已知银行卡／信用产品回填、事务回滚、尾号／备注约束和备份复制保留资料，通过。只使用内存测试库，不接触用户数据库。
+- 资源引用、SVG 解析、V9 校验值及备份版本静态检查通过；git diff --check 通过。
+- node tools/verify-p0.mjs：账户相关用例通过，随后在第 130 行原有转账断言失败：要求拒绝美元，但当前 TransferRecord 已支持多币种；该模型本轮未修改。不调整既有断言来掩盖失败。
+- 未执行应用构建、真机测试或真实设备迁移。待验收：分步返回、索引拖动、搜索清空、尾号名称联动、保存重进、旧备份恢复与升级确认后的完整流程。
+
+### 账户类型图标复用
+
+类型选择默认采用白色标识配各自圆形底色；银行按各自默认样式使用彩色或白标。账户图标跟随用途／发卡行自动选择，不再提供手动图标或彩色／白色切换入口；彩色素材保留供既有账户兼容。补接原有 accounts_* 素材：零钱通 mini_fund、余额宝 yu_e_bao、QQ qq、数字人民币 e_cny、华为 huawei、多多 duoduo、公积金 gongjijin、养老 yanglaojin、医保 yibao；公交／校园／加油／饭卡／充值卡，以及股票／基金／债券／期货／黄金／货币等。原有京东、抖音、美团和信贷图形沿用作对应账户标识，不再回退到 Lucide。尚无独立图形的类型使用同类账户图标（如充值卡或信用卡）。QQ、云闪付原件含自身色彩，保留原件颜色，不强行整体染白。
+
+verify-account-details.mjs 增加 43 项默认白标与资源映射验证；本轮未改变数据库结构和金额计算。
+
+### 移除手动图标选择
+
+新增与编辑账户资料页移除「选择品牌图标」及其 Sheet、搜索、变体／历史筛选状态。用户在前一步选择账户类型即可确定默认图标；储蓄卡／信用卡选择发行行后自动使用该银行的默认彩色或白标样式。图标预览保留，不可点击更换。已有账户图标按保存资料继续显示，不批量重写或删除旧彩色资源。此前图标素材扩展章节中的选择器描述为历史实现，当前操作以本节为准。
+
+### 资产页添加入口
+
+「添加账户」移至资产页标题栏右侧，使用 HdsNavigation 的 titleBar.content.menu 原生图标项与 lucide_plus1，沿用标题栏 IMMERSIVE / ADAPTIVE 沉浸光感。移除列表底部主按钮；componentId 继续使用 accounts-create，并保持 onCreate 回调进入类型选择流程。加载及读取错误期间禁用入口，正常空列表仍可从标题栏添加。图标颜色使用主题资源，滚动前后保持一致。
+
+账户列表单独使用 12vp 纵向卡片间距，使用中／已归档共用；汇总卡片、列表标题等外层区域仍保持原有间距。
+
+### 账户分步页的 HDS 绑定
+
+账户编辑器作为本流程的 HdsNavigation 根容器，显式占满页面。titleBar 使用 enableComponentSafeArea，avoidLayoutSafeArea 保持默认，不叠加额外标题栏避让；根容器只使用 ignoreLayoutSafeArea(SYSTEM, TOP/BOTTOM)，移除根容器叠加的 expandSafeArea。类型选择、银行列表和账户资料各使用独立 Scroller，通过当前 step 绑定实际显示的滚动容器；银行列表接收父级传入的同一个控制器，字母定位与 HDS 滚动效果共用该实例。各步骤不再轮流复用同一个 Scroller。
+
+核对来源：HdsNavigation 官方 API https://developer.huawei.com/consumer/cn/doc/doccenter-references/api/ui-design-hdsnavigation/ 与 HDS 材质指南 https://developer.huawei.com/consumer/cn/doc/doccenter-capabilities/ui-design-hds-component-material/ ，并逐项核对当前本地 SDK 声明。静态检查不能替代真机上的安全区、滚动材质及返回交互验收。
+
+### 类型选择首屏布局纠正
+
+设备截图显示标题栏上方空白过大且第一组标题与返回按钮重叠，上一轮参数存在并不能证明布局正确。类型步骤改为 HdsNavigation 下直接放 Scroll，不再套满高 Column；Scroll 显式 width/height 100%、align(Top)、clip(false)，移除原用于 Column 子项的 layoutWeight。撤销上一轮增加的 avoidLayoutSafeArea:true，使用官方动态模糊示例中的 enableComponentSafeArea 配合直接滚动内容结构。其他步骤维持原结构，未修改账户数据或类型图标。
+
+参考完整示例：https://developer.huawei.com/consumer/en/doc/HarmonyOS-Guides/ui-design-navigation-dynamic-blur-demo/ 。本轮只做代码差异检查；尚无修改后设备截图，不能将静态检查标记为首屏布局验收通过。待验收明确为：标题栏位置、第一组标题完整显示、初始内容无重叠、滚动后沉浸光感。
+
+### 编辑账户类型
+
+编辑资料页提供「账户类型」按钮，复用类型选择列表，按原账户 kind 只展示同口径用途。保留名称、币种、备注和净资产开关，余额与流水不变；改选类型自动更新图标，不恢复手动图标选择。改成储蓄卡／信用卡时选择发卡行；从银行卡改成非银行卡时清空不适用的发卡行和尾号，改选另一发卡行时清空旧尾号。取消类型选择恢复进入选择器前的类型、图标、发行行和尾号草稿。类型变化纳入 metadataDirty，保存前不能执行余额校准。保存仍走原有带 revision 的账户元数据更新，不修改 asset/liability 或币种。
+
+新增内存回归用例验证编辑类型后账户 ID、名称、kind、币种及全部有效流水保持不变，资料和修订正常更新。原有银行迁移测试合计 5 项通过；分步返回及编辑交互仍需真机验收。
+
+### 银行按标识选择默认样式
+
+银行不再统一白标：catalog.json 的 preferredVariant 为每家银行明确指定 color/monochrome。根据现有素材静态对比，渤海、重庆、民生、江苏、宁波等多色标识默认使用彩色；单色标识继续使用白标配品牌底色。146 条非历史银行中 36 条默认彩色、110 条默认白标；两版素材均保留。每家银行的默认值列入生成的银行图标清单，后续可单独调整。
+
+BankAccountStyles.ets 的 preferredBankStyle 为选中银行和导入创建共用的解析方法；银行列表也使用同一份 preferredVariant。持久化 issuer_key 始终保持未带 _color 的银行键，icon_key/icon_variant 使用所选样式，避免将彩色变体误当成另一家银行。已存在账户不在读取时重新套用默认值，不执行数据更新或迁移；改选发卡行及新建／导入才采用当前默认值。彩色头像沿用 AccountAvatar 的白色圆底，在深浅主题均保留原标识颜色。
+
+验证：逐家检查默认样式存在、彩色与普通键解析一致、发行行键可通过 AccountDraft 校验，验证民生导入采用彩色及工行采用白标；生成器重复运行一致，SVG 内容未变化。已查看候选多色图形静态预览，未做真机验证。
+
+### 月付、其他资产与其他投资图形
+
+美团月付按用户选择恢复原有 accounts_meituan 文字图标，保留黄色圆底。该原件约为 2:1 宽高比，AccountAvatar 单独采用直径 72% 宽、36% 高的容器并保持 Contain，水平／垂直居中；44vp 圆底中文字容器约 31.7×15.8vp，两侧各留 14% 直径的空间，避免套用普通方形图标的框后显得过小。其他资产继续使用 lucide_vault1（保险柜），其他投资继续使用 lucide_chart_pie1（投资组合饼图），取代两项相同的人民币符号。三项沿用白色图形、原配色及原 styleKey，不改数据库资料或保存格式；新增、编辑和导入创建共用现有 AccountIcons 映射。资源全部来自项目内已有 SVG，无新增依赖或下载图片。
+
+### 归档账户的汇总与说明显示
+
+资产汇总卡片移除「含预付款资产」与「含已归档账户余额」两行说明。预付款仍按项目设置计入资产，仅隐藏说明。已归档账户在 RdbAccountRepository 的人民币汇总及 LedgerWorkspace 的外币估值中均跳过，不触发汇率查询、缺失提示或参考汇率标题；归档列表仍显示真实余额，恢复使用后重新参与汇总。归档／恢复确认文案同步说明该口径。
+
+主机回归直接执行生产 snapshot 及 accountOverview 方法，验证归档的正／负人民币余额和外币均不计入、归档外币不请求汇率、预付款仍计入、归档余额保留及恢复后的汇总。原生 Accounts.test.ets 更新归档负债排除与恢复断言；本轮未执行原生设备测试。
+
+净资产汇总卡片右上角使用卡片自身的 radialGradient 绘制，200vp 半径内由浅橙过渡到主题卡片底色。浅色为 #FFFFE3CB → #FFFFF4EA → #FFFFFFFF；深色为 #FF493124 → #FF302822 → #FF202224。使用不透明主题色 stops，不依赖背景 Builder 的透明叠加；20vp 圆角、内容尺寸及账户列表卡片不变。上一版 Builder 背景在设备截图中没有显现（右上角采样仍为纯白），已撤除；新实现的设备显示效果尚未验收。
+
+净资产卡片右上角叠放用户提供的 cards.svg，使用真实 Image 子节点绘制，72×72vp，逆时针旋转 12°，距上侧 18vp、右侧 20vp。原文件保留不改，通过 fillColor 使用浅色使用半透明白色 #80FFFFFF（约 50% 不透明度），深色使用 #0DFFFFFF（约 5% 不透明度），降低暗色下装饰的亮度；保留原有浅橙径向渐变。标题和净资产金额右侧预留 80vp，装饰不参与点击及读屏，避免覆盖金额；总资产与总负债布局不变。已解析 SVG 并检查主题资源和代码格式，尚未真机验收。
+
+### 合并银行卡资料步骤
+
+删除独立的「银行卡资料」页面与「下一步」按钮，以及该步骤专用的滚动控制器和导航状态。新建储蓄卡／信用卡选择发卡行后直接进入账户资料，尾号在资料页选填；名称、币种、备注、余额等一起填写。资料页返回到银行选择，银行选择再返回类型；编辑账户的返回和更换发卡行仍沿用原流程。尾号校验、自动名称联动及持久化字段不变。
+
+
+### 银行常用分组与顶部搜索
+
+银行列表 A 前增加「常用」分组，依次提供工、农、中、建、交、邮储、招行及其他银行；完整字母分组仍保留，索引首项「常用」与实际分组一致。输入关键词时仅显示匹配的字母分组，无匹配时仍可选择其他银行。搜索框使用 HDS titleBar.content.bottomBuilder 固定在标题下，60vp 区域包含 44vp 搜索框；共享既有沉浸材质，标题栏继续使用 IMMERSIVE / ADAPTIVE 与滚动渐变模糊。银行列表不重复绘制搜索栏；HDS 负责顶部安全区预留。
+
+「其他银行」入口复用保存后的账户图标和品牌色：资产账户为 bank_card，负债账户为 credit_card，36vp 圆形展示；常用分组与搜索无结果入口保持一致。
+
+
+银行选择页改为由自身 HdsNavigation 直接承载 List，去除 List 外的满高 Column/Row 中间容器；标题、底部搜索 Builder 与直接 List 共享滚动绑定，索引改为 List 右侧 overlay。此前仅配置材质但列表仍嵌套在中间容器内，截图未呈现预期沉浸，现按现有搜索页的直接滚动内容结构修正，显示效果仍需设备验收。银行条目取消卡片底色、圆角及 6vp 间距，使用 0.5vp 主题分割线，左侧缩进 60vp 对齐文字；保留 36vp 圆形银行图标与常用分组。
+
+索引条显示修正：从 List 的 overlay 移到外层 HdsNavigation 的 overlay，使用明确 28vp 宽度及按索引数量计算的高度，右侧内缩 4vp、居中下移 40vp。索引不参与列表滚动和 HDS 列表安全区测量；银行列表继续直接绑定 HDS，保留右侧 36vp 空间。无搜索结果时隐藏索引。该修改已静态核对 SDK overlay 接口，实际可见性与触摸跳转待设备验收。
+
+设备复查确认 HDS overlay 方案仍未显示索引，已撤掉该实现。现使用最外层 Stack，HdsNavigation 与 bankIndex 为真实并列节点；索引设为 zIndex 2、28vp 宽，右侧内缩 4vp、中心下移 40vp，仅索引窄列接收触摸。List 仍为 HDS 直接子节点，保持沉浸效果。此版本未作设备可见性验收，不以主机检查代替渲染验证。
+
+银行分组的最后一行不绘制分割线；常用组末尾为「其他银行」，因此最后一家常用银行与「其他银行」之间保留分割线，其他银行下方不绘制。单行字母分组亦不显示分割线。
+
+银行选择页安全区修正：设备截图显示加最外层 Stack 后，返回与标题侵入状态栏。撤除 Stack 与 HdsNavigation 两层 ignoreLayoutSafeArea；按 SDK TitleBarOptions 显式设置 avoidLayoutSafeArea: true，保留 enableComponentSafeArea: true，分别由 HDS 避让系统安全区并为 List 预留标题和搜索组件安全区，不添加固定状态栏高度或列表顶部补偿。索引仍为独立 Stack 子节点。未作新版本真机验收。
+
+后续设备截图中索引和沉浸效果已显示，但标题整体偏下。最终安全区归属调整为：只有外层 Stack 使用 ignoreLayoutSafeArea 覆盖窗口；内层 HDS 不忽略安全区，通过 avoidLayoutSafeArea: true 统一避让系统状态栏，通过 enableComponentSafeArea: true 预留标题和搜索区域。避免外层默认避让后 HDS 再次避让。未添加固定顶部 padding，索引和列表布局不改；实际顶部位置仍待新版本设备复核。

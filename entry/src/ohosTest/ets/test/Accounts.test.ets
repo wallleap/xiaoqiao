@@ -38,8 +38,12 @@ export default function accountsTest() {
         await workspace.saveIncome(income(workspace, 'repay-debt', 'debt'));
         expect((await workspace.accountOverview()).netMinor).assertEqual('9500');
         await workspace.archiveAccount('debt', 1, true);
-        expect((await workspace.accountOverview()).netMinor).assertEqual('9500');
+        overview = await workspace.accountOverview();
+        expect(overview.netMinor).assertEqual('11000');
+        expect(overview.liabilitiesMinor).assertEqual('0');
+        expect(overview.accounts.find((item) => item.id === 'debt')?.balanceMinor).assertEqual('-1500');
         await workspace.archiveAccount('debt', 2, false);
+        expect((await workspace.accountOverview()).netMinor).assertEqual('9500');
         const edited = account(workspace, 'asset', '999'); edited.name = '改名'; edited.styleKey = 'alipay'; edited.includeInNetAssets = false;
         await workspace.updateAccount(edited, 1);
         overview = await workspace.accountOverview();

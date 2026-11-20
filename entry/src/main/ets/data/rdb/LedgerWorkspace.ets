@@ -1,3 +1,4 @@
+import { matchImportedAccount } from '../../domain/model/ImportedAccountMatch';
 import { LedgerSearchCursor, LedgerSearchPageResult, LedgerFlowQuery, LedgerFlowPage } from '../../domain/model/LedgerSearch';
 import { RdbLedgerSearch } from './RdbLedgerSearch';
 import { RdbPrepaidRepository } from './RdbPrepaidRepository';
@@ -811,16 +812,17 @@ export class LedgerWorkspace {
       }
       return id;
     }
-    const liability = /信用卡|花呗|借呗|贷款|待还/.test(accountName);
+    const matched = matchImportedAccount(accountName);
     const order = await db.querySql('SELECT COALESCE(MAX(sort_order),-1)+1 FROM accounts WHERE deleted_at_ms IS NULL');
     let sortOrder = 0;
     try { if (order.goToFirstRow()) { sortOrder = order.getLong(0); } } finally { order.close(); }
     const now = Date.now();
     id = util.generateRandomUUID();
-    await db.insert('accounts', { id: id, name: accountName, kind: liability ? 'liability' : 'asset',
-      currency_id: currency, brand: 'cash', icon_key: 'cash', icon_variant: 'monochrome',
-      brand_color: '#D49A38', include_in_net_assets: 1, sort_order: sortOrder, created_at_ms: now, updated_at_ms: now });
-    insertedAccountTypes.set(id, currency + ':' + (liability ? 'liability' : 'asset'));
+    await db.insert('accounts', { id: id, name: accountName, kind: matched.kind,
+      currency_id: currency, brand: matched.style.brand, icon_key: matched.style.key, icon_variant: matched.style.variant || 'monochrome',
+      account_type: matched.accountType, issuer_key: matched.issuerKey, card_tail: matched.cardTail, note: '',
+      brand_color: matched.style.color, include_in_net_assets: 1, sort_order: sortOrder, created_at_ms: now, updated_at_ms: now });
+    insertedAccountTypes.set(id, currency + ':' + matched.kind);
     return id;
   }
 
@@ -1151,7 +1153,7 @@ export class LedgerWorkspace {
     const now = new Date();
     const date = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
     for (const account of result.accounts) {
-      if (!account.includeInNetAssets || account.currencyId === 'CNY' || account.balanceMinor === '0') { continue; }
+      if (account.archived || !account.includeInNetAssets || account.currencyId === 'CNY' || account.balanceMinor === '0') { continue; }
       try {
         const quote = await OfficialExchangeRates.quote(account.currencyId, 'CNY', date);
         const converted = new ExchangeRate(currencyUnit(account.currencyId), this.currency, quote.rate)

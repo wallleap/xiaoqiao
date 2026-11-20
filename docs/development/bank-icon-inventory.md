@@ -10,159 +10,159 @@
 
 文件名采用来源目录中的英文简称（小写）；简称用于本项目素材识别，不作为统一银行机构代码。账户内部兼容键保持不变，无需数据库迁移。
 
-| 银行/来源名称 | 简称 | 资源文件（白色／彩色） | 兼容图标键（白色） | 来源页面 | 历史标识 |
-|---|---|---|---|---|---|
-| 鞍山银行 | boas | `accounts_bank_boas.svg` / `accounts_bank_boas_color.svg` | `bank_30663d9c5153625c` | [查看](https://www.tubiao.cn/svg/item-30663d9c5153625c) | — |
-| 保定银行 | bobd | `accounts_bank_bobd.svg` / `accounts_bank_bobd_color.svg` | `bank_5927f8dbd3eca1be` | [查看](https://www.tubiao.cn/svg/item-5927f8dbd3eca1be) | — |
-| 北京银行 | bob | `accounts_bank_bob.svg` / `accounts_bank_bob_color.svg` | `bank_bc07bb9eaac7b1a2` | [查看](https://www.tubiao.cn/svg/item-bc07bb9eaac7b1a2) | — |
-| 本溪市商业银行 | bccb | `accounts_bank_bccb.svg` / `accounts_bank_bccb_color.svg` | `bank_1712cdd37f1b8b22` | [查看](https://www.tubiao.cn/svg/item-1712cdd37f1b8b22) | — |
-| 渤海银行 | bohaib | `accounts_bank_bohaib.svg` / `accounts_bank_bohaib_color.svg` | `bank_655102d0a03ba61e` | [查看](https://www.tubiao.cn/svg/item-655102d0a03ba61e) | — |
-| 沧州银行 | bocz | `accounts_bank_bocz.svg` / `accounts_bank_bocz_color.svg` | `bank_3d9675edeb7c46fa` | [查看](https://www.tubiao.cn/svg/item-3d9675edeb7c46fa) | — |
-| 朝阳银行 | bocy | `accounts_bank_bocy.svg` / `accounts_bank_bocy_color.svg` | `bank_28d03fcc7abb11be` | [查看](https://www.tubiao.cn/svg/item-28d03fcc7abb11be) | — |
-| 成都银行 | cdcb | `accounts_bank_cdcb.svg` / `accounts_bank_cdcb_color.svg` | `bank_24080f94b63434ab` | [查看](https://www.tubiao.cn/svg/item-24080f94b63434ab) | — |
-| 承德银行 | cdbank | `accounts_bank_cdbank.svg` / `accounts_bank_cdbank_color.svg` | `bank_52356497e588963c` | [查看](https://www.tubiao.cn/svg/item-52356497e588963c) | — |
-| 重庆三峡银行 | ccqtgb | `accounts_bank_ccqtgb.svg` / `accounts_bank_ccqtgb_color.svg` | `bank_5c69bd0e678072b9` | [查看](https://www.tubiao.cn/svg/item-5c69bd0e678072b9) | — |
-| 重庆银行 | cqbank | `accounts_bank_cqbank.svg` / `accounts_bank_cqbank_color.svg` | `bank_28cb806c4a2b4762` | [查看](https://www.tubiao.cn/svg/item-28cb806c4a2b4762) | — |
-| 达州银行 | dccb | `accounts_bank_dccb.svg` / `accounts_bank_dccb_color.svg` | `bank_206e093ce5813475` | [查看](https://www.tubiao.cn/svg/item-206e093ce5813475) | — |
-| 大连银行 | dlb | `accounts_bank_dlb.svg` / `accounts_bank_dlb_color.svg` | `bank_17a1c52f07222d53` | [查看](https://www.tubiao.cn/svg/item-17a1c52f07222d53) | — |
-| 大同银行 | dtb | `accounts_bank_dtb.svg` / `accounts_bank_dtb_color.svg` | `bank_0986964944efb395` | [查看](https://www.tubiao.cn/svg/item-0986964944efb395) | 是 |
-| 丹东银行 | bodd | `accounts_bank_bodd.svg` / `accounts_bank_bodd_color.svg` | `bank_565ca720da891e1f` | [查看](https://www.tubiao.cn/svg/item-565ca720da891e1f) | — |
-| 德州银行 | dzbank | `accounts_bank_dzbank.svg` / `accounts_bank_dzbank_color.svg` | `bank_dc1b501a0e1ddab9` | [查看](https://www.tubiao.cn/svg/item-dc1b501a0e1ddab9) | — |
-| 东莞银行 | bod | `accounts_bank_bod.svg` / `accounts_bank_bod_color.svg` | `bank_f7e3f97b06adc4a5` | [查看](https://www.tubiao.cn/svg/item-f7e3f97b06adc4a5) | — |
-| 东营银行 | dyccb | `accounts_bank_dyccb.svg` / `accounts_bank_dyccb_color.svg` | `bank_e67569b8d4fa217f` | [查看](https://www.tubiao.cn/svg/item-e67569b8d4fa217f) | — |
-| 鄂尔多斯银行 | ordosb | `accounts_bank_ordosb.svg` / `accounts_bank_ordosb_color.svg` | `bank_36bfc81423ce478c` | [查看](https://www.tubiao.cn/svg/item-36bfc81423ce478c) | — |
-| 福建海峡银行 | fjhxbc | `accounts_bank_fjhxbc.svg` / `accounts_bank_fjhxbc_color.svg` | `bank_7206510ccdb16bba` | [查看](https://www.tubiao.cn/svg/item-7206510ccdb16bba) | — |
-| 抚顺银行 | fscb | `accounts_bank_fscb.svg` / `accounts_bank_fscb_color.svg` | `bank_5d6ccdb695b9dd42` | [查看](https://www.tubiao.cn/svg/item-5d6ccdb695b9dd42) | — |
-| 阜阳银行 | fxcb | `accounts_bank_fxcb.svg` / `accounts_bank_fxcb_color.svg` | `bank_ed53b93cf82610f4` | [查看](https://www.tubiao.cn/svg/item-ed53b93cf82610f4) | — |
-| 富滇银行 | fdbank | `accounts_bank_fdbank.svg` / `accounts_bank_fdbank_color.svg` | `bank_7d690142090615b3` | [查看](https://www.tubiao.cn/svg/item-7d690142090615b3) | — |
-| 甘肃银行 | bogs | `accounts_bank_bogs.svg` / `accounts_bank_bogs_color.svg` | `bank_73298bce8744330f` | [查看](https://www.tubiao.cn/svg/item-73298bce8744330f) | — |
-| 广东华兴银行 | ghb | `accounts_bank_ghb.svg` / `accounts_bank_ghb_color.svg` | `bank_9454de529d92427c` | [查看](https://www.tubiao.cn/svg/item-9454de529d92427c) | — |
-| 广东南粤银行 | nybank | `accounts_bank_nybank.svg` / `accounts_bank_nybank_color.svg` | `bank_a42e935d15d46594` | [查看](https://www.tubiao.cn/svg/item-a42e935d15d46594) | — |
-| 广发银行 | gdb | `accounts_bank_gdb.svg` / `accounts_bank_gdb_color.svg` | `bank_acaaf4fe223ff584` | [查看](https://www.tubiao.cn/svg/item-acaaf4fe223ff584) | — |
-| 广西北部湾银行 | bgb | `accounts_bank_bgb.svg` / `accounts_bank_bgb_color.svg` | `bank_7a1a906a437d728b` | [查看](https://www.tubiao.cn/svg/item-7a1a906a437d728b) | — |
-| 广州银行 | gzcb | `accounts_bank_gzcb.svg` / `accounts_bank_gzcb_color.svg` | `bank_dde84144331f15b2` | [查看](https://www.tubiao.cn/svg/item-dde84144331f15b2) | — |
-| 贵阳银行 | gyccb | `accounts_bank_gyccb.svg` / `accounts_bank_gyccb_color.svg` | `bank_f938c67888eebfe7` | [查看](https://www.tubiao.cn/svg/item-f938c67888eebfe7) | — |
-| 贵州银行 | bogz | `accounts_bank_bogz.svg` / `accounts_bank_bogz_color.svg` | `bank_c0e43d309fca6add` | [查看](https://www.tubiao.cn/svg/item-c0e43d309fca6add) | — |
-| 桂林银行 | glbank | `accounts_bank_glbank.svg` / `accounts_bank_glbank_color.svg` | `bank_3f19b30b7fa21ef9` | [查看](https://www.tubiao.cn/svg/item-3f19b30b7fa21ef9) | — |
-| 国家开发银行 | cdb | `accounts_bank_cdb.svg` / `accounts_bank_cdb_color.svg` | `bank_c122117feee62f21` | [查看](https://www.tubiao.cn/svg/item-c122117feee62f21) | — |
-| 哈尔滨银行 | hrbcb | `accounts_bank_hrbcb.svg` / `accounts_bank_hrbcb_color.svg` | `bank_5df79aeb0cff8135` | [查看](https://www.tubiao.cn/svg/item-5df79aeb0cff8135) | — |
-| 哈密市商业银行 | hmccb | `accounts_bank_hmccb.svg` / `accounts_bank_hmccb_color.svg` | `bank_2543e760759f5150` | [查看](https://www.tubiao.cn/svg/item-2543e760759f5150) | — |
-| 海南银行 | hnb | `accounts_bank_hnb.svg` / `accounts_bank_hnb_color.svg` | `bank_0fbdea13c7ff22de` | [查看](https://www.tubiao.cn/svg/item-0fbdea13c7ff22de) | — |
-| 邯郸银行 | hdbank | `accounts_bank_hdbank.svg` / `accounts_bank_hdbank_color.svg` | `bank_c642c6d17544d48c` | [查看](https://www.tubiao.cn/svg/item-c642c6d17544d48c) | — |
-| 汉口银行 | hkb | `accounts_bank_hkb.svg` / `accounts_bank_hkb_color.svg` | `bank_28761f1a38dfbbd6` | [查看](https://www.tubiao.cn/svg/item-28761f1a38dfbbd6) | — |
-| 杭州银行 | hzcb | `accounts_bank_hzcb.svg` / `accounts_bank_hzcb_color.svg` | `bank_c802cd2beb943b31` | [查看](https://www.tubiao.cn/svg/item-c802cd2beb943b31) | — |
-| 河北银行 | bhb | `accounts_bank_bhb.svg` / `accounts_bank_bhb_color.svg` | `bank_ac22bab2fd6cdc4f` | [查看](https://www.tubiao.cn/svg/item-ac22bab2fd6cdc4f) | — |
-| 恒丰银行 | egbank | `accounts_bank_egbank.svg` / `accounts_bank_egbank_color.svg` | `bank_9534ccf9cc21fbad` | [查看](https://www.tubiao.cn/svg/item-9534ccf9cc21fbad) | — |
-| 衡水银行 | bohs | `accounts_bank_bohs.svg` / `accounts_bank_bohs_color.svg` | `bank_d0614e7f3c439282` | [查看](https://www.tubiao.cn/svg/item-d0614e7f3c439282) | — |
-| 湖北银行 | hbc | `accounts_bank_hbc.svg` / `accounts_bank_hbc_color.svg` | `bank_0ba9d0d3815741c9` | [查看](https://www.tubiao.cn/svg/item-0ba9d0d3815741c9) | — |
-| 湖州银行 | bohz | `accounts_bank_bohz.svg` / `accounts_bank_bohz_color.svg` | `bank_0bb9055be05b1f1d` | [查看](https://www.tubiao.cn/svg/item-0bb9055be05b1f1d) | — |
-| 葫芦岛银行 | bohld | `accounts_bank_bohld.svg` / `accounts_bank_bohld_color.svg` | `bank_14f2aa2560622a58` | [查看](https://www.tubiao.cn/svg/item-14f2aa2560622a58) | — |
-| 华融湘江银行 | hrxjb | `accounts_bank_hrxjb.svg` / `accounts_bank_hrxjb_color.svg` | `bank_e5c35f26e0a84d32` | [查看](https://www.tubiao.cn/svg/item-e5c35f26e0a84d32) | 是 |
-| 华夏银行 | hxb | `accounts_bank_hxb.svg` / `accounts_bank_hxb_color.svg` | `bank_a347afb643e9dda2` | [查看](https://www.tubiao.cn/svg/item-a347afb643e9dda2) | — |
-| 徽商银行 | hsbank | `accounts_bank_hsbank.svg` / `accounts_bank_hsbank_color.svg` | `bank_a68c2590a384df96` | [查看](https://www.tubiao.cn/svg/item-a68c2590a384df96) | — |
-| 吉林银行 | bojl | `accounts_bank_bojl.svg` / `accounts_bank_bojl_color.svg` | `bank_f135e4805d010124` | [查看](https://www.tubiao.cn/svg/item-f135e4805d010124) | — |
-| 济宁银行 | jnbank | `accounts_bank_jnbank.svg` / `accounts_bank_jnbank_color.svg` | `bank_a179be324ec19312` | [查看](https://www.tubiao.cn/svg/item-a179be324ec19312) | — |
-| 嘉兴银行 | jxbank | `accounts_bank_jxbank.svg` / `accounts_bank_jxbank_color.svg` | `bank_560b1a4519af709f` | [查看](https://www.tubiao.cn/svg/item-560b1a4519af709f) | — |
-| 江苏银行 | jsbank | `accounts_bank_jsbank.svg` / `accounts_bank_jsbank_color.svg` | `bank_1f150844afc30c68` | [查看](https://www.tubiao.cn/svg/item-1f150844afc30c68) | — |
-| 江苏长江商业银行 | jscjcb | `accounts_bank_jscjcb.svg` / `accounts_bank_jscjcb_color.svg` | `bank_26139358ec87b742` | [查看](https://www.tubiao.cn/svg/item-26139358ec87b742) | — |
-| 江西银行 | jxb | `accounts_bank_jxb.svg` / `accounts_bank_jxb_color.svg` | `bank_b4b77bdb41f0ba23` | [查看](https://www.tubiao.cn/svg/item-b4b77bdb41f0ba23) | — |
-| 交通银行 | comm | `accounts_bank_comm.svg` / `accounts_bank_comm_color.svg` | `bank_be3f0313e6049e7a` | [查看](https://www.tubiao.cn/svg/item-be3f0313e6049e7a) | — |
-| 焦作中旅银行 | cts | `accounts_bank_cts.svg` / `accounts_bank_cts_color.svg` | `bank_148d3a1c6b46cf0f` | [查看](https://www.tubiao.cn/svg/item-148d3a1c6b46cf0f) | — |
-| 金华银行 | jhccb | `accounts_bank_jhccb.svg` / `accounts_bank_jhccb_color.svg` | `bank_037f61b4a416febd` | [查看](https://www.tubiao.cn/svg/item-037f61b4a416febd) | — |
-| 锦州银行 | jzbank | `accounts_bank_jzbank.svg` / `accounts_bank_jzbank_color.svg` | `bank_c003c5255e9b5f1e` | [查看](https://www.tubiao.cn/svg/item-c003c5255e9b5f1e) | — |
-| 晋城银行 | jinchb | `accounts_bank_jinchb.svg` / `accounts_bank_jinchb_color.svg` | `bank_407ffdc7083cd181` | [查看](https://www.tubiao.cn/svg/item-407ffdc7083cd181) | 是 |
-| 晋商银行 | jsb | `accounts_bank_jsb.svg` / `accounts_bank_jsb_color.svg` | `bank_e1e1ab1c91789925` | [查看](https://www.tubiao.cn/svg/item-e1e1ab1c91789925) | — |
-| 晋中银行 | jzb | `accounts_bank_jzb.svg` / `accounts_bank_jzb_color.svg` | `bank_52dde46f7fad5e27` | [查看](https://www.tubiao.cn/svg/item-52dde46f7fad5e27) | 是 |
-| 九江银行 | jjccb | `accounts_bank_jjccb.svg` / `accounts_bank_jjccb_color.svg` | `bank_1ab5f0d64a489e91` | [查看](https://www.tubiao.cn/svg/item-1ab5f0d64a489e91) | — |
-| 库尔勒市商业银行 | kcccb | `accounts_bank_kcccb.svg` / `accounts_bank_kcccb_color.svg` | `bank_c5c28a0efe21d46f` | [查看](https://www.tubiao.cn/svg/item-c5c28a0efe21d46f) | — |
-| 昆仑银行 | klb | `accounts_bank_klb.svg` / `accounts_bank_klb_color.svg` | `bank_ed0bb779e0611c72` | [查看](https://www.tubiao.cn/svg/item-ed0bb779e0611c72) | — |
-| 莱商银行 | lsbank | `accounts_bank_lsbank.svg` / `accounts_bank_lsbank_color.svg` | `bank_6bb7da5f9f9507cd` | [查看](https://www.tubiao.cn/svg/item-6bb7da5f9f9507cd) | — |
-| 兰州银行 | lzbank | `accounts_bank_lzbank.svg` / `accounts_bank_lzbank_color.svg` | `bank_8f2612d537a16365` | [查看](https://www.tubiao.cn/svg/item-8f2612d537a16365) | — |
-| 廊坊银行 | bolf | `accounts_bank_bolf.svg` / `accounts_bank_bolf_color.svg` | `bank_80f930eff48d1c1f` | [查看](https://www.tubiao.cn/svg/item-80f930eff48d1c1f) | — |
-| 乐山市商业银行 | lsccb | `accounts_bank_lsccb.svg` / `accounts_bank_lsccb_color.svg` | `bank_bda3c9ff9f476f68` | [查看](https://www.tubiao.cn/svg/item-bda3c9ff9f476f68) | — |
-| 辽阳银行 | boly | `accounts_bank_boly.svg` / `accounts_bank_boly_color.svg` | `bank_8fb25721a2caac67` | [查看](https://www.tubiao.cn/svg/item-8fb25721a2caac67) | 是 |
-| 临商银行 | lsbc | `accounts_bank_lsbc.svg` / `accounts_bank_lsbc_color.svg` | `bank_78e2c3384f02bb48` | [查看](https://www.tubiao.cn/svg/item-78e2c3384f02bb48) | — |
-| 柳州银行 | lzccb | `accounts_bank_lzccb.svg` / `accounts_bank_lzccb_color.svg` | `bank_73999369a515d961` | [查看](https://www.tubiao.cn/svg/item-73999369a515d961) | — |
-| 龙江银行 | ljbank | `accounts_bank_ljbank.svg` / `accounts_bank_ljbank_color.svg` | `bank_c144472fd84111fe` | [查看](https://www.tubiao.cn/svg/item-c144472fd84111fe) | — |
-| 泸州银行 | lzb | `accounts_bank_lzb.svg` / `accounts_bank_lzb_color.svg` | `bank_48152f519819602f` | [查看](https://www.tubiao.cn/svg/item-48152f519819602f) | — |
-| 洛阳银行 | bly | `accounts_bank_bly.svg` / `accounts_bank_bly_color.svg` | `bank_ad466c737e0c733f` | [查看](https://www.tubiao.cn/svg/item-ad466c737e0c733f) | — |
-| 绵阳市商业银行 | myccb | `accounts_bank_myccb.svg` / `accounts_bank_myccb_color.svg` | `bank_a08410c7990f951c` | [查看](https://www.tubiao.cn/svg/item-a08410c7990f951c) | — |
-| 南京银行 | njcb | `accounts_bank_njcb.svg` / `accounts_bank_njcb_color.svg` | `bank_a332fd83d07292bf` | [查看](https://www.tubiao.cn/svg/item-a332fd83d07292bf) | — |
-| 内蒙古银行 | h3cb | `accounts_bank_h3cb.svg` / `accounts_bank_h3cb_color.svg` | `bank_7cd9d05dfeb29d19` | [查看](https://www.tubiao.cn/svg/item-7cd9d05dfeb29d19) | — |
-| 宁波东海银行 | ndhb | `accounts_bank_ndhb.svg` / `accounts_bank_ndhb_color.svg` | `bank_2eed2034612d7154` | [查看](https://www.tubiao.cn/svg/item-2eed2034612d7154) | — |
-| 宁波通商银行 | nbcmb | `accounts_bank_nbcmb.svg` / `accounts_bank_nbcmb_color.svg` | `bank_6ee7b110f00fed02` | [查看](https://www.tubiao.cn/svg/item-6ee7b110f00fed02) | — |
-| 宁波银行 | nbcb | `accounts_bank_nbcb.svg` / `accounts_bank_nbcb_color.svg` | `bank_3c789bc646f0b3f1` | [查看](https://www.tubiao.cn/svg/item-3c789bc646f0b3f1) | — |
-| 宁夏银行 | nxbank | `accounts_bank_nxbank.svg` / `accounts_bank_nxbank_color.svg` | `bank_88d7586177e7513b` | [查看](https://www.tubiao.cn/svg/item-88d7586177e7513b) | — |
-| 盘锦银行 | bopj | `accounts_bank_bopj.svg` / `accounts_bank_bopj_color.svg` | `bank_1cd8c37c4adcf957` | [查看](https://www.tubiao.cn/svg/item-1cd8c37c4adcf957) | — |
-| 平安银行 | spabank | `accounts_bank_spabank.svg` / `accounts_bank_spabank_color.svg` | `bank_5d085ba3787c37d7` | [查看](https://www.tubiao.cn/svg/item-5d085ba3787c37d7) | — |
-| 平顶山银行 | bop | `accounts_bank_bop.svg` / `accounts_bank_bop_color.svg` | `bank_8e66776def452515` | [查看](https://www.tubiao.cn/svg/item-8e66776def452515) | — |
-| 浦发银行 | spdb | `accounts_bank_spdb.svg` / `accounts_bank_spdb_color.svg` | `bank_f992e61b2440eb9f` | [查看](https://www.tubiao.cn/svg/item-f992e61b2440eb9f) | — |
-| 齐鲁银行 | qlbank | `accounts_bank_qlbank.svg` / `accounts_bank_qlbank_color.svg` | `bank_9208a36075cce97c` | [查看](https://www.tubiao.cn/svg/item-9208a36075cce97c) | — |
-| 齐商银行 | qsb | `accounts_bank_qsb.svg` / `accounts_bank_qsb_color.svg` | `bank_a7ad5a279ba0a0db` | [查看](https://www.tubiao.cn/svg/item-a7ad5a279ba0a0db) | — |
-| 秦皇岛银行 | qhdbank | `accounts_bank_qhdbank.svg` / `accounts_bank_qhdbank_color.svg` | `bank_84ceb085dcbb10f2` | [查看](https://www.tubiao.cn/svg/item-84ceb085dcbb10f2) | — |
-| 青岛银行 | qdccb | `accounts_bank_qdccb.svg` / `accounts_bank_qdccb_color.svg` | `bank_9b679cd19b713009` | [查看](https://www.tubiao.cn/svg/item-9b679cd19b713009) | — |
-| 青海银行 | qhbank | `accounts_bank_qhbank.svg` / `accounts_bank_qhbank_color.svg` | `bank_a62ccfdd6b452be4` | [查看](https://www.tubiao.cn/svg/item-a62ccfdd6b452be4) | — |
-| 曲靖市商业银行 | qjcccb | `accounts_bank_qjcccb.svg` / `accounts_bank_qjcccb_color.svg` | `bank_f3d037d826814866` | [查看](https://www.tubiao.cn/svg/item-f3d037d826814866) | — |
-| 泉州银行 | boqz | `accounts_bank_boqz.svg` / `accounts_bank_boqz_color.svg` | `bank_7576633e8748306c` | [查看](https://www.tubiao.cn/svg/item-7576633e8748306c) | — |
-| 日照银行 | rzb | `accounts_bank_rzb.svg` / `accounts_bank_rzb_color.svg` | `bank_91265b7284430f91` | [查看](https://www.tubiao.cn/svg/item-91265b7284430f91) | — |
-| 厦门国际银行 | xmintb | `accounts_bank_xmintb.svg` / `accounts_bank_xmintb_color.svg` | `bank_384a0333c213a88e` | [查看](https://www.tubiao.cn/svg/item-384a0333c213a88e) | — |
-| 厦门银行 | xmbank | `accounts_bank_xmbank.svg` / `accounts_bank_xmbank_color.svg` | `bank_44e08ebec3442bae` | [查看](https://www.tubiao.cn/svg/item-44e08ebec3442bae) | — |
-| 上海银行 | bosc | `accounts_bank_bosc.svg` / `accounts_bank_bosc_color.svg` | `bank_231653e198c2ef26` | [查看](https://www.tubiao.cn/svg/item-231653e198c2ef26) | — |
-| 上饶银行 | srbank | `accounts_bank_srbank.svg` / `accounts_bank_srbank_color.svg` | `bank_0b67fbc1cfdff255` | [查看](https://www.tubiao.cn/svg/item-0b67fbc1cfdff255) | — |
-| 绍兴银行 | sxcb | `accounts_bank_sxcb.svg` / `accounts_bank_sxcb_color.svg` | `bank_b783965c4080a701` | [查看](https://www.tubiao.cn/svg/item-b783965c4080a701) | — |
-| 盛京银行 | sjbank | `accounts_bank_sjbank.svg` / `accounts_bank_sjbank_color.svg` | `bank_6f65c2166f85b6e1` | [查看](https://www.tubiao.cn/svg/item-6f65c2166f85b6e1) | — |
-| 石嘴山银行 | szsbk | `accounts_bank_szsbk.svg` / `accounts_bank_szsbk_color.svg` | `bank_d0d9a01213c85a0e` | [查看](https://www.tubiao.cn/svg/item-d0d9a01213c85a0e) | — |
-| 四川天府银行 | sctfb | `accounts_bank_sctfb.svg` / `accounts_bank_sctfb_color.svg` | `bank_f5d92febbb4c19f2` | [查看](https://www.tubiao.cn/svg/item-f5d92febbb4c19f2) | — |
-| 四川银行 | scb | `accounts_bank_scb.svg` / `accounts_bank_scb_color.svg` | `bank_6a68708325fe2dab` | [查看](https://www.tubiao.cn/svg/item-6a68708325fe2dab) | — |
-| 苏州银行 | bosz | `accounts_bank_bosz.svg` / `accounts_bank_bosz_color.svg` | `bank_630c2f13056faa88` | [查看](https://www.tubiao.cn/svg/item-630c2f13056faa88) | — |
-| 遂宁银行 | snbank | `accounts_bank_snbank.svg` / `accounts_bank_snbank_color.svg` | `bank_901a1acc09e1f3d3` | [查看](https://www.tubiao.cn/svg/item-901a1acc09e1f3d3) | — |
-| 台州银行 | tzbank | `accounts_bank_tzbank.svg` / `accounts_bank_tzbank_color.svg` | `bank_a9583d5a61155655` | [查看](https://www.tubiao.cn/svg/item-a9583d5a61155655) | — |
-| 泰安银行 | taccb | `accounts_bank_taccb.svg` / `accounts_bank_taccb_color.svg` | `bank_f1839dc43ed2b94a` | [查看](https://www.tubiao.cn/svg/item-f1839dc43ed2b94a) | — |
-| 泰隆银行 | tlcb | `accounts_bank_tlcb.svg` / `accounts_bank_tlcb_color.svg` | `bank_8c865c490ced4f5c` | [查看](https://www.tubiao.cn/svg/item-8c865c490ced4f5c) | — |
-| 唐山银行 | bots | `accounts_bank_bots.svg` / `accounts_bank_bots_color.svg` | `bank_191b35220bfbb928` | [查看](https://www.tubiao.cn/svg/item-191b35220bfbb928) | — |
-| 天津银行 | botj | `accounts_bank_botj.svg` / `accounts_bank_botj_color.svg` | `bank_91398f5a17e0c6ac` | [查看](https://www.tubiao.cn/svg/item-91398f5a17e0c6ac) | — |
-| 铁岭银行 | botl | `accounts_bank_botl.svg` / `accounts_bank_botl_color.svg` | `bank_38d7b6a59fe6d2ff` | [查看](https://www.tubiao.cn/svg/item-38d7b6a59fe6d2ff) | — |
-| 网商银行 | mybank | `accounts_bank_mybank.svg` / `accounts_bank_mybank_color.svg` | `bank_e33d629fb3fff305` | [查看](https://www.tubiao.cn/svg/item-e33d629fb3fff305) | — |
-| 威海市商业银行 | whccb | `accounts_bank_whccb.svg` / `accounts_bank_whccb_color.svg` | `bank_7582d0339c4074ee` | [查看](https://www.tubiao.cn/svg/item-7582d0339c4074ee) | — |
-| 潍坊银行 | wfccb | `accounts_bank_wfccb.svg` / `accounts_bank_wfccb_color.svg` | `bank_8e3a3d0242a97c5b` | [查看](https://www.tubiao.cn/svg/item-8e3a3d0242a97c5b) | — |
-| 温州银行 | wzbank | `accounts_bank_wzbank.svg` / `accounts_bank_wzbank_color.svg` | `bank_921dfd7b670db7c7` | [查看](https://www.tubiao.cn/svg/item-921dfd7b670db7c7) | — |
-| 乌海银行 | whbank | `accounts_bank_whbank.svg` / `accounts_bank_whbank_color.svg` | `bank_edaba5ab68b23160` | [查看](https://www.tubiao.cn/svg/item-edaba5ab68b23160) | — |
-| 乌鲁木齐市商业银行 | uccb | `accounts_bank_uccb.svg` / `accounts_bank_uccb_color.svg` | `bank_e50f71fea8011c7b` | [查看](https://www.tubiao.cn/svg/item-e50f71fea8011c7b) | — |
-| 西安银行 | xabank | `accounts_bank_xabank.svg` / `accounts_bank_xabank_color.svg` | `bank_bb7a4441fa411c18` | [查看](https://www.tubiao.cn/svg/item-bb7a4441fa411c18) | — |
-| 西藏银行 | boxz | `accounts_bank_boxz.svg` / `accounts_bank_boxz_color.svg` | `bank_f5e054115d10192b` | [查看](https://www.tubiao.cn/svg/item-f5e054115d10192b) | — |
-| 新疆汇和银行 | xjhb | `accounts_bank_xjhb.svg` / `accounts_bank_xjhb_color.svg` | `bank_72405463d7da6f93` | [查看](https://www.tubiao.cn/svg/item-72405463d7da6f93) | — |
-| 新疆银行 | xjb | `accounts_bank_xjb.svg` / `accounts_bank_xjb_color.svg` | `bank_2d04d78caaa3f7f4` | [查看](https://www.tubiao.cn/svg/item-2d04d78caaa3f7f4) | — |
-| 邢台银行 | xtb | `accounts_bank_xtb.svg` / `accounts_bank_xtb_color.svg` | `bank_1ee9ed1c9bff6670` | [查看](https://www.tubiao.cn/svg/item-1ee9ed1c9bff6670) | — |
-| 兴业银行 | cib | `accounts_bank_cib.svg` / `accounts_bank_cib_color.svg` | `bank_f5f4efccb216cf52` | [查看](https://www.tubiao.cn/svg/item-f5f4efccb216cf52) | — |
-| 雅安市商业银行 | yaccb | `accounts_bank_yaccb.svg` / `accounts_bank_yaccb_color.svg` | `bank_98ac51113563b082` | [查看](https://www.tubiao.cn/svg/item-98ac51113563b082) | — |
-| 烟台银行 | ytb | `accounts_bank_ytb.svg` / `accounts_bank_ytb_color.svg` | `bank_d584c86cc198577a` | [查看](https://www.tubiao.cn/svg/item-d584c86cc198577a) | — |
-| 阳泉市商业银行 | yqccb | `accounts_bank_yqccb.svg` / `accounts_bank_yqccb_color.svg` | `bank_aa5b942fbffb206a` | [查看](https://www.tubiao.cn/svg/item-aa5b942fbffb206a) | 是 |
-| 宜宾市商业银行 | ybccb | `accounts_bank_ybccb.svg` / `accounts_bank_ybccb_color.svg` | `bank_3a5216e8b23e8f63` | [查看](https://www.tubiao.cn/svg/item-3a5216e8b23e8f63) | — |
-| 营口沿海银行 | ykyhb | `accounts_bank_ykyhb.svg` / `accounts_bank_ykyhb_color.svg` | `bank_aa72f268f6d514df` | [查看](https://www.tubiao.cn/svg/item-aa72f268f6d514df) | 是 |
-| 营口银行 | boyk | `accounts_bank_boyk.svg` / `accounts_bank_boyk_color.svg` | `bank_cad6f42eaa04d2c2` | [查看](https://www.tubiao.cn/svg/item-cad6f42eaa04d2c2) | — |
-| 云南红塔银行 | ynhtbank | `accounts_bank_ynhtbank.svg` / `accounts_bank_ynhtbank_color.svg` | `bank_3d44b968c4597ff4` | [查看](https://www.tubiao.cn/svg/item-3d44b968c4597ff4) | — |
-| 枣庄银行 | zzb | `accounts_bank_zzb.svg` / `accounts_bank_zzb_color.svg` | `bank_a0dbc5a676189b16` | [查看](https://www.tubiao.cn/svg/item-a0dbc5a676189b16) | — |
-| 张家口银行 | zjkccb | `accounts_bank_zjkccb.svg` / `accounts_bank_zjkccb_color.svg` | `bank_a570d94fa548503b` | [查看](https://www.tubiao.cn/svg/item-a570d94fa548503b) | — |
-| 长安银行 | cabank | `accounts_bank_cabank.svg` / `accounts_bank_cabank_color.svg` | `bank_082c95b801b821e4` | [查看](https://www.tubiao.cn/svg/item-082c95b801b821e4) | — |
-| 长城华西银行 | gwb | `accounts_bank_gwb.svg` / `accounts_bank_gwb_color.svg` | `bank_d793aa2f3eb16795` | [查看](https://www.tubiao.cn/svg/item-d793aa2f3eb16795) | — |
-| 长沙银行 | bscb | `accounts_bank_bscb.svg` / `accounts_bank_bscb_color.svg` | `bank_88f2a650579da10e` | [查看](https://www.tubiao.cn/svg/item-88f2a650579da10e) | — |
-| 长治银行 | czb | `accounts_bank_czb.svg` / `accounts_bank_czb_color.svg` | `bank_fd61b4f4d046166c` | [查看](https://www.tubiao.cn/svg/item-fd61b4f4d046166c) | 是 |
-| 招商银行 | cmb | `accounts_bank_cmb.svg` / `accounts_bank_cmb_color.svg` | `cmb` | [查看](https://www.tubiao.cn/svg/item-88f6a761f76e3520) | — |
-| 浙江稠州商业银行 | czcb | `accounts_bank_czcb.svg` / `accounts_bank_czcb_color.svg` | `bank_4e5bd3187e7c4e80` | [查看](https://www.tubiao.cn/svg/item-4e5bd3187e7c4e80) | — |
-| 浙江民泰商业银行 | mtbank | `accounts_bank_mtbank.svg` / `accounts_bank_mtbank_color.svg` | `bank_89f644cf2285e9c7` | [查看](https://www.tubiao.cn/svg/item-89f644cf2285e9c7) | — |
-| 浙商银行 | czbank | `accounts_bank_czbank.svg` / `accounts_bank_czbank_color.svg` | `bank_0b35a3df2f0658ed` | [查看](https://www.tubiao.cn/svg/item-0b35a3df2f0658ed) | — |
-| 郑州银行 | zzbank | `accounts_bank_zzbank.svg` / `accounts_bank_zzbank_color.svg` | `bank_e825183a11f81fd6` | [查看](https://www.tubiao.cn/svg/item-e825183a11f81fd6) | — |
-| 中国工商银行 | icbc | `accounts_bank_icbc.svg` / `accounts_bank_icbc_color.svg` | `icbk` | [查看](https://www.tubiao.cn/svg/item-3fb063fe8e824ea5) | — |
-| 中国光大银行 | ceb | `accounts_bank_ceb.svg` / `accounts_bank_ceb_color.svg` | `bank_2c94c71d0e1e5cf4` | [查看](https://www.tubiao.cn/svg/item-2c94c71d0e1e5cf4) | — |
-| 中国建设银行 | ccb | `accounts_bank_ccb.svg` / `accounts_bank_ccb_color.svg` | `ccbc` | [查看](https://www.tubiao.cn/svg/item-01737cfc6b8559eb) | — |
-| 中国进出口银行 | eibof | `accounts_bank_eibof.svg` / `accounts_bank_eibof_color.svg` | `bank_1aa887f9ea4c782f` | [查看](https://www.tubiao.cn/svg/item-1aa887f9ea4c782f) | — |
-| 中国民生银行 | cmbc | `accounts_bank_cmbc.svg` / `accounts_bank_cmbc_color.svg` | `bank_dd14c4de90f711ad` | [查看](https://www.tubiao.cn/svg/item-dd14c4de90f711ad) | — |
-| 中国农业发展银行 | adbc | `accounts_bank_adbc.svg` / `accounts_bank_adbc_color.svg` | `bank_af0436d4af867817` | [查看](https://www.tubiao.cn/svg/item-af0436d4af867817) | — |
-| 中国农业银行 | abc | `accounts_bank_abc.svg` / `accounts_bank_abc_color.svg` | `aboc` | [查看](https://www.tubiao.cn/svg/item-0c6bd3ee646141a5) | — |
-| 中国人民银行 | pboc | `accounts_bank_pboc.svg` / `accounts_bank_pboc_color.svg` | `bank_c278abc49ac503c0` | [查看](https://www.tubiao.cn/svg/item-c278abc49ac503c0) | — |
-| 中国银行 | boc | `accounts_bank_boc.svg` / `accounts_bank_boc_color.svg` | `bkch` | [查看](https://www.tubiao.cn/svg/item-81cc6f0374a6b2fb) | — |
-| 中国邮政储蓄银行 | psbc | `accounts_bank_psbc.svg` / `accounts_bank_psbc_color.svg` | `bank_697f11d169df03a4` | [查看](https://www.tubiao.cn/svg/item-697f11d169df03a4) | — |
-| 中信银行 | citic | `accounts_bank_citic.svg` / `accounts_bank_citic_color.svg` | `bank_0b4239b04615dee8` | [查看](https://www.tubiao.cn/svg/item-0b4239b04615dee8) | — |
-| 中原银行 | zybank | `accounts_bank_zybank.svg` / `accounts_bank_zybank_color.svg` | `bank_2e3421d25611d8ed` | [查看](https://www.tubiao.cn/svg/item-2e3421d25611d8ed) | — |
-| 珠海华润银行 | rboz | `accounts_bank_rboz.svg` / `accounts_bank_rboz_color.svg` | `bank_fcb70013d0f16434` | [查看](https://www.tubiao.cn/svg/item-fcb70013d0f16434) | — |
-| 自贡银行 | zgbank | `accounts_bank_zgbank.svg` / `accounts_bank_zgbank_color.svg` | `bank_6f4201bb58206d21` | [查看](https://www.tubiao.cn/svg/item-6f4201bb58206d21) | — |
+| 银行/来源名称 | 简称 | 默认显示 | 资源文件（白色／彩色） | 兼容图标键（白色） | 来源页面 | 历史标识 |
+|---|---|---|---|---|---|---|
+| 鞍山银行 | boas | 白标 | `accounts_bank_boas.svg` / `accounts_bank_boas_color.svg` | `bank_30663d9c5153625c` | [查看](https://www.tubiao.cn/svg/item-30663d9c5153625c) | — |
+| 保定银行 | bobd | 白标 | `accounts_bank_bobd.svg` / `accounts_bank_bobd_color.svg` | `bank_5927f8dbd3eca1be` | [查看](https://www.tubiao.cn/svg/item-5927f8dbd3eca1be) | — |
+| 北京银行 | bob | 白标 | `accounts_bank_bob.svg` / `accounts_bank_bob_color.svg` | `bank_bc07bb9eaac7b1a2` | [查看](https://www.tubiao.cn/svg/item-bc07bb9eaac7b1a2) | — |
+| 本溪市商业银行 | bccb | 白标 | `accounts_bank_bccb.svg` / `accounts_bank_bccb_color.svg` | `bank_1712cdd37f1b8b22` | [查看](https://www.tubiao.cn/svg/item-1712cdd37f1b8b22) | — |
+| 渤海银行 | bohaib | 彩色 | `accounts_bank_bohaib.svg` / `accounts_bank_bohaib_color.svg` | `bank_655102d0a03ba61e` | [查看](https://www.tubiao.cn/svg/item-655102d0a03ba61e) | — |
+| 沧州银行 | bocz | 白标 | `accounts_bank_bocz.svg` / `accounts_bank_bocz_color.svg` | `bank_3d9675edeb7c46fa` | [查看](https://www.tubiao.cn/svg/item-3d9675edeb7c46fa) | — |
+| 朝阳银行 | bocy | 白标 | `accounts_bank_bocy.svg` / `accounts_bank_bocy_color.svg` | `bank_28d03fcc7abb11be` | [查看](https://www.tubiao.cn/svg/item-28d03fcc7abb11be) | — |
+| 成都银行 | cdcb | 白标 | `accounts_bank_cdcb.svg` / `accounts_bank_cdcb_color.svg` | `bank_24080f94b63434ab` | [查看](https://www.tubiao.cn/svg/item-24080f94b63434ab) | — |
+| 承德银行 | cdbank | 白标 | `accounts_bank_cdbank.svg` / `accounts_bank_cdbank_color.svg` | `bank_52356497e588963c` | [查看](https://www.tubiao.cn/svg/item-52356497e588963c) | — |
+| 重庆三峡银行 | ccqtgb | 白标 | `accounts_bank_ccqtgb.svg` / `accounts_bank_ccqtgb_color.svg` | `bank_5c69bd0e678072b9` | [查看](https://www.tubiao.cn/svg/item-5c69bd0e678072b9) | — |
+| 重庆银行 | cqbank | 彩色 | `accounts_bank_cqbank.svg` / `accounts_bank_cqbank_color.svg` | `bank_28cb806c4a2b4762` | [查看](https://www.tubiao.cn/svg/item-28cb806c4a2b4762) | — |
+| 达州银行 | dccb | 白标 | `accounts_bank_dccb.svg` / `accounts_bank_dccb_color.svg` | `bank_206e093ce5813475` | [查看](https://www.tubiao.cn/svg/item-206e093ce5813475) | — |
+| 大连银行 | dlb | 白标 | `accounts_bank_dlb.svg` / `accounts_bank_dlb_color.svg` | `bank_17a1c52f07222d53` | [查看](https://www.tubiao.cn/svg/item-17a1c52f07222d53) | — |
+| 大同银行 | dtb | 白标 | `accounts_bank_dtb.svg` / `accounts_bank_dtb_color.svg` | `bank_0986964944efb395` | [查看](https://www.tubiao.cn/svg/item-0986964944efb395) | 是 |
+| 丹东银行 | bodd | 白标 | `accounts_bank_bodd.svg` / `accounts_bank_bodd_color.svg` | `bank_565ca720da891e1f` | [查看](https://www.tubiao.cn/svg/item-565ca720da891e1f) | — |
+| 德州银行 | dzbank | 白标 | `accounts_bank_dzbank.svg` / `accounts_bank_dzbank_color.svg` | `bank_dc1b501a0e1ddab9` | [查看](https://www.tubiao.cn/svg/item-dc1b501a0e1ddab9) | — |
+| 东莞银行 | bod | 白标 | `accounts_bank_bod.svg` / `accounts_bank_bod_color.svg` | `bank_f7e3f97b06adc4a5` | [查看](https://www.tubiao.cn/svg/item-f7e3f97b06adc4a5) | — |
+| 东营银行 | dyccb | 白标 | `accounts_bank_dyccb.svg` / `accounts_bank_dyccb_color.svg` | `bank_e67569b8d4fa217f` | [查看](https://www.tubiao.cn/svg/item-e67569b8d4fa217f) | — |
+| 鄂尔多斯银行 | ordosb | 白标 | `accounts_bank_ordosb.svg` / `accounts_bank_ordosb_color.svg` | `bank_36bfc81423ce478c` | [查看](https://www.tubiao.cn/svg/item-36bfc81423ce478c) | — |
+| 福建海峡银行 | fjhxbc | 白标 | `accounts_bank_fjhxbc.svg` / `accounts_bank_fjhxbc_color.svg` | `bank_7206510ccdb16bba` | [查看](https://www.tubiao.cn/svg/item-7206510ccdb16bba) | — |
+| 抚顺银行 | fscb | 白标 | `accounts_bank_fscb.svg` / `accounts_bank_fscb_color.svg` | `bank_5d6ccdb695b9dd42` | [查看](https://www.tubiao.cn/svg/item-5d6ccdb695b9dd42) | — |
+| 阜阳银行 | fxcb | 彩色 | `accounts_bank_fxcb.svg` / `accounts_bank_fxcb_color.svg` | `bank_ed53b93cf82610f4` | [查看](https://www.tubiao.cn/svg/item-ed53b93cf82610f4) | — |
+| 富滇银行 | fdbank | 白标 | `accounts_bank_fdbank.svg` / `accounts_bank_fdbank_color.svg` | `bank_7d690142090615b3` | [查看](https://www.tubiao.cn/svg/item-7d690142090615b3) | — |
+| 甘肃银行 | bogs | 白标 | `accounts_bank_bogs.svg` / `accounts_bank_bogs_color.svg` | `bank_73298bce8744330f` | [查看](https://www.tubiao.cn/svg/item-73298bce8744330f) | — |
+| 广东华兴银行 | ghb | 白标 | `accounts_bank_ghb.svg` / `accounts_bank_ghb_color.svg` | `bank_9454de529d92427c` | [查看](https://www.tubiao.cn/svg/item-9454de529d92427c) | — |
+| 广东南粤银行 | nybank | 白标 | `accounts_bank_nybank.svg` / `accounts_bank_nybank_color.svg` | `bank_a42e935d15d46594` | [查看](https://www.tubiao.cn/svg/item-a42e935d15d46594) | — |
+| 广发银行 | gdb | 白标 | `accounts_bank_gdb.svg` / `accounts_bank_gdb_color.svg` | `bank_acaaf4fe223ff584` | [查看](https://www.tubiao.cn/svg/item-acaaf4fe223ff584) | — |
+| 广西北部湾银行 | bgb | 彩色 | `accounts_bank_bgb.svg` / `accounts_bank_bgb_color.svg` | `bank_7a1a906a437d728b` | [查看](https://www.tubiao.cn/svg/item-7a1a906a437d728b) | — |
+| 广州银行 | gzcb | 白标 | `accounts_bank_gzcb.svg` / `accounts_bank_gzcb_color.svg` | `bank_dde84144331f15b2` | [查看](https://www.tubiao.cn/svg/item-dde84144331f15b2) | — |
+| 贵阳银行 | gyccb | 白标 | `accounts_bank_gyccb.svg` / `accounts_bank_gyccb_color.svg` | `bank_f938c67888eebfe7` | [查看](https://www.tubiao.cn/svg/item-f938c67888eebfe7) | — |
+| 贵州银行 | bogz | 白标 | `accounts_bank_bogz.svg` / `accounts_bank_bogz_color.svg` | `bank_c0e43d309fca6add` | [查看](https://www.tubiao.cn/svg/item-c0e43d309fca6add) | — |
+| 桂林银行 | glbank | 彩色 | `accounts_bank_glbank.svg` / `accounts_bank_glbank_color.svg` | `bank_3f19b30b7fa21ef9` | [查看](https://www.tubiao.cn/svg/item-3f19b30b7fa21ef9) | — |
+| 国家开发银行 | cdb | 彩色 | `accounts_bank_cdb.svg` / `accounts_bank_cdb_color.svg` | `bank_c122117feee62f21` | [查看](https://www.tubiao.cn/svg/item-c122117feee62f21) | — |
+| 哈尔滨银行 | hrbcb | 白标 | `accounts_bank_hrbcb.svg` / `accounts_bank_hrbcb_color.svg` | `bank_5df79aeb0cff8135` | [查看](https://www.tubiao.cn/svg/item-5df79aeb0cff8135) | — |
+| 哈密市商业银行 | hmccb | 彩色 | `accounts_bank_hmccb.svg` / `accounts_bank_hmccb_color.svg` | `bank_2543e760759f5150` | [查看](https://www.tubiao.cn/svg/item-2543e760759f5150) | — |
+| 海南银行 | hnb | 彩色 | `accounts_bank_hnb.svg` / `accounts_bank_hnb_color.svg` | `bank_0fbdea13c7ff22de` | [查看](https://www.tubiao.cn/svg/item-0fbdea13c7ff22de) | — |
+| 邯郸银行 | hdbank | 白标 | `accounts_bank_hdbank.svg` / `accounts_bank_hdbank_color.svg` | `bank_c642c6d17544d48c` | [查看](https://www.tubiao.cn/svg/item-c642c6d17544d48c) | — |
+| 汉口银行 | hkb | 白标 | `accounts_bank_hkb.svg` / `accounts_bank_hkb_color.svg` | `bank_28761f1a38dfbbd6` | [查看](https://www.tubiao.cn/svg/item-28761f1a38dfbbd6) | — |
+| 杭州银行 | hzcb | 彩色 | `accounts_bank_hzcb.svg` / `accounts_bank_hzcb_color.svg` | `bank_c802cd2beb943b31` | [查看](https://www.tubiao.cn/svg/item-c802cd2beb943b31) | — |
+| 河北银行 | bhb | 彩色 | `accounts_bank_bhb.svg` / `accounts_bank_bhb_color.svg` | `bank_ac22bab2fd6cdc4f` | [查看](https://www.tubiao.cn/svg/item-ac22bab2fd6cdc4f) | — |
+| 恒丰银行 | egbank | 彩色 | `accounts_bank_egbank.svg` / `accounts_bank_egbank_color.svg` | `bank_9534ccf9cc21fbad` | [查看](https://www.tubiao.cn/svg/item-9534ccf9cc21fbad) | — |
+| 衡水银行 | bohs | 彩色 | `accounts_bank_bohs.svg` / `accounts_bank_bohs_color.svg` | `bank_d0614e7f3c439282` | [查看](https://www.tubiao.cn/svg/item-d0614e7f3c439282) | — |
+| 湖北银行 | hbc | 彩色 | `accounts_bank_hbc.svg` / `accounts_bank_hbc_color.svg` | `bank_0ba9d0d3815741c9` | [查看](https://www.tubiao.cn/svg/item-0ba9d0d3815741c9) | — |
+| 湖州银行 | bohz | 白标 | `accounts_bank_bohz.svg` / `accounts_bank_bohz_color.svg` | `bank_0bb9055be05b1f1d` | [查看](https://www.tubiao.cn/svg/item-0bb9055be05b1f1d) | — |
+| 葫芦岛银行 | bohld | 白标 | `accounts_bank_bohld.svg` / `accounts_bank_bohld_color.svg` | `bank_14f2aa2560622a58` | [查看](https://www.tubiao.cn/svg/item-14f2aa2560622a58) | — |
+| 华融湘江银行 | hrxjb | 白标 | `accounts_bank_hrxjb.svg` / `accounts_bank_hrxjb_color.svg` | `bank_e5c35f26e0a84d32` | [查看](https://www.tubiao.cn/svg/item-e5c35f26e0a84d32) | 是 |
+| 华夏银行 | hxb | 白标 | `accounts_bank_hxb.svg` / `accounts_bank_hxb_color.svg` | `bank_a347afb643e9dda2` | [查看](https://www.tubiao.cn/svg/item-a347afb643e9dda2) | — |
+| 徽商银行 | hsbank | 白标 | `accounts_bank_hsbank.svg` / `accounts_bank_hsbank_color.svg` | `bank_a68c2590a384df96` | [查看](https://www.tubiao.cn/svg/item-a68c2590a384df96) | — |
+| 吉林银行 | bojl | 白标 | `accounts_bank_bojl.svg` / `accounts_bank_bojl_color.svg` | `bank_f135e4805d010124` | [查看](https://www.tubiao.cn/svg/item-f135e4805d010124) | — |
+| 济宁银行 | jnbank | 彩色 | `accounts_bank_jnbank.svg` / `accounts_bank_jnbank_color.svg` | `bank_a179be324ec19312` | [查看](https://www.tubiao.cn/svg/item-a179be324ec19312) | — |
+| 嘉兴银行 | jxbank | 白标 | `accounts_bank_jxbank.svg` / `accounts_bank_jxbank_color.svg` | `bank_560b1a4519af709f` | [查看](https://www.tubiao.cn/svg/item-560b1a4519af709f) | — |
+| 江苏银行 | jsbank | 彩色 | `accounts_bank_jsbank.svg` / `accounts_bank_jsbank_color.svg` | `bank_1f150844afc30c68` | [查看](https://www.tubiao.cn/svg/item-1f150844afc30c68) | — |
+| 江苏长江商业银行 | jscjcb | 白标 | `accounts_bank_jscjcb.svg` / `accounts_bank_jscjcb_color.svg` | `bank_26139358ec87b742` | [查看](https://www.tubiao.cn/svg/item-26139358ec87b742) | — |
+| 江西银行 | jxb | 白标 | `accounts_bank_jxb.svg` / `accounts_bank_jxb_color.svg` | `bank_b4b77bdb41f0ba23` | [查看](https://www.tubiao.cn/svg/item-b4b77bdb41f0ba23) | — |
+| 交通银行 | comm | 白标 | `accounts_bank_comm.svg` / `accounts_bank_comm_color.svg` | `bank_be3f0313e6049e7a` | [查看](https://www.tubiao.cn/svg/item-be3f0313e6049e7a) | — |
+| 焦作中旅银行 | cts | 白标 | `accounts_bank_cts.svg` / `accounts_bank_cts_color.svg` | `bank_148d3a1c6b46cf0f` | [查看](https://www.tubiao.cn/svg/item-148d3a1c6b46cf0f) | — |
+| 金华银行 | jhccb | 白标 | `accounts_bank_jhccb.svg` / `accounts_bank_jhccb_color.svg` | `bank_037f61b4a416febd` | [查看](https://www.tubiao.cn/svg/item-037f61b4a416febd) | — |
+| 锦州银行 | jzbank | 白标 | `accounts_bank_jzbank.svg` / `accounts_bank_jzbank_color.svg` | `bank_c003c5255e9b5f1e` | [查看](https://www.tubiao.cn/svg/item-c003c5255e9b5f1e) | — |
+| 晋城银行 | jinchb | 白标 | `accounts_bank_jinchb.svg` / `accounts_bank_jinchb_color.svg` | `bank_407ffdc7083cd181` | [查看](https://www.tubiao.cn/svg/item-407ffdc7083cd181) | 是 |
+| 晋商银行 | jsb | 彩色 | `accounts_bank_jsb.svg` / `accounts_bank_jsb_color.svg` | `bank_e1e1ab1c91789925` | [查看](https://www.tubiao.cn/svg/item-e1e1ab1c91789925) | — |
+| 晋中银行 | jzb | 白标 | `accounts_bank_jzb.svg` / `accounts_bank_jzb_color.svg` | `bank_52dde46f7fad5e27` | [查看](https://www.tubiao.cn/svg/item-52dde46f7fad5e27) | 是 |
+| 九江银行 | jjccb | 白标 | `accounts_bank_jjccb.svg` / `accounts_bank_jjccb_color.svg` | `bank_1ab5f0d64a489e91` | [查看](https://www.tubiao.cn/svg/item-1ab5f0d64a489e91) | — |
+| 库尔勒市商业银行 | kcccb | 白标 | `accounts_bank_kcccb.svg` / `accounts_bank_kcccb_color.svg` | `bank_c5c28a0efe21d46f` | [查看](https://www.tubiao.cn/svg/item-c5c28a0efe21d46f) | — |
+| 昆仑银行 | klb | 白标 | `accounts_bank_klb.svg` / `accounts_bank_klb_color.svg` | `bank_ed0bb779e0611c72` | [查看](https://www.tubiao.cn/svg/item-ed0bb779e0611c72) | — |
+| 莱商银行 | lsbank | 白标 | `accounts_bank_lsbank.svg` / `accounts_bank_lsbank_color.svg` | `bank_6bb7da5f9f9507cd` | [查看](https://www.tubiao.cn/svg/item-6bb7da5f9f9507cd) | — |
+| 兰州银行 | lzbank | 白标 | `accounts_bank_lzbank.svg` / `accounts_bank_lzbank_color.svg` | `bank_8f2612d537a16365` | [查看](https://www.tubiao.cn/svg/item-8f2612d537a16365) | — |
+| 廊坊银行 | bolf | 白标 | `accounts_bank_bolf.svg` / `accounts_bank_bolf_color.svg` | `bank_80f930eff48d1c1f` | [查看](https://www.tubiao.cn/svg/item-80f930eff48d1c1f) | — |
+| 乐山市商业银行 | lsccb | 白标 | `accounts_bank_lsccb.svg` / `accounts_bank_lsccb_color.svg` | `bank_bda3c9ff9f476f68` | [查看](https://www.tubiao.cn/svg/item-bda3c9ff9f476f68) | — |
+| 辽阳银行 | boly | 白标 | `accounts_bank_boly.svg` / `accounts_bank_boly_color.svg` | `bank_8fb25721a2caac67` | [查看](https://www.tubiao.cn/svg/item-8fb25721a2caac67) | 是 |
+| 临商银行 | lsbc | 白标 | `accounts_bank_lsbc.svg` / `accounts_bank_lsbc_color.svg` | `bank_78e2c3384f02bb48` | [查看](https://www.tubiao.cn/svg/item-78e2c3384f02bb48) | — |
+| 柳州银行 | lzccb | 白标 | `accounts_bank_lzccb.svg` / `accounts_bank_lzccb_color.svg` | `bank_73999369a515d961` | [查看](https://www.tubiao.cn/svg/item-73999369a515d961) | — |
+| 龙江银行 | ljbank | 白标 | `accounts_bank_ljbank.svg` / `accounts_bank_ljbank_color.svg` | `bank_c144472fd84111fe` | [查看](https://www.tubiao.cn/svg/item-c144472fd84111fe) | — |
+| 泸州银行 | lzb | 白标 | `accounts_bank_lzb.svg` / `accounts_bank_lzb_color.svg` | `bank_48152f519819602f` | [查看](https://www.tubiao.cn/svg/item-48152f519819602f) | — |
+| 洛阳银行 | bly | 彩色 | `accounts_bank_bly.svg` / `accounts_bank_bly_color.svg` | `bank_ad466c737e0c733f` | [查看](https://www.tubiao.cn/svg/item-ad466c737e0c733f) | — |
+| 绵阳市商业银行 | myccb | 彩色 | `accounts_bank_myccb.svg` / `accounts_bank_myccb_color.svg` | `bank_a08410c7990f951c` | [查看](https://www.tubiao.cn/svg/item-a08410c7990f951c) | — |
+| 南京银行 | njcb | 白标 | `accounts_bank_njcb.svg` / `accounts_bank_njcb_color.svg` | `bank_a332fd83d07292bf` | [查看](https://www.tubiao.cn/svg/item-a332fd83d07292bf) | — |
+| 内蒙古银行 | h3cb | 白标 | `accounts_bank_h3cb.svg` / `accounts_bank_h3cb_color.svg` | `bank_7cd9d05dfeb29d19` | [查看](https://www.tubiao.cn/svg/item-7cd9d05dfeb29d19) | — |
+| 宁波东海银行 | ndhb | 白标 | `accounts_bank_ndhb.svg` / `accounts_bank_ndhb_color.svg` | `bank_2eed2034612d7154` | [查看](https://www.tubiao.cn/svg/item-2eed2034612d7154) | — |
+| 宁波通商银行 | nbcmb | 彩色 | `accounts_bank_nbcmb.svg` / `accounts_bank_nbcmb_color.svg` | `bank_6ee7b110f00fed02` | [查看](https://www.tubiao.cn/svg/item-6ee7b110f00fed02) | — |
+| 宁波银行 | nbcb | 彩色 | `accounts_bank_nbcb.svg` / `accounts_bank_nbcb_color.svg` | `bank_3c789bc646f0b3f1` | [查看](https://www.tubiao.cn/svg/item-3c789bc646f0b3f1) | — |
+| 宁夏银行 | nxbank | 白标 | `accounts_bank_nxbank.svg` / `accounts_bank_nxbank_color.svg` | `bank_88d7586177e7513b` | [查看](https://www.tubiao.cn/svg/item-88d7586177e7513b) | — |
+| 盘锦银行 | bopj | 白标 | `accounts_bank_bopj.svg` / `accounts_bank_bopj_color.svg` | `bank_1cd8c37c4adcf957` | [查看](https://www.tubiao.cn/svg/item-1cd8c37c4adcf957) | — |
+| 平安银行 | spabank | 白标 | `accounts_bank_spabank.svg` / `accounts_bank_spabank_color.svg` | `bank_5d085ba3787c37d7` | [查看](https://www.tubiao.cn/svg/item-5d085ba3787c37d7) | — |
+| 平顶山银行 | bop | 白标 | `accounts_bank_bop.svg` / `accounts_bank_bop_color.svg` | `bank_8e66776def452515` | [查看](https://www.tubiao.cn/svg/item-8e66776def452515) | — |
+| 浦发银行 | spdb | 白标 | `accounts_bank_spdb.svg` / `accounts_bank_spdb_color.svg` | `bank_f992e61b2440eb9f` | [查看](https://www.tubiao.cn/svg/item-f992e61b2440eb9f) | — |
+| 齐鲁银行 | qlbank | 彩色 | `accounts_bank_qlbank.svg` / `accounts_bank_qlbank_color.svg` | `bank_9208a36075cce97c` | [查看](https://www.tubiao.cn/svg/item-9208a36075cce97c) | — |
+| 齐商银行 | qsb | 白标 | `accounts_bank_qsb.svg` / `accounts_bank_qsb_color.svg` | `bank_a7ad5a279ba0a0db` | [查看](https://www.tubiao.cn/svg/item-a7ad5a279ba0a0db) | — |
+| 秦皇岛银行 | qhdbank | 彩色 | `accounts_bank_qhdbank.svg` / `accounts_bank_qhdbank_color.svg` | `bank_84ceb085dcbb10f2` | [查看](https://www.tubiao.cn/svg/item-84ceb085dcbb10f2) | — |
+| 青岛银行 | qdccb | 白标 | `accounts_bank_qdccb.svg` / `accounts_bank_qdccb_color.svg` | `bank_9b679cd19b713009` | [查看](https://www.tubiao.cn/svg/item-9b679cd19b713009) | — |
+| 青海银行 | qhbank | 彩色 | `accounts_bank_qhbank.svg` / `accounts_bank_qhbank_color.svg` | `bank_a62ccfdd6b452be4` | [查看](https://www.tubiao.cn/svg/item-a62ccfdd6b452be4) | — |
+| 曲靖市商业银行 | qjcccb | 白标 | `accounts_bank_qjcccb.svg` / `accounts_bank_qjcccb_color.svg` | `bank_f3d037d826814866` | [查看](https://www.tubiao.cn/svg/item-f3d037d826814866) | — |
+| 泉州银行 | boqz | 白标 | `accounts_bank_boqz.svg` / `accounts_bank_boqz_color.svg` | `bank_7576633e8748306c` | [查看](https://www.tubiao.cn/svg/item-7576633e8748306c) | — |
+| 日照银行 | rzb | 彩色 | `accounts_bank_rzb.svg` / `accounts_bank_rzb_color.svg` | `bank_91265b7284430f91` | [查看](https://www.tubiao.cn/svg/item-91265b7284430f91) | — |
+| 厦门国际银行 | xmintb | 白标 | `accounts_bank_xmintb.svg` / `accounts_bank_xmintb_color.svg` | `bank_384a0333c213a88e` | [查看](https://www.tubiao.cn/svg/item-384a0333c213a88e) | — |
+| 厦门银行 | xmbank | 白标 | `accounts_bank_xmbank.svg` / `accounts_bank_xmbank_color.svg` | `bank_44e08ebec3442bae` | [查看](https://www.tubiao.cn/svg/item-44e08ebec3442bae) | — |
+| 上海银行 | bosc | 白标 | `accounts_bank_bosc.svg` / `accounts_bank_bosc_color.svg` | `bank_231653e198c2ef26` | [查看](https://www.tubiao.cn/svg/item-231653e198c2ef26) | — |
+| 上饶银行 | srbank | 白标 | `accounts_bank_srbank.svg` / `accounts_bank_srbank_color.svg` | `bank_0b67fbc1cfdff255` | [查看](https://www.tubiao.cn/svg/item-0b67fbc1cfdff255) | — |
+| 绍兴银行 | sxcb | 白标 | `accounts_bank_sxcb.svg` / `accounts_bank_sxcb_color.svg` | `bank_b783965c4080a701` | [查看](https://www.tubiao.cn/svg/item-b783965c4080a701) | — |
+| 盛京银行 | sjbank | 白标 | `accounts_bank_sjbank.svg` / `accounts_bank_sjbank_color.svg` | `bank_6f65c2166f85b6e1` | [查看](https://www.tubiao.cn/svg/item-6f65c2166f85b6e1) | — |
+| 石嘴山银行 | szsbk | 白标 | `accounts_bank_szsbk.svg` / `accounts_bank_szsbk_color.svg` | `bank_d0d9a01213c85a0e` | [查看](https://www.tubiao.cn/svg/item-d0d9a01213c85a0e) | — |
+| 四川天府银行 | sctfb | 白标 | `accounts_bank_sctfb.svg` / `accounts_bank_sctfb_color.svg` | `bank_f5d92febbb4c19f2` | [查看](https://www.tubiao.cn/svg/item-f5d92febbb4c19f2) | — |
+| 四川银行 | scb | 白标 | `accounts_bank_scb.svg` / `accounts_bank_scb_color.svg` | `bank_6a68708325fe2dab` | [查看](https://www.tubiao.cn/svg/item-6a68708325fe2dab) | — |
+| 苏州银行 | bosz | 白标 | `accounts_bank_bosz.svg` / `accounts_bank_bosz_color.svg` | `bank_630c2f13056faa88` | [查看](https://www.tubiao.cn/svg/item-630c2f13056faa88) | — |
+| 遂宁银行 | snbank | 白标 | `accounts_bank_snbank.svg` / `accounts_bank_snbank_color.svg` | `bank_901a1acc09e1f3d3` | [查看](https://www.tubiao.cn/svg/item-901a1acc09e1f3d3) | — |
+| 台州银行 | tzbank | 彩色 | `accounts_bank_tzbank.svg` / `accounts_bank_tzbank_color.svg` | `bank_a9583d5a61155655` | [查看](https://www.tubiao.cn/svg/item-a9583d5a61155655) | — |
+| 泰安银行 | taccb | 白标 | `accounts_bank_taccb.svg` / `accounts_bank_taccb_color.svg` | `bank_f1839dc43ed2b94a` | [查看](https://www.tubiao.cn/svg/item-f1839dc43ed2b94a) | — |
+| 泰隆银行 | tlcb | 白标 | `accounts_bank_tlcb.svg` / `accounts_bank_tlcb_color.svg` | `bank_8c865c490ced4f5c` | [查看](https://www.tubiao.cn/svg/item-8c865c490ced4f5c) | — |
+| 唐山银行 | bots | 彩色 | `accounts_bank_bots.svg` / `accounts_bank_bots_color.svg` | `bank_191b35220bfbb928` | [查看](https://www.tubiao.cn/svg/item-191b35220bfbb928) | — |
+| 天津银行 | botj | 白标 | `accounts_bank_botj.svg` / `accounts_bank_botj_color.svg` | `bank_91398f5a17e0c6ac` | [查看](https://www.tubiao.cn/svg/item-91398f5a17e0c6ac) | — |
+| 铁岭银行 | botl | 白标 | `accounts_bank_botl.svg` / `accounts_bank_botl_color.svg` | `bank_38d7b6a59fe6d2ff` | [查看](https://www.tubiao.cn/svg/item-38d7b6a59fe6d2ff) | — |
+| 网商银行 | mybank | 白标 | `accounts_bank_mybank.svg` / `accounts_bank_mybank_color.svg` | `bank_e33d629fb3fff305` | [查看](https://www.tubiao.cn/svg/item-e33d629fb3fff305) | — |
+| 威海市商业银行 | whccb | 白标 | `accounts_bank_whccb.svg` / `accounts_bank_whccb_color.svg` | `bank_7582d0339c4074ee` | [查看](https://www.tubiao.cn/svg/item-7582d0339c4074ee) | — |
+| 潍坊银行 | wfccb | 白标 | `accounts_bank_wfccb.svg` / `accounts_bank_wfccb_color.svg` | `bank_8e3a3d0242a97c5b` | [查看](https://www.tubiao.cn/svg/item-8e3a3d0242a97c5b) | — |
+| 温州银行 | wzbank | 白标 | `accounts_bank_wzbank.svg` / `accounts_bank_wzbank_color.svg` | `bank_921dfd7b670db7c7` | [查看](https://www.tubiao.cn/svg/item-921dfd7b670db7c7) | — |
+| 乌海银行 | whbank | 白标 | `accounts_bank_whbank.svg` / `accounts_bank_whbank_color.svg` | `bank_edaba5ab68b23160` | [查看](https://www.tubiao.cn/svg/item-edaba5ab68b23160) | — |
+| 乌鲁木齐市商业银行 | uccb | 彩色 | `accounts_bank_uccb.svg` / `accounts_bank_uccb_color.svg` | `bank_e50f71fea8011c7b` | [查看](https://www.tubiao.cn/svg/item-e50f71fea8011c7b) | — |
+| 西安银行 | xabank | 白标 | `accounts_bank_xabank.svg` / `accounts_bank_xabank_color.svg` | `bank_bb7a4441fa411c18` | [查看](https://www.tubiao.cn/svg/item-bb7a4441fa411c18) | — |
+| 西藏银行 | boxz | 白标 | `accounts_bank_boxz.svg` / `accounts_bank_boxz_color.svg` | `bank_f5e054115d10192b` | [查看](https://www.tubiao.cn/svg/item-f5e054115d10192b) | — |
+| 新疆汇和银行 | xjhb | 白标 | `accounts_bank_xjhb.svg` / `accounts_bank_xjhb_color.svg` | `bank_72405463d7da6f93` | [查看](https://www.tubiao.cn/svg/item-72405463d7da6f93) | — |
+| 新疆银行 | xjb | 彩色 | `accounts_bank_xjb.svg` / `accounts_bank_xjb_color.svg` | `bank_2d04d78caaa3f7f4` | [查看](https://www.tubiao.cn/svg/item-2d04d78caaa3f7f4) | — |
+| 邢台银行 | xtb | 彩色 | `accounts_bank_xtb.svg` / `accounts_bank_xtb_color.svg` | `bank_1ee9ed1c9bff6670` | [查看](https://www.tubiao.cn/svg/item-1ee9ed1c9bff6670) | — |
+| 兴业银行 | cib | 白标 | `accounts_bank_cib.svg` / `accounts_bank_cib_color.svg` | `bank_f5f4efccb216cf52` | [查看](https://www.tubiao.cn/svg/item-f5f4efccb216cf52) | — |
+| 雅安市商业银行 | yaccb | 白标 | `accounts_bank_yaccb.svg` / `accounts_bank_yaccb_color.svg` | `bank_98ac51113563b082` | [查看](https://www.tubiao.cn/svg/item-98ac51113563b082) | — |
+| 烟台银行 | ytb | 白标 | `accounts_bank_ytb.svg` / `accounts_bank_ytb_color.svg` | `bank_d584c86cc198577a` | [查看](https://www.tubiao.cn/svg/item-d584c86cc198577a) | — |
+| 阳泉市商业银行 | yqccb | 彩色 | `accounts_bank_yqccb.svg` / `accounts_bank_yqccb_color.svg` | `bank_aa5b942fbffb206a` | [查看](https://www.tubiao.cn/svg/item-aa5b942fbffb206a) | 是 |
+| 宜宾市商业银行 | ybccb | 彩色 | `accounts_bank_ybccb.svg` / `accounts_bank_ybccb_color.svg` | `bank_3a5216e8b23e8f63` | [查看](https://www.tubiao.cn/svg/item-3a5216e8b23e8f63) | — |
+| 营口沿海银行 | ykyhb | 彩色 | `accounts_bank_ykyhb.svg` / `accounts_bank_ykyhb_color.svg` | `bank_aa72f268f6d514df` | [查看](https://www.tubiao.cn/svg/item-aa72f268f6d514df) | 是 |
+| 营口银行 | boyk | 彩色 | `accounts_bank_boyk.svg` / `accounts_bank_boyk_color.svg` | `bank_cad6f42eaa04d2c2` | [查看](https://www.tubiao.cn/svg/item-cad6f42eaa04d2c2) | — |
+| 云南红塔银行 | ynhtbank | 白标 | `accounts_bank_ynhtbank.svg` / `accounts_bank_ynhtbank_color.svg` | `bank_3d44b968c4597ff4` | [查看](https://www.tubiao.cn/svg/item-3d44b968c4597ff4) | — |
+| 枣庄银行 | zzb | 彩色 | `accounts_bank_zzb.svg` / `accounts_bank_zzb_color.svg` | `bank_a0dbc5a676189b16` | [查看](https://www.tubiao.cn/svg/item-a0dbc5a676189b16) | — |
+| 张家口银行 | zjkccb | 白标 | `accounts_bank_zjkccb.svg` / `accounts_bank_zjkccb_color.svg` | `bank_a570d94fa548503b` | [查看](https://www.tubiao.cn/svg/item-a570d94fa548503b) | — |
+| 长安银行 | cabank | 白标 | `accounts_bank_cabank.svg` / `accounts_bank_cabank_color.svg` | `bank_082c95b801b821e4` | [查看](https://www.tubiao.cn/svg/item-082c95b801b821e4) | — |
+| 长城华西银行 | gwb | 彩色 | `accounts_bank_gwb.svg` / `accounts_bank_gwb_color.svg` | `bank_d793aa2f3eb16795` | [查看](https://www.tubiao.cn/svg/item-d793aa2f3eb16795) | — |
+| 长沙银行 | bscb | 白标 | `accounts_bank_bscb.svg` / `accounts_bank_bscb_color.svg` | `bank_88f2a650579da10e` | [查看](https://www.tubiao.cn/svg/item-88f2a650579da10e) | — |
+| 长治银行 | czb | 白标 | `accounts_bank_czb.svg` / `accounts_bank_czb_color.svg` | `bank_fd61b4f4d046166c` | [查看](https://www.tubiao.cn/svg/item-fd61b4f4d046166c) | 是 |
+| 招商银行 | cmb | 白标 | `accounts_bank_cmb.svg` / `accounts_bank_cmb_color.svg` | `cmb` | [查看](https://www.tubiao.cn/svg/item-88f6a761f76e3520) | — |
+| 浙江稠州商业银行 | czcb | 白标 | `accounts_bank_czcb.svg` / `accounts_bank_czcb_color.svg` | `bank_4e5bd3187e7c4e80` | [查看](https://www.tubiao.cn/svg/item-4e5bd3187e7c4e80) | — |
+| 浙江民泰商业银行 | mtbank | 白标 | `accounts_bank_mtbank.svg` / `accounts_bank_mtbank_color.svg` | `bank_89f644cf2285e9c7` | [查看](https://www.tubiao.cn/svg/item-89f644cf2285e9c7) | — |
+| 浙商银行 | czbank | 白标 | `accounts_bank_czbank.svg` / `accounts_bank_czbank_color.svg` | `bank_0b35a3df2f0658ed` | [查看](https://www.tubiao.cn/svg/item-0b35a3df2f0658ed) | — |
+| 郑州银行 | zzbank | 彩色 | `accounts_bank_zzbank.svg` / `accounts_bank_zzbank_color.svg` | `bank_e825183a11f81fd6` | [查看](https://www.tubiao.cn/svg/item-e825183a11f81fd6) | — |
+| 中国工商银行 | icbc | 白标 | `accounts_bank_icbc.svg` / `accounts_bank_icbc_color.svg` | `icbk` | [查看](https://www.tubiao.cn/svg/item-3fb063fe8e824ea5) | — |
+| 中国光大银行 | ceb | 白标 | `accounts_bank_ceb.svg` / `accounts_bank_ceb_color.svg` | `bank_2c94c71d0e1e5cf4` | [查看](https://www.tubiao.cn/svg/item-2c94c71d0e1e5cf4) | — |
+| 中国建设银行 | ccb | 白标 | `accounts_bank_ccb.svg` / `accounts_bank_ccb_color.svg` | `ccbc` | [查看](https://www.tubiao.cn/svg/item-01737cfc6b8559eb) | — |
+| 中国进出口银行 | eibof | 白标 | `accounts_bank_eibof.svg` / `accounts_bank_eibof_color.svg` | `bank_1aa887f9ea4c782f` | [查看](https://www.tubiao.cn/svg/item-1aa887f9ea4c782f) | — |
+| 中国民生银行 | cmbc | 彩色 | `accounts_bank_cmbc.svg` / `accounts_bank_cmbc_color.svg` | `bank_dd14c4de90f711ad` | [查看](https://www.tubiao.cn/svg/item-dd14c4de90f711ad) | — |
+| 中国农业发展银行 | adbc | 白标 | `accounts_bank_adbc.svg` / `accounts_bank_adbc_color.svg` | `bank_af0436d4af867817` | [查看](https://www.tubiao.cn/svg/item-af0436d4af867817) | — |
+| 中国农业银行 | abc | 白标 | `accounts_bank_abc.svg` / `accounts_bank_abc_color.svg` | `aboc` | [查看](https://www.tubiao.cn/svg/item-0c6bd3ee646141a5) | — |
+| 中国人民银行 | pboc | 白标 | `accounts_bank_pboc.svg` / `accounts_bank_pboc_color.svg` | `bank_c278abc49ac503c0` | [查看](https://www.tubiao.cn/svg/item-c278abc49ac503c0) | — |
+| 中国银行 | boc | 白标 | `accounts_bank_boc.svg` / `accounts_bank_boc_color.svg` | `bkch` | [查看](https://www.tubiao.cn/svg/item-81cc6f0374a6b2fb) | — |
+| 中国邮政储蓄银行 | psbc | 白标 | `accounts_bank_psbc.svg` / `accounts_bank_psbc_color.svg` | `bank_697f11d169df03a4` | [查看](https://www.tubiao.cn/svg/item-697f11d169df03a4) | — |
+| 中信银行 | citic | 白标 | `accounts_bank_citic.svg` / `accounts_bank_citic_color.svg` | `bank_0b4239b04615dee8` | [查看](https://www.tubiao.cn/svg/item-0b4239b04615dee8) | — |
+| 中原银行 | zybank | 白标 | `accounts_bank_zybank.svg` / `accounts_bank_zybank_color.svg` | `bank_2e3421d25611d8ed` | [查看](https://www.tubiao.cn/svg/item-2e3421d25611d8ed) | — |
+| 珠海华润银行 | rboz | 白标 | `accounts_bank_rboz.svg` / `accounts_bank_rboz_color.svg` | `bank_fcb70013d0f16434` | [查看](https://www.tubiao.cn/svg/item-fcb70013d0f16434) | — |
+| 自贡银行 | zgbank | 彩色 | `accounts_bank_zgbank.svg` / `accounts_bank_zgbank_color.svg` | `bank_6f4201bb58206d21` | [查看](https://www.tubiao.cn/svg/item-6f4201bb58206d21) | — |

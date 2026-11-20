@@ -11,12 +11,13 @@ export class RdbAccountRepository {
   async snapshot(): Promise<AccountOverview> {
     return this.session.read(async (db: relationalStore.RdbStore): Promise<AccountOverview> => {
       const accounts: AccountProfile[] = [];
-      const rows = await db.querySql("SELECT id,name,kind,currency_id,COALESCE(brand,''),COALESCE(icon_key,'bank_card'),COALESCE(icon_variant,'monochrome'),COALESCE(brand_color,'#5378B8'),include_in_net_assets,revision,archived_at_ms FROM accounts WHERE deleted_at_ms IS NULL ORDER BY sort_order,created_at_ms,id");
+      const rows = await db.querySql("SELECT id,name,kind,currency_id,COALESCE(brand,''),COALESCE(icon_key,'bank_card'),COALESCE(icon_variant,'monochrome'),COALESCE(brand_color,'#5378B8'),include_in_net_assets,revision,archived_at_ms,account_type,issuer_key,card_tail,note FROM accounts WHERE deleted_at_ms IS NULL ORDER BY sort_order,created_at_ms,id");
       try {
         while (rows.goToNextRow()) {
           accounts.push({ id: rows.getString(0), name: rows.getString(1), kind: rows.getString(2), currencyId: rows.getString(3),
             brand: rows.getString(4), iconKey: rows.getString(5), iconVariant: rows.getString(6), brandColor: rows.getString(7),
-            includeInNetAssets: rows.getLong(8) === 1, revision: rows.getLong(9), archived: !rows.isColumnNull(10), balanceMinor: '0' });
+            includeInNetAssets: rows.getLong(8) === 1, revision: rows.getLong(9), archived: !rows.isColumnNull(10), balanceMinor: '0',
+            accountType: rows.getString(11), issuerKey: rows.getString(12), cardTail: rows.getString(13), note: rows.getString(14) });
         }
       } finally { rows.close(); }
       // Sum individual integer-text movements with BigInt, never SQLite SUM or floating point.
@@ -28,7 +29,7 @@ export class RdbAccountRepository {
       let assets: bigint = BigInt(0); let liabilities: bigint = BigInt(0);
       for (const account of accounts) {
         const balance = balances.get(account.id) || BigInt(0); account.balanceMinor = balance.toString();
-        if (account.includeInNetAssets && account.currencyId === 'CNY') {
+        if (!account.archived && account.includeInNetAssets && account.currencyId === 'CNY') {
           if (balance >= BigInt(0)) { assets += balance; } else { liabilities -= balance; }
         }
       }
@@ -42,6 +43,7 @@ export class RdbAccountRepository {
       const now = Date.now();
       await db.insert('accounts', { id: value.id, name: value.name, kind: value.kind, currency_id: value.opening.currency.id,
         brand: draft.style.brand, icon_key: draft.style.key, icon_variant: draft.style.variant || 'monochrome', brand_color: draft.style.color,
+        account_type: value.accountType || 'other_asset', issuer_key: value.issuerKey || '', card_tail: value.cardTail || '', note: value.note || '',
         include_in_net_assets: value.includeInNetAssets ? 1 : 0, created_at_ms: now, updated_at_ms: now });
       const adjustment = util.generateRandomUUID();
       const minor = value.opening.toSafeMinorNumber();
@@ -105,6 +107,8 @@ export class RdbAccountRepository {
     await this.session.write(async (db: relationalStore.RdbStore): Promise<void> => {
       // Opening is immutable after creation. Metadata edits cannot move money or change the account kind/currency.
       const changed = await db.update({ name: draft.command.name, brand: draft.style.brand, icon_key: draft.style.key,
+        account_type: draft.command.accountType || 'other_asset', issuer_key: draft.command.issuerKey || '',
+        card_tail: draft.command.cardTail || '', note: draft.command.note || '',
         icon_variant: draft.style.variant || 'monochrome', brand_color: draft.style.color, include_in_net_assets: command.includeInNetAssets ? 1 : 0,
         updated_at_ms: Date.now(), revision: revision + 1 }, new relationalStore.RdbPredicates('accounts')
         .equalTo('id', command.id).equalTo('kind', command.kind).equalTo('currency_id', command.opening.currency.id)

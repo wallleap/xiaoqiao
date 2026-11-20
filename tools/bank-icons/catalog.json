@@ -23,7 +23,9 @@
         91.78160064697266
       ],
       "abbreviation": "boas",
-      "resourceKey": "bank_boas"
+      "resourceKey": "bank_boas",
+      "indexLetter": "A",
+      "preferredVariant": "monochrome"
     },
     {
       "key": "bank_5927f8dbd3eca1be",
@@ -46,7 +48,9 @@
         86.4
       ],
       "abbreviation": "bobd",
-      "resourceKey": "bank_bobd"
+      "resourceKey": "bank_bobd",
+      "indexLetter": "B",
+      "preferredVariant": "monochrome"
     },
     {
       "key": "bank_bc07bb9eaac7b1a2",
@@ -69,7 +73,9 @@
         91.8
       ],
       "abbreviation": "bob",
-      "resourceKey": "bank_bob"
+      "resourceKey": "bank_bob",
+      "indexLetter": "B",
+      "preferredVariant": "monochrome"
     },
     {
       "key": "bank_1712cdd37f1b8b22",
@@ -92,7 +98,9 @@
         91.80000823974609
       ],
       "abbreviation": "bccb",
-      "resourceKey": "bank_bccb"
+      "resourceKey": "bank_bccb",
+      "indexLetter": "B",
+      "preferredVariant": "monochrome"
     },
     {
       "key": "bank_655102d0a03ba61e",
@@ -115,7 +123,9 @@
         97.17515716552734
       ],
       "abbreviation": "bohaib",
-      "resourceKey": "bank_bohaib"
+      "resourceKey": "bank_bohaib",
+      "indexLetter": "B",
+      "preferredVariant": "color"
     },
     {
       "key": "bank_3d9675edeb7c46fa",
@@ -138,7 +148,9 @@
         87.36236938476563
       ],
       "abbreviation": "bocz",
-      "resourceKey": "bank_bocz"
+      "resourceKey": "bank_bocz",
+      "indexLetter": "C",
+      "preferredVariant": "monochrome"
     },
     {
       "key": "bank_28d03fcc7abb11be",
@@ -161,7 +173,9 @@
         104.75998352050782
       ],
       "abbreviation": "bocy",
-      "resourceKey": "bank_bocy"
+      "resourceKey": "bank_bocy",
+      "indexLetter": "C",
+      "preferredVariant": "monochrome"
     },
     {
       "key": "bank_24080f94b63434ab",
@@ -184,7 +198,9 @@
         99.36
       ],
       "abbreviation": "cdcb",
-      "resourceKey": "bank_cdcb"
+      "resourceKey": "bank_cdcb",
+      "indexLetter": "C",
+      "preferredVariant": "monochrome"
     },
     {
       "key": "bank_52356497e588963c",
@@ -207,7 +223,9 @@
         91.8
       ],
       "abbreviation": "cdbank",
-      "resourceKey": "bank_cdbank"
+      "resourceKey": "bank_cdbank",
+      "indexLetter": "C",
+      "preferredVariant": "monochrome"
     },
     {
       "key": "bank_5c69bd0e678072b9",
@@ -230,7 +248,9 @@
         91.8
       ],
       "abbreviation": "ccqtgb",
-      "resourceKey": "bank_ccqtgb"
+      "resourceKey": "bank_ccqtgb",
+      "indexLetter": "C",
+      "preferredVariant": "monochrome"
     },
     {
       "key": "bank_28cb806c4a2b4762",
@@ -253,7 +273,9 @@
         91.96200988769532
       ],
       "abbreviation": "cqbank",
-      "resourceKey": "bank_cqbank"
+      "resourceKey": "bank_cqbank",
+      "indexLetter": "C",
+      "preferredVariant": "color"
     },
     {
       "key": "bank_206e093ce5813475",
@@ -276,7 +298,9 @@
         91.81955291748046
       ],
       "abbreviation": "dccb",
-      "resourceKey": "bank_dccb"
+      "resourceKey": "bank_dccb",
+      "indexLetter": "D",
+      "preferredVariant": "monochrome"
     },
     {
       "key": "bank_17a1c52f07222d53",
@@ -299,7 +323,9 @@
         91.8
       ],
       "abbreviation": "dlb",
-      "resourceKey": "bank_dlb"
+      "resourceKey": "bank_dlb",
+      "indexLetter": "D",
+      "preferredVariant": "monochrome"
     },
     {
       "key": "bank_0986964944efb395",
@@ -322,7 +348,9 @@
         91.8
       ],
       "abbreviation": "dtb",
-      "resourceKey": "bank_dtb"
+      "resourceKey": "bank_dtb",
+      "indexLetter": "D",
+      "preferredVariant": "monochrome"
     },
     {
       "key": "bank_565ca720da891e1f",
@@ -345,7 +373,9 @@
         91.8
       ],
       "abbreviation": "bodd",
-      "resourceKey": "bank_bodd"
+      "resourceKey": "bank_bodd",
+      "indexLetter": "D",
+      "preferredVariant": "monochrome"
     },
     {
       "key": "bank_dc1b501a0e1ddab9",
@@ -368,7 +398,9 @@
         91.77732421875
       ],
       "abbreviation": "dzbank",
-      "resourceKey": "bank_dzbank"
+      "resourceKey": "bank_dzbank",
+      "indexLetter": "D",
+      "preferredVariant": "monochrome"
     },
     {
       "key": "bank_f7e3f97b06adc4a5",
@@ -391,7 +423,9 @@
         91.74600494384765
       ],
       "abbreviation": "bod",
-      "resourceKey": "bank_bod"
+      "resourceKey": "bank_bod",
+      "indexLetter": "D",
+      "preferredVariant": "monochrome"
     },
     {
       "key": "bank_e67569b8d4fa217f",
@@ -414,7 +448,9 @@
         91.8
       ],
       "abbreviation": "dyccb",
-      "resourceKey": "bank_dyccb"
+      "resourceKey": "bank_dyccb",
+      "indexLetter": "D",
+      "preferredVariant": "monochrome"
     },
     {
       "key": "bank_36bfc81423ce478c",
@@ -437,7 +473,9 @@
         91.8
       ],
       "abbreviation": "ordosb",
-      "resourceKey": "bank_ordosb"
+      "resourceKey": "bank_ordosb",
+      "indexLetter": "E",
+      "preferredVariant": "monochrome"
     },
     {
       "key": "bank_7206510ccdb16bba",
@@ -460,7 +498,9 @@
         91.81349670410157
       ],
       "abbreviation": "fjhxbc",
-      "resourceKey": "bank_fjhxbc"
+      "resourceKey": "bank_fjhxbc",
+      "indexLetter": "F",
+      "preferredVariant": "monochrome"
     },
     {
       "key": "bank_5d6ccdb695b9dd42",
@@ -483,7 +523,9 @@
         94.4998764038086
       ],
       "abbreviation": "fscb",
-      "resourceKey": "bank_fscb"
+      "resourceKey": "bank_fscb",
+      "indexLetter": "F",
+      "preferredVariant": "monochrome"
     },
     {
       "key": "bank_ed53b93cf82610f4",
@@ -506,7 +548,9 @@
         90.01152191162109
       ],
       "abbreviation": "fxcb",
-      "resourceKey": "bank_fxcb"
+      "resourceKey": "bank_fxcb",
+      "indexLetter": "F",
+      "preferredVariant": "color"
     },
     {
       "key": "bank_7d690142090615b3",
@@ -529,7 +573,9 @@
         81.00001647949219
       ],
       "abbreviation": "fdbank",
-      "resourceKey": "bank_fdbank"
+      "resourceKey": "bank_fdbank",
+      "indexLetter": "F",
+      "preferredVariant": "monochrome"
     },
     {
       "key": "bank_73298bce8744330f",
@@ -552,7 +598,9 @@
         91.8
       ],
       "abbreviation": "bogs",
-      "resourceKey": "bank_bogs"
+      "resourceKey": "bank_bogs",
+      "indexLetter": "G",
+      "preferredVariant": "monochrome"
     },
     {
       "key": "bank_9454de529d92427c",
@@ -575,7 +623,9 @@
         107.94599670410156
       ],
       "abbreviation": "ghb",
-      "resourceKey": "bank_ghb"
+      "resourceKey": "bank_ghb",
+      "indexLetter": "G",
+      "preferredVariant": "monochrome"
     },
     {
       "key": "bank_a42e935d15d46594",
@@ -598,7 +648,9 @@
         95.04
       ],
       "abbreviation": "nybank",
-      "resourceKey": "bank_nybank"
+      "resourceKey": "bank_nybank",
+      "indexLetter": "G",
+      "preferredVariant": "monochrome"
     },
     {
       "key": "bank_acaaf4fe223ff584",
@@ -621,7 +673,9 @@
         90.8722787475586
       ],
       "abbreviation": "gdb",
-      "resourceKey": "bank_gdb"
+      "resourceKey": "bank_gdb",
+      "indexLetter": "G",
+      "preferredVariant": "monochrome"
     },
     {
       "key": "bank_7a1a906a437d728b",
@@ -644,7 +698,9 @@
         92.92028411865235
       ],
       "abbreviation": "bgb",
-      "resourceKey": "bank_bgb"
+      "resourceKey": "bank_bgb",
+      "indexLetter": "G",
+      "preferredVariant": "color"
     },
     {
       "key": "bank_dde84144331f15b2",
@@ -667,7 +723,9 @@
         90.72
       ],
       "abbreviation": "gzcb",
-      "resourceKey": "bank_gzcb"
+      "resourceKey": "bank_gzcb",
+      "indexLetter": "G",
+      "preferredVariant": "monochrome"
     },
     {
       "key": "bank_f938c67888eebfe7",
@@ -690,7 +748,9 @@
         92.35282104492188
       ],
       "abbreviation": "gyccb",
-      "resourceKey": "bank_gyccb"
+      "resourceKey": "bank_gyccb",
+      "indexLetter": "G",
+      "preferredVariant": "monochrome"
     },
     {
       "key": "bank_c0e43d309fca6add",
@@ -713,7 +773,9 @@
         91.69210876464844
       ],
       "abbreviation": "bogz",
-      "resourceKey": "bank_bogz"
+      "resourceKey": "bank_bogz",
+      "indexLetter": "G",
+      "preferredVariant": "monochrome"
     },
     {
       "key": "bank_3f19b30b7fa21ef9",
@@ -736,7 +798,9 @@
         92.23299865722656
       ],
       "abbreviation": "glbank",
-      "resourceKey": "bank_glbank"
+      "resourceKey": "bank_glbank",
+      "indexLetter": "G",
+      "preferredVariant": "color"
     },
     {
       "key": "bank_c122117feee62f21",
@@ -759,7 +823,9 @@
         86.4
       ],
       "abbreviation": "cdb",
-      "resourceKey": "bank_cdb"
+      "resourceKey": "bank_cdb",
+      "indexLetter": "G",
+      "preferredVariant": "color"
     },
     {
       "key": "bank_5df79aeb0cff8135",
@@ -782,7 +848,9 @@
         86.4
       ],
       "abbreviation": "hrbcb",
-      "resourceKey": "bank_hrbcb"
+      "resourceKey": "bank_hrbcb",
+      "indexLetter": "H",
+      "preferredVariant": "monochrome"
     },
     {
       "key": "bank_2543e760759f5150",
@@ -805,7 +873,9 @@
         105.76623779296875
       ],
       "abbreviation": "hmccb",
-      "resourceKey": "bank_hmccb"
+      "resourceKey": "bank_hmccb",
+      "indexLetter": "H",
+      "preferredVariant": "color"
     },
     {
       "key": "bank_0fbdea13c7ff22de",
@@ -828,7 +898,9 @@
         95.04102172851563
       ],
       "abbreviation": "hnb",
-      "resourceKey": "bank_hnb"
+      "resourceKey": "bank_hnb",
+      "indexLetter": "H",
+      "preferredVariant": "color"
     },
     {
       "key": "bank_c642c6d17544d48c",
@@ -851,7 +923,9 @@
         91.80004943847656
       ],
       "abbreviation": "hdbank",
-      "resourceKey": "bank_hdbank"
+      "resourceKey": "bank_hdbank",
+      "indexLetter": "H",
+      "preferredVariant": "monochrome"
     },
     {
       "key": "bank_28761f1a38dfbbd6",
@@ -874,7 +948,9 @@
         93.96
       ],
       "abbreviation": "hkb",
-      "resourceKey": "bank_hkb"
+      "resourceKey": "bank_hkb",
+      "indexLetter": "H",
+      "preferredVariant": "monochrome"
     },
     {
       "key": "bank_c802cd2beb943b31",
@@ -897,7 +973,9 @@
         91.79980224609375
       ],
       "abbreviation": "hzcb",
-      "resourceKey": "bank_hzcb"
+      "resourceKey": "bank_hzcb",
+      "indexLetter": "H",
+      "preferredVariant": "color"
     },
     {
       "key": "bank_ac22bab2fd6cdc4f",
@@ -920,7 +998,9 @@
         90.61631927490234
       ],
       "abbreviation": "bhb",
-      "resourceKey": "bank_bhb"
+      "resourceKey": "bank_bhb",
+      "indexLetter": "H",
+      "preferredVariant": "color"
     },
     {
       "key": "bank_9534ccf9cc21fbad",
@@ -943,7 +1023,9 @@
         91.37448303222656
       ],
       "abbreviation": "egbank",
-      "resourceKey": "bank_egbank"
+      "resourceKey": "bank_egbank",
+      "indexLetter": "H",
+      "preferredVariant": "color"
     },
     {
       "key": "bank_d0614e7f3c439282",
@@ -966,7 +1048,9 @@
         95.04009063720703
       ],
       "abbreviation": "bohs",
-      "resourceKey": "bank_bohs"
+      "resourceKey": "bank_bohs",
+      "indexLetter": "H",
+      "preferredVariant": "color"
     },
     {
       "key": "bank_0ba9d0d3815741c9",
@@ -989,7 +1073,9 @@
         86.4
       ],
       "abbreviation": "hbc",
-      "resourceKey": "bank_hbc"
+      "resourceKey": "bank_hbc",
+      "indexLetter": "H",
+      "preferredVariant": "color"
     },
     {
       "key": "bank_0bb9055be05b1f1d",
@@ -1012,7 +1098,9 @@
         91.80154083251954
       ],
       "abbreviation": "bohz",
-      "resourceKey": "bank_bohz"
+      "resourceKey": "bank_bohz",
+      "indexLetter": "H",
+      "preferredVariant": "monochrome"
     },
     {
       "key": "bank_14f2aa2560622a58",
@@ -1035,7 +1123,9 @@
         91.80005767822266
       ],
       "abbreviation": "bohld",
-      "resourceKey": "bank_bohld"
+      "resourceKey": "bank_bohld",
+      "indexLetter": "H",
+      "preferredVariant": "monochrome"
     },
     {
       "key": "bank_e5c35f26e0a84d32",
@@ -1058,7 +1148,9 @@
         91.8
       ],
       "abbreviation": "hrxjb",
-      "resourceKey": "bank_hrxjb"
+      "resourceKey": "bank_hrxjb",
+      "indexLetter": "H",
+      "preferredVariant": "monochrome"
     },
     {
       "key": "bank_a347afb643e9dda2",
@@ -1081,7 +1173,9 @@
         92.88002471923828
       ],
       "abbreviation": "hxb",
-      "resourceKey": "bank_hxb"
+      "resourceKey": "bank_hxb",
+      "indexLetter": "H",
+      "preferredVariant": "monochrome"
     },
     {
       "key": "bank_a68c2590a384df96",
@@ -1104,7 +1198,9 @@
         88.56
       ],
       "abbreviation": "hsbank",
-      "resourceKey": "bank_hsbank"
+      "resourceKey": "bank_hsbank",
+      "indexLetter": "H",
+      "preferredVariant": "monochrome"
     },
     {
       "key": "bank_f135e4805d010124",
@@ -1127,7 +1223,9 @@
         98.81956329345704
       ],
       "abbreviation": "bojl",
-      "resourceKey": "bank_bojl"
+      "resourceKey": "bank_bojl",
+      "indexLetter": "J",
+      "preferredVariant": "monochrome"
     },
     {
       "key": "bank_a179be324ec19312",
@@ -1150,7 +1248,9 @@
         91.74599670410156
       ],
       "abbreviation": "jnbank",
-      "resourceKey": "bank_jnbank"
+      "resourceKey": "bank_jnbank",
+      "indexLetter": "J",
+      "preferredVariant": "color"
     },
     {
       "key": "bank_560b1a4519af709f",
@@ -1173,7 +1273,9 @@
         91.8
       ],
       "abbreviation": "jxbank",
-      "resourceKey": "bank_jxbank"
+      "resourceKey": "bank_jxbank",
+      "indexLetter": "J",
+      "preferredVariant": "monochrome"
     },
     {
       "key": "bank_1f150844afc30c68",
@@ -1196,7 +1298,9 @@
         91.8
       ],
       "abbreviation": "jsbank",
-      "resourceKey": "bank_jsbank"
+      "resourceKey": "bank_jsbank",
+      "indexLetter": "J",
+      "preferredVariant": "color"
     },
     {
       "key": "bank_26139358ec87b742",
@@ -1219,7 +1323,9 @@
         91.8
       ],
       "abbreviation": "jscjcb",
-      "resourceKey": "bank_jscjcb"
+      "resourceKey": "bank_jscjcb",
+      "indexLetter": "J",
+      "preferredVariant": "monochrome"
     },
     {
       "key": "bank_b4b77bdb41f0ba23",
@@ -1242,7 +1348,9 @@
         91.81494689941407
       ],
       "abbreviation": "jxb",
-      "resourceKey": "bank_jxb"
+      "resourceKey": "bank_jxb",
+      "indexLetter": "J",
+      "preferredVariant": "monochrome"
     },
     {
       "key": "bank_be3f0313e6049e7a",
@@ -1265,7 +1373,9 @@
         92.97720428466796
       ],
       "abbreviation": "comm",
-      "resourceKey": "bank_comm"
+      "resourceKey": "bank_comm",
+      "indexLetter": "J",
+      "preferredVariant": "monochrome"
     },
     {
       "key": "bank_148d3a1c6b46cf0f",
@@ -1288,7 +1398,9 @@
         91.8
       ],
       "abbreviation": "cts",
-      "resourceKey": "bank_cts"
+      "resourceKey": "bank_cts",
+      "indexLetter": "J",
+      "preferredVariant": "monochrome"
     },
     {
       "key": "bank_037f61b4a416febd",
@@ -1311,7 +1423,9 @@
         111.78
       ],
       "abbreviation": "jhccb",
-      "resourceKey": "bank_jhccb"
+      "resourceKey": "bank_jhccb",
+      "indexLetter": "J",
+      "preferredVariant": "monochrome"
     },
     {
       "key": "bank_c003c5255e9b5f1e",
@@ -1334,7 +1448,9 @@
         104.76
       ],
       "abbreviation": "jzbank",
-      "resourceKey": "bank_jzbank"
+      "resourceKey": "bank_jzbank",
+      "indexLetter": "J",
+      "preferredVariant": "monochrome"
     },
     {
       "key": "bank_407ffdc7083cd181",
@@ -1357,7 +1473,9 @@
         87.48001647949219
       ],
       "abbreviation": "jinchb",
-      "resourceKey": "bank_jinchb"
+      "resourceKey": "bank_jinchb",
+      "indexLetter": "J",
+      "preferredVariant": "monochrome"
     },
     {
       "key": "bank_e1e1ab1c91789925",
@@ -1380,7 +1498,9 @@
         91.8
       ],
       "abbreviation": "jsb",
-      "resourceKey": "bank_jsb"
+      "resourceKey": "bank_jsb",
+      "indexLetter": "J",
+      "preferredVariant": "color"
     },
     {
       "key": "bank_52dde46f7fad5e27",
@@ -1403,7 +1523,9 @@
         92.87934906005859
       ],
       "abbreviation": "jzb",
-      "resourceKey": "bank_jzb"
+      "resourceKey": "bank_jzb",
+      "indexLetter": "J",
+      "preferredVariant": "monochrome"
     },
     {
       "key": "bank_1ab5f0d64a489e91",
@@ -1426,7 +1548,9 @@
         91.8
       ],
       "abbreviation": "jjccb",
-      "resourceKey": "bank_jjccb"
+      "resourceKey": "bank_jjccb",
+      "indexLetter": "J",
+      "preferredVariant": "monochrome"
     },
     {
       "key": "bank_c5c28a0efe21d46f",
@@ -1449,7 +1573,9 @@
         91.81221954345703
       ],
       "abbreviation": "kcccb",
-      "resourceKey": "bank_kcccb"
+      "resourceKey": "bank_kcccb",
+      "indexLetter": "K",
+      "preferredVariant": "monochrome"
     },
     {
       "key": "bank_ed0bb779e0611c72",
@@ -1472,7 +1598,9 @@
         91.79897827148437
       ],
       "abbreviation": "klb",
-      "resourceKey": "bank_klb"
+      "resourceKey": "bank_klb",
+      "indexLetter": "K",
+      "preferredVariant": "monochrome"
     },
     {
       "key": "bank_6bb7da5f9f9507cd",
@@ -1495,7 +1623,9 @@
         95.04
       ],
       "abbreviation": "lsbank",
-      "resourceKey": "bank_lsbank"
+      "resourceKey": "bank_lsbank",
+      "indexLetter": "L",
+      "preferredVariant": "monochrome"
     },
     {
       "key": "bank_8f2612d537a16365",
@@ -1518,7 +1648,9 @@
         92.82632629394531
       ],
       "abbreviation": "lzbank",
-      "resourceKey": "bank_lzbank"
+      "resourceKey": "bank_lzbank",
+      "indexLetter": "L",
+      "preferredVariant": "monochrome"
     },
     {
       "key": "bank_80f930eff48d1c1f",
@@ -1541,7 +1673,9 @@
         86.40095581054688
       ],
       "abbreviation": "bolf",
-      "resourceKey": "bank_bolf"
+      "resourceKey": "bank_bolf",
+      "indexLetter": "L",
+      "preferredVariant": "monochrome"
     },
     {
       "key": "bank_bda3c9ff9f476f68",
@@ -1564,7 +1698,9 @@
         91.83276123046875
       ],
       "abbreviation": "lsccb",
-      "resourceKey": "bank_lsccb"
+      "resourceKey": "bank_lsccb",
+      "indexLetter": "L",
+      "preferredVariant": "monochrome"
     },
     {
       "key": "bank_8fb25721a2caac67",
@@ -1587,7 +1723,9 @@
         91.79878875732422
       ],
       "abbreviation": "boly",
-      "resourceKey": "bank_boly"
+      "resourceKey": "bank_boly",
+      "indexLetter": "L",
+      "preferredVariant": "monochrome"
     },
     {
       "key": "bank_78e2c3384f02bb48",
@@ -1610,7 +1748,9 @@
         91.8
       ],
       "abbreviation": "lsbc",
-      "resourceKey": "bank_lsbc"
+      "resourceKey": "bank_lsbc",
+      "indexLetter": "L",
+      "preferredVariant": "monochrome"
     },
     {
       "key": "bank_73999369a515d961",
@@ -1633,7 +1773,9 @@
         91.90799835205078
       ],
       "abbreviation": "lzccb",
-      "resourceKey": "bank_lzccb"
+      "resourceKey": "bank_lzccb",
+      "indexLetter": "L",
+      "preferredVariant": "monochrome"
     },
     {
       "key": "bank_c144472fd84111fe",
@@ -1656,7 +1798,9 @@
         93.96108764648437
       ],
       "abbreviation": "ljbank",
-      "resourceKey": "bank_ljbank"
+      "resourceKey": "bank_ljbank",
+      "indexLetter": "L",
+      "preferredVariant": "monochrome"
     },
     {
       "key": "bank_48152f519819602f",
@@ -1679,7 +1823,9 @@
         91.80000823974609
       ],
       "abbreviation": "lzb",
-      "resourceKey": "bank_lzb"
+      "resourceKey": "bank_lzb",
+      "indexLetter": "L",
+      "preferredVariant": "monochrome"
     },
     {
       "key": "bank_ad466c737e0c733f",
@@ -1702,7 +1848,9 @@
         85.84604187011719
       ],
       "abbreviation": "bly",
-      "resourceKey": "bank_bly"
+      "resourceKey": "bank_bly",
+      "indexLetter": "L",
+      "preferredVariant": "color"
     },
     {
       "key": "bank_a08410c7990f951c",
@@ -1725,7 +1873,9 @@
         99.9
       ],
       "abbreviation": "myccb",
-      "resourceKey": "bank_myccb"
+      "resourceKey": "bank_myccb",
+      "indexLetter": "M",
+      "preferredVariant": "color"
     },
     {
       "key": "bank_a332fd83d07292bf",
@@ -1748,7 +1898,9 @@
         91.79958801269531
       ],
       "abbreviation": "njcb",
-      "resourceKey": "bank_njcb"
+      "resourceKey": "bank_njcb",
+      "indexLetter": "N",
+      "preferredVariant": "monochrome"
     },
     {
       "key": "bank_7cd9d05dfeb29d19",
@@ -1771,7 +1923,9 @@
         95.04
       ],
       "abbreviation": "h3cb",
-      "resourceKey": "bank_h3cb"
+      "resourceKey": "bank_h3cb",
+      "indexLetter": "N",
+      "preferredVariant": "monochrome"
     },
     {
       "key": "bank_2eed2034612d7154",
@@ -1794,7 +1948,9 @@
         91.80003295898437
       ],
       "abbreviation": "ndhb",
-      "resourceKey": "bank_ndhb"
+      "resourceKey": "bank_ndhb",
+      "indexLetter": "N",
+      "preferredVariant": "monochrome"
     },
     {
       "key": "bank_6ee7b110f00fed02",
@@ -1817,7 +1973,9 @@
         91.61655029296875
       ],
       "abbreviation": "nbcmb",
-      "resourceKey": "bank_nbcmb"
+      "resourceKey": "bank_nbcmb",
+      "indexLetter": "N",
+      "preferredVariant": "color"
     },
     {
       "key": "bank_3c789bc646f0b3f1",
@@ -1840,7 +1998,9 @@
         91.8
       ],
       "abbreviation": "nbcb",
-      "resourceKey": "bank_nbcb"
+      "resourceKey": "bank_nbcb",
+      "indexLetter": "N",
+      "preferredVariant": "color"
     },
     {
       "key": "bank_88d7586177e7513b",
@@ -1863,7 +2023,9 @@
         89.10000823974609
       ],
       "abbreviation": "nxbank",
-      "resourceKey": "bank_nxbank"
+      "resourceKey": "bank_nxbank",
+      "indexLetter": "N",
+      "preferredVariant": "monochrome"
     },
     {
       "key": "bank_1cd8c37c4adcf957",
@@ -1886,7 +2048,9 @@
         91.8
       ],
       "abbreviation": "bopj",
-      "resourceKey": "bank_bopj"
+      "resourceKey": "bank_bopj",
+      "indexLetter": "P",
+      "preferredVariant": "monochrome"
     },
     {
       "key": "bank_5d085ba3787c37d7",
@@ -1909,7 +2073,9 @@
         91.8
       ],
       "abbreviation": "spabank",
-      "resourceKey": "bank_spabank"
+      "resourceKey": "bank_spabank",
+      "indexLetter": "P",
+      "preferredVariant": "monochrome"
     },
     {
       "key": "bank_8e66776def452515",
@@ -1932,7 +2098,9 @@
         91.90800659179688
       ],
       "abbreviation": "bop",
-      "resourceKey": "bank_bop"
+      "resourceKey": "bank_bop",
+      "indexLetter": "P",
+      "preferredVariant": "monochrome"
     },
     {
       "key": "bank_f992e61b2440eb9f",
@@ -1955,7 +2123,9 @@
         91.8
       ],
       "abbreviation": "spdb",
-      "resourceKey": "bank_spdb"
+      "resourceKey": "bank_spdb",
+      "indexLetter": "P",
+      "preferredVariant": "monochrome"
     },
     {
       "key": "bank_9208a36075cce97c",
@@ -1978,7 +2148,9 @@
         91.62190612792969
       ],
       "abbreviation": "qlbank",
-      "resourceKey": "bank_qlbank"
+      "resourceKey": "bank_qlbank",
+      "indexLetter": "Q",
+      "preferredVariant": "color"
     },
     {
       "key": "bank_a7ad5a279ba0a0db",
@@ -2001,7 +2173,9 @@
         91.8
       ],
       "abbreviation": "qsb",
-      "resourceKey": "bank_qsb"
+      "resourceKey": "bank_qsb",
+      "indexLetter": "Q",
+      "preferredVariant": "monochrome"
     },
     {
       "key": "bank_84ceb085dcbb10f2",
@@ -2024,7 +2198,9 @@
         91.80001647949219
       ],
       "abbreviation": "qhdbank",
-      "resourceKey": "bank_qhdbank"
+      "resourceKey": "bank_qhdbank",
+      "indexLetter": "Q",
+      "preferredVariant": "color"
     },
     {
       "key": "bank_9b679cd19b713009",
@@ -2047,7 +2223,9 @@
         91.8
       ],
       "abbreviation": "qdccb",
-      "resourceKey": "bank_qdccb"
+      "resourceKey": "bank_qdccb",
+      "indexLetter": "Q",
+      "preferredVariant": "monochrome"
     },
     {
       "key": "bank_a62ccfdd6b452be4",
@@ -2070,7 +2248,9 @@
         91.8018374633789
       ],
       "abbreviation": "qhbank",
-      "resourceKey": "bank_qhbank"
+      "resourceKey": "bank_qhbank",
+      "indexLetter": "Q",
+      "preferredVariant": "color"
     },
     {
       "key": "bank_f3d037d826814866",
@@ -2093,7 +2273,9 @@
         91.26
       ],
       "abbreviation": "qjcccb",
-      "resourceKey": "bank_qjcccb"
+      "resourceKey": "bank_qjcccb",
+      "indexLetter": "Q",
+      "preferredVariant": "monochrome"
     },
     {
       "key": "bank_7576633e8748306c",
@@ -2116,7 +2298,9 @@
         91.8
       ],
       "abbreviation": "boqz",
-      "resourceKey": "bank_boqz"
+      "resourceKey": "bank_boqz",
+      "indexLetter": "Q",
+      "preferredVariant": "monochrome"
     },
     {
       "key": "bank_91265b7284430f91",
@@ -2139,7 +2323,9 @@
         91.80057678222656
       ],
       "abbreviation": "rzb",
-      "resourceKey": "bank_rzb"
+      "resourceKey": "bank_rzb",
+      "indexLetter": "R",
+      "preferredVariant": "color"
     },
     {
       "key": "bank_384a0333c213a88e",
@@ -2162,7 +2348,9 @@
         88.56
       ],
       "abbreviation": "xmintb",
-      "resourceKey": "bank_xmintb"
+      "resourceKey": "bank_xmintb",
+      "indexLetter": "X",
+      "preferredVariant": "monochrome"
     },
     {
       "key": "bank_44e08ebec3442bae",
@@ -2185,7 +2373,9 @@
         91.8
       ],
       "abbreviation": "xmbank",
-      "resourceKey": "bank_xmbank"
+      "resourceKey": "bank_xmbank",
+      "indexLetter": "X",
+      "preferredVariant": "monochrome"
     },
     {
       "key": "bank_231653e198c2ef26",
@@ -2208,7 +2398,9 @@
         91.61639373779298
       ],
       "abbreviation": "bosc",
-      "resourceKey": "bank_bosc"
+      "resourceKey": "bank_bosc",
+      "indexLetter": "S",
+      "preferredVariant": "monochrome"
     },
     {
       "key": "bank_0b67fbc1cfdff255",
@@ -2231,7 +2423,9 @@
         95.04
       ],
       "abbreviation": "srbank",
-      "resourceKey": "bank_srbank"
+      "resourceKey": "bank_srbank",
+      "indexLetter": "S",
+      "preferredVariant": "monochrome"
     },
     {
       "key": "bank_b783965c4080a701",
@@ -2254,7 +2448,9 @@
         111.78109588623047
       ],
       "abbreviation": "sxcb",
-      "resourceKey": "bank_sxcb"
+      "resourceKey": "bank_sxcb",
+      "indexLetter": "S",
+      "preferredVariant": "monochrome"
     },
     {
       "key": "bank_6f65c2166f85b6e1",
@@ -2277,7 +2473,9 @@
         91.8
       ],
       "abbreviation": "sjbank",
-      "resourceKey": "bank_sjbank"
+      "resourceKey": "bank_sjbank",
+      "indexLetter": "S",
+      "preferredVariant": "monochrome"
     },
     {
       "key": "bank_d0d9a01213c85a0e",
@@ -2300,7 +2498,9 @@
         91.8
       ],
       "abbreviation": "szsbk",
-      "resourceKey": "bank_szsbk"
+      "resourceKey": "bank_szsbk",
+      "indexLetter": "S",
+      "preferredVariant": "monochrome"
     },
     {
       "key": "bank_f5d92febbb4c19f2",
@@ -2323,7 +2523,9 @@
         90.70586059570313
       ],
       "abbreviation": "sctfb",
-      "resourceKey": "bank_sctfb"
+      "resourceKey": "bank_sctfb",
+      "indexLetter": "S",
+      "preferredVariant": "monochrome"
     },
     {
       "key": "bank_6a68708325fe2dab",
@@ -2346,7 +2548,9 @@
         95.04
       ],
       "abbreviation": "scb",
-      "resourceKey": "bank_scb"
+      "resourceKey": "bank_scb",
+      "indexLetter": "S",
+      "preferredVariant": "monochrome"
     },
     {
       "key": "bank_630c2f13056faa88",
@@ -2369,7 +2573,9 @@
         91.79912658691406
       ],
       "abbreviation": "bosz",
-      "resourceKey": "bank_bosz"
+      "resourceKey": "bank_bosz",
+      "indexLetter": "S",
+      "preferredVariant": "monochrome"
     },
     {
       "key": "bank_901a1acc09e1f3d3",
@@ -2392,7 +2598,9 @@
         95.04087341308593
       ],
       "abbreviation": "snbank",
-      "resourceKey": "bank_snbank"
+      "resourceKey": "bank_snbank",
+      "indexLetter": "S",
+      "preferredVariant": "monochrome"
     },
     {
       "key": "bank_a9583d5a61155655",
@@ -2415,7 +2623,9 @@
         90.72107940673828
       ],
       "abbreviation": "tzbank",
-      "resourceKey": "bank_tzbank"
+      "resourceKey": "bank_tzbank",
+      "indexLetter": "T",
+      "preferredVariant": "color"
     },
     {
       "key": "bank_f1839dc43ed2b94a",
@@ -2438,7 +2648,9 @@
         91.81558959960938
       ],
       "abbreviation": "taccb",
-      "resourceKey": "bank_taccb"
+      "resourceKey": "bank_taccb",
+      "indexLetter": "T",
+      "preferredVariant": "monochrome"
     },
     {
       "key": "bank_8c865c490ced4f5c",
@@ -2461,7 +2673,9 @@
         95.57896179199219
       ],
       "abbreviation": "tlcb",
-      "resourceKey": "bank_tlcb"
+      "resourceKey": "bank_tlcb",
+      "indexLetter": "T",
+      "preferredVariant": "monochrome"
     },
     {
       "key": "bank_191b35220bfbb928",
@@ -2484,7 +2698,9 @@
         95.04
       ],
       "abbreviation": "bots",
-      "resourceKey": "bank_bots"
+      "resourceKey": "bank_bots",
+      "indexLetter": "T",
+      "preferredVariant": "color"
     },
     {
       "key": "bank_91398f5a17e0c6ac",
@@ -2507,7 +2723,9 @@
         86.40108764648437
       ],
       "abbreviation": "botj",
-      "resourceKey": "bank_botj"
+      "resourceKey": "bank_botj",
+      "indexLetter": "T",
+      "preferredVariant": "monochrome"
     },
     {
       "key": "bank_38d7b6a59fe6d2ff",
@@ -2530,7 +2748,9 @@
         91.80036254882812
       ],
       "abbreviation": "botl",
-      "resourceKey": "bank_botl"
+      "resourceKey": "bank_botl",
+      "indexLetter": "T",
+      "preferredVariant": "monochrome"
     },
     {
       "key": "bank_e33d629fb3fff305",
@@ -2553,7 +2773,9 @@
         59.97888336181641
       ],
       "abbreviation": "mybank",
-      "resourceKey": "bank_mybank"
+      "resourceKey": "bank_mybank",
+      "indexLetter": "W",
+      "preferredVariant": "monochrome"
     },
     {
       "key": "bank_7582d0339c4074ee",
@@ -2576,7 +2798,9 @@
         91.8
       ],
       "abbreviation": "whccb",
-      "resourceKey": "bank_whccb"
+      "resourceKey": "bank_whccb",
+      "indexLetter": "W",
+      "preferredVariant": "monochrome"
     },
     {
       "key": "bank_8e3a3d0242a97c5b",
@@ -2599,7 +2823,9 @@
         97.27511352539062
       ],
       "abbreviation": "wfccb",
-      "resourceKey": "bank_wfccb"
+      "resourceKey": "bank_wfccb",
+      "indexLetter": "W",
+      "preferredVariant": "monochrome"
     },
     {
       "key": "bank_921dfd7b670db7c7",
@@ -2622,7 +2848,9 @@
         92.87968688964844
       ],
       "abbreviation": "wzbank",
-      "resourceKey": "bank_wzbank"
+      "resourceKey": "bank_wzbank",
+      "indexLetter": "W",
+      "preferredVariant": "monochrome"
     },
     {
       "key": "bank_edaba5ab68b23160",
@@ -2645,7 +2873,9 @@
         98.7357568359375
       ],
       "abbreviation": "whbank",
-      "resourceKey": "bank_whbank"
+      "resourceKey": "bank_whbank",
+      "indexLetter": "W",
+      "preferredVariant": "monochrome"
     },
     {
       "key": "bank_e50f71fea8011c7b",
@@ -2668,7 +2898,9 @@
         91.52034301757813
       ],
       "abbreviation": "uccb",
-      "resourceKey": "bank_uccb"
+      "resourceKey": "bank_uccb",
+      "indexLetter": "W",
+      "preferredVariant": "color"
     },
     {
       "key": "bank_bb7a4441fa411c18",
@@ -2691,7 +2923,9 @@
         95.04
       ],
       "abbreviation": "xabank",
-      "resourceKey": "bank_xabank"
+      "resourceKey": "bank_xabank",
+      "indexLetter": "X",
+      "preferredVariant": "monochrome"
     },
     {
       "key": "bank_f5e054115d10192b",
@@ -2714,7 +2948,9 @@
         95.04011535644531
       ],
       "abbreviation": "boxz",
-      "resourceKey": "bank_boxz"
+      "resourceKey": "bank_boxz",
+      "indexLetter": "X",
+      "preferredVariant": "monochrome"
     },
     {
       "key": "bank_72405463d7da6f93",
@@ -2737,7 +2973,9 @@
         91.8
       ],
       "abbreviation": "xjhb",
-      "resourceKey": "bank_xjhb"
+      "resourceKey": "bank_xjhb",
+      "indexLetter": "X",
+      "preferredVariant": "monochrome"
     },
     {
       "key": "bank_2d04d78caaa3f7f4",
@@ -2760,7 +2998,9 @@
         91.80000823974609
       ],
       "abbreviation": "xjb",
-      "resourceKey": "bank_xjb"
+      "resourceKey": "bank_xjb",
+      "indexLetter": "X",
+      "preferredVariant": "color"
     },
     {
       "key": "bank_1ee9ed1c9bff6670",
@@ -2783,7 +3023,9 @@
         91.71822875976562
       ],
       "abbreviation": "xtb",
-      "resourceKey": "bank_xtb"
+      "resourceKey": "bank_xtb",
+      "indexLetter": "X",
+      "preferredVariant": "color"
     },
     {
       "key": "bank_f5f4efccb216cf52",
@@ -2806,7 +3048,9 @@
         91.8
       ],
       "abbreviation": "cib",
-      "resourceKey": "bank_cib"
+      "resourceKey": "bank_cib",
+      "indexLetter": "X",
+      "preferredVariant": "monochrome"
     },
     {
       "key": "bank_98ac51113563b082",
@@ -2829,7 +3073,9 @@
         90.23399505615234
       ],
       "abbreviation": "yaccb",
-      "resourceKey": "bank_yaccb"
+      "resourceKey": "bank_yaccb",
+      "indexLetter": "Y",
+      "preferredVariant": "monochrome"
     },
     {
       "key": "bank_d584c86cc198577a",
@@ -2852,7 +3098,9 @@
         91.8
       ],
       "abbreviation": "ytb",
-      "resourceKey": "bank_ytb"
+      "resourceKey": "bank_ytb",
+      "indexLetter": "Y",
+      "preferredVariant": "monochrome"
     },
     {
       "key": "bank_aa5b942fbffb206a",
@@ -2875,7 +3123,9 @@
         98.72171630859376
       ],
       "abbreviation": "yqccb",
-      "resourceKey": "bank_yqccb"
+      "resourceKey": "bank_yqccb",
+      "indexLetter": "Y",
+      "preferredVariant": "color"
     },
     {
       "key": "bank_3a5216e8b23e8f63",
@@ -2898,7 +3148,9 @@
         91.69200164794921
       ],
       "abbreviation": "ybccb",
-      "resourceKey": "bank_ybccb"
+      "resourceKey": "bank_ybccb",
+      "indexLetter": "Y",
+      "preferredVariant": "color"
     },
     {
       "key": "bank_aa72f268f6d514df",
@@ -2921,7 +3173,9 @@
         91.80229064941406
       ],
       "abbreviation": "ykyhb",
-      "resourceKey": "bank_ykyhb"
+      "resourceKey": "bank_ykyhb",
+      "indexLetter": "Y",
+      "preferredVariant": "color"
     },
     {
       "key": "bank_cad6f42eaa04d2c2",
@@ -2944,7 +3198,9 @@
         102.60024719238281
       ],
       "abbreviation": "boyk",
-      "resourceKey": "bank_boyk"
+      "resourceKey": "bank_boyk",
+      "indexLetter": "Y",
+      "preferredVariant": "color"
     },
     {
       "key": "bank_3d44b968c4597ff4",
@@ -2967,7 +3223,9 @@
         87.53399505615235
       ],
       "abbreviation": "ynhtbank",
-      "resourceKey": "bank_ynhtbank"
+      "resourceKey": "bank_ynhtbank",
+      "indexLetter": "Y",
+      "preferredVariant": "monochrome"
     },
     {
       "key": "bank_a0dbc5a676189b16",
@@ -2990,7 +3248,9 @@
         104.11200164794921
       ],
       "abbreviation": "zzb",
-      "resourceKey": "bank_zzb"
+      "resourceKey": "bank_zzb",
+      "indexLetter": "Z",
+      "preferredVariant": "color"
     },
     {
       "key": "bank_a570d94fa548503b",
@@ -3013,7 +3273,9 @@
         91.80108764648438
       ],
       "abbreviation": "zjkccb",
-      "resourceKey": "bank_zjkccb"
+      "resourceKey": "bank_zjkccb",
+      "indexLetter": "Z",
+      "preferredVariant": "monochrome"
     },
     {
       "key": "bank_082c95b801b821e4",
@@ -3036,7 +3298,9 @@
         77.76
       ],
       "abbreviation": "cabank",
-      "resourceKey": "bank_cabank"
+      "resourceKey": "bank_cabank",
+      "indexLetter": "C",
+      "preferredVariant": "monochrome"
     },
     {
       "key": "bank_d793aa2f3eb16795",
@@ -3059,7 +3323,9 @@
         91.74601318359375
       ],
       "abbreviation": "gwb",
-      "resourceKey": "bank_gwb"
+      "resourceKey": "bank_gwb",
+      "indexLetter": "C",
+      "preferredVariant": "color"
     },
     {
       "key": "bank_88f2a650579da10e",
@@ -3082,7 +3348,9 @@
         105.3
       ],
       "abbreviation": "bscb",
-      "resourceKey": "bank_bscb"
+      "resourceKey": "bank_bscb",
+      "indexLetter": "C",
+      "preferredVariant": "monochrome"
     },
     {
       "key": "bank_fd61b4f4d046166c",
@@ -3105,7 +3373,9 @@
         91.80021423339844
       ],
       "abbreviation": "czb",
-      "resourceKey": "bank_czb"
+      "resourceKey": "bank_czb",
+      "indexLetter": "C",
+      "preferredVariant": "monochrome"
     },
     {
       "key": "cmb",
@@ -3128,7 +3398,9 @@
         91.80000823974609
       ],
       "abbreviation": "cmb",
-      "resourceKey": "bank_cmb"
+      "resourceKey": "bank_cmb",
+      "indexLetter": "Z",
+      "preferredVariant": "monochrome"
     },
     {
       "key": "bank_4e5bd3187e7c4e80",
@@ -3151,7 +3423,9 @@
         91.80000823974609
       ],
       "abbreviation": "czcb",
-      "resourceKey": "bank_czcb"
+      "resourceKey": "bank_czcb",
+      "indexLetter": "Z",
+      "preferredVariant": "monochrome"
     },
     {
       "key": "bank_89f644cf2285e9c7",
@@ -3174,7 +3448,9 @@
         93.96
       ],
       "abbreviation": "mtbank",
-      "resourceKey": "bank_mtbank"
+      "resourceKey": "bank_mtbank",
+      "indexLetter": "Z",
+      "preferredVariant": "monochrome"
     },
     {
       "key": "bank_0b35a3df2f0658ed",
@@ -3197,7 +3473,9 @@
         91.80107940673828
       ],
       "abbreviation": "czbank",
-      "resourceKey": "bank_czbank"
+      "resourceKey": "bank_czbank",
+      "indexLetter": "Z",
+      "preferredVariant": "monochrome"
     },
     {
       "key": "bank_e825183a11f81fd6",
@@ -3220,7 +3498,9 @@
         91.80007415771485
       ],
       "abbreviation": "zzbank",
-      "resourceKey": "bank_zzbank"
+      "resourceKey": "bank_zzbank",
+      "indexLetter": "Z",
+      "preferredVariant": "color"
     },
     {
       "key": "icbk",
@@ -3243,7 +3523,9 @@
         91.8
       ],
       "abbreviation": "icbc",
-      "resourceKey": "bank_icbc"
+      "resourceKey": "bank_icbc",
+      "indexLetter": "G",
+      "preferredVariant": "monochrome"
     },
     {
       "key": "bank_2c94c71d0e1e5cf4",
@@ -3266,7 +3548,9 @@
         95.04
       ],
       "abbreviation": "ceb",
-      "resourceKey": "bank_ceb"
+      "resourceKey": "bank_ceb",
+      "indexLetter": "Z",
+      "preferredVariant": "monochrome"
     },
     {
       "key": "ccbc",
@@ -3289,7 +3573,9 @@
         97.74074981689454
       ],
       "abbreviation": "ccb",
-      "resourceKey": "bank_ccb"
+      "resourceKey": "bank_ccb",
+      "indexLetter": "J",
+      "preferredVariant": "monochrome"
     },
     {
       "key": "bank_1aa887f9ea4c782f",
@@ -3312,7 +3598,9 @@
         97.2
       ],
       "abbreviation": "eibof",
-      "resourceKey": "bank_eibof"
+      "resourceKey": "bank_eibof",
+      "indexLetter": "Z",
+      "preferredVariant": "monochrome"
     },
     {
       "key": "bank_dd14c4de90f711ad",
@@ -3335,7 +3623,9 @@
         91.58400329589844
       ],
       "abbreviation": "cmbc",
-      "resourceKey": "bank_cmbc"
+      "resourceKey": "bank_cmbc",
+      "indexLetter": "Z",
+      "preferredVariant": "color"
     },
     {
       "key": "bank_af0436d4af867817",
@@ -3358,7 +3648,9 @@
         95.04
       ],
       "abbreviation": "adbc",
-      "resourceKey": "bank_adbc"
+      "resourceKey": "bank_adbc",
+      "indexLetter": "Z",
+      "preferredVariant": "monochrome"
     },
     {
       "key": "aboc",
@@ -3381,7 +3673,9 @@
         91.44251037597657
       ],
       "abbreviation": "abc",
-      "resourceKey": "bank_abc"
+      "resourceKey": "bank_abc",
+      "indexLetter": "N",
+      "preferredVariant": "monochrome"
     },
     {
       "key": "bank_c278abc49ac503c0",
@@ -3404,7 +3698,9 @@
         92.39825500488281
       ],
       "abbreviation": "pboc",
-      "resourceKey": "bank_pboc"
+      "resourceKey": "bank_pboc",
+      "indexLetter": "Z",
+      "preferredVariant": "monochrome"
     },
     {
       "key": "bkch",
@@ -3427,7 +3723,9 @@
         91.8
       ],
       "abbreviation": "boc",
-      "resourceKey": "bank_boc"
+      "resourceKey": "bank_boc",
+      "indexLetter": "Z",
+      "preferredVariant": "monochrome"
     },
     {
       "key": "bank_697f11d169df03a4",
@@ -3450,7 +3748,9 @@
         91.8
       ],
       "abbreviation": "psbc",
-      "resourceKey": "bank_psbc"
+      "resourceKey": "bank_psbc",
+      "indexLetter": "Z",
+      "preferredVariant": "monochrome"
     },
     {
       "key": "bank_0b4239b04615dee8",
@@ -3473,7 +3773,9 @@
         91.8
       ],
       "abbreviation": "citic",
-      "resourceKey": "bank_citic"
+      "resourceKey": "bank_citic",
+      "indexLetter": "Z",
+      "preferredVariant": "monochrome"
     },
     {
       "key": "bank_2e3421d25611d8ed",
@@ -3496,7 +3798,9 @@
         95.03893707275391
       ],
       "abbreviation": "zybank",
-      "resourceKey": "bank_zybank"
+      "resourceKey": "bank_zybank",
+      "indexLetter": "Z",
+      "preferredVariant": "monochrome"
     },
     {
       "key": "bank_fcb70013d0f16434",
@@ -3519,7 +3823,9 @@
         86.4
       ],
       "abbreviation": "rboz",
-      "resourceKey": "bank_rboz"
+      "resourceKey": "bank_rboz",
+      "indexLetter": "Z",
+      "preferredVariant": "monochrome"
     },
     {
       "key": "bank_6f4201bb58206d21",
@@ -3542,7 +3848,9 @@
         91.5300082397461
       ],
       "abbreviation": "zgbank",
-      "resourceKey": "bank_zgbank"
+      "resourceKey": "bank_zgbank",
+      "indexLetter": "Z",
+      "preferredVariant": "color"
     }
   ]
 }
