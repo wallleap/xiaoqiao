@@ -1,3 +1,4 @@
+import { LEDGER_USAGE_ROWS_SQL } from './LedgerUsageQuery';
 import { matchImportedAccount } from '../../domain/model/ImportedAccountMatch';
 import { LedgerSearchCursor, LedgerSearchPageResult, LedgerFlowQuery, LedgerFlowPage } from '../../domain/model/LedgerSearch';
 import { RdbLedgerSearch } from './RdbLedgerSearch';
@@ -156,7 +157,7 @@ export class LedgerWorkspace {
     return this.session.read(async (db: relationalStore.RdbStore): Promise<LedgerBook[]> => {
       this.activeBookId = await this.activeBookFromMeta(db);
       const values: LedgerBook[] = [];
-      const rows = await db.querySql("SELECT b.id,b.name,b.revision,b.archived_at_ms,b.cover_palette,b.cover_icon,COALESCE(c.entry_count,'0') FROM books b LEFT JOIN (SELECT book_id,CAST(COUNT(*) AS TEXT) AS entry_count FROM v_posted_transactions WHERE kind IN ('expense','income','transfer') GROUP BY book_id) c ON c.book_id=b.id WHERE b.deleted_at_ms IS NULL ORDER BY b.archived_at_ms IS NOT NULL,b.sort_order,b.created_at_ms,b.id");
+      const rows = await db.querySql("SELECT b.id,b.name,b.revision,b.archived_at_ms,b.cover_palette,b.cover_icon,COALESCE(c.entry_count,'0') FROM books b LEFT JOIN (SELECT book_id,CAST(COUNT(*) AS TEXT) AS entry_count FROM (" + LEDGER_USAGE_ROWS_SQL + ") GROUP BY book_id) c ON c.book_id=b.id WHERE b.deleted_at_ms IS NULL ORDER BY b.archived_at_ms IS NOT NULL,b.sort_order,b.created_at_ms,b.id");
       try {
         while (rows.goToNextRow()) {
           values.push({ id: rows.getString(0), name: rows.getString(1), revision: rows.getLong(2), archived: !rows.isColumnNull(3), coverPalette: rows.getString(4), coverIcon: rows.getString(5), entryCount: rows.getString(6) });
@@ -885,7 +886,7 @@ export class LedgerWorkspace {
 
   async usageSummary(): Promise<LedgerUsageSummary> {
     return this.session.read(async (db: relationalStore.RdbStore): Promise<LedgerUsageSummary> => {
-      const rows = await db.querySql("SELECT MIN(local_day),CAST(COUNT(*) AS TEXT) FROM (SELECT occurred_local_date AS local_day FROM v_posted_transactions WHERE kind IN ('expense','income','transfer') UNION ALL SELECT local_date AS local_day FROM v_prepaid_events WHERE kind IN ('fund','refund'))");
+      const rows = await db.querySql("SELECT MIN(local_day),CAST(COUNT(*) AS TEXT) FROM (" + LEDGER_USAGE_ROWS_SQL + ")");
       try {
         if (!rows.goToFirstRow()) { return { firstEntryDate: '', entryCount: '0' }; }
         return { firstEntryDate: rows.isColumnNull(0) ? '' : rows.getString(0), entryCount: rows.getString(1) };

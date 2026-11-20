@@ -74,6 +74,9 @@ struct Index {
   @State private showBackupRestore: boolean = false;
   @State private accountOverview: AccountOverview | undefined = undefined;
   @State private accountError: string = '';
+  @State private accountOverviewLoading: boolean = false;
+  @State private personalNetMinor: string = '';
+  @State private personalNetError: string = '';
   @State private showAccountEditor: boolean = false;
   @State private editingAccount: AccountProfile | undefined = undefined;
   @State private accountSaving: boolean = false;
@@ -321,17 +324,28 @@ struct Index {
 
   private async refreshUsage(workspace: LedgerWorkspace): Promise<void> {
     if (this.usageLoading) { return; }
-    this.usageLoading = true;
+    this.usageLoading = true; this.usageError = '';
     try { this.usage = await workspace.usageSummary(); this.usageError = ''; }
     catch (_) { this.usageError = '记账汇总暂时无法读取'; }
     finally { this.usageLoading = false; }
   }
 
   private async refreshAccountOverview(workspace: LedgerWorkspace): Promise<void> {
+    if (this.accountOverviewLoading) { return; }
+    this.accountOverviewLoading = true; this.personalNetError = '';
     try {
-      this.accountOverview = await workspace.accountOverview();
-      this.accountError = '';
-    } catch (_) { this.accountError = '账户暂时无法读取，请重试'; }
+      const overview = await workspace.accountOverview();
+      this.accountOverview = overview; this.accountError = '';
+      if (overview.netMinor.length > 0) {
+        this.personalNetMinor = overview.netMinor;
+      } else {
+        this.personalNetError = (overview.valuationMissing || []).length > 0 ?
+          '缺少 ' + (overview.valuationMissing || []).join('、') + ' 的参考汇率，请检查网络后重试' : '资产估值暂时无法完成，请重试';
+      }
+    } catch (_) {
+      this.accountError = '账户暂时无法读取，请重试';
+      this.personalNetError = '账户余额读取失败，请重试';
+    } finally { this.accountOverviewLoading = false; }
   }
 
   private async refreshAfterDeletion(workspace: LedgerWorkspace): Promise<void> {
@@ -1888,9 +1902,11 @@ struct Index {
       TabContent() {
         LocalBackupPage({
           busy: this.backupBusy, active: this.selectedTab === 4, refreshToken: this.ledgerVersion,
-          netMinor: this.accountError.length === 0 && !this.loading ? this.accountOverview?.netMinor || '' : '',
-          usage: this.usage, usageLoading: this.loading || this.usageLoading, usageError: this.usageError,
-          onRetryUsage: () => { if (this.workspace !== undefined && !this.loading) { this.refreshUsage(this.workspace); } },
+          netMinor: this.personalNetMinor, netLoading: this.loading || this.accountOverviewLoading,
+          netError: this.personalNetError || this.accountError || this.loadError,
+          usage: this.usage, usageLoading: this.loading || this.usageLoading, usageError: this.usageError || this.loadError,
+          onRetryUsage: () => { if (!this.loading) { if (this.workspace !== undefined && this.loadError.length === 0) { this.refreshUsage(this.workspace); } else { this.loadLedger(); } } },
+          onRetryAssets: () => { if (!this.loading) { if (this.workspace !== undefined && this.loadError.length === 0) { this.refreshAccountOverview(this.workspace); } else { this.loadLedger(); } } },
           ready: !this.preview && !this.loading && !this.deleting && this.loadError.length === 0 && this.ledger !== undefined,
           onOpenSpendingNatures: () => { this.showSpendingNatures = true; },
           onOpenCategories: () => { this.showCategories = true; },
@@ -1918,7 +1934,9 @@ struct Index {
         if (this.backupBusy) { return false; }
         if (next === 0 || next === 1 || next === 3 || next === 4) {
           this.selectedTab = next;
-          if (next === 4 && this.workspace !== undefined && !this.loading) { this.refreshUsage(this.workspace); }
+          if (next === 4 && this.workspace !== undefined && !this.loading) {
+            this.refreshUsage(this.workspace); this.refreshAccountOverview(this.workspace);
+          }
           return true;
         }
         if (next === 2) { this.openExpense(); } else { this.notify(`${this.labels[next]}页面尚未接入`); }

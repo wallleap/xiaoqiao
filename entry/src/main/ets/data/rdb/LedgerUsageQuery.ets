@@ -1,0 +1,2 @@
+/** Shared read-only counting grain for both personal totals and per-book totals. */
+export const LEDGER_USAGE_ROWS_SQL: string = "SELECT u.book_id,u.local_day FROM (SELECT book_id,occurred_local_date AS local_day FROM v_posted_transactions WHERE kind IN ('expense','income','transfer') UNION ALL SELECT p.book_id,e.local_date AS local_day FROM v_prepaid_events e JOIN prepaid_projects p ON p.id=e.project_id WHERE e.kind IN ('fund','refund')) u JOIN books b ON b.id=u.book_id WHERE b.deleted_at_ms IS NULL";

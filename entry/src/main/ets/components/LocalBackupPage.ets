@@ -1,3 +1,4 @@
+import { summaryValue, summaryStatus } from '../presentation/profile/PersonalSummaryState';
 import { Money } from '../core/money/Money';
 import { authentication } from '@kit.AccountKit';
 import { BusinessError } from '@kit.BasicServicesKit';
@@ -13,6 +14,9 @@ export struct LocalBackupPage {
   @Prop @Watch('personalChanged') active: boolean = false;
   @Prop @Watch('personalChanged') refreshToken: number = 0;
   @Prop netMinor: string = '';
+  @Prop netLoading: boolean = false;
+  @Prop netError: string = '';
+  onRetryAssets: () => void = () => {};
   // Visual hook only; billing/entitlement integration is intentionally not implemented yet.
   @Prop paidEdition: boolean = false;
   @Prop usage: LedgerUsageSummary | undefined = undefined;
@@ -116,12 +120,16 @@ export struct LocalBackupPage {
   }
 
   @Builder
-  private personalStat(value: string, label: string) {
+  private personalStat(value: string, label: string, loading: boolean, hasValue: boolean, error: string) {
     Column({ space: 6 }) {
-      Text(value).fontSize('20fp').fontFamily('XiaoQiaoDINMedium').fontWeight(FontWeight.Medium)
+      Text(summaryValue(value, hasValue, loading, error)).fontSize('20fp').fontFamily('XiaoQiaoDINMedium').fontWeight(FontWeight.Medium)
         .fontColor(this.profilePrimaryColor()).maxLines(1).minFontSize('14fp').maxFontSize('20fp')
         .width('100%').height(30).textAlign(TextAlign.Center).textOverflow({ overflow: TextOverflow.Ellipsis })
       Text(label).fontSize('12fp').fontColor(this.profileSecondaryColor())
+      if (summaryStatus(hasValue, loading, error).length > 0) {
+        Text(summaryStatus(hasValue, loading, error)).fontSize('10fp')
+          .fontColor(loading ? this.profileSecondaryColor() : $r('app.color.xq_font_emphasize'))
+      }
     }.layoutWeight(1).alignItems(HorizontalAlign.Center)
   }
 
@@ -148,15 +156,17 @@ export struct LocalBackupPage {
         .onClick(() => { if (this.connected) { this.onOpenHuaweiCloud(); } else { this.login(); } }).id('my-account-header')
         .accessibilityText(this.connected ? '查看华为账号与云备份' : '登录华为账号')
       Row({ space: 8 }) {
-        this.personalStat(this.recordedDays(), '记账天数')
-        this.personalStat(this.usageError.length > 0 ? '重试' : this.usage?.entryCount || '0', '记账笔数')
-        this.personalStat(this.netAssets(), '净资产')
+        this.personalStat(this.recordedDays(), '记账天数', this.usageLoading, this.usage !== undefined, this.usageError)
+        this.personalStat(this.usage?.entryCount || '0', '记账笔数', this.usageLoading, this.usage !== undefined, this.usageError)
+        this.personalStat(this.netAssets(), '净资产', this.netLoading, this.netMinor.length > 0, this.netError)
       }.width('100%').alignItems(VerticalAlign.Top)
-      if (this.usageError.length > 0) {
-        Button('记账汇总读取失败，点击重试').fontSize('12fp').fontColor($r('app.color.xq_font_emphasize'))
+      if (this.usageError.length > 0 && !this.usageLoading) {
+        Button(this.usageError + '，点击重试').fontSize('12fp').fontColor($r('app.color.xq_font_emphasize'))
           .backgroundColor(Color.Transparent).enabled(!this.usageLoading).onClick(() => { this.onRetryUsage(); })
-      } else if (this.usageLoading) {
-        Text('正在读取记账汇总…').fontSize('12fp').fontColor(this.profileSecondaryColor())
+      }
+      if (this.netError.length > 0 && !this.netLoading) {
+        Button('净资产：' + this.netError + '，点击重试').fontSize('12fp').fontColor($r('app.color.xq_font_emphasize'))
+          .backgroundColor(Color.Transparent).onClick(() => { this.onRetryAssets(); })
       }
     }.width('100%').padding(20).borderRadius(20)
       .backgroundColor('#171B22').backgroundImage(this.profileBackground()).backgroundImageSize(ImageSize.Cover)

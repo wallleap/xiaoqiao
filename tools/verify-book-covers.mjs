@@ -46,7 +46,8 @@ const cls = source.statements.find(ts.isClassDeclaration);
 const methods = ['books', 'createBook', 'updateBook'].map(name => cls.members.find(m => ts.isMethodDeclaration(m) && m.name.getText(source) === name).getText(source)).join('\n');
 const code = ts.transpileModule('class Books {' + methods + '}\nexports.Books=Books;', { compilerOptions: { target: ts.ScriptTarget.ES2020 } }).outputText;
 class Predicates { equalTo() { return this; } isNull() { return this; } }
-const context = { exports: {}, ValidatedLedgerBook, DEFAULT_BOOK_ID: 'default', util: { generateRandomUUID: () => 'category' }, relationalStore: { RdbPredicates: Predicates } };
+const { LEDGER_USAGE_ROWS_SQL } = load(base + '/data/rdb/LedgerUsageQuery.ets');
+const context = { exports: {}, LEDGER_USAGE_ROWS_SQL, ValidatedLedgerBook, DEFAULT_BOOK_ID: 'default', util: { generateRandomUUID: () => 'category' }, relationalStore: { RdbPredicates: Predicates } };
 vm.runInNewContext(code, context);
 function rows(values = []) { let i = -1; return { get rowCount() { return values.length; }, goToFirstRow() { i = 0; return !!values.length; }, goToNextRow() { return ++i < values.length; }, getString(n) { return String(values[i][n]); }, getLong(n) { return Number(values[i][n]); }, isColumnNull(n) { return values[i][n] == null; }, close() {} }; }
 const book = new context.exports.Books();
