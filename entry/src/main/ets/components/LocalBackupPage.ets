@@ -43,6 +43,7 @@ export struct LocalBackupPage {
   onOpenBudget: () => void = () => {};
   onOpenStatistics: () => void = () => {};
   onOpenRecords: () => void = () => {};
+  onOpenExchangeRates: () => void = () => {};
 
   private readonly scroller: Scroller = new Scroller();
 
@@ -182,7 +183,7 @@ export struct LocalBackupPage {
         Text(label).fontSize('12fp').fontColor($r('app.color.xq_font_primary')).maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis }).width('100%').textAlign(TextAlign.Center)
       }.width('100%').justifyContent(FlexAlign.Center)
-    }.width('25%').height(76).padding({ left: 2, right: 2 }).borderRadius(12).backgroundColor(Color.Transparent)
+    }.width('33.333%').height(76).padding({ left: 2, right: 2 }).borderRadius(12).backgroundColor(Color.Transparent)
       .enabled(this.ready && !this.busy).accessibilityText(label).id(componentId).onClick(action)
   }
 
@@ -190,13 +191,12 @@ export struct LocalBackupPage {
   private shortcuts() {
     Flex({ wrap: FlexWrap.Wrap }) {
       this.shortcut($r('app.media.mine_icon_ledgers'), '账本管理', 'my-books', this.onOpenBooks)
-      this.shortcut($r('app.media.mine_icon_assets'), '资产账户', 'my-accounts', this.onOpenAccounts)
       this.shortcut($r('app.media.mine_icon_categories'), '分类设置', 'settings-categories', this.onOpenCategories)
       this.shortcut($r('app.media.mine_icon_budget_categories'), '预算分类', 'settings-spending-natures', this.onOpenSpendingNatures)
       this.shortcut($r('app.media.mine_icon_budgets'), '修改预算', 'my-budget', this.onOpenBudget)
-      this.shortcut($r('app.media.mine_icon_charts'), '图表统计', 'my-statistics', this.onOpenStatistics)
       this.shortcut($r('app.media.mine_icon_records'), '账单明细', 'my-records', this.onOpenRecords)
       this.shortcut($r('app.media.mine_icon_tags'), '自定义标签', 'settings-tags', this.onOpenTags)
+      this.shortcut($r('app.media.mine_icon_exchange_rates'), '汇率查询', 'my-exchange-rates', this.onOpenExchangeRates)
     }.width('100%').padding(12).borderRadius(20).backgroundColor($r('app.color.xq_app_surface_card'))
   }
 
