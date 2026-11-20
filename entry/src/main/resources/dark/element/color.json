@@ -245,6 +245,10 @@
       "value": "#FF202224"
     },
     {
+      "name": "xq_ledger_account_capsule_background",
+      "value": "#FF191A1C"
+    },
+    {
       "name": "xq_ledger_status_badge_background",
       "value": "#FF202224"
     },

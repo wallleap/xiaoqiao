@@ -11,6 +11,8 @@ export struct LedgerSwipeActions {
   onDelete: () => void = () => {};
   onEdit: () => void = () => {};
   @Prop editable: boolean = false;
+  @Prop prepaid: boolean = false;
+  onPrepaidAction: (action: string) => void = () => {};
   @State private swipeOffset: number = 0;
   @State private contentHeight: number = 0;
   private startOffset: number = 0;
@@ -30,24 +32,32 @@ export struct LedgerSwipeActions {
   @Builder
   private contextMenu() {
     Menu() {
+      if (this.prepaid) {
+        MenuItem({ content: '核销' }).enabled(this.editable && !this.busy).onClick(() => { this.onPrepaidAction('consume'); })
+        MenuItem({ content: '退款' }).enabled(this.editable && !this.busy).onClick(() => { this.onPrepaidAction('refund'); })
+        MenuItem({ content: '追加付款' }).enabled(this.editable && !this.busy).onClick(() => { this.onPrepaidAction('fund'); })
+        MenuItem({ content: '编辑项目' }).enabled(this.editable && !this.busy).onClick(() => { this.onPrepaidAction('edit'); })
+        MenuItem({ content: '查看流水' }).enabled(!this.busy).onClick(() => { this.onPrepaidAction('view'); })
+      } else {
       MenuItem({ content: '编辑' }).enabled(this.editable && !this.busy).id('ledger-menu-edit-' + this.entryId)
         .onClick(() => { this.onEdit(); })
       MenuItem({ content: '删除' }).contentFontColor($r('app.color.xq_warning')).enabled(!this.busy)
         .id('ledger-menu-delete-' + this.entryId).onClick(() => { this.onDelete(); })
+      }
     }.width(224)
   }
 
   build() {
     Stack({ alignContent: Alignment.End }) {
       Row({ space: 4 }) {
-        Button('编辑').fontSize('14fp').fontColor($r('app.color.xq_font_secondary'))
+        Button(this.prepaid ? '核销' : '编辑').fontSize('14fp').fontColor($r('app.color.xq_font_secondary'))
           .backgroundColor($r('app.color.xq_background_secondary')).enabled(this.editable && !this.busy)
           .width(60).height('100%').borderRadius(12).id('ledger-edit-' + this.entryId)
-          .onClick(() => { this.activeId = ''; this.settle(false); this.onEdit(); })
-        Button('删除').fontSize('14fp').fontColor(Color.White)
-          .backgroundColor($r('app.color.xq_warning')).enabled(!this.busy)
+          .onClick(() => { this.activeId = ''; this.settle(false); if (this.prepaid) { this.onPrepaidAction('consume'); } else { this.onEdit(); } })
+        Button(this.prepaid ? '查看' : '删除').fontSize('14fp').fontColor(Color.White)
+          .backgroundColor(this.prepaid ? $r('app.color.xq_brand') : $r('app.color.xq_warning')).enabled(!this.busy)
           .width(60).height('100%').borderRadius(12).id('ledger-delete-' + this.entryId)
-          .onClick(() => { this.onDelete(); })
+          .onClick(() => { if (this.prepaid) { this.activeId = ''; this.settle(false); this.onPrepaidAction('view'); } else { this.onDelete(); } })
       }.width(this.actionWidth).height(this.contentHeight).padding({ left: 4 })
         .visibility(this.swipeOffset < 0 ? Visibility.Visible : Visibility.Hidden)
         .hitTestBehavior(this.swipeOffset <= -this.actionWidth + 1 ? HitTestMode.Default : HitTestMode.None)

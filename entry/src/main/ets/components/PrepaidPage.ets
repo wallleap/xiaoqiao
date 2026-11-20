@@ -16,6 +16,8 @@ import { OfficialExchangeRates } from '../data/exchange/OfficialExchangeRates';
 @Component
 export struct PrepaidPage {
   initialProjectId: string = '';
+  initialAction: string = '';
+  onInitialActionHandled: () => void = () => {};
   workspace: LedgerWorkspace | undefined = undefined;
   @Prop accounts: LedgerAccount[] = [];
   @Prop categories: ExpenseCategory[] = [];
@@ -65,8 +67,15 @@ export struct PrepaidPage {
   private readonly scroller: Scroller = new Scroller();
   private readonly formScroller: Scroller = new Scroller();
 
-  aboutToAppear(): void { this.active = true; this.onRegisterBack(()=>{this.closePage();return true;}); this.reload(this.initialProjectId); }
+  aboutToAppear(): void { this.active = true; this.onRegisterBack(()=>{this.closePage();return true;}); this.openInitialAction(); }
   aboutToDisappear(): void { this.active = false; this.request++; this.onBusy(false); this.discardImages(); }
+  private async openInitialAction(): Promise<void> {
+    const action = this.initialAction;
+    this.onInitialActionHandled();
+    await this.reload(this.initialProjectId);
+    if (!this.active || this.error || this.detail?.project.id !== this.initialProjectId) { return; }
+    if (['consume', 'refund', 'fund', 'edit'].includes(action)) { this.openForm(action); }
+  }
   private setWorking(value: boolean): void { this.working=value; this.onBusy(value); }
   private money(minor: string, code: string = 'CNY'): string { return Money.fromMinorText(minor,currencyUnit(code)).toDecimalString(); }
   private title(): string {
@@ -111,6 +120,9 @@ export struct PrepaidPage {
     if (this.working || this.loading) { return; }
     const project=this.detail?.project;
     if (action!=='create' && project===undefined) { return; }
+    if ((action==='consume' || action==='refund') && BigInt(project?.remainingMinor || '0')<=BigInt(0)) {
+      this.message='当前没有可核销或退款的余额'; return;
+    }
     this.action=action; this.formProjectId=action==='create' ? util.generateRandomUUID() : project?.id || '';
     this.eventId=util.generateRandomUUID(); this.formRevision=project?.revision || 1;
     this.currencyCode=action==='create' ? 'CNY' : project?.currencyId || 'CNY';

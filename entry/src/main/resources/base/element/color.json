@@ -245,8 +245,12 @@
       "value": "#FFF1F3F5"
     },
     {
+      "name": "xq_ledger_account_capsule_background",
+      "value": "#FFF7F8FA"
+    },
+    {
       "name": "xq_ledger_status_badge_background",
-      "value": "#FFF1F3F5"
+      "value": "#FFF7F8FA"
     },
     {
       "name": "xq_app_surface_keyboard",

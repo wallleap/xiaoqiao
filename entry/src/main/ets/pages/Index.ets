@@ -1,3 +1,4 @@
+import { LedgerAttachmentDraft } from '../domain/model/LedgerAttachment';
 import { CategoryIconBadge } from '../components/CategoryIconBadge';
 import { AccountAvatar } from '../components/AccountAvatar';
 import { LedgerSearchPage } from '../components/LedgerSearchPage';
@@ -59,6 +60,7 @@ struct Index {
   @State private showDataExchange: boolean = false;
   @State private showHuaweiCloud: boolean = false;
   @State private prepaidProjectId: string = '';
+  private prepaidInitialAction: string = '';
   @State private showPrepaid: boolean = false;
   @State private showBillDetails: boolean = false;
   @State private showSearchPage: boolean = false;
@@ -93,7 +95,6 @@ struct Index {
   @State private recordWidth: number = 358;
   @State private bodyViewportHeight: number = 0;
   @State private headerScrolled: boolean = false;
-  @State private periodOpacity: number = 1;
   @State private ledger: LedgerSnapshot | undefined = undefined;
   @State private ledgerVersion: number = 0;
   @State private usage: LedgerUsageSummary | undefined = undefined;
@@ -113,6 +114,7 @@ struct Index {
   private detailRequest: number = 0;
   @State private savingExpense: boolean = false;
   @State private selectedMonth: string = '';
+  @State private failedThumbnailPaths: string[] = [];
   @State private budgetInput: string = '';
   private readonly budgetController: TextInputController = new TextInputController();
   @State private budgetError: string = '';
@@ -447,11 +449,11 @@ struct Index {
 
   @Builder
   private prepaidPage() {
-    PrepaidPage({initialProjectId:this.prepaidProjectId,workspace:this.workspace,accounts:this.ledger?.accounts || [],categories:this.ledger?.categories || [],incomeCategories:this.ledger?.incomeCategories || [],spendingNatures:this.ledger?.spendingNatures || [],
+    PrepaidPage({onInitialActionHandled:()=>{this.prepaidInitialAction='';},initialAction:this.prepaidInitialAction,initialProjectId:this.prepaidProjectId,workspace:this.workspace,accounts:this.ledger?.accounts || [],categories:this.ledger?.categories || [],incomeCategories:this.ledger?.incomeCategories || [],spendingNatures:this.ledger?.spendingNatures || [],
       sheetMaterial:this.materialReady && !this.forceLegacyMaterials ? this.filterMaterials?.menu : undefined,
       onRegisterBack:(handler:()=>boolean)=>{this.prepaidBackHandler=handler;},
       onBusy:(value:boolean)=>{this.prepaidBusy=value;},
-      onClose:()=>{if (!this.prepaidBusy) {this.showPrepaid=false;this.prepaidBackHandler=()=>false;}},
+      onClose:()=>{if (!this.prepaidBusy) {this.showPrepaid=false;this.prepaidInitialAction='';this.prepaidBackHandler=()=>false;}},
       onCreate:()=>{this.openExpense(true);},
       onChanged:async ():Promise<void>=>{await this.loadLedger();}
     })
@@ -523,6 +525,13 @@ struct Index {
     this.expenseFromPrepaid = fromPrepaid;
     if (fromPrepaid) { this.showPrepaid = false; }
     this.showExpense = true;
+  }
+
+  private openPrepaidAction(entry: LedgerEntry, action: string): void {
+    if (this.preview || this.workspace === undefined || this.loading || this.deleting || this.prepaidBusy || !entry.prepaidId) { return; }
+    this.activeSwipeId = ''; this.dismissPrepaidNotice();
+    this.prepaidProjectId = entry.prepaidId; this.prepaidInitialAction = action;
+    this.showPrepaid = true;
   }
 
   private async openDetail(id: string, edit: boolean = false): Promise<void> {
@@ -889,20 +898,21 @@ struct Index {
 
   @Builder
   private bookTitle() {
-    Row() {
+    Row({ space: 8 }) {
       Button({ type: ButtonType.Normal }) {
         Row({ space: 6 }) {
+          Image($r('app.media.lucide_notebook_text1')).width(22).height(22)
+            .fillColor(this.headerScrolled ? $r('app.color.xq_icon_on_primary') : $r('app.color.xq_icon_primary'))
           Text(this.preview ? '日常账本' : this.ledger?.bookName || '日常账本').fontSize('24fp').fontWeight(FontWeight.Bold)
             .fontColor(this.headerScrolled ? $r('app.color.xq_font_on_primary') : $r('app.color.xq_font_primary'))
             .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
-          Image($r('app.media.lucide_chevron_down1')).width(18).height(18)
-            .fillColor(this.headerScrolled ? $r('app.color.xq_icon_on_primary') : $r('app.color.xq_icon_primary'))
-        }
+            .constraintSize({ maxWidth: 'calc(100% - 28vp)' })
+        }.width('100%').justifyContent(FlexAlign.Start)
       }.id('ledger-book-selector').backgroundColor(Color.Transparent).padding(0).height(48)
-        .constraintSize({ maxWidth: 'calc(100% - 48vp)' })
+        .stateEffect(false).layoutWeight(1)
       .accessibilityText(`选择账本，当前${this.ledger?.bookName || '日常账本'}`)
       .onClick(() => { this.openBookSheet(); })
-      Blank()
+      this.navigationMonth()
       this.searchAction()
     }.width('100%').padding({ left: this.viewportWidth >= 600 ? 32 : 16, right: this.viewportWidth >= 600 ? 32 : 16 })
       .opacity(this.navigationTitleOpacity).id('ledger-title-content')
@@ -941,25 +951,29 @@ struct Index {
     });
   }
 
-  @Builder
-  private header() {
-    Row({ space: 8 }) {
-      Button({ type: ButtonType.Capsule }) {
-        Row({ space: 8 }) {
-          Image($r('app.media.lucide_calendar_check1')).width(18).height(18).fillColor($r('app.color.xq_icon_primary'))
-          Text(this.month()).fontSize('14fp').fontWeight(FontWeight.Medium).fontColor($r('app.color.xq_font_primary'))
-          Image($r('app.media.lucide_chevron_down1')).width(14).height(14).fillColor($r('app.color.xq_icon_primary'))
-        }
-      }.padding({ left: 14, right: 14 }).height(36).backgroundColor($r('app.color.xq_app_surface_card'))
-        .border({ width: 1, color: $r('app.color.xq_app_divider_subtle') })
-        .enabled(!this.loading && !this.bookBusy && !this.backupBusy)
-        .accessibilityText('选择账单月份，当前' + this.month()).id('ledger-month-selector')
-        .onClick(() => { this.chooseLedgerMonth(); })
-      Text('·').fontSize('12fp').fontColor($r('app.color.xq_font_tertiary'))
-      Text('CNY').fontSize('12fp').fontColor($r('app.color.xq_font_secondary'))
-    }.id('ledger-period').width('100%').margin({ top: 2, bottom: 16 })
-      .opacity(this.periodOpacity).visibility(this.periodOpacity > 0 ? Visibility.Visible : Visibility.Hidden)
+  private navigationMonthLabel(): string {
+    if (this.preview) { return '2026/10'; }
+    const now = new Date();
+    return (this.selectedMonth || now.getFullYear().toString() + '-' +
+      (now.getMonth() + 1).toString().padStart(2, '0')).replace('-', '/');
+  }
 
+  @Builder
+  private navigationMonth() {
+    Button({ type: ButtonType.Capsule }) {
+      Row({ space: 4 }) {
+        Text(this.navigationMonthLabel()).fontSize('14fp').fontWeight(FontWeight.Medium)
+          .fontColor(this.headerScrolled ? $r('app.color.xq_font_on_primary') : $r('app.color.xq_font_primary'))
+          .maxLines(1)
+        Image($r('app.media.lucide_chevron_down1')).width(12).height(12)
+          .fillColor(this.headerScrolled ? $r('app.color.xq_icon_on_primary') : $r('app.color.xq_icon_primary'))
+      }
+    }.padding({ left: 10, right: 10 }).height(36)
+      .backgroundColor(this.materialReady && !this.forceLegacyMaterials ? Color.Transparent : $r('app.color.xq_app_surface_card'))
+      .systemMaterial(this.materialReady && !this.forceLegacyMaterials ? this.filterMaterials?.action : undefined)
+      .enabled(!this.loading && !this.bookBusy && !this.backupBusy)
+      .accessibilityText('选择账单月份，当前' + this.month()).id('ledger-month-selector')
+      .onClick(() => { this.chooseLedgerMonth(); })
   }
 
   @Builder
@@ -1084,7 +1098,7 @@ struct Index {
           this.entryAccountAvatar(this.entryAccountProfile(entry, true)!, true)
         }
       }.height(20).constraintSize({ maxWidth: 128 }).padding({ left: 3, right: 6, top: 3, bottom: 3 })
-        .borderRadius(10).backgroundColor($r('app.color.xq_background_secondary'))
+        .borderRadius(10).backgroundColor($r('app.color.xq_ledger_account_capsule_background'))
         .clip(true)
         .justifyContent(FlexAlign.End).margin({ top: 3 })
         .accessibilityText(entry.transfer ? '转出账户：' + entry.account + '，转入账户：' + (entry.toAccount || '') : '账户：' + entry.account)
@@ -1178,12 +1192,51 @@ struct Index {
       .alignItems(VerticalAlign.Center)
   }
 
+  private entryImages(entry: LedgerEntry): LedgerAttachmentDraft[] {
+    if (this.workspace === undefined) { return []; }
+    return this.ledger?.entries.find((item: SavedLedgerEntry) => item.id === entry.id)?.attachments || [];
+  }
+
+  @Builder
+  private entryThumbnails(entry: LedgerEntry) {
+    if (this.entryImages(entry).length > 0) {
+      Scroll() {
+        Row({ space: 6 }) {
+          ForEach(this.entryImages(entry), (attachment: LedgerAttachmentDraft) => {
+            Stack() {
+              if (this.failedThumbnailPaths.includes(attachment.relativePath)) {
+                Image($r('app.media.lucide_image_off1')).width(20).height(20)
+                  .fillColor($r('app.color.xq_icon_tertiary'))
+              } else {
+                Image('file://' + this.workspace!.backup.resources.root + '/' + attachment.relativePath)
+                  .width(52).height(52).objectFit(ImageFit.Cover)
+                  .onError(() => {
+                    if (!this.failedThumbnailPaths.includes(attachment.relativePath)) {
+                      this.failedThumbnailPaths = [...this.failedThumbnailPaths, attachment.relativePath];
+                    }
+                  })
+              }
+            }.width(52).height(52).borderRadius(8).clip(true)
+              .backgroundColor($r('app.color.xq_ledger_account_capsule_background'))
+              .accessibilityText('账目图片').id('ledger-thumbnail-' + entry.id + '-' + attachment.sha256)
+          }, (attachment: LedgerAttachmentDraft) => attachment.sha256)
+        }
+      }.scrollable(ScrollDirection.Horizontal).scrollBar(BarState.Off)
+        .width('100%').height(52).margin({ top: 2, bottom: 8 })
+    }
+  }
+
   @Builder
   private ledgerRow(entry: LedgerEntry, pageKind: LedgerKind) {
-    Row({ space: 8 }) {
-      this.entryContent(entry, pageKind)
-      this.entryAmount(entry, pageKind)
-    }.width('100%').alignItems(VerticalAlign.Top).borderRadius(16)
+    Column() {
+      Row({ space: 8 }) {
+        this.entryContent(entry, pageKind)
+        this.entryAmount(entry, pageKind)
+      }.width('100%').alignItems(VerticalAlign.Top)
+      if (this.entryImages(entry).length > 0) {
+        Row() { this.entryThumbnails(entry) }.width('100%').padding({ left: 72, right: 8 })
+      }
+    }.width('100%').borderRadius(16)
       .backgroundColor($r('app.color.xq_comp_common_contrary'))
       .id(entry.id).onClick(() => { this.openDetail(entry.id); })
   }
@@ -1219,7 +1272,7 @@ struct Index {
     Image($r('app.media.lucide_funnel1')).width(22).height(22)
       .fillColor(this.account.length > 0 || this.selectedTagIds.length > 0 ?
         $r('app.color.xq_icon_emphasize') : $r('app.color.xq_icon_primary'))
-      .id('ledger-filter-glyph')
+      .opacity(0.7).id('ledger-filter-glyph')
   }
 
   @Builder
@@ -1360,9 +1413,6 @@ struct Index {
     const offset = this.bodyScroller.currentOffset().yOffset;
     const scrolled = offset > 0;
     if (this.headerScrolled !== scrolled) { this.headerScrolled = scrolled; }
-    // The period starts 14vp below the fixed title; finish fading before their bounds meet.
-    const opacity = Math.max(0, Math.min(1, 1 - Math.max(0, offset) / 12));
-    if (this.periodOpacity !== opacity) { this.periodOpacity = opacity; }
     // The first ListItem is before the filter placeholder. Do not use the moving toolbar's bounds.
     const handoff = navigationHandoff(offset, this.filterStartOffset, 56);
     this.navigationTitleOpacity = handoff.titleOpacity;
@@ -1437,11 +1487,13 @@ struct Index {
             if (index > 0 && entry.date === this.entries(pageKind)[index - 1].date) {
               Row() {
                 Divider().strokeWidth(0.5).color($r('app.color.xq_app_divider_subtle'))
-              }.height(8).width('100%').padding({ left: 12, right: 12 })
+              }.height(8).width('100%').padding({ left: 72, right: 12 })
                 .id('ledger-entry-divider-' + entry.id)
             }
             LedgerSwipeActions({ entryId: entry.id, activeId: $activeSwipeId, busy: this.deleting,
-              editable: !this.preview, onEdit: () => { this.openDetail(entry.id, true); },
+              editable: !this.preview, prepaid: !!entry.prepaidId,
+              onPrepaidAction: (action: string) => { this.openPrepaidAction(entry, action); },
+              onEdit: () => { this.openDetail(entry.id, true); },
               menuMaterial: this.materialReady && !this.forceLegacyMaterials ? this.filterMaterials?.menu : undefined,
               content: () => { this.ledgerRow(entry, pageKind); }, onDelete: () => {
                 this.confirmDelete({ id: entry.id, category: entry.recoveryKind ? (entry.recoveryKind === 'refund' ? '退款' : '报销到账') : entry.category, minor: entry.recoveryKind ? (-BigInt(entry.minor)).toString() : entry.minor });
@@ -1491,7 +1543,6 @@ struct Index {
     List({ scroller: this.bodyScroller }) {
       ListItem() {
         Column({ space: 0 }) {
-        this.header()
           if (this.viewportWidth < 720 && !this.upgradeRequired) { this.summary(); this.prepaidEntry(); }
         }.width('100%').padding({ top: 12, bottom: 24 })
           .onAreaChange((_previous: Area, current: Area) => {
