@@ -1,5 +1,7 @@
 # 小巧记账：HDS沉浸光感控件优先规则
 
+> 当前新增开发约定见[表单、Sheet 与子页面规范](forms-sheets-subpages.md)。本文保留阶段性设计记录；尺寸、材质、表单状态和返回规则有差异时，以当前规范和用户后续要求为准。
+
 日期：2026-11-02。依据用户最新要求，后续UI优先使用HDS沉浸光感控件，并参考[华为控件设计规范](https://developer.huawei.com/consumer/cn/doc/doccenter-ux-design/general_overview-0000001929599380)中的控件。本文是现有页面的选型约束与对应表，不代表Figma已替换为官方控件实例，也不代表开发组件已接入。
 
 ## 首页实际接入状态
