@@ -1,3 +1,4 @@
+import { RdbBookDeletion, BookDeletionResult } from './RdbBookDeletion';
 import { RdbCurrencySettings } from './RdbCurrencySettings';
 import { LEDGER_USAGE_ROWS_SQL } from './LedgerUsageQuery';
 import { matchImportedAccount } from '../../domain/model/ImportedAccountMatch';
@@ -6,7 +7,7 @@ import { RdbLedgerSearch } from './RdbLedgerSearch';
 import { RdbPrepaidRepository } from './RdbPrepaidRepository';
 import { PrepaidProject, PrepaidDetail, PrepaidProjectCommand, PrepaidEventCommand, prepaidEntryContext } from '../../domain/model/Prepaid';
 import { FxConversion } from '../../core/money/FxConversion';
-import { parseFxEntry } from '../../domain/model/FxEntrySnapshot';
+import { FxEntrySnapshot, parseFxEntry } from '../../domain/model/FxEntrySnapshot';
 import { validateConversion } from '../../core/money/FxConversion';
 import { RdbFxSnapshots } from './RdbFxSnapshots';
 import { OfficialExchangeRates } from '../exchange/OfficialExchangeRates';
@@ -36,7 +37,7 @@ import { RecordExpense } from '../../domain/services/RecordExpense';
 import { UpdateExpense } from '../../domain/services/UpdateExpense';
 import { EntryDetail } from '../../domain/model/EntryDetail';
 import { validateLedgerLocation } from '../../domain/model/LedgerLocation';
-import { MonthlyBudget, DEFAULT_MONTHLY_BUDGET_MINOR } from '../../domain/model/MonthlyBudget';
+import { MonthlyBudget } from '../../domain/model/MonthlyBudget';
 import { BookAppearance, LedgerBook, ValidatedLedgerBook } from '../../domain/model/LedgerBook';
 import { BudgetNatureLine, SpendingNatureCommand, SpendingNatureProfile, ValidatedSpendingNature, isCustomNatureColor } from '../../domain/model/SpendingNature';
 import { CategoryCommand, CategoryOrderItem, CategoryProfile, ValidatedCategory } from '../../domain/model/CategoryProfile';
@@ -75,6 +76,7 @@ export class LedgerWorkspace {
   private readonly store: relationalStore.RdbStore;
   private readonly session: RdbSession;
   readonly backup: LedgerBackupPackage;
+  private readonly bookDeletion: RdbBookDeletion;
   readonly localBackup: LocalLedgerBackup;
   private readonly writer: RecordExpense;
   private readonly updater: UpdateExpense;
@@ -83,6 +85,16 @@ export class LedgerWorkspace {
   private readonly accountRepository: RdbAccountRepository;
   private readonly statisticsRepository: RdbStatisticsRepository;
   private activeBookId: string = DEFAULT_BOOK_ID;
+  bookCurrency: CurrencyUnit = currencyUnit('CNY');
+  monthStartDay: number = 1;
+
+  private async readBookSettings(db: relationalStore.RdbStore, id: string): Promise<void> {
+    const rows = await db.querySql('SELECT base_currency_id,month_start_day FROM books WHERE id=? AND deleted_at_ms IS NULL', [id]);
+    try {
+      if (!rows.goToFirstRow()) { throw new Error('LEDGER_BOOK_UNAVAILABLE'); }
+      this.bookCurrency = currencyUnit(rows.getString(0)); this.monthStartDay = rows.getLong(1);
+    } finally { rows.close(); }
+  }
 
   private constructor(context: common.Context, name: string, store: relationalStore.RdbStore) {
     OfficialExchangeRates.initialize(context);
@@ -91,6 +103,7 @@ export class LedgerWorkspace {
     this.currencySettings = new RdbCurrencySettings(this.session);
     this.localBackup = new LocalLedgerBackup(context, name, this.session);
     this.backup = new LedgerBackupPackage(context, name, this.localBackup);
+    this.bookDeletion = new RdbBookDeletion(this.session, this.backup.resources);
     this.accountRepository = new RdbAccountRepository(store);
     this.statisticsRepository = new RdbStatisticsRepository(store);
     this.transfer = new TransferService(new RdbTransferRepository(store));
@@ -106,6 +119,7 @@ export class LedgerWorkspace {
       const workspace = new LedgerWorkspace(context, name, store);
       await workspace.currencySettings.load();
       await workspace.initializeActiveBook();
+      try { await workspace.bookDeletion.cleanup(); } catch (_) { /* Retain failed resource cleanup tasks for next open. */ }
       return workspace;
     });
     LedgerWorkspace.instances.set(name, pending);
@@ -154,6 +168,7 @@ export class LedgerWorkspace {
       const id = await this.activeBookFromMeta(db);
       await this.saveActiveBook(db, id);
       this.activeBookId = id;
+      await this.readBookSettings(db, id);
     });
   }
 
@@ -161,10 +176,10 @@ export class LedgerWorkspace {
     return this.session.read(async (db: relationalStore.RdbStore): Promise<LedgerBook[]> => {
       this.activeBookId = await this.activeBookFromMeta(db);
       const values: LedgerBook[] = [];
-      const rows = await db.querySql("SELECT b.id,b.name,b.revision,b.archived_at_ms,b.cover_palette,b.cover_icon,COALESCE(c.entry_count,'0') FROM books b LEFT JOIN (SELECT book_id,CAST(COUNT(*) AS TEXT) AS entry_count FROM (" + LEDGER_USAGE_ROWS_SQL + ") GROUP BY book_id) c ON c.book_id=b.id WHERE b.deleted_at_ms IS NULL ORDER BY b.archived_at_ms IS NOT NULL,b.sort_order,b.created_at_ms,b.id");
+      const rows = await db.querySql("SELECT b.id,b.name,b.revision,b.archived_at_ms,b.cover_palette,b.cover_icon,COALESCE(c.entry_count,'0'),b.base_currency_id,b.month_start_day,(EXISTS(SELECT 1 FROM transactions WHERE book_id=b.id) OR EXISTS(SELECT 1 FROM budgets WHERE book_id=b.id) OR EXISTS(SELECT 1 FROM prepaid_projects WHERE book_id=b.id)) FROM books b LEFT JOIN (SELECT book_id,CAST(COUNT(*) AS TEXT) AS entry_count FROM (" + LEDGER_USAGE_ROWS_SQL + ") GROUP BY book_id) c ON c.book_id=b.id WHERE b.deleted_at_ms IS NULL ORDER BY b.archived_at_ms IS NOT NULL,b.sort_order,b.created_at_ms,b.id");
       try {
         while (rows.goToNextRow()) {
-          values.push({ id: rows.getString(0), name: rows.getString(1), revision: rows.getLong(2), archived: !rows.isColumnNull(3), coverPalette: rows.getString(4), coverIcon: rows.getString(5), entryCount: rows.getString(6) });
+          values.push({ id: rows.getString(0), name: rows.getString(1), revision: rows.getLong(2), archived: !rows.isColumnNull(3), coverPalette: rows.getString(4), coverIcon: rows.getString(5), entryCount: rows.getString(6), currencyId: rows.getString(7), monthStartDay: rows.getLong(8), currencyLocked: rows.getLong(9) !== 0 });
         }
       } finally { rows.close(); }
       return values;
@@ -179,11 +194,12 @@ export class LedgerWorkspace {
       } finally { rows.close(); }
       await this.saveActiveBook(db, id);
       this.activeBookId = id;
+      await this.readBookSettings(db, id);
     });
   }
 
   async createBook(name: string, id: string, appearance?: BookAppearance): Promise<void> {
-    const draft = new ValidatedLedgerBook({ id: id, name: name, coverPalette: appearance?.coverPalette, coverIcon: appearance?.coverIcon }).draft;
+    const draft = new ValidatedLedgerBook({ id: id, name: name, coverPalette: appearance?.coverPalette, coverIcon: appearance?.coverIcon, currencyId: appearance?.currencyId, monthStartDay: appearance?.monthStartDay }).draft;
     await this.session.write(async (db: relationalStore.RdbStore): Promise<void> => {
       const duplicate = await db.querySql('SELECT id FROM books WHERE deleted_at_ms IS NULL AND name=? LIMIT 1', [draft.name]);
       try { if (duplicate.goToFirstRow()) { throw new Error('LEDGER_BOOK_NAME_EXISTS'); } } finally { duplicate.close(); }
@@ -191,7 +207,7 @@ export class LedgerWorkspace {
       let sortOrder: number = 0;
       try { if (order.goToFirstRow()) { sortOrder = order.getLong(0); } } finally { order.close(); }
       const now = Date.now();
-      await db.insert('books', { id: draft.id, name: draft.name, base_currency_id: 'CNY', timezone: 'Asia/Shanghai',
+      await db.insert('books', { id: draft.id, name: draft.name, base_currency_id: draft.currencyId, month_start_day: draft.monthStartDay, timezone: 'Asia/Shanghai',
         sort_order: sortOrder, created_at_ms: now, updated_at_ms: now, cover_palette: draft.coverPalette, cover_icon: draft.coverIcon });
       const source = await db.querySql('SELECT id FROM books WHERE id=? AND deleted_at_ms IS NULL', [DEFAULT_BOOK_ID]);
       let sourceBook: string;
@@ -217,17 +233,24 @@ export class LedgerWorkspace {
   }
 
   async updateBook(id: string, name: string, revision: number, appearance?: BookAppearance): Promise<void> {
-    const draft = new ValidatedLedgerBook({ id: id, name: name, coverPalette: appearance?.coverPalette, coverIcon: appearance?.coverIcon }).draft;
+    const draft = new ValidatedLedgerBook({ id: id, name: name, coverPalette: appearance?.coverPalette, coverIcon: appearance?.coverIcon, currencyId: appearance?.currencyId, monthStartDay: appearance?.monthStartDay }).draft;
     if (!Number.isSafeInteger(revision) || revision < 1 || revision >= Number.MAX_SAFE_INTEGER) { throw new Error('INVALID_EXPECTED_REVISION'); }
     await this.session.write(async (db: relationalStore.RdbStore): Promise<void> => {
       const duplicate = await db.querySql('SELECT id FROM books WHERE id<>? AND deleted_at_ms IS NULL AND name=? LIMIT 1', [id, draft.name]);
       try { if (duplicate.goToFirstRow()) { throw new Error('LEDGER_BOOK_NAME_EXISTS'); } } finally { duplicate.close(); }
       const values: relationalStore.ValuesBucket = { name: draft.name, updated_at_ms: Date.now(), revision: revision + 1 };
-      if (appearance !== undefined) { values['cover_palette'] = draft.coverPalette || 'butter'; values['cover_icon'] = draft.coverIcon || 'lucide_notebook_text1'; }
+      if (appearance !== undefined) { values['cover_palette'] = draft.coverPalette || 'butter'; values['cover_icon'] = draft.coverIcon || 'lucide_notebook_text1';
+        if (appearance.currencyId !== undefined) { values['base_currency_id'] = draft.currencyId || 'CNY'; }
+        if (appearance.monthStartDay !== undefined) { values['month_start_day'] = draft.monthStartDay || 1; }
+      }
       const changed = await db.update(values,
         new relationalStore.RdbPredicates('books').equalTo('id', id).equalTo('revision', revision).isNull('deleted_at_ms'));
       if (changed !== 1) { throw new Error('LEDGER_BOOK_CHANGED'); }
     });
+  }
+
+  async deleteArchivedBook(id: string, revision: number): Promise<BookDeletionResult> {
+    return this.bookDeletion.execute(id, revision);
   }
 
   async archiveBook(id: string, revision: number, archived: boolean): Promise<void> {
@@ -383,11 +406,34 @@ export class LedgerWorkspace {
     }
     const validRows = rows.filter((row: CsvPreviewRow) => row.valid && row.selected);
     if (validRows.length === 0) { throw new Error('CSV_NO_VALID_ROWS'); }
+    const importBookId = this.activeBookId;
+    const importBookCurrency = this.bookCurrency;
+    const importFx: Map<number, FxEntrySnapshot> = new Map();
+    for (const row of validRows) {
+      if (row.fx !== undefined) {
+        const snapshot = parseFxEntry(JSON.stringify(row.fx));
+        if ((snapshot.bookCurrencyId || 'CNY') !== importBookCurrency.id) { throw new Error('IMPORT_BOOK_CURRENCY_MISMATCH'); }
+        importFx.set(row.rowNumber, snapshot);
+      } else if (importBookCurrency.id !== 'CNY' && row.type !== 'refund' && row.type !== 'reimbursement') {
+        const original = Money.parse(row.amount, currencyUnit('CNY'));
+        const quote = await OfficialExchangeRates.quote('CNY', importBookCurrency.id, row.date);
+        const rate = new ExchangeRate(original.currency, importBookCurrency, quote.rate);
+        importFx.set(row.rowNumber, { currencyId: 'CNY', bookCurrencyId: importBookCurrency.id,
+          paidMinor: original.minor.toString(), grossMinor: original.minor.toString(), discountMinor: '0',
+          bookMinor: rate.convert(original).minor.toString(), bookFx: { rate: quote.rate, date: quote.date, source: quote.source === 'same_currency' ? 'manual' : quote.source },
+          accountCurrencyId: 'CNY', accountMinor: original.minor.toString(),
+          receivedCurrencyId: row.type === 'transfer' ? 'CNY' : undefined,
+          receivedMinor: row.type === 'transfer' ? original.minor.toString() : undefined,
+          bookFeeMinor: rate.convert(Money.parse(row.transferFee || '0', currencyUnit('CNY'))).minor.toString() });
+      }
+    }
     const provider = metadata.sourceKind.trim().length > 0 ? metadata.sourceKind :
       /微信|wechat|weixin/i.test(fileName) ? 'wechat' :
       /支付宝|alipay/i.test(fileName) ? 'alipay' : /\.xlsx$/i.test(fileName) ? 'xlsx' : 'csv';
     return this.session.write(async (db: relationalStore.RdbStore): Promise<number> => {
       this.activeBookId = await this.activeBookFromMeta(db);
+      await this.readBookSettings(db, this.activeBookId);
+      if (this.activeBookId !== importBookId || this.bookCurrency.id !== importBookCurrency.id) { throw new Error('LEDGER_BOOK_CHANGED'); }
       const batchId = util.generateRandomUUID();
       const now = Date.now();
       const createdCategories: Map<string, string> = new Map();
@@ -422,7 +468,7 @@ export class LedgerWorkspace {
         .concat(validRows.filter((row: CsvPreviewRow) => row.type === 'refund' || row.type === 'reimbursement'));
       let processed = 0;
       for (const row of orderedRows) {
-        const fx = row.fx === undefined ? undefined : parseFxEntry(JSON.stringify(row.fx));
+        const fx = importFx.get(row.rowNumber);
         const code = fx?.currencyId || 'CNY';
         const accountCode = row.type === 'transfer' ? code : fx?.accountCurrencyId || code;
         const incomingCode = fx?.receivedCurrencyId || code;
@@ -515,7 +561,7 @@ export class LedgerWorkspace {
         await db.insert('transactions', { id: transactionId, book_id: this.activeBookId, kind: row.type,
           category_id: row.type === 'transfer' ? null : categoryId,
           currency_id: code, gross_minor: fx === undefined ? amount : Number(fx.grossMinor), discount_minor: fx === undefined ? 0 : Number(fx.discountMinor),
-          paid_minor: amount, book_currency_id: 'CNY', book_minor: fx === undefined ? amount : Number(fx.bookMinor), include_in_budget: row.type === 'expense' && row.includeInBudget ? 1 : 0,
+          paid_minor: amount, book_currency_id: importBookCurrency.id, book_minor: fx === undefined ? amount : Number(fx.bookMinor), include_in_budget: row.type === 'expense' && row.includeInBudget ? 1 : 0,
           spending_nature_id: row.type === 'expense' ? row.spendingNatureId || null : null,
           include_in_assets: accountId.length > 0 ? 1 : 0, balance_mode: applyBalance ? 'apply' : 'preserve',
           reimbursement_status: row.type === 'expense' && row.reimbursementPending ? 'pending' : 'none',
@@ -535,7 +581,7 @@ export class LedgerWorkspace {
           const coupon = Money.parse(row.transferCoupon || '0', currencyUnit(code));
           const outgoing = Money.fromMinorText(String(amount), currencyUnit(code)).add(fee).subtract(coupon);
           if (fx !== undefined) {
-            const bookFee = Money.fromMinorText(fx.bookFeeMinor || '0', this.currency);
+            const bookFee = Money.fromMinorText(fx.bookFeeMinor || '0', importBookCurrency);
             if (fee.minor > BigInt(0)) { validateConversion(fee, bookFee, fx.bookFx); }
             else if (bookFee.minor !== BigInt(0)) { throw new Error('FX_AMOUNT_MISMATCH'); }
           }
@@ -561,7 +607,7 @@ export class LedgerWorkspace {
         }
         if (fx !== undefined) {
           const original = Money.fromMinorText(fx.paidMinor, currencyUnit(code));
-          await RdbFxSnapshots.insert(db, transactionId, original, Money.fromMinorText(fx.bookMinor, this.currency), fx.bookFx);
+          await RdbFxSnapshots.insert(db, transactionId, original, Money.fromMinorText(fx.bookMinor, importBookCurrency), fx.bookFx);
           const movement = await db.querySql('SELECT id,currency_id,CAST(abs(delta_minor) AS TEXT) FROM account_movements WHERE transaction_id=? AND leg=?', [transactionId, row.type === 'transfer' ? 'transfer_in' : row.type]);
           try { if (movement.goToFirstRow()) { await RdbFxSnapshots.insert(db, transactionId, original, Money.fromMinorText(movement.getString(2), currencyUnit(movement.getString(1))), fx.accountFx, movement.getString(0)); } } finally { movement.close(); }
         }
@@ -1073,26 +1119,27 @@ export class LedgerWorkspace {
   }
 
   async setBudgetNatureAmount(month: string, natureId: string, decimal: string): Promise<void> {
-    const period = MonthlyBudget.period(month);
-    const amount = MonthlyBudget.parse(decimal, this.currency);
     await this.session.write(async (db: relationalStore.RdbStore): Promise<void> => {
       this.activeBookId = await this.activeBookFromMeta(db);
+      await this.readBookSettings(db, this.activeBookId);
+      const period = MonthlyBudget.period(month, this.monthStartDay);
+      const amount = MonthlyBudget.parse(decimal, this.bookCurrency);
       const nature = await db.querySql('SELECT id FROM spending_natures WHERE id=? AND deleted_at_ms IS NULL', [natureId]);
       try { if (!nature.goToFirstRow()) { throw new Error('SPENDING_NATURE_UNAVAILABLE'); } } finally { nature.close(); }
       const rows = await db.querySql('SELECT id,currency_id,CAST(total_minor AS TEXT) FROM budgets WHERE book_id=? AND period_start_date=? AND period_end_date_exclusive=? AND deleted_at_ms IS NULL',
         [this.activeBookId, period.start, period.endExclusive]);
       let budgetId: string = '';
-      let totalMinor: string = DEFAULT_MONTHLY_BUDGET_MINOR;
+      let totalMinor: string = Money.parse('2500', this.bookCurrency).minor.toString();
       try {
         if (rows.goToFirstRow()) {
-          if (rows.getString(1) !== this.currency.id) { throw new Error('CURRENCY_MISMATCH'); }
+          if (rows.getString(1) !== this.bookCurrency.id) { throw new Error('CURRENCY_MISMATCH'); }
           budgetId = rows.getString(0); totalMinor = rows.getString(2);
         }
       } finally { rows.close(); }
       const now = Date.now();
       if (budgetId.length === 0) {
         budgetId = util.generateRandomUUID();
-        await db.insert('budgets', { id: budgetId, book_id: this.activeBookId, currency_id: this.currency.id,
+        await db.insert('budgets', { id: budgetId, book_id: this.activeBookId, currency_id: this.bookCurrency.id,
           period_start_date: period.start, period_end_date_exclusive: period.endExclusive,
           total_minor: Number(totalMinor), created_at_ms: now, updated_at_ms: now });
       }
@@ -1153,12 +1200,22 @@ export class LedgerWorkspace {
     let assets = BigInt(result.assetsMinor); let liabilities = BigInt(result.liabilitiesMinor);
     const prepaid = await this.session.read((db: relationalStore.RdbStore) => RdbPrepaidRepository.projects(db));
     let prepaidMinor = BigInt(0);
-    for (const project of prepaid) { if (project.includeInNetAssets) { prepaidMinor += BigInt(project.remainingBookMinor); } }
-    assets += prepaidMinor;
-    result.prepaidMinor = prepaidMinor.toString();
     const missing: string[] = [];
     const now = new Date();
     const date = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
+    for (const project of prepaid) {
+      if (!project.includeInNetAssets || project.remainingBookMinor === '0') { continue; }
+      const code = project.bookCurrencyId || 'CNY';
+      try {
+        if (code === 'CNY') { prepaidMinor += BigInt(project.remainingBookMinor); }
+        else {
+          const quote = await OfficialExchangeRates.quote(code, 'CNY', date);
+          prepaidMinor += new ExchangeRate(currencyUnit(code), this.currency, quote.rate)
+            .convert(Money.fromMinorText(project.remainingBookMinor, currencyUnit(code))).minor;
+        }
+      } catch (_) { if (!missing.includes(code)) { missing.push(code); } }
+    }
+    assets += prepaidMinor; result.prepaidMinor = prepaidMinor.toString();
     for (const account of result.accounts) {
       if (account.archived || !account.includeInNetAssets || account.currencyId === 'CNY' || account.balanceMinor === '0') { continue; }
       try {
@@ -1203,7 +1260,7 @@ export class LedgerWorkspace {
     unit: StatisticsBucketUnit): Promise<LedgerStatistics> {
     return this.session.read(async (db: relationalStore.RdbStore): Promise<LedgerStatistics> => {
       this.activeBookId = await this.activeBookFromMeta(db);
-      return this.statisticsRepository.snapshot(this.activeBookId, startDate, endDateExclusive, kind, unit);
+      return this.statisticsRepository.snapshot(this.activeBookId, startDate, endDateExclusive, kind, unit, this.monthStartDay);
     });
   }
 
@@ -1231,7 +1288,7 @@ export class LedgerWorkspace {
           revision: rows.getLong(4), categoryId: rows.getString(5), categoryName: rows.getString(6), categoryPath: rows.getString(6),
           iconKey: rows.getString(7), accountId: rows.getString(8), accountName: rows.getString(9), currencyId: rows.getString(10),
           currencyCode: rows.getString(11), currencySymbol: rows.getString(12), currencyScale: rows.getLong(13),
-          grossMinor: rows.getString(14), discountMinor: rows.getString(15), paidMinor: rows.getString(16), bookMinor: rows.getString(17),
+          grossMinor: rows.getString(14), discountMinor: rows.getString(15), paidMinor: rows.getString(16), bookMinor: rows.getString(17), bookCurrencyId: rows.getString(26),
           includeInBudget: rows.getLong(18) === 1, includeInAssets: rows.getLong(19) === 1, balanceMode: rows.getString(20),
           occurredAtMs: rows.getLong(21), localDate: rows.getString(22), timezone: rows.getString(23), offsetMinutes: rows.getLong(24),
           note: rows.getString(25), toAccountId: rows.getString(29), toAccountName: rows.getString(30), transferPurpose: rows.getString(33), transferOutMinor: rows.getString(34),
@@ -1341,16 +1398,17 @@ export class LedgerWorkspace {
   }
 
   async setMonthlyBudget(month: string, decimal: string): Promise<void> {
-    const period = MonthlyBudget.period(month);
-    const amount = MonthlyBudget.parse(decimal, this.currency);
     await this.session.write(async (db: relationalStore.RdbStore): Promise<void> => {
       this.activeBookId = await this.activeBookFromMeta(db);
+      await this.readBookSettings(db, this.activeBookId);
+      const period = MonthlyBudget.period(month, this.monthStartDay);
+      const amount = MonthlyBudget.parse(decimal, this.bookCurrency);
       const rows = await db.querySql('SELECT id,currency_id FROM budgets WHERE book_id=? AND period_start_date=? AND period_end_date_exclusive=? AND deleted_at_ms IS NULL',
         [this.activeBookId, period.start, period.endExclusive]);
       let id: string = '';
       try {
         if (rows.goToFirstRow()) {
-          if (rows.getString(1) !== this.currency.id) { throw new Error('CURRENCY_MISMATCH'); }
+          if (rows.getString(1) !== this.bookCurrency.id) { throw new Error('CURRENCY_MISMATCH'); }
           id = rows.getString(0);
         }
       } finally { rows.close(); }
@@ -1359,7 +1417,7 @@ export class LedgerWorkspace {
         await db.executeSql('UPDATE budgets SET total_minor=?,updated_at_ms=?,revision=revision+1 WHERE id=?',
           [amount.toSafeMinorNumber(), now, id]);
       } else {
-        await db.insert('budgets', { id: util.generateRandomUUID(), book_id: this.activeBookId, currency_id: this.currency.id,
+        await db.insert('budgets', { id: util.generateRandomUUID(), book_id: this.activeBookId, currency_id: this.bookCurrency.id,
           period_start_date: period.start, period_end_date_exclusive: period.endExclusive,
           total_minor: amount.toSafeMinorNumber(), created_at_ms: now, updated_at_ms: now });
       }
@@ -1382,13 +1440,14 @@ export class LedgerWorkspace {
   }
 
   async snapshot(month: string): Promise<LedgerSnapshot> {
-    const period = MonthlyBudget.period(month);
     return this.session.read(async (db: relationalStore.RdbStore): Promise<LedgerSnapshot> => {
       this.activeBookId = await this.activeBookFromMeta(db);
+      await this.readBookSettings(db, this.activeBookId);
+      const period = MonthlyBudget.period(month, this.monthStartDay);
       const book = await db.querySql('SELECT name,base_currency_id FROM books WHERE id=? AND deleted_at_ms IS NULL', [this.activeBookId]);
       let bookName: string = '';
       try {
-        if (!book.goToFirstRow() || book.getString(1) !== 'CNY') { throw new Error('LEDGER_BOOK_UNAVAILABLE'); }
+        if (!book.goToFirstRow()) { throw new Error('LEDGER_BOOK_UNAVAILABLE'); }
         bookName = book.getString(0);
       } finally { book.close(); }
       const categories: ExpenseCategory[] = [];
@@ -1427,7 +1486,7 @@ export class LedgerWorkspace {
       let income: bigint = BigInt(0);
       let expense: bigint = BigInt(0);
       let budgetUsed: bigint = BigInt(0);
-      const rows = await db.querySql("SELECT t.id,t.note,CASE WHEN t.kind='transfer' THEN CASE d.purpose WHEN 'credit_repayment' THEN '信用卡还款' WHEN 'loan_repayment' THEN '借款还款' WHEN 'topup' THEN '充值' WHEN 'withdrawal' THEN '提现' ELSE '转账' END ELSE c.name END,COALESCE(c.icon_key,'transfer'),COALESCE(a.name,'不使用账户'),t.occurred_local_date,t.occurred_at_ms,t.occurred_offset_minutes,t.kind,CAST(COALESCE(t.book_minor,t.paid_minor) AS TEXT),t.include_in_budget,CAST(t.gross_minor AS TEXT),CAST(t.discount_minor AS TEXT),COALESCE(ai.name,''),CAST(COALESCE(d.out_minor,t.paid_minor) AS TEXT),CAST(COALESCE(d.fee_minor,0) AS TEXT),CAST(COALESCE(d.coupon_minor,0) AS TEXT),COALESCE(d.purpose,'transfer'),COALESCE(d.fee_in_expense,1),COALESCE(d.fee_in_budget,1),COALESCE(t.merchant_name_snapshot,mc.name,''),COALESCE(t.address_text,''),COALESCE(m.account_id,d.from_account_id,''),COALESCE(t.merchant_id,''),t.latitude_e6,t.longitude_e6,t.reimbursement_status,CAST(COALESCE((SELECT SUM(r.amount_minor) FROM v_expense_recoveries r WHERE r.transaction_id=t.id),0) AS TEXT),COALESCE((SELECT name FROM spending_natures WHERE id=t.spending_nature_id),''),CAST(COALESCE((SELECT SUM(r.amount_minor) FROM v_expense_recoveries r WHERE r.transaction_id=t.id AND r.kind='reimbursement'),0) AS TEXT),CAST(COALESCE((SELECT SUM(r.amount_minor) FROM v_expense_recoveries r WHERE r.transaction_id=t.id AND r.kind='refund'),0) AS TEXT),COALESCE((SELECT COALESCE(custom_color,color_token) FROM spending_natures WHERE id=t.spending_nature_id),''),t.currency_id,CAST(t.paid_minor AS TEXT),CAST(COALESCE(d.book_fee_minor,0) AS TEXT) FROM transactions t LEFT JOIN categories c ON c.id=t.category_id LEFT JOIN v_transfer_details d ON d.transaction_id=t.id LEFT JOIN account_movements m ON m.transaction_id=t.id AND m.leg<>'transfer_in' LEFT JOIN accounts a ON a.id=COALESCE(m.account_id,d.from_account_id) LEFT JOIN account_movements mi ON mi.transaction_id=t.id AND mi.leg='transfer_in' LEFT JOIN accounts ai ON ai.id=mi.account_id LEFT JOIN merchants mc ON mc.id=t.merchant_id WHERE t.book_id=? AND t.posting_state='posted' AND t.deleted_at_ms IS NULL AND (t.import_batch_id IS NULL OR EXISTS(SELECT 1 FROM import_batches b WHERE b.id=t.import_batch_id AND b.status='committed')) AND t.kind IN ('expense','income','transfer') AND substr(t.occurred_local_date,1,7)=? ORDER BY t.occurred_at_ms DESC,t.created_at_ms DESC,t.id DESC", [this.activeBookId, month]);
+      const rows = await db.querySql("SELECT t.id,t.note,CASE WHEN t.kind='transfer' THEN CASE d.purpose WHEN 'credit_repayment' THEN '信用卡还款' WHEN 'loan_repayment' THEN '借款还款' WHEN 'topup' THEN '充值' WHEN 'withdrawal' THEN '提现' ELSE '转账' END ELSE c.name END,COALESCE(c.icon_key,'transfer'),COALESCE(a.name,'不使用账户'),t.occurred_local_date,t.occurred_at_ms,t.occurred_offset_minutes,t.kind,CAST(COALESCE(t.book_minor,t.paid_minor) AS TEXT),t.include_in_budget,CAST(t.gross_minor AS TEXT),CAST(t.discount_minor AS TEXT),COALESCE(ai.name,''),CAST(COALESCE(d.out_minor,t.paid_minor) AS TEXT),CAST(COALESCE(d.fee_minor,0) AS TEXT),CAST(COALESCE(d.coupon_minor,0) AS TEXT),COALESCE(d.purpose,'transfer'),COALESCE(d.fee_in_expense,1),COALESCE(d.fee_in_budget,1),COALESCE(t.merchant_name_snapshot,mc.name,''),COALESCE(t.address_text,''),COALESCE(m.account_id,d.from_account_id,''),COALESCE(t.merchant_id,''),t.latitude_e6,t.longitude_e6,t.reimbursement_status,CAST(COALESCE((SELECT SUM(r.amount_minor) FROM v_expense_recoveries r WHERE r.transaction_id=t.id),0) AS TEXT),COALESCE((SELECT name FROM spending_natures WHERE id=t.spending_nature_id),''),CAST(COALESCE((SELECT SUM(r.amount_minor) FROM v_expense_recoveries r WHERE r.transaction_id=t.id AND r.kind='reimbursement'),0) AS TEXT),CAST(COALESCE((SELECT SUM(r.amount_minor) FROM v_expense_recoveries r WHERE r.transaction_id=t.id AND r.kind='refund'),0) AS TEXT),COALESCE((SELECT COALESCE(custom_color,color_token) FROM spending_natures WHERE id=t.spending_nature_id),''),t.currency_id,CAST(t.paid_minor AS TEXT),CAST(COALESCE(d.book_fee_minor,0) AS TEXT) FROM transactions t LEFT JOIN categories c ON c.id=t.category_id LEFT JOIN v_transfer_details d ON d.transaction_id=t.id LEFT JOIN account_movements m ON m.transaction_id=t.id AND m.leg<>'transfer_in' LEFT JOIN accounts a ON a.id=COALESCE(m.account_id,d.from_account_id) LEFT JOIN account_movements mi ON mi.transaction_id=t.id AND mi.leg='transfer_in' LEFT JOIN accounts ai ON ai.id=mi.account_id LEFT JOIN merchants mc ON mc.id=t.merchant_id WHERE t.book_id=? AND t.posting_state='posted' AND t.deleted_at_ms IS NULL AND (t.import_batch_id IS NULL OR EXISTS(SELECT 1 FROM import_batches b WHERE b.id=t.import_batch_id AND b.status='committed')) AND t.kind IN ('expense','income','transfer') AND t.occurred_local_date>=? AND t.occurred_local_date<? ORDER BY t.occurred_at_ms DESC,t.created_at_ms DESC,t.id DESC", [this.activeBookId, period.start, period.endExclusive]);
       try {
         while (rows.goToNextRow()) {
           const isIncome = rows.getString(8) === 'income';
@@ -1450,7 +1509,7 @@ export class LedgerWorkspace {
               { latitudeE6: rows.getLong(24), longitudeE6: rows.getLong(25) } });
         }
       } finally { rows.close(); }
-      const receipts = await db.querySql("SELECT r.id,r.transaction_id,r.kind,CAST(r.book_minor AS TEXT),COALESCE(a.name,'不使用账户'),COALESCE(r.account_id,''),r.local_date,r.occurred_at_ms,r.offset_minutes,r.note,c.name,COALESCE(c.icon_key,'other'),COALESCE(r.merchant_name_snapshot,''),COALESCE(r.address_text,''),r.latitude_e6,r.longitude_e6 FROM v_expense_recoveries r LEFT JOIN accounts a ON a.id=r.account_id LEFT JOIN categories c ON c.id=r.category_id WHERE r.book_id=? AND substr(r.local_date,1,7)=?", [this.activeBookId, month]);
+      const receipts = await db.querySql("SELECT r.id,r.transaction_id,r.kind,CAST(r.book_minor AS TEXT),COALESCE(a.name,'不使用账户'),COALESCE(r.account_id,''),r.local_date,r.occurred_at_ms,r.offset_minutes,r.note,c.name,COALESCE(c.icon_key,'other'),COALESCE(r.merchant_name_snapshot,''),COALESCE(r.address_text,''),r.latitude_e6,r.longitude_e6 FROM v_expense_recoveries r LEFT JOIN accounts a ON a.id=r.account_id LEFT JOIN categories c ON c.id=r.category_id WHERE r.book_id=? AND r.local_date>=? AND r.local_date<?", [this.activeBookId, period.start, period.endExclusive]);
       try {
         while (receipts.goToNextRow()) {
           const value = receipts.getString(3);
@@ -1464,7 +1523,7 @@ export class LedgerWorkspace {
             location: receipts.isColumnNull(14) || receipts.isColumnNull(15) ? undefined : { latitudeE6: receipts.getLong(14), longitudeE6: receipts.getLong(15) } });
         }
       } finally { receipts.close(); }
-      const prepaidRows=await db.querySql("SELECT e.id,p.id,e.kind,p.name,p.currency_id,CAST(e.amount_minor AS TEXT),CAST(e.book_minor AS TEXT),COALESCE(e.account_id,''),COALESCE(a.name,''),e.local_date,e.occurred_at_ms,e.offset_minutes,p.merchant,e.quote_json,CAST(p.remaining_minor AS TEXT),e.account_currency_id,CAST(e.cash_minor AS TEXT) FROM v_prepaid_events e JOIN v_prepaid_balances p ON p.id=e.project_id LEFT JOIN accounts a ON a.id=e.account_id WHERE p.book_id=? AND e.kind IN ('fund','refund') AND substr(e.local_date,1,7)=?",[this.activeBookId,month]);
+      const prepaidRows=await db.querySql("SELECT e.id,p.id,e.kind,p.name,p.currency_id,CAST(e.amount_minor AS TEXT),CAST(e.book_minor AS TEXT),COALESCE(e.account_id,''),COALESCE(a.name,''),e.local_date,e.occurred_at_ms,e.offset_minutes,p.merchant,e.quote_json,CAST(p.remaining_minor AS TEXT),e.account_currency_id,CAST(e.cash_minor AS TEXT) FROM v_prepaid_events e JOIN v_prepaid_balances p ON p.id=e.project_id LEFT JOIN accounts a ON a.id=e.account_id WHERE p.book_id=? AND e.kind IN ('fund','refund') AND e.local_date>=? AND e.local_date<?",[this.activeBookId,period.start,period.endExclusive]);
       try { while (prepaidRows.goToNextRow()) {
         const context=prepaidEntryContext(prepaidRows.getString(13));
         const original=prepaidRows.getString(5); const book=prepaidRows.getString(6); const code=prepaidRows.getString(4);
@@ -1474,7 +1533,7 @@ export class LedgerWorkspace {
           account:prepaidRows.getString(8),accountId:prepaidRows.getString(7),date:prepaidRows.getString(9),occurredAtMs:prepaidRows.getLong(10),offsetMinutes:prepaidRows.getLong(11),
           income:false,minor:book,grossMinor:context?.grossMinor || original,discountMinor:context?.discountMinor || '0',merchant:prepaidRows.getString(12),
           tagIds:context?.tagIds || [],tagNames:context?.tagNames || [],address:context?.addressText || '',location:context?.location,
-          fx:{ currencyId:code,paidMinor:original,grossMinor:context?.grossMinor || original,discountMinor:context?.discountMinor || '0',bookMinor:book,
+          fx:{ bookCurrencyId: this.bookCurrency.id, currencyId:code,paidMinor:original,grossMinor:context?.grossMinor || original,discountMinor:context?.discountMinor || '0',bookMinor:book,
             accountCurrencyId:prepaidRows.getString(15),accountMinor:prepaidRows.getString(16) }
         });
       } } finally { prepaidRows.close(); }
@@ -1485,7 +1544,7 @@ export class LedgerWorkspace {
           try { if (recovery.goToFirstRow()) {
             const original = recovery.getString(2);
             const parentQuote = await RdbFxSnapshots.read(db,recovery.getString(0),'book');
-            entry.fx = { currencyId: recovery.getString(1), paidMinor: original, grossMinor: original, discountMinor: '0',
+            entry.fx = { bookCurrencyId: this.bookCurrency.id, currencyId: recovery.getString(1), paidMinor: original, grossMinor: original, discountMinor: '0',
               bookMinor: recovery.getString(3), accountCurrencyId: recovery.getString(4), accountMinor: recovery.getString(5),
               bookFx: parentQuote === undefined ? undefined : { rate: parentQuote.rate, source: parentQuote.source, date: parentQuote.date, actual: true },
               accountFx: recovery.getString(6) ? JSON.parse(recovery.getString(6)) as FxConversion : undefined };
@@ -1495,7 +1554,7 @@ export class LedgerWorkspace {
         const monetary = await db.querySql("SELECT t.currency_id,CAST(t.paid_minor AS TEXT),CAST(t.book_minor AS TEXT),COALESCE(m.currency_id,t.currency_id),CAST(COALESCE(abs(m.delta_minor),t.paid_minor) AS TEXT),COALESCE(d.to_currency_id,t.currency_id),CAST(COALESCE(d.in_minor,t.paid_minor) AS TEXT),CAST(COALESCE(d.book_fee_minor,0) AS TEXT) FROM transactions t LEFT JOIN account_movements m ON m.transaction_id=t.id AND m.leg=t.kind LEFT JOIN v_transfer_details d ON d.transaction_id=t.id WHERE t.id=?", [entry.id]);
         try {
           if (monetary.goToFirstRow()) {
-            entry.fx = { currencyId: monetary.getString(0), paidMinor: monetary.getString(1), grossMinor: entry.grossMinor, discountMinor: entry.discountMinor,
+            entry.fx = { bookCurrencyId: this.bookCurrency.id, currencyId: monetary.getString(0), paidMinor: monetary.getString(1), grossMinor: entry.grossMinor, discountMinor: entry.discountMinor,
               bookMinor: monetary.getString(2), accountCurrencyId: monetary.getString(3), accountMinor: monetary.getString(4),
               receivedCurrencyId: entry.transfer ? monetary.getString(5) : undefined, receivedMinor: entry.transfer ? monetary.getString(6) : undefined,
               bookFeeMinor: monetary.getString(7), bookFx: await RdbFxSnapshots.read(db,entry.id,'book'), accountFx: await RdbFxSnapshots.read(db,entry.id,'settlement') };
@@ -1503,14 +1562,14 @@ export class LedgerWorkspace {
         } finally { monetary.close(); }
       }
       entries.sort((a: SavedLedgerEntry, b: SavedLedgerEntry) => b.occurredAtMs - a.occurredAtMs || a.id.localeCompare(b.id));
-      const usage = await db.querySql('SELECT CAST(COALESCE(SUM(amount_minor),0) AS TEXT) FROM v_budget_expense_flows WHERE book_id=? AND substr(local_date,1,7)=?', [this.activeBookId, month]);
+      const usage = await db.querySql('SELECT CAST(COALESCE(SUM(amount_minor),0) AS TEXT) FROM v_budget_expense_flows WHERE book_id=? AND local_date>=? AND local_date<?', [this.activeBookId, period.start, period.endExclusive]);
       try { usage.goToFirstRow(); budgetUsed = BigInt(usage.getString(0)); } finally { usage.close(); }
       const tagNames: Map<string, string[]> = new Map();
       const tagIds: Map<string, string[]> = new Map();
       const entryTagRows = await db.querySql('SELECT tt.transaction_id,g.id,g.name FROM transaction_tags tt ' +
         'JOIN tags g ON g.id=tt.tag_id JOIN v_posted_transactions tx ON tx.id=tt.transaction_id ' +
-        'WHERE tt.book_id=? AND (substr(tx.occurred_local_date,1,7)=? OR EXISTS(SELECT 1 FROM v_expense_recoveries r WHERE r.transaction_id=tx.id AND substr(r.local_date,1,7)=?)) ORDER BY g.sort_order,g.created_at_ms,g.id',
-        [this.activeBookId, month, month]);
+        'WHERE tt.book_id=? AND (tx.occurred_local_date>=? AND tx.occurred_local_date<? OR EXISTS(SELECT 1 FROM v_expense_recoveries r WHERE r.transaction_id=tx.id AND r.local_date>=? AND r.local_date<?)) ORDER BY g.sort_order,g.created_at_ms,g.id',
+        [this.activeBookId, period.start, period.endExclusive, period.start, period.endExclusive]);
       try {
         while (entryTagRows.goToNextRow()) {
           const transactionId = entryTagRows.getString(0);
@@ -1532,8 +1591,8 @@ export class LedgerWorkspace {
       const attachmentRows = await db.querySql('SELECT ta.transaction_id,a.relative_path,a.content_sha256,' +
         'a.byte_size,a.mime_type FROM transaction_attachments ta JOIN attachments a ON a.id=ta.attachment_id ' +
         'JOIN v_posted_transactions tx ON tx.id=ta.transaction_id WHERE tx.book_id=? ' +
-        'AND substr(tx.occurred_local_date,1,7)=? AND a.state=\'ready\' AND a.deleted_at_ms IS NULL ' +
-        'ORDER BY ta.transaction_id,ta.sort_order', [this.activeBookId, month]);
+        'AND tx.occurred_local_date>=? AND tx.occurred_local_date<? AND a.state=\'ready\' AND a.deleted_at_ms IS NULL ' +
+        'ORDER BY ta.transaction_id,ta.sort_order', [this.activeBookId, period.start, period.endExclusive]);
       try {
         while (attachmentRows.goToNextRow()) {
           const transactionId = attachmentRows.getString(0);
@@ -1546,29 +1605,29 @@ export class LedgerWorkspace {
       for (const entry of entries) {
         entry.attachments = entryAttachments.get(entry.id) || [];
       }
-      let budgetTotal: string = DEFAULT_MONTHLY_BUDGET_MINOR;
+      let budgetTotal: string = Money.parse('2500', this.bookCurrency).minor.toString();
       let budgetId: string = '';
       const budget = await db.querySql('SELECT id,CAST(total_minor AS TEXT),currency_id FROM budgets WHERE book_id=? AND period_start_date=? AND period_end_date_exclusive=? AND deleted_at_ms IS NULL',
         [this.activeBookId, period.start, period.endExclusive]);
       try {
         if (budget.goToFirstRow()) {
-          if (budget.getString(2) !== this.currency.id) { throw new Error('CURRENCY_MISMATCH'); }
+          if (budget.getString(2) !== this.bookCurrency.id) { throw new Error('CURRENCY_MISMATCH'); }
           budgetId = budget.getString(0); budgetTotal = budget.getString(1);
         }
       } finally { budget.close(); }
       const budgetNatureLines: BudgetNatureLine[] = [];
       const lines = await db.querySql('SELECT n.id,n.name,COALESCE(n.custom_color,n.color_token),CAST(COALESCE(l.amount_minor,0) AS TEXT),' +
-        "CAST(COALESCE((SELECT SUM(t.amount_minor) FROM v_budget_expense_flows t WHERE t.spending_nature_id=n.id AND t.book_id=? AND substr(t.local_date,1,7)=?),0) AS TEXT)," +
+        "CAST(COALESCE((SELECT SUM(t.amount_minor) FROM v_budget_expense_flows t WHERE t.spending_nature_id=n.id AND t.book_id=? AND t.local_date>=? AND t.local_date<?),0) AS TEXT)," +
         'n.archived_at_ms FROM spending_natures n LEFT JOIN budget_nature_lines l ON l.spending_nature_id=n.id AND l.budget_id=? ' +
-        'WHERE n.deleted_at_ms IS NULL AND (n.archived_at_ms IS NULL OR l.id IS NOT NULL OR EXISTS(SELECT 1 FROM v_budget_expense_flows f WHERE f.spending_nature_id=n.id AND f.book_id=? AND substr(f.local_date,1,7)=?)) ORDER BY n.sort_order,n.created_at_ms,n.id',
-        [this.activeBookId, month, budgetId, this.activeBookId, month]);
+        'WHERE n.deleted_at_ms IS NULL AND (n.archived_at_ms IS NULL OR l.id IS NOT NULL OR EXISTS(SELECT 1 FROM v_budget_expense_flows f WHERE f.spending_nature_id=n.id AND f.book_id=? AND f.local_date>=? AND f.local_date<?)) ORDER BY n.sort_order,n.created_at_ms,n.id',
+        [this.activeBookId, period.start, period.endExclusive, budgetId, this.activeBookId, period.start, period.endExclusive]);
       try {
         while (lines.goToNextRow()) {
           budgetNatureLines.push({ natureId: lines.getString(0), name: lines.getString(1), colorKey: lines.getString(2),
             amountMinor: lines.getString(3), usedMinor: lines.getString(4), archived: !lines.isColumnNull(5) });
         }
       } finally { lines.close(); }
-      return { bookId: this.activeBookId, bookName: bookName, categories: categories, incomeCategories: incomeCategories,
+      return { currencyId: this.bookCurrency.id, monthStartDay: this.monthStartDay, periodStart: period.start, periodEndExclusive: period.endExclusive, bookId: this.activeBookId, bookName: bookName, categories: categories, incomeCategories: incomeCategories,
         spendingNatures: spendingNatures, tags: tags, budgetNatureLines: budgetNatureLines, accounts: accounts,
         entries: entries, incomeMinor: income.toString(), expenseMinor: expense.toString(),
         budgetTotalMinor: budgetTotal, budgetUsedMinor: budgetUsed.toString() };

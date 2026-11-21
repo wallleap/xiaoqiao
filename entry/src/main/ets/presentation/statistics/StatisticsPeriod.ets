@@ -1,3 +1,4 @@
+import { MonthlyBudget } from '../../domain/model/MonthlyBudget';
 import { StatisticsBucketUnit } from '../../domain/model/LedgerStatistics';
 
 export type StatisticsRange = 'week' | 'month' | 'year' | 'custom';
@@ -26,7 +27,7 @@ function startOfMonth(date: Date): Date {
 }
 
 export function currentRange(range: StatisticsRange, now: Date = new Date(),
-  customStart: string = '', customEnd: string = ''): StatisticsDateRange {
+  customStart: string = '', customEnd: string = '', monthStartDay: number = 1): StatisticsDateRange {
   if (range === 'week') {
     const start = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 12, 0, 0, 0);
     const weekday = (start.getDay() + 6) % 7;
@@ -35,13 +36,13 @@ export function currentRange(range: StatisticsRange, now: Date = new Date(),
     return { startDate: localDate(start), endDateExclusive: localDate(end), bucketUnit: 'day' };
   }
   if (range === 'month') {
-    const start = startOfMonth(now);
-    const end = new Date(start.getFullYear(), start.getMonth() + 1, 1, 12, 0, 0, 0);
-    return { startDate: localDate(start), endDateExclusive: localDate(end), bucketUnit: 'day' };
+    const period = MonthlyBudget.period(MonthlyBudget.monthForDate(localDate(now), monthStartDay), monthStartDay);
+    return { startDate: period.start, endDateExclusive: period.endExclusive, bucketUnit: 'day' };
   }
   if (range === 'year') {
-    return { startDate: `${now.getFullYear()}-01-01`, endDateExclusive: `${now.getFullYear() + 1}-01-01`,
-      bucketUnit: 'month' };
+    const label = MonthlyBudget.monthForDate(localDate(now), monthStartDay).substring(0, 4);
+    return { startDate: MonthlyBudget.period(label + '-01', monthStartDay).start,
+      endDateExclusive: MonthlyBudget.period(String(Number(label) + 1) + '-01', monthStartDay).start, bucketUnit: 'month' };
   }
   const first = parseLocalDate(customStart);
   const last = parseLocalDate(customEnd);
@@ -52,7 +53,7 @@ export function currentRange(range: StatisticsRange, now: Date = new Date(),
   return { startDate: localDate(start), endDateExclusive: localDate(end), bucketUnit: days > 62 ? 'month' : 'day' };
 }
 
-export function shiftedRange(range: StatisticsRange, current: StatisticsDateRange, direction: number): StatisticsDateRange {
+export function shiftedRange(range: StatisticsRange, current: StatisticsDateRange, direction: number, monthStartDay: number = 1): StatisticsDateRange {
   if (range === 'custom' || direction === 0) { return current; }
   const start = parseLocalDate(current.startDate);
   const end = parseLocalDate(current.endDateExclusive);
@@ -60,8 +61,9 @@ export function shiftedRange(range: StatisticsRange, current: StatisticsDateRang
     start.setDate(start.getDate() + direction * 7);
     end.setDate(end.getDate() + direction * 7);
   } else if (range === 'month') {
-    start.setMonth(start.getMonth() + direction);
-    end.setMonth(end.getMonth() + direction);
+    const label = new Date(start.getFullYear(), start.getMonth() + direction, 1, 12);
+    const period = MonthlyBudget.period(localDate(label).substring(0, 7), monthStartDay);
+    return { startDate: period.start, endDateExclusive: period.endExclusive, bucketUnit: current.bucketUnit };
   } else {
     start.setFullYear(start.getFullYear() + direction);
     end.setFullYear(end.getFullYear() + direction);

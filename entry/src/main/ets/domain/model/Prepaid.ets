@@ -28,6 +28,7 @@ export function prepaidEntryContext(json: string): PrepaidEntryContext | undefin
 
 export type PrepaidEventKind = 'fund' | 'consume' | 'refund';
 export interface PrepaidProject {
+  bookCurrencyId?: string;
   id: string;
   bookId: string;
   name: string;

@@ -1,3 +1,4 @@
+import { currencyDefinition, currencyUnit } from '../core/money/Currencies';
 import { CategoryIconBadge } from './CategoryIconBadge';
 import { ItemRestriction, SegmentButton, SegmentButtonOptions, SegmentButtonTextItem } from '@kit.ArkUI';
 import { DividerShowType, HdsNavigation, HdsNavigationTitleMode, hdsMaterial, ScrollEffectType } from '@kit.UIDesignKit';
@@ -35,6 +36,8 @@ interface TagRankingItem {
 
 @Component
 export struct StatisticsPage {
+  @Prop @Watch('pageContextChanged') monthStartDay: number = 1;
+  @Prop currencyId: string = 'CNY';
   workspace: LedgerWorkspace | undefined = undefined;
   @Prop @Watch('pageContextChanged') active: boolean = false;
   @Prop @Watch('pageContextChanged') bookId: string = '';
@@ -80,6 +83,8 @@ export struct StatisticsPage {
   @State private selectedBarIncome: boolean = false;
   @State private barChartWidth: number = 280;
   private requestId: number = 0;
+  private rangeBookId: string = '';
+  private rangeStartDay: number = 1;
   private readonly scroller: Scroller = new Scroller();
   private readonly expenseLineContext: CanvasRenderingContext2D = new CanvasRenderingContext2D(new RenderingContextSettings(true));
   private readonly incomeLineContext: CanvasRenderingContext2D = new CanvasRenderingContext2D(new RenderingContextSettings(true));
@@ -88,7 +93,7 @@ export struct StatisticsPage {
 
   aboutToAppear(): void {
     this.applyRangeMaterial();
-    const range = currentRange('month');
+    const range = currentRange('month', new Date(), '', '', this.monthStartDay);
     this.customStart = range.startDate;
     this.customEnd = this.lastInclusive(range.endDateExclusive);
     this.dateRange = range;
@@ -108,6 +113,10 @@ export struct StatisticsPage {
   }
 
   private pageContextChanged(): void {
+    if (this.rangeBookId !== this.bookId || this.rangeStartDay !== this.monthStartDay) {
+      this.dateRange = currentRange(this.rangeValue(), new Date(), this.customStart, this.customEnd, this.monthStartDay);
+      this.rangeBookId = this.bookId; this.rangeStartDay = this.monthStartDay;
+    }
     if (this.active && this.workspace !== undefined && this.bookId.length > 0) { this.load(); }
   }
 
@@ -122,7 +131,7 @@ export struct StatisticsPage {
   }
 
   private periodTitle(): string {
-    if (this.rangeValue() !== 'custom' && this.rangeValue() !== 'week') { return rangeTitle(this.rangeValue(), this.dateRange); }
+    if (this.rangeValue() !== 'custom' && this.rangeValue() !== 'week' && !(this.rangeValue() === 'month' && this.monthStartDay !== 1)) { return rangeTitle(this.rangeValue(), this.dateRange); }
     return this.dateRange.startDate.replace(/-/g, '/') + ' — ' +
       this.lastInclusive(this.dateRange.endDateExclusive).replace(/-/g, '/');
   }
@@ -132,7 +141,7 @@ export struct StatisticsPage {
   }
 
   private amount(minor: string): string {
-    return displayAmount(minor);
+    return displayAmount(minor, currencyUnit(this.currencyId));
   }
 
   private percent(value: number): string {
@@ -184,7 +193,7 @@ export struct StatisticsPage {
     }
     if (next === this.range) { return; }
     this.range = next;
-    this.dateRange = currentRange(this.rangeValue());
+    this.dateRange = currentRange(this.rangeValue(), new Date(), '', '', this.monthStartDay);
     this.statistics = undefined; this.incomeStatistics = undefined;
     this.showAllCategories = false; this.showAllIncomeCategories = false;
     this.load();
@@ -192,7 +201,7 @@ export struct StatisticsPage {
 
   private shiftPeriod(direction: number): void {
     if (this.rangeValue() === 'custom') { return; }
-    this.dateRange = shiftedRange(this.rangeValue(), this.dateRange, direction);
+    this.dateRange = shiftedRange(this.rangeValue(), this.dateRange, direction, this.monthStartDay);
     this.statistics = undefined; this.incomeStatistics = undefined;
     this.showAllCategories = false; this.showAllIncomeCategories = false;
     this.load();
@@ -376,7 +385,7 @@ export struct StatisticsPage {
   private summaryAmount(label: string, minor: string, income: boolean, componentId: string) {
     Column({ space: 4 }) {
       Text(label).fontSize('12fp').fontColor($r('app.color.xq_font_secondary'))
-      Text('¥' + this.amount(minor)).fontSize('22fp').fontFamily('XiaoQiaoDINMedium')
+      Text(currencyDefinition(this.currencyId).symbol + this.amount(minor)).fontSize('22fp').fontFamily('XiaoQiaoDINMedium')
         .fontWeight(FontWeight.Medium).fontColor(income ? $r('app.color.xq_app_income') : $r('app.color.xq_brand'))
         .maxLines(1).minFontSize('14fp').maxFontSize('22fp').id(componentId)
     }.layoutWeight(1).alignItems(HorizontalAlign.Start)
@@ -423,7 +432,7 @@ export struct StatisticsPage {
         this.summaryAmount('收入总额', this.incomeStatistics?.totalMinor || '0', true, 'statistics-income-total')
       }.width('100%')
       Row() {
-        Text('结余  ¥' + this.amount(this.balanceMinor())).fontSize('14fp').fontFamily('XiaoQiaoDINMedium')
+        Text('结余  ' + currencyDefinition(this.currencyId).symbol + this.amount(this.balanceMinor())).fontSize('14fp').fontFamily('XiaoQiaoDINMedium')
           .fontColor($r('app.color.xq_font_primary')).layoutWeight(1).maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis }).id('statistics-balance')
         Text(this.bookName.length > 0 ? this.bookName : '当前账本').fontSize('12fp')
@@ -460,7 +469,7 @@ export struct StatisticsPage {
             Column({ space: 2 }) {
               Text(this.selectedBarKey + (this.selectedBarIncome ? ' · 收入' : ' · 支出'))
                 .fontSize('10fp').fontColor(Color.White).maxLines(1)
-              Text('¥' + this.amount(this.positiveMinor(this.bucketMinor(this.selectedBarKey, this.selectedBarIncome))))
+              Text(currencyDefinition(this.currencyId).symbol + this.amount(this.positiveMinor(this.bucketMinor(this.selectedBarKey, this.selectedBarIncome))))
                 .fontSize('12fp').fontFamily('XiaoQiaoDINMedium').fontColor(Color.White)
                 .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
             }.width(132).height(40).justifyContent(FlexAlign.Center).borderRadius(8)
@@ -586,7 +595,7 @@ export struct StatisticsPage {
       Row() {
         Text(income ? '收入走势' : '支出走势').fontSize('18fp').fontWeight(FontWeight.Medium)
           .fontColor($r('app.color.xq_font_primary')).layoutWeight(1)
-        Text('¥' + this.amount((income ? this.incomeStatistics : this.statistics)?.totalMinor || '0'))
+        Text(currencyDefinition(this.currencyId).symbol + this.amount((income ? this.incomeStatistics : this.statistics)?.totalMinor || '0'))
           .fontSize('16fp').fontFamily('XiaoQiaoDINMedium')
           .fontColor(income ? $r('app.color.xq_app_income') : $r('app.color.xq_brand'))
           .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis }).constraintSize({ maxWidth: '50%' })
@@ -611,7 +620,7 @@ export struct StatisticsPage {
               .position({ x: this.selectedTrendPoint(income).x - 4, y: this.selectedTrendPoint(income).y - 4 }).hitTestBehavior(HitTestMode.None)
             Column({ space: 2 }) {
               Text(this.selectedTrendBucket(income)?.key || '').fontSize('10fp').fontColor(Color.White).maxLines(1)
-              Text('¥' + this.amount(this.selectedTrendBucket(income)?.amountMinor || '0')).fontSize('12fp')
+              Text(currencyDefinition(this.currencyId).symbol + this.amount(this.selectedTrendBucket(income)?.amountMinor || '0')).fontSize('12fp')
                 .fontColor(Color.White).maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
             }.width(104).height(44).justifyContent(FlexAlign.Center).borderRadius(8)
               .backgroundColor(income ? $r('app.color.xq_app_income') : $r('app.color.xq_brand'))
@@ -656,7 +665,7 @@ export struct StatisticsPage {
           Text(category.name).fontSize('16fp').fontWeight(FontWeight.Medium)
             .fontColor($r('app.color.xq_font_primary')).layoutWeight(1).maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis })
-          Text('¥' + this.amount(category.amountMinor)).fontSize('16fp').fontFamily('XiaoQiaoDINMedium')
+          Text(currencyDefinition(this.currencyId).symbol + this.amount(category.amountMinor)).fontSize('16fp').fontFamily('XiaoQiaoDINMedium')
             .fontWeight(FontWeight.Medium).fontColor($r('app.color.xq_font_primary')).maxLines(1)
             .minFontSize('12fp').maxFontSize('16fp').constraintSize({ maxWidth: '45%' })
           Image($r('app.media.lucide_chevron_right1')).width(16).height(16)
@@ -859,7 +868,7 @@ export struct StatisticsPage {
             .padding({ left: 12, right: 12 }).borderRadius(16).maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis }).constraintSize({ maxWidth: '100%' })
         }.layoutWeight(1)
-        Text('¥' + this.amount(category.amountMinor)).fontSize('16fp').fontFamily('XiaoQiaoDINMedium')
+        Text(currencyDefinition(this.currencyId).symbol + this.amount(category.amountMinor)).fontSize('16fp').fontFamily('XiaoQiaoDINMedium')
           .fontColor($r('app.color.xq_font_primary')).maxLines(1).minFontSize('12fp').maxFontSize('16fp')
           .constraintSize({ maxWidth: '45%' })
       }.width('100%').alignItems(VerticalAlign.Center)
@@ -900,7 +909,7 @@ export struct StatisticsPage {
         Text((kind === 'income' ? '收入 · ' : '支出 · ') + `${tag.entryCount} 笔`).fontSize('12fp')
           .fontColor($r('app.color.xq_font_secondary'))
       }.layoutWeight(1).alignItems(HorizontalAlign.Start)
-      Text('¥' + this.amount(tag.amountMinor)).fontSize('16fp').fontFamily('XiaoQiaoDINMedium')
+      Text(currencyDefinition(this.currencyId).symbol + this.amount(tag.amountMinor)).fontSize('16fp').fontFamily('XiaoQiaoDINMedium')
         .fontColor($r('app.color.xq_font_primary')).maxLines(1).minFontSize('12fp').maxFontSize('16fp').constraintSize({ maxWidth: '40%' })
       Image($r('app.media.lucide_chevron_right1')).width(16).height(16)
         .fillColor($r('app.color.xq_icon_tertiary'))
@@ -984,7 +993,7 @@ export struct StatisticsPage {
         Text(entry.date + ' · ' + entry.categoryName).fontSize('12fp')
           .fontColor($r('app.color.xq_font_secondary')).maxLines(1)
       }.layoutWeight(1).alignItems(HorizontalAlign.Start)
-      Text('¥' + this.amount(entry.amountMinor)).fontSize('16fp').fontFamily('XiaoQiaoDINMedium')
+      Text(currencyDefinition(this.currencyId).symbol + this.amount(entry.amountMinor)).fontSize('16fp').fontFamily('XiaoQiaoDINMedium')
         .fontColor(this.kind === 1 ? $r('app.color.xq_app_income') : $r('app.color.xq_font_primary'))
         .maxLines(1).minFontSize('12fp').maxFontSize('16fp')
       Image($r('app.media.lucide_chevron_right1')).width(16).height(16)
@@ -1006,7 +1015,7 @@ export struct StatisticsPage {
           Text(this.periodTitle() + ' · ' + (this.kind === 1 ? '收入' : '支出'))
             .fontSize('12fp').fontColor($r('app.color.xq_font_secondary'))
         }.layoutWeight(1).alignItems(HorizontalAlign.Start)
-        Text('¥' + this.amount(this.selectedSheetAmount)).fontSize('18fp')
+        Text(currencyDefinition(this.currencyId).symbol + this.amount(this.selectedSheetAmount)).fontSize('18fp')
           .fontFamily('XiaoQiaoDINMedium').fontColor($r('app.color.xq_font_primary'))
       }.width('100%').padding({ right: 40 })
       Divider().strokeWidth(0.5).color($r('app.color.xq_app_divider_subtle'))

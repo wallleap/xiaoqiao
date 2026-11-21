@@ -17,7 +17,7 @@ function load(file) {
   return module.exports;
 }
 const { prepareCurrencySwitch } = load(base + '/presentation/ledger/CurrencySwitchDraft.ets');
-const { currencyUnit } = load(base + '/core/money/Currencies.ets');
+const { currencyUnit, currencyDefinition } = load(base + '/core/money/Currencies.ets');
 const { enabledCurrencies, currencyProfiles, currencySettings, installCurrencySettings } = load(base + '/core/money/CurrencySettings.ets');
 const draft = { amount: '12.30+2.00', discount: '0.30', fee: '1.00', coupon: '0' };
 assert.equal(prepareCurrencySwitch(draft, currencyUnit('USD'), 'expense').amount, '12.3+2');
@@ -37,18 +37,20 @@ assert.equal(prepareCurrencySwitch({ ...draft, amount: '1.2345' }, currencyUnit(
 const source = fs.readFileSync(base + '/components/ExpenseEditor.ets', 'utf8');
 const tree = ts.createSourceFile('editor.ts', source.replace('export struct', 'class'), ts.ScriptTarget.Latest, true);
 const cls = tree.statements.find(s => ts.isClassDeclaration(s) && s.name.text === 'ExpenseEditor');
-const names = ['applyCurrency', 'currencyChoices', 'selectCurrency', 'focusAmount', 'currencySheetOptions', 'prepareSaveRates', 'save'];
+const names = ['applyCurrency', 'currencyChoices', 'selectCurrency', 'focusAmount', 'currencySheetOptions', 'prepareSaveRates', 'save', 'refreshPreviewRate', 'bookAmountPreview', 'converted', 'effectiveDiscount', 'amountCurrency', 'transferOutgoing', 'isRepayment'];
 const methods = names.map(name => cls.members.find(m => ts.isMethodDeclaration(m) && m.name.getText(tree) === name).getText(tree)).join('\n');
 const code = ts.transpileModule('class Editor {' + methods + '}\nexports.Editor=Editor;', { compilerOptions: { target: ts.ScriptTarget.ES2020 } }).outputText;
 const service = { quote: async (from, to, date) => ({ from, to, rate: from === to ? '1' : '7.2', date, source: from === to ? 'same_currency' : 'manual' }) };
 const { ExpenseAmountInput } = load(base + '/presentation/ledger/ExpenseAmountInput.ets');
-const context = { OfficialExchangeRates: service, ExpenseAmountInput, ExpenseErrorField: { Amount: 'amount', Category: 'category', Save: 'save' }, exports: {}, prepareCurrencySwitch, currencyUnit, enabledCurrencies, $r: x => x, SheetKeyboardAvoidMode: { TRANSLATE_AND_RESIZE: 'resize' } };
+const { Money } = load(base + '/core/money/Money.ets');
+const { ExchangeRate } = load(base + '/core/money/ExchangeRate.ets');
+const context = { Money, ExchangeRate, currencyDefinition, OfficialExchangeRates: service, ExpenseAmountInput, ExpenseErrorField: { Amount: 'amount', Category: 'category', Save: 'save' }, exports: {}, prepareCurrencySwitch, currencyUnit, enabledCurrencies, $r: x => x, SheetKeyboardAvoidMode: { TRANSLATE_AND_RESIZE: 'resize' } };
 vm.runInNewContext(code, context);
 function editor(extra = {}) {
   const page = new context.exports.Editor();
-  Object.assign(page, { active: true, saving: false, currencyCode: 'CNY', expression: '12.34', discount: '0.04', transferFee: '1.01', transferCoupon: '0.01',
+  Object.assign(page, { active: true, saving: false, currencyCode: 'CNY', bookCurrencyId: 'CNY', expression: '12.34', discount: '0.04', transferFee: '1.01', transferCoupon: '0.01',
     bookRate: '7', settlementRate: '8', actualSettlement: '99', quoteDate: '2026-11-20', quoteSource: 'ECB', quoteVersion: 1,
-    showCurrencyPicker: true, currencySearch: '', currencyError: '', accountId: 'cny', toAccountId: 'recipient',
+    previewRate: '', previewRateLoading: false, previewRateUnavailable: false, previewRateRequest: 0, showCurrencyPicker: true, currencySearch: '', currencyError: '', accountId: 'cny', toAccountId: 'recipient',
     accounts: [{ id: 'cny', currencyId: 'CNY' }, { id: 'usd', currencyId: 'USD' }], ...extra });
   return page;
 }
@@ -115,7 +117,7 @@ p.onSavingChange = value => savingEvents.push(value); p.showError = (_field, mes
 await p.save(); assert.equal(writes, 0); assert.equal(p.saving, false); assert.deepEqual(savingEvents, [true, false]); assert.match(p.errorText, /尚未保存/);
 // Successful save uses the global quote and retains the entered foreign amount.
 service.quote = async (from, to, date) => ({ from, to, rate: from === to ? '1' : '7.2', date, source: from === to ? 'same_currency' : 'manual' });
-const { ExchangeRate } = load(base + '/core/money/ExchangeRate.ets');
+
 p.converted = (amount, code, rate) => amount.currency.code === code ? amount : new ExchangeRate(amount.currency, currencyUnit(code), rate).convert(amount);
 p.fxQuote = rate => ({ rate, source: p.quoteSource }); p.settlementAmount = amount => amount;
 p.attachmentDrafts = () => []; p.localDate = () => '2026-11-21'; p.onSaved = () => {};
@@ -124,5 +126,28 @@ await p.save(); assert.equal(writes, 1); assert.equal(p.saved, true); assert.equ
 const fxCard = source.slice(source.indexOf('private fxCard()'), source.indexOf('private prepaidMode()'));
 assert(!/TextInput|MoneyAmountField|获取参考汇率|bookAmountText|实际到账/.test(fxCard));
 
+// Live approximate amount: recompute locally as amounts change; only currency/date changes request a quote.
+p = editor(); assert.equal(p.bookAmountPreview(), '');
+p.isIncome = true; assert.equal(p.bookAmountPreview(), '');
+p = editor({ currencyCode: 'USD', expression: '10', discount: '0.5' }); p.fxDate = () => '2026-11-21';
+service.quote = async (from, to, date) => ({ from, to, date, rate: '7.2', source: 'manual' });
+await p.refreshPreviewRate(); assert.equal(p.bookAmountPreview(), '≈ ¥68.40 CNY');
+p.isIncome = true; assert.equal(p.bookAmountPreview(), '≈ ¥72.00 CNY'); p.isIncome = false;
+p.expression = '20'; assert.equal(p.bookAmountPreview(), '≈ ¥140.40 CNY'); assert.equal(p.bookRate, '7');
+p.expression = '20+'; assert.equal(p.bookAmountPreview(), '≈ —');
+p = editor({ currencyCode: 'JPY', bookCurrencyId: 'USD', isTransfer: true, transferPurpose: 'credit_repayment', expression: '100', transferFee: '2', transferCoupon: '1', previewRate: '0.01' });
+assert.equal(p.bookAmountPreview(), '≈ $1.01 USD');
+p = editor({ currencyCode: 'USD', expression: '10', discount: '0', editingEntry: { bookFx: { rate: '7' } } });
+p.fxDate = () => '2026-11-21'; service.quote = async () => { throw Error('must retain historical quote'); };
+await p.refreshPreviewRate(); assert.equal(p.bookAmountPreview(), '≈ ¥70.00 CNY');
+p.editingEntry = undefined; await p.refreshPreviewRate(); assert.equal(p.bookAmountPreview(), '≈ 暂不可用');
+let finishPreview; service.quote = (from, to, date) => new Promise(resolve => { finishPreview = () => resolve({ from, to, date, rate: '7.2', source: 'manual' }); });
+const oldPreview = p.refreshPreviewRate(); assert.equal(p.bookAmountPreview(), '≈ 换算中…');
+p.currencyCode = 'CNY'; await p.refreshPreviewRate(); finishPreview(); await oldPreview;
+assert.equal(p.previewRate, '1'); assert.equal(p.bookAmountPreview(), '');
+p.currencyCode = 'USD'; const closedPreview = p.refreshPreviewRate(); p.active = false; finishPreview(); await closedPreview; assert.equal(p.previewRate, '');
+assert.match(source, /@Watch\('previewCurrencyChanged'\) private currencyCode/);
+assert.match(source, /@Watch\('previewCurrencyChanged'\) private occurredAtMs/);
+assert.match(source, /if \(this.currencyCode !== this.bookCurrencyId\) \{\s*Text\(this.bookAmountPreview\(\)\)/);
 installCurrencySettings(profiles, settings);
 console.log('PASS: currency list selection, amount/precision policy, FX invalidation, accounts, focus, automatic save quotes and failure-before-write (host only)');

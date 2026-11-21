@@ -1,0 +1,14 @@
+-- V11: defaults preserve all historical monetary rows and budget periods.
+ALTER TABLE books ADD COLUMN month_start_day INTEGER NOT NULL DEFAULT 1 CHECK(typeof(month_start_day)='integer' AND month_start_day BETWEEN 1 AND 31);
+DROP TRIGGER book_currency_locked;
+CREATE TRIGGER book_currency_locked BEFORE UPDATE OF base_currency_id ON books
+ WHEN NEW.base_currency_id<>OLD.base_currency_id AND
+ (EXISTS(SELECT 1 FROM transactions WHERE book_id=OLD.id) OR EXISTS(SELECT 1 FROM budgets WHERE book_id=OLD.id) OR EXISTS(SELECT 1 FROM prepaid_projects WHERE book_id=OLD.id))
+ BEGIN SELECT RAISE(ABORT,'book currency is in use'); END;
+DROP TRIGGER prepaid_event_publish;
+CREATE TRIGGER prepaid_event_publish BEFORE UPDATE OF posting_state ON prepaid_events
+ WHEN OLD.posting_state='draft' AND NEW.posting_state='posted'
+ BEGIN
+ SELECT CASE WHEN NEW.kind<>'fund' AND ((SELECT COALESCE(SUM(amount_minor),0) FROM prepaid_allocations WHERE event_id=NEW.id)<>NEW.amount_minor OR (SELECT COALESCE(SUM(book_minor),0) FROM prepaid_allocations WHERE event_id=NEW.id)<>NEW.book_minor) THEN RAISE(ABORT,'PREPAID_ALLOCATION') END;
+ SELECT CASE WHEN NEW.kind='consume' AND ((NEW.book_minor=0 AND NEW.transaction_id IS NOT NULL) OR (NEW.book_minor>0 AND NOT EXISTS(SELECT 1 FROM transactions t JOIN prepaid_projects p ON p.id=NEW.project_id WHERE t.id=NEW.transaction_id AND t.book_id=p.book_id AND t.kind='expense' AND t.currency_id=(SELECT base_currency_id FROM books WHERE id=p.book_id) AND t.paid_minor=NEW.book_minor AND t.book_minor=NEW.book_minor AND t.include_in_assets=0 AND t.posting_state='posted' AND t.deleted_at_ms IS NULL AND NOT EXISTS(SELECT 1 FROM account_movements WHERE transaction_id=t.id)))) THEN RAISE(ABORT,'PREPAID_ALLOCATION') END;
+ END;

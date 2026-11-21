@@ -1,3 +1,4 @@
+import { currencyDefinition, currencyUnit } from '../core/money/Currencies';
 import { HdsNavigation, HdsNavigationTitleMode, hdsMaterial, DividerShowType, ScrollEffectType } from '@kit.UIDesignKit';
 import { LedgerWorkspace } from '../data/rdb/LedgerWorkspace';
 import { LedgerSnapshot } from '../domain/model/LedgerSnapshot';
@@ -24,7 +25,12 @@ export struct BudgetPage {
   @State private natureInput: string = '0';
   @State private showNatureEditor: boolean = false;
   @State private error: string = '';
-  private readonly currency: CurrencyUnit = new CurrencyUnit('CNY', 'CNY', 2);
+  // Read the code at each render call; do not rely on a component accessor-backed property.
+  private amountCurrency(): CurrencyUnit {
+    return currencyUnit(this.snapshot?.currencyId || this.workspace?.bookCurrency?.id || 'CNY');
+  }
+  private symbol(): string { return currencyDefinition(this.amountCurrency().id).symbol; }
+  private amount(minor: string): string { return displayAmount(minor, this.amountCurrency()); }
   private readonly totalController: TextInputController = new TextInputController();
   private readonly natureController: TextInputController = new TextInputController();
   private readonly scroller: Scroller = new Scroller();
@@ -41,17 +47,17 @@ export struct BudgetPage {
     this.loading = true; this.error = '';
     try {
       this.snapshot = await this.workspace.snapshot(this.monthKey.replace('年', '-').replace('月', '-01'));
-      this.totalInput = Money.fromMinorText(this.snapshot.budgetTotalMinor, this.currency).toDecimalString();
+      this.totalInput = Money.fromMinorText(this.snapshot.budgetTotalMinor, this.amountCurrency()).toDecimalString();
     } catch (_) { this.error = '预算暂时无法读取，请返回后重试'; }
     finally { this.loading = false; }
   }
 
   private validTotal(): boolean {
-    try { ExpenseAmountInput.nonnegative(this.totalInput, this.currency); return true; } catch (_) { return false; }
+    try { ExpenseAmountInput.nonnegative(this.totalInput, this.amountCurrency()); return true; } catch (_) { return false; }
   }
 
   private validNature(): boolean {
-    try { ExpenseAmountInput.nonnegative(this.natureInput, this.currency); return true; } catch (_) { return false; }
+    try { ExpenseAmountInput.nonnegative(this.natureInput, this.amountCurrency()); return true; } catch (_) { return false; }
   }
 
   private sumAllocated(): bigint {
@@ -78,7 +84,7 @@ export struct BudgetPage {
 
   private editNature(line: BudgetNatureLine): void {
     this.editing = line;
-    this.natureInput = Money.fromMinorText(line.amountMinor, this.currency).toDecimalString();
+    this.natureInput = Money.fromMinorText(line.amountMinor, this.amountCurrency()).toDecimalString();
     this.error = '';
     this.showNatureEditor = true;
   }
@@ -109,7 +115,7 @@ export struct BudgetPage {
       Text((this.editing?.name || '') + '预算').fontSize('20fp').fontWeight(FontWeight.Bold).width('100%')
       Text('设置该预算分类本月可使用的额度；修改不会改变已发生账目。').fontSize('12fp')
         .fontColor($r('app.color.xq_font_secondary')).width('100%')
-      MoneyAmountField({ value: $natureInput, fieldId: 'budget-nature-input', currency: this.currency,
+      MoneyAmountField({ value: $natureInput, fieldId: 'budget-nature-input', currency: this.amountCurrency(),
         controller: this.natureController, disabled: this.busy, canSubmit: this.validNature() && !this.busy,
         submitLabel: '保存', onSubmit: () => { this.saveNature(); } })
       if (this.error.length > 0) {
@@ -128,11 +134,11 @@ export struct BudgetPage {
         Text(line.name).fontSize('16fp').fontWeight(FontWeight.Medium).fontColor(spendingNatureText(line.colorKey))
         if (line.archived) { Text('已归档').fontSize('10fp').fontColor($r('app.color.xq_font_tertiary')) }
         Blank()
-        Text(line.amountMinor === '0' ? '未设额度' : '¥' + displayAmount(line.amountMinor))
+        Text(line.amountMinor === '0' ? '未设额度' : this.symbol() + this.amount(line.amountMinor))
           .fontSize('16fp').fontFamily('XiaoQiaoDINMedium').fontColor($r('app.color.xq_font_primary'))
       }.width('100%')
       Row() {
-        Text('已用 ¥' + displayAmount(line.usedMinor)).fontSize('12fp').fontColor($r('app.color.xq_font_secondary'))
+        Text('已用 ' + this.symbol() + this.amount(line.usedMinor)).fontSize('12fp').fontColor($r('app.color.xq_font_secondary'))
         Blank()
         Text(line.amountMinor === '0' ? '仅计入未分配' : (BigInt(line.usedMinor) > BigInt(line.amountMinor) ? '已超分类额度' : '分类预算内'))
           .fontSize('12fp').fontColor(BigInt(line.usedMinor) > BigInt(line.amountMinor) && line.amountMinor !== '0' ?
@@ -154,19 +160,19 @@ export struct BudgetPage {
           Column({ space: 16 }) {
             Column({ space: 12 }) {
               Text('本月总预算').fontSize('14fp').fontColor($r('app.color.xq_font_secondary')).width('100%')
-              MoneyAmountField({ value: $totalInput, fieldId: 'ledger-budget-input', currency: this.currency,
+              MoneyAmountField({ value: $totalInput, fieldId: 'ledger-budget-input', currency: this.amountCurrency(),
                 controller: this.totalController, disabled: this.busy, canSubmit: this.validTotal() && !this.busy,
                 submitLabel: '保存', onSubmit: () => { this.saveTotal(); } })
               Row() {
                 Text('分类预算合计').fontSize('12fp').fontColor($r('app.color.xq_font_secondary'))
                 Blank()
-                Text('¥' + displayAmount(this.sumAllocated().toString())).fontSize('12fp')
+                Text(this.symbol() + this.amount(this.sumAllocated().toString())).fontSize('12fp')
                   .fontFamily('XiaoQiaoDINRegular').fontColor($r('app.color.xq_font_primary'))
               }.width('100%')
               Row() {
                 Text('未分配').fontSize('12fp').fontColor($r('app.color.xq_font_secondary'))
                 Blank()
-                Text('¥' + displayAmount(this.unallocated())).fontSize('12fp')
+                Text(this.symbol() + this.amount(this.unallocated())).fontSize('12fp')
                   .fontFamily('XiaoQiaoDINRegular').fontColor($r('app.color.xq_font_primary'))
               }.width('100%')
             }.padding(20).width('100%').borderRadius(20).backgroundColor($r('app.color.xq_app_surface_card'))

@@ -73,6 +73,7 @@ export interface SavedLedgerEntry {
 }
 
 export interface LedgerSnapshot {
+  currencyId?: string; monthStartDay?: number; periodStart?: string; periodEndExclusive?: string;
   bookId: string;
   bookName: string;
   categories: ExpenseCategory[];

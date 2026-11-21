@@ -724,6 +724,7 @@ export struct DataExchangePage {
         code === 'CSV_ACCOUNT_INVALID' ? '导入未完成：账户不可用' :
         code === 'CSV_TRANSFER_ACCOUNT_INVALID' ? '导入未完成：转账的转出、转入账户无效' :
         code === 'CSV_TRANSFER_REPAYMENT_ACCOUNT_INVALID' ? '导入未完成：还款的转入账户必须是负债账户' :
+        code === 'IMPORT_BOOK_CURRENCY_MISMATCH' ? '文件中的账本币种与当前账本不同，请切换到相同币种的账本后导入' :
         code === 'CSV_NO_VALID_ROWS' ? '没有可导入的有效行' :
         `导入未完成，账目未写入（${code || '未知错误'}）`;
       this.importError = true;

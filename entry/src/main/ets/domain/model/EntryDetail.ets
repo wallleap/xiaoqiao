@@ -44,6 +44,7 @@ export interface EntryDetail {
   discountMinor: string;
   paidMinor: string;
   bookMinor: string;
+  bookCurrencyId?: string;
   bookFx?: FxConversion;
   accountFx?: FxConversion;
   accountCurrencyId?: string;

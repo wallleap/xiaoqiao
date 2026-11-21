@@ -9,6 +9,7 @@ export interface FxEntrySnapshot {
   grossMinor: string;
   discountMinor: string;
   bookMinor: string;
+  bookCurrencyId?: string;
   accountCurrencyId: string;
   accountMinor: string;
   bookFx?: FxConversion;
@@ -26,7 +27,7 @@ export function parseFxEntry(text: string): FxEntrySnapshot {
   const gross = Money.fromMinorText(value.grossMinor, from);
   const discount = Money.fromMinorText(value.discountMinor, from);
   if (paid.minor <= BigInt(0) || gross.subtract(discount).minor !== paid.minor || discount.minor < BigInt(0)) { throw new Error('FX_IMPORT_INVALID'); }
-  const book = Money.fromMinorText(value.bookMinor, currencyUnit('CNY'));
+  const book = Money.fromMinorText(value.bookMinor, currencyUnit(value.bookCurrencyId || 'CNY'));
   validateConversion(paid, book, value.bookFx);
   paid.toSafeMinorNumber(); gross.toSafeMinorNumber(); discount.toSafeMinorNumber(); book.toSafeMinorNumber();
   const settled = Money.fromMinorText(value.receivedMinor || value.accountMinor, currencyUnit(value.receivedCurrencyId || value.accountCurrencyId));
@@ -34,7 +35,7 @@ export function parseFxEntry(text: string): FxEntrySnapshot {
   if (settled.minor <= BigInt(0)) { throw new Error('FX_IMPORT_INVALID'); }
   validateConversion(paid, settled, value.accountFx);
   if (value.bookFeeMinor !== undefined) {
-    const fee = Money.fromMinorText(value.bookFeeMinor, currencyUnit('CNY'));
+    const fee = Money.fromMinorText(value.bookFeeMinor, currencyUnit(value.bookCurrencyId || 'CNY'));
     fee.toSafeMinorNumber();
     if (fee.minor < BigInt(0)) { throw new Error('FX_IMPORT_INVALID'); }
   }

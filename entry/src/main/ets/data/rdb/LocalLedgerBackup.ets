@@ -1,3 +1,5 @@
+import { BookDeletionMigration } from './BookDeletionMigration';
+import { BookSettingsMigration } from './BookSettingsMigration';
 import { RdbCurrencySettings } from './RdbCurrencySettings';
 import { common } from '@kit.AbilityKit';
 import { relationalStore } from '@kit.ArkData';
@@ -84,8 +86,8 @@ export class LocalLedgerBackup {
   }
 
   private static async check(db: relationalStore.RdbStore, allowLegacy: boolean = false): Promise<void> {
-    const version = await BookCoverMigration.status(db);
-    if (version !== 10 && (!allowLegacy || ![2, 3, 4, 5, 6, 7, 8, 9].includes(version))) { throw new Error('BACKUP_VERSION_UNSUPPORTED'); }
+    const version = await BookDeletionMigration.status(db);
+    if (version !== 12 && (!allowLegacy || ![2, 3, 4, 5, 6, 7, 8, 9, 10, 11].includes(version))) { throw new Error('BACKUP_VERSION_UNSUPPORTED'); }
     if (version >= 7) { await RdbCurrencySettings.read(db); }
     const integrity = await db.querySql('PRAGMA integrity_check(1)');
     try {
@@ -112,7 +114,7 @@ export class LocalLedgerBackup {
     const candidate = await relationalStore.getRdbStore(this.context, { name: this.candidateName,
       securityLevel: relationalStore.SecurityLevel.S1 });
     try {
-      let version = await BookCoverMigration.status(candidate);
+      let version = await BookDeletionMigration.status(candidate);
       if (version === 2) {
         await SpendingNatureMigration.upgradeCandidate(candidate);
         version = 3;
@@ -133,7 +135,9 @@ export class LocalLedgerBackup {
       if (version === 7) { await PrepaidMigration.upgradeCandidate(candidate); version = 8; }
       if (version === 8) { await AccountDetailsMigration.upgradeCandidate(candidate); version = 9; }
       if (version === 9) { await BookCoverMigration.upgradeCandidate(candidate); version = 10; }
-      if (version !== 10) { throw new Error('BACKUP_VERSION_UNSUPPORTED'); }
+      if (version === 10) { await BookSettingsMigration.upgradeCandidate(candidate); version = 11; }
+      if (version === 11) { await BookDeletionMigration.upgradeCandidate(candidate); version = 12; }
+      if (version !== 12) { throw new Error('BACKUP_VERSION_UNSUPPORTED'); }
       if (await LocalLedgerBackup.schema(candidate) !== schema) { throw new Error('BACKUP_SCHEMA_MISMATCH'); }
       await LocalLedgerBackup.check(candidate);
       return await LocalLedgerBackup.preview(candidate, (await fs.stat(this.candidate)).size);

@@ -50,10 +50,10 @@ export interface LedgerEntry {
   icon: Resource;
 }
 
-export function displayAmount(minor: string): string {
-  const value = Money.fromMinorText(minor, new CurrencyUnit('CNY', 'CNY', 2)).toDecimalString();
+export function displayAmount(minor: string, currency: CurrencyUnit = new CurrencyUnit('CNY', 'CNY', 2)): string {
+  const value = Money.fromMinorText(minor, currency).toDecimalString();
   const parts = value.split('.');
-  return parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',') + '.' + parts[1];
+  return parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',') + (parts.length > 1 ? '.' + parts[1] : '');
 }
 
 /** Badges describe the original expense; receipt rows already name their own type. */

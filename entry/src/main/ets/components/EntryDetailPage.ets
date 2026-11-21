@@ -261,11 +261,11 @@ export struct EntryDetailPage {
         }.width('calc(100% + 64vp)').height(16).margin({ top: 20, bottom: 8 })
         this.field('账本', this.entry.bookName)
         if (this.entry.prepaidLinked) { this.field('来源', '预付款核销／退款差额，请在预付款项目中撤销') }
-        if (this.entry.currencyCode !== 'CNY') {
-          this.field('折合人民币', '¥' + Money.fromMinorText(this.entry.bookMinor,currencyUnit('CNY')).toDecimalString())
+        if (this.entry.currencyCode !== (this.entry.bookCurrencyId || 'CNY')) {
+          this.field('账本折算金额', Money.fromMinorText(this.entry.bookMinor,currencyUnit(this.entry.bookCurrencyId || 'CNY')).toDecimalString() + ' ' + (this.entry.bookCurrencyId || 'CNY'))
         }
         if (this.entry.bookFx !== undefined) {
-          this.field('入账汇率', '1 ' + this.entry.currencyCode + ' = ' + this.entry.bookFx.rate + ' CNY')
+          this.field('入账汇率', '1 ' + this.entry.currencyCode + ' = ' + this.entry.bookFx.rate + ' ' + (this.entry.bookCurrencyId || 'CNY'))
           this.field('汇率来源', (this.entry.bookFx.source === 'manual' ? '手动' : 'ECB 参考汇率') + ' · ' + this.entry.bookFx.date)
         }
         if (this.entry.kind !== 'transfer' && this.entry.accountCurrencyId !== undefined && this.entry.accountCurrencyId !== this.entry.currencyId && this.entry.accountMinor !== undefined) {

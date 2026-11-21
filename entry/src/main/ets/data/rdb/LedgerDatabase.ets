@@ -1,3 +1,5 @@
+import { BookDeletionMigration } from './BookDeletionMigration';
+import { BookSettingsMigration } from './BookSettingsMigration';
 import { LedgerBackupPackage } from '../backup/LedgerBackupPackage';
 import { common } from '@kit.AbilityKit';
 import { relationalStore } from '@kit.ArkData';
@@ -61,11 +63,13 @@ export class LedgerDatabase {
           await PrepaidMigration.apply(db, '', false);
           await AccountDetailsMigration.apply(db, '', false);
           await BookCoverMigration.apply(db, '', false);
+          await BookSettingsMigration.apply(db, '', false);
+          await BookDeletionMigration.apply(db, '', false);
           await LedgerDatabase.ensureIncomeCategories(db);
         });
       } else {
-        let version = await session.read(async (db: relationalStore.RdbStore): Promise<number> => BookCoverMigration.status(db));
-        if (version < 10 && !allowUpgrade) { throw new Error('LEDGER_UPGRADE_REQUIRED'); }
+        let version = await session.read(async (db: relationalStore.RdbStore): Promise<number> => BookDeletionMigration.status(db));
+        if (version < 12 && !allowUpgrade) { throw new Error('LEDGER_UPGRADE_REQUIRED'); }
         if (version === 1) {
           if (!allowUpgrade) { throw new Error('LEDGER_UPGRADE_REQUIRED'); }
           await TransferMigration.upgrade(store, name);
@@ -84,7 +88,9 @@ export class LedgerDatabase {
         if (version === 6) { await MulticurrencyMigration.upgrade(store, name); version = 7; }
         if (version === 7) { await PrepaidMigration.upgrade(store, name); version = 8; }
         if (version === 8) { await AccountDetailsMigration.upgrade(store, name); version = 9; }
-        if (version === 9) { await BookCoverMigration.upgrade(store, name); }
+        if (version === 9) { await BookCoverMigration.upgrade(store, name); version = 10; }
+        if (version === 10) { await BookSettingsMigration.upgrade(store, name); version = 11; }
+        if (version === 11) { await BookDeletionMigration.upgrade(store, name); }
         await session.write(async (db: relationalStore.RdbStore): Promise<void> => { await LedgerDatabase.ensureIncomeCategories(db); });
       }
       return store;

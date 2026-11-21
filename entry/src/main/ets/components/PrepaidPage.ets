@@ -78,7 +78,8 @@ export struct PrepaidPage {
     if (['consume', 'refund', 'fund', 'edit'].includes(action)) { this.openForm(action); }
   }
   private setWorking(value: boolean): void { this.working=value; this.onBusy(value); }
-  private money(minor: string, code: string = 'CNY'): string { return Money.fromMinorText(minor,currencyUnit(code)).toDecimalString(); }
+  private bookCode(): string { return this.workspace?.bookCurrency.id || 'CNY'; }
+  private money(minor: string, code: string = this.bookCode()): string { return Money.fromMinorText(minor,currencyUnit(code)).toDecimalString(); }
   private title(): string {
     if (this.action==='create') { return '新增预付款'; }
     if (this.action==='edit') { return '编辑预付款'; }
@@ -126,7 +127,7 @@ export struct PrepaidPage {
     }
     this.action=action; this.formProjectId=action==='create' ? util.generateRandomUUID() : project?.id || '';
     this.eventId=util.generateRandomUUID(); this.formRevision=project?.revision || 1;
-    this.currencyCode=action==='create' ? 'CNY' : project?.currencyId || 'CNY';
+    this.currencyCode=action==='create' ? this.bookCode() : project?.currencyId || 'CNY';
     this.nameText=action==='create' ? '' : project?.name || ''; this.merchantText=action==='create' ? '' : project?.merchant || '';
     this.projectNote=action==='create' ? '' : project?.note || ''; this.expiryText=action==='create' ? '' : project?.expiryDate || '';
     this.includeNet=action==='create' || project?.includeInNetAssets===true;
@@ -137,7 +138,7 @@ export struct PrepaidPage {
     this.resetRates(); this.showForm=true;
   }
   private accountCode(): string { return this.accounts.find((item: LedgerAccount) => item.id===this.accountId)?.currencyId || this.currencyCode; }
-  private resetRates(): void { this.bookRate=this.currencyCode==='CNY' ? '1' : ''; this.cashRate=this.accountCode()===this.currencyCode ? '1' : ''; this.quoteSource='manual'; this.quoteDate=''; this.actualCash=''; }
+  private resetRates(): void { this.bookRate=this.currencyCode===this.bookCode() ? '1' : ''; this.cashRate=this.accountCode()===this.currencyCode ? '1' : ''; this.quoteSource='manual'; this.quoteDate=''; this.actualCash=''; }
   private choose(title: string, values: string[], index: number, accept: (index: number) => void): void {
     if (this.working) { return; }
     this.getUIContext().getFocusController().clearFocus();
@@ -180,7 +181,7 @@ export struct PrepaidPage {
     if (!validPrepaidDate(this.dateText)) { this.formError='请先选择有效日期'; return; }
     this.setWorking(true); this.formError='';
     try {
-      const book=await OfficialExchangeRates.quote(this.currencyCode,'CNY',this.dateText);
+      const book=await OfficialExchangeRates.quote(this.currencyCode,this.bookCode(),this.dateText);
       const cash=await OfficialExchangeRates.quote(this.currencyCode,this.accountCode(),this.dateText);
       if (this.active) {
         this.bookRate=book.rate; this.cashRate=cash.rate; this.quoteDate=book.source==='same_currency' ? cash.date : book.date;
@@ -219,7 +220,7 @@ export struct PrepaidPage {
     if (kind!=='consume') {
       const code=this.accountCode();
       cash=code===this.currencyCode ? amount : this.actualCash ? ExpenseAmountInput.nonnegative(this.actualCash,currencyUnit(code)) : new ExchangeRate(amount.currency,currencyUnit(code),this.cashRate).convert(amount);
-      cashBook=code==='CNY' ? cash : new ExchangeRate(cash.currency,currencyUnit('CNY'),crossRate(this.bookRate,this.cashRate)).convert(cash);
+      cashBook=code===this.bookCode() ? cash : new ExchangeRate(cash.currency,currencyUnit(this.bookCode()),crossRate(this.bookRate,this.cashRate)).convert(cash);
     }
     const date=new Date(this.dateText+'T12:00:00');
     return { id:this.eventId,projectId:this.formProjectId,bookId:this.workspace?.bookId() || '',expectedRevision:this.action==='create' ? 1 : this.formRevision,kind:kind,
@@ -312,14 +313,14 @@ export struct PrepaidPage {
             this.choice('日期',this.dateText,()=>{this.chooseDate(false);})
             if (this.action!=='consume') {
               this.choice(this.action==='refund' ? '到账账户' : '付款账户',this.accounts.find((item:LedgerAccount)=>item.id===this.accountId)?.name || '选择账户',()=>{this.chooseAccount();})
-              if (this.currencyCode!=='CNY') { TextInput({text:this.bookRate,placeholder:'参考汇率：1 '+this.currencyCode+' = ? CNY'}).fontSize('14fp').type(InputType.NUMBER_DECIMAL).enabled(!this.working).onChange((value:string)=>{this.bookRate=value;this.quoteSource='manual';this.quoteDate=this.dateText;}) }
+              if (this.currencyCode!==this.bookCode()) { TextInput({text:this.bookRate,placeholder:'参考汇率：1 '+this.currencyCode+' = ? ' + this.bookCode()}).fontSize('14fp').type(InputType.NUMBER_DECIMAL).enabled(!this.working).onChange((value:string)=>{this.bookRate=value;this.quoteSource='manual';this.quoteDate=this.dateText;}) }
               if (this.accountCode()!==this.currencyCode) {
                 TextInput({text:this.cashRate,placeholder:'结算汇率：1 '+this.currencyCode+' = ? '+this.accountCode()}).fontSize('14fp').type(InputType.NUMBER_DECIMAL).enabled(!this.working).onChange((value:string)=>{this.cashRate=value;this.quoteSource='manual';this.quoteDate=this.dateText;})
                 MoneyAmountField({value:$actualCash,fieldId:'prepaid-actual-cash',currency:currencyUnit(this.accountCode()),
                   fontSize:'14fp',allowEmpty:true,placeholder:'实际账户金额 '+this.accountCode()+'（选填）',disabled:this.working,
                   onChange:()=>{this.formError='';}})
               }
-              if (this.currencyCode!=='CNY' || this.accountCode()!==this.currencyCode) {
+              if (this.currencyCode!==this.bookCode() || this.accountCode()!==this.currencyCode) {
                 Button('获取参考汇率').fontSize('13fp').backgroundColor(Color.Transparent).fontColor($r('app.color.xq_font_emphasize')).enabled(!this.working).onClick(()=>{this.loadRates();})
                 Text((this.quoteDate ? this.quoteDate+' · ' : '')+(this.quoteSource==='manual' ? '手动汇率' : '欧洲中央银行 ECB · 官网免费参考汇率')).fontSize('12fp').fontColor($r('app.color.xq_font_tertiary')).width('100%')
               }
@@ -394,7 +395,7 @@ export struct PrepaidPage {
           Row() { Text(this.label(event.kind)).fontSize('15fp').layoutWeight(1); Text(this.money(event.amountMinor,this.detail?.project.currencyId || 'CNY')+' '+(this.detail?.project.currencyId || '')).fontSize('17fp').fontFamily('XiaoQiaoDINMedium') }.width('100%')
           Text(event.localDate+' · 历史成本 ¥'+this.money(event.bookMinor)).fontSize('12fp').fontColor($r('app.color.xq_font_secondary')).width('100%')
           if (event.accountId) { Text(event.accountName+' · '+(event.kind==='fund' ? '付款 ' : '到账 ')+this.money(event.cashMinor,event.accountCurrencyId)+' '+event.accountCurrencyId).fontSize('12fp').fontColor($r('app.color.xq_font_secondary')).width('100%') }
-          if (event.kind==='refund'&&event.cashBookMinor!==event.bookMinor) { Text('退款差额 '+this.money((BigInt(event.cashBookMinor)-BigInt(event.bookMinor)).toString())+' CNY，已单独记录收支').fontSize('12fp').fontColor($r('app.color.xq_font_secondary')).width('100%') }
+          if (event.kind==='refund'&&event.cashBookMinor!==event.bookMinor) { Text('退款差额 '+this.money((BigInt(event.cashBookMinor)-BigInt(event.bookMinor)).toString())+' '+this.bookCode()+'，已单独记录收支').fontSize('12fp').fontColor($r('app.color.xq_font_secondary')).width('100%') }
           if (event.entryContext?.categoryName) { Text('核销分类预设 · '+event.entryContext.categoryName).fontSize('12fp').fontColor($r('app.color.xq_font_secondary')).width('100%') }
           if (event.entryContext?.addressText) { Text(event.entryContext.addressText).fontSize('12fp').fontColor($r('app.color.xq_font_secondary')).width('100%') }
           if ((event.entryContext?.tagNames.length || 0)>0) { Text((event.entryContext?.tagNames || []).join(' · ')).fontSize('12fp').fontColor($r('app.color.xq_font_secondary')).width('100%') }

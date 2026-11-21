@@ -55,7 +55,7 @@ export class LedgerBackupPackage implements BackupResourceSwap {
         await BackupFiles.copy(source + '/' + relative, directory + '/' + file.path);
       }
       const files = [await BackupFiles.info(directory + '/ledger.db', 'ledger.db'), ...assets];
-      const manifest: BackupManifest = { format: 'xiaoqiao', version: 1, schema: 10, createdAt: new Date().toISOString(), files: files };
+      const manifest: BackupManifest = { format: 'xiaoqiao', version: 1, schema: 12, createdAt: new Date().toISOString(), files: files };
       await BackupFiles.writeText(directory + '/manifest.json', JSON.stringify(manifest));
       await BackupZip.encode(directory, archive, [await BackupFiles.info(directory + '/manifest.json', 'manifest.json'), ...files]);
       await BackupFiles.copy(archive, uri);
@@ -64,7 +64,7 @@ export class LedgerBackupPackage implements BackupResourceSwap {
   async hasPrevious(): Promise<boolean> { return fs.access(this.previous + '/ledger.db'); }
   private async inspect(): Promise<BackupFileInfo[]> {
     const manifest = JSON.parse(await BackupFiles.text(this.stage + '/manifest.json')) as BackupManifest;
-    if (manifest.format !== 'xiaoqiao' || manifest.version !== 1 || (manifest.schema !== 2 && manifest.schema !== 3 && manifest.schema !== 4 && manifest.schema !== 5 && manifest.schema !== 6 && manifest.schema !== 7 && manifest.schema !== 8 && manifest.schema !== 9 && manifest.schema !== 10) || !Array.isArray(manifest.files) ||
+    if (manifest.format !== 'xiaoqiao' || manifest.version !== 1 || (manifest.schema !== 2 && manifest.schema !== 3 && manifest.schema !== 4 && manifest.schema !== 5 && manifest.schema !== 6 && manifest.schema !== 7 && manifest.schema !== 8 && manifest.schema !== 9 && manifest.schema !== 10 && manifest.schema !== 11 && manifest.schema !== 12) || !Array.isArray(manifest.files) ||
       manifest.files.length === 0 || manifest.files.length > 2047) { throw new Error('PACKAGE_VERSION'); }
     const paths: Set<string> = new Set();
     for (const file of manifest.files) {

@@ -1,3 +1,4 @@
+import { MonthlyBudget } from '../domain/model/MonthlyBudget';
 import { CategoryIconBadge } from './CategoryIconBadge';
 import { BillCalendarDay, billCalendarDays, billDateKey, trimBillDecimal, compactBillAmount } from '../presentation/ledger/BillCalendar';
 import { HdsNavigation, HdsNavigationTitleMode, hdsMaterial, DividerShowType, ScrollEffectType } from '@kit.UIDesignKit';
@@ -62,7 +63,7 @@ export struct BillDetailsPage {
     this.active = true;
     if (this.rangeMaterial !== undefined) { this.viewOptions.backgroundSystemMaterial = this.rangeMaterial; }
     const now = new Date();
-    this.month = now.getFullYear().toString() + '-' + (now.getMonth() + 1).toString().padStart(2, '0');
+    this.month = MonthlyBudget.monthForDate(localDate(now), this.workspace?.monthStartDay || 1);
     this.selectedDate = '';
     this.rebuildCalendar(); this.reload();
   }
@@ -78,7 +79,7 @@ export struct BillDetailsPage {
   private selectFlowRange(index: number): void {
     if (index === 4) { this.pickCustomStart(); return; }
     this.flowRange = index;
-    if (index !== 0) { this.flowPeriod = currentRange(this.flowRangeName()); }
+    if (index !== 0) { this.flowPeriod = currentRange(this.flowRangeName(), new Date(), '', '', this.workspace?.monthStartDay || 1); }
     this.resetFlow();
   }
   private pickCustomStart(): void {
@@ -151,7 +152,7 @@ export struct BillDetailsPage {
     return { incomeMinor: day?.incomeMinor || '0', expenseMinor: day?.expenseMinor || '0' };
   }
   private periodLabel(): string {
-    if (!this.isFlow()) { return this.month.replace('-', '年') + '月'; }
+    if (!this.isFlow()) { const period = MonthlyBudget.period(this.month, this.workspace?.monthStartDay || 1); return this.month.replace('-', '年') + '月' + ((this.workspace?.monthStartDay || 1) === 1 ? '' : ' · ' + period.start + ' 起'); }
     if (this.flowRange === 0) { return '全部时间'; }
     if (this.flowRange === 1 || this.flowRange === 2) { return rangeTitle(this.flowRangeName(), this.flowPeriod); }
     const end = parseLocalDate(this.flowPeriod.endDateExclusive); end.setDate(end.getDate() - 1);
@@ -180,7 +181,7 @@ export struct BillDetailsPage {
   private shift(offset: number): void {
     if (this.isFlow()) {
       if (this.flowRange === 0 || this.flowRange === 4) { return; }
-      this.flowPeriod = shiftedRange(this.flowRangeName(), this.flowPeriod, offset); this.resetFlow(); return;
+      this.flowPeriod = shiftedRange(this.flowRangeName(), this.flowPeriod, offset, this.workspace?.monthStartDay || 1); this.resetFlow(); return;
     }
     const parts = this.month.split('-');
     const date = new Date(Number(parts[0]), Number(parts[1]) - 1 + offset, 1);
@@ -189,7 +190,7 @@ export struct BillDetailsPage {
     this.scroller.scrollTo({ xOffset: 0, yOffset: 0 }); this.reload();
   }
   private rebuildCalendar(): void {
-    this.calendar = billCalendarDays(this.month).map((day: BillCalendarDay): BillCalendarCell => {
+    this.calendar = billCalendarDays(this.month, this.workspace?.monthStartDay || 1).map((day: BillCalendarDay): BillCalendarCell => {
       const emptyTotals: DailyTotals = { incomeMinor: '0', expenseMinor: '0' };
       const totals: DailyTotals = day.inMonth ? dailyTotals(this.entries, day.date) : emptyTotals;
       return { day: day, incomeMinor: totals.incomeMinor, expenseMinor: totals.expenseMinor };
@@ -201,20 +202,20 @@ export struct BillDetailsPage {
     return rows;
   }
   private calendarAmount(minor: string): string {
-    const full = trimBillDecimal(minor);
+    const full = trimBillDecimal(minor, this.bookCode());
     const available = Math.max(1, this.calendarWidth / 7 - 6);
     const width = this.getUIContext().getMeasureUtils().measureTextSize({ textContent: full, fontSize: '9fp', fontFamily: 'XiaoQiaoDINMedium' }).width;
     if (this.getUIContext().px2vp(Number(width)) <= available) { return full; }
     for (let digits = 2; digits >= 0; digits--) {
-      const compact = compactBillAmount(minor, digits);
+      const compact = compactBillAmount(minor, digits, this.bookCode());
       const measured = this.getUIContext().getMeasureUtils().measureTextSize({ textContent: compact, fontSize: '9fp', fontFamily: 'XiaoQiaoDINMedium' }).width;
       if (this.getUIContext().px2vp(Number(measured)) <= available) { return compact; }
     }
-    return compactBillAmount(minor, 0);
+    return compactBillAmount(minor, 0, this.bookCode());
   }
   private selectDay(day: BillCalendarDay): void {
     if (!day.inMonth) {
-      this.month = day.date.substring(0, 7); this.entries = []; this.rebuildCalendar(); this.reload();
+      this.month = MonthlyBudget.monthForDate(day.date, this.workspace?.monthStartDay || 1); this.entries = []; this.rebuildCalendar(); this.reload();
     }
     this.selectedDate = this.selectedDate === day.date ? '' : day.date;
     this.scroller.scrollTo({ xOffset: 0, yOffset: 0 });
@@ -265,11 +266,13 @@ export struct BillDetailsPage {
     }.padding(10).width('100%').borderRadius(20).backgroundColor($r('app.color.xq_app_surface_card'))
       .onAreaChange((_oldArea: Area, area: Area) => { this.calendarWidth = Math.max(1, Number(area.width) - 20); })
   }
+  private bookCode(): string { return this.workspace?.bookCurrency.id || 'CNY'; }
+  private bookAmount(minor: string): string { return displayAmount(minor, currencyUnit(this.bookCode())); }
   private amount(entry: LedgerEntry): string {
     if (entry.fx && !entry.transfer) {
       return currencyDefinition(entry.fx.currencyId).symbol + Money.fromMinorText(entry.fx.paidMinor, currencyUnit(entry.fx.currencyId)).toDecimalString();
     }
-    return '¥' + displayAmount(entry.recoveryKind ? (-BigInt(entry.minor)).toString() : entry.transfer && this.kind === LedgerKind.Expense ? entry.expenseMinor || '0' : entry.minor);
+    return currencyDefinition(this.bookCode()).symbol + this.bookAmount(entry.recoveryKind ? (-BigInt(entry.minor)).toString() : entry.transfer && this.kind === LedgerKind.Expense ? entry.expenseMinor || '0' : entry.minor);
   }
   private sign(entry: LedgerEntry): string {
     if (entry.prepaidId) { return entry.prepaidKind === 'refund' ? '+' : '−'; }
@@ -402,7 +405,7 @@ export struct BillDetailsPage {
                 Column({ space: 0 }) {
                   Row() {
                     Text(date.replace(/-/g, '/')).fontSize('13fp').fontWeight(FontWeight.Medium).layoutWeight(1)
-                    Text('收 ' + displayAmount(this.totals(date).incomeMinor) + '  支 ' + displayAmount(this.totals(date).expenseMinor))
+                    Text('收 ' + this.bookAmount(this.totals(date).incomeMinor) + '  支 ' + this.bookAmount(this.totals(date).expenseMinor))
                       .fontSize('11fp').fontColor($r('app.color.xq_font_secondary'))
                   }.width('100%').padding({ top: 24, bottom: 12 })
                   Column() {

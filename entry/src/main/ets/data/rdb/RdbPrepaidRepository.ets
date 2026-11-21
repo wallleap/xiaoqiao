@@ -17,13 +17,13 @@ export class RdbPrepaidRepository {
   static async projects(db: relationalStore.RdbStore, bookId: string = ''): Promise<PrepaidProject[]> {
     const result: PrepaidProject[] = [];
     const rows = await db.querySql('SELECT id,book_id,name,merchant,currency_id,expiry_date,note,include_in_net_assets,revision,' +
-      'CAST(funded_minor AS TEXT),CAST(consumed_minor AS TEXT),CAST(refunded_minor AS TEXT),CAST(remaining_minor AS TEXT),CAST(remaining_book_minor AS TEXT) FROM v_prepaid_balances' +
+      'CAST(funded_minor AS TEXT),CAST(consumed_minor AS TEXT),CAST(refunded_minor AS TEXT),CAST(remaining_minor AS TEXT),CAST(remaining_book_minor AS TEXT),(SELECT base_currency_id FROM books WHERE id=v_prepaid_balances.book_id) FROM v_prepaid_balances' +
       (bookId ? ' WHERE book_id=?' : '') + ' ORDER BY created_at_ms,id', bookId ? [bookId] : []);
     try { while (rows.goToNextRow()) {
       result.push({ id: rows.getString(0), bookId: rows.getString(1), name: rows.getString(2), merchant: rows.getString(3),
         currencyId: rows.getString(4), expiryDate: rows.getString(5), note: rows.getString(6), includeInNetAssets: rows.getLong(7) === 1,
         revision: rows.getLong(8), fundedMinor: rows.getString(9), consumedMinor: rows.getString(10), refundedMinor: rows.getString(11),
-        remainingMinor: rows.getString(12), remainingBookMinor: rows.getString(13) });
+        remainingMinor: rows.getString(12), remainingBookMinor: rows.getString(13), bookCurrencyId: rows.getString(14) });
     } } finally { rows.close(); }
     return result;
   }
@@ -60,7 +60,7 @@ export class RdbPrepaidRepository {
     RdbPrepaidRepository.validateProject(command);
     if (payment.kind !== 'fund' || payment.projectId !== command.id || payment.bookId !== command.bookId) { throw new Error('PREPAID_PROJECT'); }
     await this.session.write(async (db: relationalStore.RdbStore): Promise<void> => {
-      const book = await db.querySql("SELECT id FROM books WHERE id=? AND base_currency_id='CNY' AND archived_at_ms IS NULL AND deleted_at_ms IS NULL", [command.bookId]);
+      const book = await db.querySql("SELECT id FROM books WHERE id=? AND archived_at_ms IS NULL AND deleted_at_ms IS NULL", [command.bookId]);
       try { if (!book.goToFirstRow()) { throw new Error('LEDGER_BOOK_UNAVAILABLE'); } } finally { book.close(); }
       const now = Date.now();
       await db.insert('prepaid_projects', { id: command.id, book_id: command.bookId, name: command.name.trim(), merchant: command.merchant.trim(),
@@ -89,6 +89,10 @@ export class RdbPrepaidRepository {
   }
   save(command: PrepaidEventCommand): Promise<void> { return this.session.write((db: relationalStore.RdbStore) => RdbPrepaidRepository.saveIn(db, command)); }
 
+  private static async bookCode(db: relationalStore.RdbStore, bookId: string): Promise<string> {
+    const rows = await db.querySql('SELECT base_currency_id FROM books WHERE id=? AND deleted_at_ms IS NULL', [bookId]);
+    try { if (!rows.goToFirstRow()) { throw new Error('LEDGER_BOOK_UNAVAILABLE'); } return rows.getString(0); } finally { rows.close(); }
+  }
   private static async writeTransaction(db: relationalStore.RdbStore, command: PrepaidEventCommand, project: PrepaidProject,
     amount: bigint, income: boolean): Promise<string> {
     if (amount <= BigInt(0)) { return ''; }
@@ -99,10 +103,11 @@ export class RdbPrepaidRepository {
       const nature = await db.querySql('SELECT id FROM spending_natures WHERE id=? AND deleted_at_ms IS NULL AND archived_at_ms IS NULL', [command.spendingNatureId]);
       try { if (!nature.goToFirstRow()) { throw new Error('PREPAID_CATEGORY'); } } finally { nature.close(); }
     }
+    const bookCode = await RdbPrepaidRepository.bookCode(db, command.bookId);
     const id = util.generateRandomUUID(); const now = Date.now();
-    const value = Money.fromMinor(amount,currencyUnit('CNY')).toSafeMinorNumber();
+    const value = Money.fromMinor(amount,currencyUnit(bookCode)).toSafeMinorNumber();
     await db.insert('transactions', { id: id, book_id: command.bookId, kind: income ? 'income' : 'expense', category_id: categoryId,
-      currency_id: 'CNY', gross_minor: value, discount_minor: 0, paid_minor: value, book_currency_id: 'CNY', book_minor: value,
+      currency_id: bookCode, gross_minor: value, discount_minor: 0, paid_minor: value, book_currency_id: bookCode, book_minor: value,
       include_in_assets: 0, include_in_budget: command.kind === 'consume' && command.includeInBudget ? 1 : 0,
       spending_nature_id: command.kind === 'consume' ? command.spendingNatureId || null : null,
       balance_mode: 'apply', note: (command.kind === 'consume' ? '预付款核销 · ' : '预付款退款差额 · ') + project.name +
@@ -134,6 +139,7 @@ export class RdbPrepaidRepository {
     initial: PrepaidDetail | undefined = undefined): Promise<void> {
     const detail = initial === undefined ? await RdbPrepaidRepository.detailIn(db, command.bookId, command.projectId) : initial;
     const project = detail.project;
+    const bookCode = await RdbPrepaidRepository.bookCode(db, command.bookId);
     if (project.revision !== command.expectedRevision || !command.id || !['fund','consume','refund'].includes(command.kind)) { throw new Error('PREPAID_CHANGED'); }
     if (!command.amount.currency.matches(currencyUnit(project.currencyId)) || command.amount.minor <= BigInt(0) || !validPrepaidDate(command.localDate) ||
       !Number.isSafeInteger(command.occurredAtMs) || !Number.isInteger(command.offsetMinutes) || Math.abs(command.offsetMinutes)>840 ||
@@ -144,12 +150,12 @@ export class RdbPrepaidRepository {
     if (command.kind !== 'consume') {
       if (!['manual','ECB','ECB_CACHE'].includes(command.rateSource) || !validPrepaidDate(command.rateDate)) { throw new Error('PREPAID_CASH'); }
       if (!command.accountId || command.cash === undefined || command.cashBook === undefined || command.cash.minor<=BigInt(0) || command.cashBook.minor<BigInt(0) ||
-        !command.cashBook.currency.matches(currencyUnit('CNY'))) { throw new Error('PREPAID_CASH'); }
+        !command.cashBook.currency.matches(currencyUnit(bookCode))) { throw new Error('PREPAID_CASH'); }
       command.cash.toSafeMinorNumber(); command.cashBook.toSafeMinorNumber(); accountCode = command.cash.currency.id;
       const account = await db.querySql('SELECT id FROM accounts WHERE id=? AND currency_id=? AND deleted_at_ms IS NULL AND archived_at_ms IS NULL',[command.accountId,accountCode]);
       try { if (!account.goToFirstRow()) { throw new Error('ACCOUNT_UNAVAILABLE'); } } finally { account.close(); }
       if (project.currencyId === accountCode && command.cash.minor !== command.amount.minor) { throw new Error('PREPAID_CASH'); }
-      if (accountCode === 'CNY' && command.cash.minor !== command.cashBook.minor) { throw new Error('PREPAID_CASH'); }
+      if (accountCode === bookCode && command.cash.minor !== command.cashBook.minor) { throw new Error('PREPAID_CASH'); }
     }
     if (command.kind === 'fund') {
       bookMinor = command.cashBook?.minor || BigInt(0);
@@ -168,7 +174,7 @@ export class RdbPrepaidRepository {
     const sequence = await db.querySql('SELECT COALESCE(MAX(sequence_no),0)+1 FROM prepaid_events WHERE project_id=?',[project.id]);
     let next = 1; try { sequence.goToFirstRow(); next=sequence.getLong(0); } finally { sequence.close(); }
     await db.insert('prepaid_events',{ id: command.id, project_id: project.id, sequence_no: next, kind: command.kind,
-      amount_minor: command.amount.toSafeMinorNumber(), book_minor: Money.fromMinor(bookMinor,currencyUnit('CNY')).toSafeMinorNumber(),
+      amount_minor: command.amount.toSafeMinorNumber(), book_minor: Money.fromMinor(bookMinor,currencyUnit(bookCode)).toSafeMinorNumber(),
       account_id: command.kind === 'consume' ? null : command.accountId, account_currency_id: accountCode,
       cash_minor: command.kind === 'consume' ? 0 : command.cash?.toSafeMinorNumber() || 0,
       cash_book_minor: command.kind === 'consume' ? 0 : command.cashBook?.toSafeMinorNumber() || 0,

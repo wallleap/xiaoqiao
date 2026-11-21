@@ -1,3 +1,6 @@
+import { MonthlyBudget } from '../../domain/model/MonthlyBudget';
+import { currencyUnit } from '../../core/money/Currencies';
+import { Money } from '../../core/money/Money';
 import { i18n } from '@kit.LocalizationKit';
 
 export interface BillCalendarDay {
@@ -54,39 +57,41 @@ function lunarLabel(date: Date): string[] {
 }
 
 /** Monday-first complete weeks, including muted adjoining-month dates. Local noon avoids DST boundaries. */
-export function billCalendarDays(monthKey: string): BillCalendarDay[] {
+export function billCalendarDays(monthKey: string, startDay: number = 1): BillCalendarDay[] {
   const parts = monthKey.split('-');
   const year = Number(parts[0]); const month = Number(parts[1]) - 1;
   if (!Number.isInteger(year) || !Number.isInteger(month) || month < 0 || month > 11) { return []; }
-  const first = new Date(year, month, 1, 12);
+  const period = MonthlyBudget.period(monthKey, startDay);
+  const first = new Date(period.start + 'T12:00:00');
   const offset = (first.getDay() + 6) % 7;
-  const days = new Date(year, month + 1, 0, 12).getDate();
+  const days = Math.round((Date.parse(period.endExclusive + 'T12:00:00Z') - Date.parse(period.start + 'T12:00:00Z')) / 86400000);
   const count = Math.max(35, Math.ceil((offset + days) / 7) * 7);
   const result: BillCalendarDay[] = [];
   for (let index = 0; index < count; index++) {
-    const date = new Date(year, month, index - offset + 1, 12);
-    const inMonth = date.getMonth() === month;
+    const date = new Date(first.getFullYear(), first.getMonth(), first.getDate() + index - offset, 12);
+    const inMonth = billDateKey(date) >= period.start && billDateKey(date) < period.endExclusive;
     const label = inMonth ? lunarLabel(date) : ['', ''];
     result.push({ date: billDateKey(date), day: date.getDate(), inMonth: inMonth, secondary: label[0], festival: label[1] === 'festival' });
   }
   return result;
 }
 
-export function trimBillDecimal(minor: string): string {
+export function trimBillDecimal(minor: string, code: string = 'CNY'): string {
   const negative = minor.startsWith('-');
   const absolute = negative ? -BigInt(minor) : BigInt(minor);
-  const decimal = (absolute / BigInt(100)).toString() + '.' + (absolute % BigInt(100)).toString().padStart(2, '0');
-  return (negative ? '−' : '') + decimal.replace(/\.00$/, '').replace(/(\.\d)0$/, '$1');
+  const decimal = Money.fromMinor(absolute, currencyUnit(code)).toDecimalString();
+  return (negative ? '−' : '') + (decimal.includes('.') ? decimal.replace(/0+$/, '').replace(/\.$/, '') : decimal);
 }
 
 /** Truncates compact labels only; exact minor-unit totals remain available below the calendar. */
-export function compactBillAmount(minor: string, digits: number = 2): string {
+export function compactBillAmount(minor: string, digits: number = 2, code: string = 'CNY'): string {
   const value = BigInt(minor); const absolute = value < BigInt(0) ? -value : value;
-  if (absolute < BigInt(100000)) { return trimBillDecimal(minor); }
-  const divisor = absolute >= BigInt('10000000000') ? BigInt('10000000000') : BigInt(1000000);
+  const unit = BigInt(10) ** BigInt(currencyUnit(code).scale);
+  if (absolute < unit * BigInt(1000)) { return trimBillDecimal(minor, code); }
+  const divisor = absolute >= unit * BigInt(100000000) ? unit * BigInt(100000000) : unit * BigInt(10000);
   const scale = BigInt(10) ** BigInt(digits);
   const scaled = absolute * scale / divisor;
   const whole = (scaled / scale).toString();
   const fraction = digits > 0 ? (scaled % scale).toString().padStart(digits, '0').replace(/0+$/, '') : '';
-  return (value < BigInt(0) ? '−' : '') + whole + (fraction ? '.' + fraction : '') + (divisor === BigInt(1000000) ? '万' : '亿');
+  return (value < BigInt(0) ? '−' : '') + whole + (fraction ? '.' + fraction : '') + (divisor === unit * BigInt(10000) ? '万' : '亿');
 }

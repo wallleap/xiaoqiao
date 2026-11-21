@@ -1,8 +1,10 @@
+import { currencyUnit } from '../../core/money/Currencies';
 import { BOOK_PALETTES, BOOK_ICON_KEYS, BookPalette } from './BookCoverCatalog';
 
-export interface BookAppearance { coverPalette: string; coverIcon: string; }
+export interface BookAppearance { currencyId?: string; monthStartDay?: number; coverPalette: string; coverIcon: string; }
 
 export interface LedgerBook {
+  currencyId?: string; monthStartDay?: number; currencyLocked?: boolean;
   entryCount?: string;
   coverPalette?: string;
   coverIcon?: string;
@@ -13,6 +15,7 @@ export interface LedgerBook {
 }
 
 export interface LedgerBookDraft {
+  currencyId?: string; monthStartDay?: number;
   coverPalette?: string;
   coverIcon?: string;
   id: string;
@@ -32,6 +35,9 @@ export class ValidatedLedgerBook {
     if (!BOOK_PALETTES.some((item: BookPalette) => item.key === palette) || !BOOK_ICON_KEYS.includes(icon)) {
       throw new Error('INVALID_BOOK_APPEARANCE');
     }
-    this.draft = { id: draft.id, name: name, coverPalette: palette, coverIcon: icon };
+    const currencyId = draft.currencyId || 'CNY'; const monthStartDay = draft.monthStartDay === undefined ? 1 : draft.monthStartDay;
+    currencyUnit(currencyId);
+    if (!Number.isInteger(monthStartDay) || monthStartDay < 1 || monthStartDay > 31) { throw new Error('INVALID_MONTH_START_DAY'); }
+    this.draft = { currencyId: currencyId, monthStartDay: monthStartDay, id: draft.id, name: name, coverPalette: palette, coverIcon: icon };
   }
 }

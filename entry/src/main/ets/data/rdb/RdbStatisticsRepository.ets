@@ -1,3 +1,4 @@
+import { MonthlyBudget } from '../../domain/model/MonthlyBudget';
 import { relationalStore } from '@kit.ArkData';
 import { LedgerStatistics, StatisticsBucket, StatisticsBucketUnit, StatisticsBudgetCategory,
   StatisticsCategory, StatisticsEntry, StatisticsKind, StatisticsTagCategory } from '../../domain/model/LedgerStatistics';
@@ -86,8 +87,8 @@ function nextMonth(value: string): string {
   return formatDate(date);
 }
 
-function bucketKey(date: string, unit: StatisticsBucketUnit): string {
-  return unit === 'month' ? date.substring(0, 7) : date;
+function bucketKey(date: string, unit: StatisticsBucketUnit, startDay: number = 1): string {
+  return unit === 'month' ? MonthlyBudget.monthForDate(date, startDay) : date;
 }
 
 function bucketLabel(key: string, unit: StatisticsBucketUnit): string {
@@ -212,22 +213,22 @@ export class RdbStatisticsRepository {
   }
 
   private buildBuckets(startDate: string, endDateExclusive: string, unit: StatisticsBucketUnit,
-    totals: Map<string, bigint>): StatisticsBucket[] {
+    totals: Map<string, bigint>, monthStartDay: number = 1): StatisticsBucket[] {
     const buckets: StatisticsBucket[] = [];
-    let cursor = unit === 'month' ? startDate.substring(0, 7) + '-01' : startDate;
-    const limit = unit === 'month' ? endDateExclusive.substring(0, 7) + '-01' : endDateExclusive;
+    let cursor = startDate;
+    const limit = endDateExclusive;
     let guard = 0;
     while (cursor < limit && guard < 4000) {
-      const key = bucketKey(cursor, unit);
+      const key = bucketKey(cursor, unit, monthStartDay);
       buckets.push({ key: key, label: bucketLabel(key, unit), amountMinor: (totals.get(key) || BigInt(0)).toString() });
-      cursor = unit === 'month' ? nextMonth(cursor) : nextDay(cursor);
+      cursor = unit === 'month' ? MonthlyBudget.period(key, monthStartDay).endExclusive : nextDay(cursor);
       guard++;
     }
     return buckets;
   }
 
   async snapshot(bookId: string, startDate: string, endDateExclusive: string, kind: StatisticsKind,
-    unit: StatisticsBucketUnit): Promise<LedgerStatistics> {
+    unit: StatisticsBucketUnit, monthStartDay: number = 1): Promise<LedgerStatistics> {
     this.validateRange(startDate, endDateExclusive);
     const records = await this.rawEntries(bookId, startDate, endDateExclusive);
     const categories = await this.categories(bookId);
@@ -242,7 +243,7 @@ export class RdbStatisticsRepository {
       const amount = this.effectiveAmount(entry, kind);
       if (amount === BigInt(0)) { continue; }
       total += amount;
-      const key = bucketKey(entry.date, unit);
+      const key = bucketKey(entry.date, unit, monthStartDay);
       bucketTotals.set(key, (bucketTotals.get(key) || BigInt(0)) + amount);
       for (const tag of tagsByTransaction.get(entry.tagSourceId || entry.id) || []) {
         const current = tagTotals.get(tag.id);
@@ -308,7 +309,7 @@ export class RdbStatisticsRepository {
       return leftAmount > rightAmount ? -1 : 1;
     });
     return { bookId: bookId, startDate: startDate, endDateExclusive: endDateExclusive, kind: kind,
-      totalMinor: total.toString(), buckets: this.buildBuckets(startDate, endDateExclusive, unit, bucketTotals),
+      totalMinor: total.toString(), buckets: this.buildBuckets(startDate, endDateExclusive, unit, bucketTotals, monthStartDay),
       categories: categoryValues, budgetCategories: kind === 'expense' ? budgetValues : [], tagCategories: tagValues };
   }
 

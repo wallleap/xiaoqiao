@@ -53,7 +53,7 @@ export struct ExpenseEditor {
   // The material is an immutable native instance supplied when the editor opens.
   sheetMaterial: SystemUiMaterial | undefined = undefined;
   workspace: LedgerWorkspace | undefined = undefined;
-  @State private currencyCode: string = 'CNY';
+  @State @Watch('previewCurrencyChanged') private currencyCode: string = 'CNY';
   private amountCurrency(): CurrencyUnit { return currencyUnit(this.currencyCode); }
   @State private bookRate: string = '';
   @State private settlementRate: string = '';
@@ -62,8 +62,13 @@ export struct ExpenseEditor {
   @State private quoteSource: string = 'manual';
   @State private quoteBusy: boolean = false;
   private quoteVersion: number = 0;
+  @State private previewRate: string = '';
+  @State private previewRateLoading: boolean = false;
+  @State private previewRateUnavailable: boolean = false;
+  private previewRateRequest: number = 0;
 
   bookId: string = '';
+  bookCurrencyId: string = 'CNY';
   editingEntry: EntryDetail | undefined = undefined;
   @Prop @Watch('categoryChoicesChanged') categories: ExpenseCategory[] = [];
   @Prop @Watch('categoryChoicesChanged') incomeCategories: ExpenseCategory[] = [];
@@ -107,7 +112,7 @@ export struct ExpenseEditor {
   @State private selectedTagIds: string[] = [];
   @State private accountId: string = '';
   @State private toAccountId: string = '';
-  @State private occurredAtMs: number = Date.now();
+  @State @Watch('previewCurrencyChanged') private occurredAtMs: number = Date.now();
   @State private occurredAtLabel: string = '';
   @State private includeBudget: boolean = true;
   @State private includeAssets: boolean = true;
@@ -147,6 +152,7 @@ export struct ExpenseEditor {
   private saveId: string = util.generateRandomUUID();
 
   aboutToAppear(): void {
+    if (this.editingEntry === undefined) { this.currencyCode = this.bookCurrencyId; }
     const entry = this.editingEntry;
     this.prepaid = entry === undefined && this.initialPrepaid;
     this.isIncome = entry?.kind === 'income';
@@ -183,13 +189,14 @@ export struct ExpenseEditor {
     }
     this.occurredAtLabel = this.dateLabel();
     this.active = true;
+    this.refreshPreviewRate();
     this.previousAvoidMode = this.getUIContext().getKeyboardAvoidMode();
     this.getUIContext().setKeyboardAvoidMode(KeyboardAvoidMode.RESIZE);
     this.focusAmountAfterFrame();
   }
 
   aboutToDisappear(): void {
-    this.active = false; this.quoteVersion++; this.showCurrencyPicker = false;
+    this.active = false; this.quoteVersion++; this.previewRateRequest++; this.showCurrencyPicker = false;
     this.mapRequestVersion++; this.mapBusy = false;
     clearTimeout(this.amountFocusTimer);
     this.amountController.stopEditing();
@@ -627,6 +634,43 @@ export struct ExpenseEditor {
     }
   }
 
+  private previewCurrencyChanged(): void { if (this.active) { this.refreshPreviewRate(); } }
+
+  /** Display-only quote; saving still resolves and validates its own conversion snapshot. */
+  private async refreshPreviewRate(): Promise<void> {
+    if (!this.active) { return; }
+    const request = ++this.previewRateRequest;
+    const from = this.currencyCode; const to = this.bookCurrencyId; const date = this.fxDate();
+    this.previewRate = ''; this.previewRateLoading = false; this.previewRateUnavailable = false;
+    if (from === to) { this.previewRate = '1'; return; }
+    if (this.editingEntry?.bookFx !== undefined) { this.previewRate = this.editingEntry.bookFx.rate; return; }
+    this.previewRateLoading = true;
+    try {
+      const quote = await OfficialExchangeRates.quote(from, to, date);
+      if (this.active && request === this.previewRateRequest && from === this.currencyCode && to === this.bookCurrencyId && date === this.fxDate()) {
+        this.previewRate = quote.rate;
+      }
+    } catch (_) {
+      if (this.active && request === this.previewRateRequest) { this.previewRateUnavailable = true; }
+    } finally { if (this.active && request === this.previewRateRequest) { this.previewRateLoading = false; } }
+  }
+
+  private bookAmountPreview(): string {
+    if (this.currencyCode === this.bookCurrencyId) { return ''; }
+    try {
+      const amount = this.isTransfer ? this.transferOutgoing() :
+        ExpenseAmountInput.paidAmount(this.expression, this.effectiveDiscount(), this.amountCurrency());
+      if (amount.minor !== BigInt(0) && this.currencyCode !== this.bookCurrencyId) {
+        if (this.previewRateLoading) { return '≈ 换算中…'; }
+        if (this.previewRateUnavailable || !this.previewRate) { return '≈ 暂不可用'; }
+      }
+      const target = currencyUnit(this.bookCurrencyId);
+      const value = amount.minor === BigInt(0) ? Money.fromMinor(BigInt(0), target) :
+        this.converted(amount, this.bookCurrencyId, this.previewRate);
+      return '≈ ' + currencyDefinition(this.bookCurrencyId).symbol + value.toDecimalString() + ' ' + this.bookCurrencyId;
+    } catch (_) { return '≈ —'; }
+  }
+
   private fxDate(): string { return this.localDate(); }
   private settlementCode(): string {
     const id = this.isTransfer ? this.toAccountId : this.accountId;
@@ -737,12 +781,12 @@ export struct ExpenseEditor {
   /** Resolve new records through global currency settings; keep historical conversion snapshots when editing. */
   private async prepareSaveRates(): Promise<void> {
     const source = this.currencyCode; const target = this.settlementCode(); const date = this.fxDate();
-    if (source === 'CNY' && target === source) { return; }
-    if (this.editingEntry !== undefined && (source === 'CNY' || this.bookRate.length > 0) &&
+    if (source === this.bookCurrencyId && target === source) { return; }
+    if (this.editingEntry !== undefined && (source === this.bookCurrencyId || this.bookRate.length > 0) &&
       (target === source || this.actualSettlement.length > 0 || this.settlementRate.length > 0)) { return; }
     this.quoteBusy = true;
     try {
-      const book = await OfficialExchangeRates.quote(source, 'CNY', date);
+      const book = await OfficialExchangeRates.quote(source, this.bookCurrencyId, date);
       const settlement = await OfficialExchangeRates.quote(source, target, date);
       if (!this.active || source !== this.currencyCode || target !== this.settlementCode() || date !== this.fxDate()) {
         throw new Error('FX_DRAFT_CHANGED');
@@ -780,10 +824,10 @@ export struct ExpenseEditor {
   private prepaidMode(): boolean { return this.prepaid && !this.isIncome && !this.isTransfer && this.editingEntry === undefined; }
   private prepaidCost(amount: Money): Money {
     const cash = this.settlementAmount(amount);
-    if (cash.currency.code === 'CNY') { return cash; }
-    const book = this.currencyCode === 'CNY' ? '1' : this.bookRate;
+    if (cash.currency.code === this.bookCurrencyId) { return cash; }
+    const book = this.currencyCode === this.bookCurrencyId ? '1' : this.bookRate;
     const rate = cash.currency.code === this.currencyCode ? '1' : this.settlementRate;
-    return new ExchangeRate(cash.currency,currencyUnit('CNY'),crossRate(book,rate)).convert(cash);
+    return new ExchangeRate(cash.currency,currencyUnit(this.bookCurrencyId),crossRate(book,rate)).convert(cash);
   }
   private async savePrepaid(workspace: LedgerWorkspace, command: ExpenseCommand): Promise<void> {
     if (command.accountPaid === undefined || command.accountId === undefined) { throw new Error('ACCOUNT_UNAVAILABLE'); }
@@ -792,7 +836,7 @@ export struct ExpenseEditor {
       id: this.prepaidEventId, projectId: command.id, bookId: command.bookId, expectedRevision: 1, kind: 'fund',
       amount: paid, accountId: command.accountId, cash: command.accountPaid, cashBook: command.bookPaid,
       rateSource: this.actualSettlement ? 'manual' : this.quoteSource, rateDate: this.quoteDate || command.localDate,
-      bookRate: this.currencyCode === 'CNY' ? '1' : this.bookRate, cashRate: this.settlementCode() === this.currencyCode ? '1' : this.settlementRate,
+      bookRate: this.currencyCode === this.bookCurrencyId ? '1' : this.bookRate, cashRate: this.settlementCode() === this.currencyCode ? '1' : this.settlementRate,
       categoryId: this.selectedId, incomeCategoryId: '', spendingNatureId: this.selectedNatureId, includeInBudget: this.includeBudget,
       occurredAtMs: command.occurredAtMs, localDate: command.localDate, offsetMinutes: command.offsetMinutes, note: command.note, attachments: command.attachments,
       entryContext: { categoryId: this.selectedId, categoryName: this.selected()?.name || '', spendingNatureId: this.selectedNatureId,
@@ -866,7 +910,7 @@ export struct ExpenseEditor {
       await this.prepareSaveRates();
       const account = this.accountId.length > 0 ? this.accountId : undefined;
       command = { id: this.saveId, bookId: this.bookId, categoryId: this.isTransfer ? 'transfer' : this.selectedId, gross: gross,
-        discount: reduction, bookPaid: this.prepaidMode() ? this.prepaidCost(paid) : this.converted(paid, 'CNY', this.bookRate),
+        discount: reduction, bookPaid: this.prepaidMode() ? this.prepaidCost(paid) : this.converted(paid, this.bookCurrencyId, this.bookRate),
         bookFx: this.fxQuote(this.bookRate), accountFx: this.fxQuote(this.settlementRate, this.actualSettlement.length > 0),
         accountId: this.isTransfer ? undefined : account,
         accountPaid: this.isTransfer || account === undefined ? undefined : this.settlementAmount(paid),
@@ -895,7 +939,7 @@ export struct ExpenseEditor {
           toAccountId: this.toAccountId, amount: command.gross, purpose: this.transferPurpose,
           received: this.settlementAmount(command.gross), bookAmount: command.bookPaid, bookFx: command.bookFx,
           settlementFx: this.fxQuote(this.settlementRate, this.actualSettlement.length > 0),
-          bookFee: this.converted(ExpenseAmountInput.evaluateDiscount(this.transferFee, this.amountCurrency()), 'CNY', this.bookRate),
+          bookFee: this.converted(ExpenseAmountInput.evaluateDiscount(this.transferFee, this.amountCurrency()), this.bookCurrencyId, this.bookRate),
           fee: ExpenseAmountInput.evaluateDiscount(this.transferFee, this.amountCurrency()),
           coupon: ExpenseAmountInput.evaluateDiscount(this.transferCoupon, this.amountCurrency()), feeInBudget: this.feeBudget, includeInAssets: command.includeInAssets,
           tagIds: this.selectedTagIds, attachments: command.attachments,
@@ -1800,9 +1844,16 @@ export struct ExpenseEditor {
                 })
                 .onWillDelete((): boolean => { this.press('⌫'); return false; })
             }.height(48).width('100%')
-            Text((this.isTransfer ? '实际转出 ' + this.transferOutgoingText() : (this.isIncome ? '收入 ' : '实付 ') + this.paidText()) + ' ' + this.currencyCode).fontSize('12fp').fontFamily('XiaoQiaoDINRegular').id('expense-paid')
-              .width('100%').height(24).maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis }).textAlign(TextAlign.Start)
-              .accessibilityDescription(this.isIncome ? '点击编辑上方收入金额' : '点击编辑上方原金额').onClick(() => { this.focusAmountFromPaid(); })
+            Row({ space: 6 }) {
+              Text((this.isTransfer ? '实际转出 ' + this.transferOutgoingText() : (this.isIncome ? '收入 ' : '实付 ') + this.paidText()) + ' ' + this.currencyCode).fontSize('12fp').fontFamily('XiaoQiaoDINRegular').id('expense-paid')
+                .flexShrink(1).height(24).maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis }).textAlign(TextAlign.Start)
+                .accessibilityDescription(this.isIncome ? '点击编辑上方收入金额' : '点击编辑上方原金额').onClick(() => { this.focusAmountFromPaid(); })
+              if (this.currencyCode !== this.bookCurrencyId) {
+                Text(this.bookAmountPreview()).fontSize('12fp').fontFamily('XiaoQiaoDINRegular')
+                  .fontColor($r('app.color.xq_font_secondary')).flexShrink(1).height(24).maxLines(1)
+                  .textOverflow({ overflow: TextOverflow.Ellipsis }).textAlign(TextAlign.Start).id('expense-book-amount-preview')
+              }
+            }.width('100%').justifyContent(FlexAlign.Start)
             if (this.errorText.length > 0 && (this.errorField === ExpenseErrorField.Amount ||
               (!this.keyboardVisible && this.errorField !== ExpenseErrorField.Category && this.errorField !== ExpenseErrorField.Accounts))) {
               this.errorMessage()

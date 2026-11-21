@@ -83,7 +83,7 @@ export struct LedgerSearchPage {
     if (entry.fx) {
       return sign + currencyDefinition(entry.fx.currencyId).symbol + Money.fromMinorText(entry.fx.paidMinor, currencyUnit(entry.fx.currencyId)).toDecimalString();
     }
-    return sign + '¥' + displayAmount(entry.recoveryKind ? (-BigInt(entry.minor)).toString() : entry.minor);
+    return sign + currencyDefinition(this.workspace?.bookCurrency.id || 'CNY').symbol + displayAmount(entry.recoveryKind ? (-BigInt(entry.minor)).toString() : entry.minor, currencyUnit(this.workspace?.bookCurrency.id || 'CNY'));
   }
   @Builder
   private resultRow(entry: LedgerEntry) {

@@ -59,6 +59,8 @@ class BookCoverTests(unittest.TestCase):
 
     def test_production_book_counts_include_only_effective_transactions(self):
         self.migrate()
+        # Production book queries now require the V11 settings column.
+        for sql in statements('BookSettingsSchema.ets'): self.db.execute(sql)
         helper = schema_tests.SchemaTests()
         helper.db = self.db
         helper.expense(id='count-expense')
@@ -86,6 +88,8 @@ class BookCoverTests(unittest.TestCase):
 
     def test_personal_total_equals_sum_of_book_counts_with_prepayments(self):
         self.migrate()
+        # Production book queries now require the V11 settings column.
+        for sql in statements('BookSettingsSchema.ets'): self.db.execute(sql)
         helper = schema_tests.SchemaTests()
         helper.db = self.db
         helper.expense(id='unified-expense')
