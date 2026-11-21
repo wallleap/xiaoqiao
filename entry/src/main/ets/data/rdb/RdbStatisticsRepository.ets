@@ -8,6 +8,9 @@ interface CategoryMeta {
   parentId: string;
   name: string;
   iconKey: string;
+  frozenRootId?: string;
+  frozenRootName?: string;
+  frozenRootIcon?: string;
 }
 
 interface NatureMeta {
@@ -118,12 +121,12 @@ export class RdbStatisticsRepository {
   private async categories(bookId: string): Promise<Map<string, CategoryMeta>> {
     const values: Map<string, CategoryMeta> = new Map();
     const rows = await this.store.querySql(
-      "SELECT id,COALESCE(parent_id,''),name,COALESCE(icon_key,'other') FROM categories WHERE book_id=?",
+      "SELECT id,COALESCE(parent_id,''),name,COALESCE(icon_key,'other'),COALESCE(frozen_root_id,''),COALESCE(frozen_root_name,''),COALESCE(frozen_root_icon,'') FROM v_historical_categories WHERE book_id=?",
       [bookId]);
     try {
       while (rows.goToNextRow()) {
         values.set(rows.getString(0), { id: rows.getString(0), parentId: rows.getString(1),
-          name: rows.getString(2), iconKey: rows.getString(3) });
+          name: rows.getString(2), iconKey: rows.getString(3), frozenRootId: rows.getString(4), frozenRootName: rows.getString(5), frozenRootIcon: rows.getString(6) });
       }
     } finally { rows.close(); }
     return values;
@@ -196,6 +199,7 @@ export class RdbStatisticsRepository {
 
   private rootCategory(id: string, categories: Map<string, CategoryMeta>): CategoryMeta | undefined {
     let current = categories.get(id);
+    if (current?.frozenRootId) { return { id: current.frozenRootId, parentId: '', name: current.frozenRootName || current.name, iconKey: current.frozenRootIcon || current.iconKey }; }
     const visited: Set<string> = new Set();
     while (current !== undefined && current.parentId.length > 0 && !visited.has(current.id)) {
       visited.add(current.id);

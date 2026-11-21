@@ -450,7 +450,7 @@ struct Index {
   private confirmDatabaseUpgrade(): void {
     if (this.loading) { return; }
     this.getUIContext().getPromptAction().showDialog({ title: '升级本地账本？',
-      message: '先在本机备份，再升级账本币种、月起始日和归档账本删除支持。原账目及余额会保留；升级失败会回滚，并保留升级前备份。',
+      message: '先在本机备份，再升级分类历史快照及分类删除支持。原账目及余额会保留；升级失败会回滚，并保留升级前备份。',
       buttons: [{ text: '取消', color: $r('app.color.xq_font_primary') }, { text: '备份并升级', color: $r('app.color.xq_font_emphasize') }]
     }).then(async (result) => {
       if (result.index !== 1) { return; }
@@ -534,17 +534,23 @@ struct Index {
 
   @Builder
   private categoryManagementPage() {
-    CategoryManagementPage({
-      onRegisterBack: (handler: () => boolean) => { this.categoryBackHandler = handler; },
-      workspace: this.workspace,
-      onCreated: (id: string) => { if (this.showExpense) { this.expenseCreatedOption = 'categories:' + id; } },
-      sheetMaterial: this.materialReady && !this.forceLegacyMaterials ? this.filterMaterials?.menu : undefined,
-      segmentMaterial: this.materialReady && !this.forceLegacyMaterials ? this.filterMaterials?.segment : undefined,
-      onClose: () => {
-        this.showCategories = false;
-        this.loadLedger();
-      }
-    })
+    Stack() {
+      Column() {
+        CategoryManagementPage({
+          onOpenPrepaid: (id: string) => { this.prepaidProjectId = id; this.prepaidInitialAction = ''; this.showPrepaid = true; },
+          onRegisterBack: (handler: () => boolean) => { this.categoryBackHandler = handler; },
+          workspace: this.workspace,
+          onCreated: (id: string) => { if (this.showExpense) { this.expenseCreatedOption = 'categories:' + id; } },
+          sheetMaterial: this.materialReady && !this.forceLegacyMaterials ? this.filterMaterials?.menu : undefined,
+          segmentMaterial: this.materialReady && !this.forceLegacyMaterials ? this.filterMaterials?.segment : undefined,
+          onClose: () => {
+            this.showCategories = false;
+            this.loadLedger();
+          }
+        })
+      }.width('100%').height('100%').visibility(this.showPrepaid ? Visibility.Hidden : Visibility.Visible)
+      if (this.showPrepaid) { this.prepaidPage() }
+    }.width('100%').height('100%')
   }
 
   @Builder
@@ -562,7 +568,7 @@ struct Index {
 
   @Builder
   private prepaidPage() {
-    PrepaidPage({onInitialActionHandled:()=>{this.prepaidInitialAction='';},initialAction:this.prepaidInitialAction,initialProjectId:this.prepaidProjectId,workspace:this.workspace,accounts:this.ledger?.accounts || [],categories:this.ledger?.categories || [],incomeCategories:this.ledger?.incomeCategories || [],spendingNatures:this.ledger?.spendingNatures || [],
+    PrepaidPage({returnToCaller:this.showCategories,onInitialActionHandled:()=>{this.prepaidInitialAction='';},initialAction:this.prepaidInitialAction,initialProjectId:this.prepaidProjectId,workspace:this.workspace,accounts:this.ledger?.accounts || [],categories:this.ledger?.categories || [],incomeCategories:this.ledger?.incomeCategories || [],spendingNatures:this.ledger?.spendingNatures || [],
       sheetMaterial:this.materialReady && !this.forceLegacyMaterials ? this.filterMaterials?.menu : undefined,
       onRegisterBack:(handler:()=>boolean)=>{this.prepaidBackHandler=handler;},
       onBusy:(value:boolean)=>{this.prepaidBusy=value;},

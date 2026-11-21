@@ -40,7 +40,7 @@ import { validateLedgerLocation } from '../../domain/model/LedgerLocation';
 import { MonthlyBudget } from '../../domain/model/MonthlyBudget';
 import { BookAppearance, LedgerBook, ValidatedLedgerBook } from '../../domain/model/LedgerBook';
 import { BudgetNatureLine, SpendingNatureCommand, SpendingNatureProfile, ValidatedSpendingNature, isCustomNatureColor } from '../../domain/model/SpendingNature';
-import { CategoryCommand, CategoryOrderItem, CategoryProfile, ValidatedCategory } from '../../domain/model/CategoryProfile';
+import { CategoryCommand, CategoryOrderItem, CategoryProfile, CategoryPrepaidReference, ValidatedCategory } from '../../domain/model/CategoryProfile';
 import { TagCommand, TagProfile, ValidatedTag } from '../../domain/model/TagProfile';
 import { LedgerDatabase, DEFAULT_BOOK_ID } from './LedgerDatabase';
 import { RdbLedgerRepository } from './RdbLedgerRepository';
@@ -1088,6 +1088,50 @@ export class LedgerWorkspace {
     });
   }
 
+  /** Uses the same raw-event predicate as deletion guards; never hides draft/withdrawn references. */
+  async categoryPrepaidReferences(categoryId: string): Promise<CategoryPrepaidReference[]> {
+    return this.session.read(async (db: relationalStore.RdbStore): Promise<CategoryPrepaidReference[]> => {
+      const bookId = await this.activeBookFromMeta(db);
+      const rows = await db.querySql("SELECT p.id,p.name,COUNT(*) FROM prepaid_events e " +
+        "JOIN prepaid_projects p ON p.id=e.project_id WHERE p.book_id=? AND " +
+        "(json_extract(e.quote_json,'$.entry.categoryId')=? OR e.transaction_id IN " +
+        "(SELECT id FROM transactions WHERE category_id=? AND book_id=?)) " +
+        "GROUP BY p.id,p.name ORDER BY p.updated_at_ms DESC,p.id", [bookId, categoryId, categoryId, bookId]);
+      const values: CategoryPrepaidReference[] = [];
+      try {
+        while (rows.goToNextRow()) {
+          values.push({ projectId: rows.getString(0), projectName: rows.getString(1), eventCount: rows.getLong(2) });
+        }
+      } finally { rows.close(); }
+      return values;
+    });
+  }
+
+  /** Preflight gives stable app errors; writer triggers independently enforce the same deletion rules. */
+  async deleteCategory(id: string, revision: number): Promise<void> {
+    if (!id || !Number.isSafeInteger(revision) || revision < 1) { throw new Error('INVALID_EXPECTED_REVISION'); }
+    await this.session.write(async (db: relationalStore.RdbStore): Promise<void> => {
+      const bookId = await this.activeBookFromMeta(db);
+      // Native RDB errors can omit RAISE messages. Report known reference blockers before issuing DELETE.
+      const blockers = await db.querySql("SELECT EXISTS(SELECT 1 FROM categories child WHERE child.parent_id=c.id)," +
+        "EXISTS(SELECT 1 FROM budget_lines WHERE category_id=c.id)," +
+        "EXISTS(SELECT 1 FROM prepaid_events e JOIN prepaid_projects p ON p.id=e.project_id WHERE p.book_id=c.book_id AND " +
+        "(json_extract(e.quote_json,'$.entry.categoryId')=c.id OR e.transaction_id IN (SELECT id FROM transactions WHERE category_id=c.id)))," +
+        "(c.archived_at_ms IS NULL AND NOT EXISTS(SELECT 1 FROM categories other WHERE other.id<>c.id AND other.book_id=c.book_id AND other.kind=c.kind AND other.deleted_at_ms IS NULL AND other.archived_at_ms IS NULL)) " +
+        "FROM categories c WHERE c.id=? AND c.book_id=? AND c.revision=? AND c.deleted_at_ms IS NULL", [id, bookId, revision]);
+      try {
+        if (!blockers.goToFirstRow()) { throw new Error('CATEGORY_CHANGED'); }
+        if (blockers.getLong(0) === 1) { throw new Error('CATEGORY_HAS_CHILDREN'); }
+        if (blockers.getLong(1) === 1) { throw new Error('CATEGORY_HAS_BUDGET'); }
+        if (blockers.getLong(2) === 1) { throw new Error('CATEGORY_HAS_PREPAID'); }
+        if (blockers.getLong(3) === 1) { throw new Error('LAST_ACTIVE_CATEGORY'); }
+      } finally { blockers.close(); }
+      const changed = await db.delete(new relationalStore.RdbPredicates('categories').equalTo('id', id)
+        .equalTo('book_id', bookId).equalTo('revision', revision).isNull('deleted_at_ms'));
+      if (changed !== 1) { throw new Error('CATEGORY_CHANGED'); }
+    });
+  }
+
   async archiveCategory(id: string, revision: number, archived: boolean): Promise<void> {
     if (!Number.isSafeInteger(revision) || revision < 1 || revision >= Number.MAX_SAFE_INTEGER) { throw new Error('INVALID_EXPECTED_REVISION'); }
     await this.session.write(async (db: relationalStore.RdbStore): Promise<void> => {
@@ -1278,7 +1322,7 @@ export class LedgerWorkspace {
       this.activeBookId = await this.activeBookFromMeta(db);
       const linked = await db.querySql('SELECT transaction_id FROM v_expense_recoveries WHERE id=? AND book_id=?', [id, this.activeBookId]);
       try { if (linked.goToFirstRow()) { id = linked.getString(0); } } finally { linked.close(); }
-      const rows = await db.querySql("SELECT t.id,t.book_id,b.name,t.kind,t.revision,COALESCE(t.category_id,''),COALESCE(c.name,'转账'),COALESCE(c.icon_key,'other'),COALESCE(m.account_id,d.from_account_id,''),COALESCE(a.name,''),t.currency_id,u.code,u.symbol,u.minor_unit,CAST(t.gross_minor AS TEXT),CAST(t.discount_minor AS TEXT),CAST(t.paid_minor AS TEXT),CAST(COALESCE(t.book_minor,t.paid_minor) AS TEXT),t.include_in_budget,t.include_in_assets,t.balance_mode,t.occurred_at_ms,t.occurred_local_date,t.occurred_timezone,t.occurred_offset_minutes,t.note,t.book_currency_id,COALESCE(m.currency_id,t.currency_id),(SELECT COUNT(*) FROM fx_snapshots WHERE transaction_id=t.id),COALESCE(mi.account_id,''),COALESCE(ai.name,''),COALESCE(mi.currency_id,t.currency_id),t.group_id,COALESCE(d.purpose,'transfer'),CAST(COALESCE(d.out_minor,t.paid_minor) AS TEXT),CAST(COALESCE(d.in_minor,t.paid_minor) AS TEXT),CAST(COALESCE(d.fee_minor,0) AS TEXT),CAST(COALESCE(d.coupon_minor,0) AS TEXT),COALESCE(d.fee_in_expense,1),COALESCE(d.fee_in_budget,1),COALESCE(a.kind,'asset'),COALESCE(ai.kind,'asset'),COALESCE(nt.spending_nature_id,''),COALESCE(n.name,''),COALESCE(n.custom_color,n.color_token,'') FROM v_posted_transactions t JOIN transactions nt ON nt.id=t.id JOIN books b ON b.id=t.book_id JOIN currencies u ON u.id=t.currency_id LEFT JOIN categories c ON c.id=t.category_id LEFT JOIN spending_natures n ON n.id=nt.spending_nature_id LEFT JOIN v_transfer_details d ON d.transaction_id=t.id LEFT JOIN account_movements m ON m.transaction_id=t.id AND m.leg<>'transfer_in' LEFT JOIN accounts a ON a.id=COALESCE(m.account_id,d.from_account_id) LEFT JOIN account_movements mi ON mi.transaction_id=t.id AND mi.leg='transfer_in' LEFT JOIN accounts ai ON ai.id=mi.account_id WHERE t.id=? AND t.book_id=?",
+      const rows = await db.querySql("SELECT t.id,t.book_id,b.name,t.kind,t.revision,COALESCE(t.category_id,''),COALESCE(c.name,'转账'),COALESCE(c.icon_key,'other'),COALESCE(m.account_id,d.from_account_id,''),COALESCE(a.name,''),t.currency_id,u.code,u.symbol,u.minor_unit,CAST(t.gross_minor AS TEXT),CAST(t.discount_minor AS TEXT),CAST(t.paid_minor AS TEXT),CAST(COALESCE(t.book_minor,t.paid_minor) AS TEXT),t.include_in_budget,t.include_in_assets,t.balance_mode,t.occurred_at_ms,t.occurred_local_date,t.occurred_timezone,t.occurred_offset_minutes,t.note,t.book_currency_id,COALESCE(m.currency_id,t.currency_id),(SELECT COUNT(*) FROM fx_snapshots WHERE transaction_id=t.id),COALESCE(mi.account_id,''),COALESCE(ai.name,''),COALESCE(mi.currency_id,t.currency_id),t.group_id,COALESCE(d.purpose,'transfer'),CAST(COALESCE(d.out_minor,t.paid_minor) AS TEXT),CAST(COALESCE(d.in_minor,t.paid_minor) AS TEXT),CAST(COALESCE(d.fee_minor,0) AS TEXT),CAST(COALESCE(d.coupon_minor,0) AS TEXT),COALESCE(d.fee_in_expense,1),COALESCE(d.fee_in_budget,1),COALESCE(a.kind,'asset'),COALESCE(ai.kind,'asset'),COALESCE(nt.spending_nature_id,''),COALESCE(n.name,''),COALESCE(n.custom_color,n.color_token,'') FROM v_posted_transactions t JOIN transactions nt ON nt.id=t.id JOIN books b ON b.id=t.book_id JOIN currencies u ON u.id=t.currency_id LEFT JOIN v_historical_categories c ON c.id=t.category_id LEFT JOIN spending_natures n ON n.id=nt.spending_nature_id LEFT JOIN v_transfer_details d ON d.transaction_id=t.id LEFT JOIN account_movements m ON m.transaction_id=t.id AND m.leg<>'transfer_in' LEFT JOIN accounts a ON a.id=COALESCE(m.account_id,d.from_account_id) LEFT JOIN account_movements mi ON mi.transaction_id=t.id AND mi.leg='transfer_in' LEFT JOIN accounts ai ON ai.id=mi.account_id WHERE t.id=? AND t.book_id=?",
         [id, this.activeBookId]);
       let detail: EntryDetail;
       try {
@@ -1307,9 +1351,10 @@ export class LedgerWorkspace {
       let categoryId = detail.categoryId;
       while (categoryId.length > 0 && !visited.has(categoryId)) {
         visited.add(categoryId);
-        const category = await db.querySql("SELECT name,COALESCE(parent_id,'') FROM categories WHERE id=? AND book_id=?", [categoryId, detail.bookId]);
+        const category = await db.querySql("SELECT name,COALESCE(parent_id,''),COALESCE(frozen_path,'') FROM v_historical_categories WHERE id=? AND book_id=?", [categoryId, detail.bookId]);
         try {
           if (!category.goToFirstRow()) { break; }
+          if (category.getString(2).length > 0) { path.unshift(category.getString(2)); break; }
           path.unshift(category.getString(0)); categoryId = category.getString(1);
         } finally { category.close(); }
       }
@@ -1486,7 +1531,7 @@ export class LedgerWorkspace {
       let income: bigint = BigInt(0);
       let expense: bigint = BigInt(0);
       let budgetUsed: bigint = BigInt(0);
-      const rows = await db.querySql("SELECT t.id,t.note,CASE WHEN t.kind='transfer' THEN CASE d.purpose WHEN 'credit_repayment' THEN '信用卡还款' WHEN 'loan_repayment' THEN '借款还款' WHEN 'topup' THEN '充值' WHEN 'withdrawal' THEN '提现' ELSE '转账' END ELSE c.name END,COALESCE(c.icon_key,'transfer'),COALESCE(a.name,'不使用账户'),t.occurred_local_date,t.occurred_at_ms,t.occurred_offset_minutes,t.kind,CAST(COALESCE(t.book_minor,t.paid_minor) AS TEXT),t.include_in_budget,CAST(t.gross_minor AS TEXT),CAST(t.discount_minor AS TEXT),COALESCE(ai.name,''),CAST(COALESCE(d.out_minor,t.paid_minor) AS TEXT),CAST(COALESCE(d.fee_minor,0) AS TEXT),CAST(COALESCE(d.coupon_minor,0) AS TEXT),COALESCE(d.purpose,'transfer'),COALESCE(d.fee_in_expense,1),COALESCE(d.fee_in_budget,1),COALESCE(t.merchant_name_snapshot,mc.name,''),COALESCE(t.address_text,''),COALESCE(m.account_id,d.from_account_id,''),COALESCE(t.merchant_id,''),t.latitude_e6,t.longitude_e6,t.reimbursement_status,CAST(COALESCE((SELECT SUM(r.amount_minor) FROM v_expense_recoveries r WHERE r.transaction_id=t.id),0) AS TEXT),COALESCE((SELECT name FROM spending_natures WHERE id=t.spending_nature_id),''),CAST(COALESCE((SELECT SUM(r.amount_minor) FROM v_expense_recoveries r WHERE r.transaction_id=t.id AND r.kind='reimbursement'),0) AS TEXT),CAST(COALESCE((SELECT SUM(r.amount_minor) FROM v_expense_recoveries r WHERE r.transaction_id=t.id AND r.kind='refund'),0) AS TEXT),COALESCE((SELECT COALESCE(custom_color,color_token) FROM spending_natures WHERE id=t.spending_nature_id),''),t.currency_id,CAST(t.paid_minor AS TEXT),CAST(COALESCE(d.book_fee_minor,0) AS TEXT) FROM transactions t LEFT JOIN categories c ON c.id=t.category_id LEFT JOIN v_transfer_details d ON d.transaction_id=t.id LEFT JOIN account_movements m ON m.transaction_id=t.id AND m.leg<>'transfer_in' LEFT JOIN accounts a ON a.id=COALESCE(m.account_id,d.from_account_id) LEFT JOIN account_movements mi ON mi.transaction_id=t.id AND mi.leg='transfer_in' LEFT JOIN accounts ai ON ai.id=mi.account_id LEFT JOIN merchants mc ON mc.id=t.merchant_id WHERE t.book_id=? AND t.posting_state='posted' AND t.deleted_at_ms IS NULL AND (t.import_batch_id IS NULL OR EXISTS(SELECT 1 FROM import_batches b WHERE b.id=t.import_batch_id AND b.status='committed')) AND t.kind IN ('expense','income','transfer') AND t.occurred_local_date>=? AND t.occurred_local_date<? ORDER BY t.occurred_at_ms DESC,t.created_at_ms DESC,t.id DESC", [this.activeBookId, period.start, period.endExclusive]);
+      const rows = await db.querySql("SELECT t.id,t.note,CASE WHEN t.kind='transfer' THEN CASE d.purpose WHEN 'credit_repayment' THEN '信用卡还款' WHEN 'loan_repayment' THEN '借款还款' WHEN 'topup' THEN '充值' WHEN 'withdrawal' THEN '提现' ELSE '转账' END ELSE c.name END,COALESCE(c.icon_key,'transfer'),COALESCE(a.name,'不使用账户'),t.occurred_local_date,t.occurred_at_ms,t.occurred_offset_minutes,t.kind,CAST(COALESCE(t.book_minor,t.paid_minor) AS TEXT),t.include_in_budget,CAST(t.gross_minor AS TEXT),CAST(t.discount_minor AS TEXT),COALESCE(ai.name,''),CAST(COALESCE(d.out_minor,t.paid_minor) AS TEXT),CAST(COALESCE(d.fee_minor,0) AS TEXT),CAST(COALESCE(d.coupon_minor,0) AS TEXT),COALESCE(d.purpose,'transfer'),COALESCE(d.fee_in_expense,1),COALESCE(d.fee_in_budget,1),COALESCE(t.merchant_name_snapshot,mc.name,''),COALESCE(t.address_text,''),COALESCE(m.account_id,d.from_account_id,''),COALESCE(t.merchant_id,''),t.latitude_e6,t.longitude_e6,t.reimbursement_status,CAST(COALESCE((SELECT SUM(r.amount_minor) FROM v_expense_recoveries r WHERE r.transaction_id=t.id),0) AS TEXT),COALESCE((SELECT name FROM spending_natures WHERE id=t.spending_nature_id),''),CAST(COALESCE((SELECT SUM(r.amount_minor) FROM v_expense_recoveries r WHERE r.transaction_id=t.id AND r.kind='reimbursement'),0) AS TEXT),CAST(COALESCE((SELECT SUM(r.amount_minor) FROM v_expense_recoveries r WHERE r.transaction_id=t.id AND r.kind='refund'),0) AS TEXT),COALESCE((SELECT COALESCE(custom_color,color_token) FROM spending_natures WHERE id=t.spending_nature_id),''),t.currency_id,CAST(t.paid_minor AS TEXT),CAST(COALESCE(d.book_fee_minor,0) AS TEXT) FROM transactions t LEFT JOIN v_historical_categories c ON c.id=t.category_id LEFT JOIN v_transfer_details d ON d.transaction_id=t.id LEFT JOIN account_movements m ON m.transaction_id=t.id AND m.leg<>'transfer_in' LEFT JOIN accounts a ON a.id=COALESCE(m.account_id,d.from_account_id) LEFT JOIN account_movements mi ON mi.transaction_id=t.id AND mi.leg='transfer_in' LEFT JOIN accounts ai ON ai.id=mi.account_id LEFT JOIN merchants mc ON mc.id=t.merchant_id WHERE t.book_id=? AND t.posting_state='posted' AND t.deleted_at_ms IS NULL AND (t.import_batch_id IS NULL OR EXISTS(SELECT 1 FROM import_batches b WHERE b.id=t.import_batch_id AND b.status='committed')) AND t.kind IN ('expense','income','transfer') AND t.occurred_local_date>=? AND t.occurred_local_date<? ORDER BY t.occurred_at_ms DESC,t.created_at_ms DESC,t.id DESC", [this.activeBookId, period.start, period.endExclusive]);
       try {
         while (rows.goToNextRow()) {
           const isIncome = rows.getString(8) === 'income';
@@ -1509,7 +1554,7 @@ export class LedgerWorkspace {
               { latitudeE6: rows.getLong(24), longitudeE6: rows.getLong(25) } });
         }
       } finally { rows.close(); }
-      const receipts = await db.querySql("SELECT r.id,r.transaction_id,r.kind,CAST(r.book_minor AS TEXT),COALESCE(a.name,'不使用账户'),COALESCE(r.account_id,''),r.local_date,r.occurred_at_ms,r.offset_minutes,r.note,c.name,COALESCE(c.icon_key,'other'),COALESCE(r.merchant_name_snapshot,''),COALESCE(r.address_text,''),r.latitude_e6,r.longitude_e6 FROM v_expense_recoveries r LEFT JOIN accounts a ON a.id=r.account_id LEFT JOIN categories c ON c.id=r.category_id WHERE r.book_id=? AND r.local_date>=? AND r.local_date<?", [this.activeBookId, period.start, period.endExclusive]);
+      const receipts = await db.querySql("SELECT r.id,r.transaction_id,r.kind,CAST(r.book_minor AS TEXT),COALESCE(a.name,'不使用账户'),COALESCE(r.account_id,''),r.local_date,r.occurred_at_ms,r.offset_minutes,r.note,c.name,COALESCE(c.icon_key,'other'),COALESCE(r.merchant_name_snapshot,''),COALESCE(r.address_text,''),r.latitude_e6,r.longitude_e6 FROM v_expense_recoveries r LEFT JOIN accounts a ON a.id=r.account_id LEFT JOIN v_historical_categories c ON c.id=r.category_id WHERE r.book_id=? AND r.local_date>=? AND r.local_date<?", [this.activeBookId, period.start, period.endExclusive]);
       try {
         while (receipts.goToNextRow()) {
           const value = receipts.getString(3);

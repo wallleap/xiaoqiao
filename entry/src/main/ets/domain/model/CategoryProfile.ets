@@ -37,3 +37,10 @@ export class ValidatedCategory {
       name: name, iconKey: command.iconKey };
   }
 }
+
+/** A project containing raw category references, including draft or withdrawn events. */
+export interface CategoryPrepaidReference {
+  projectId: string;
+  projectName: string;
+  eventCount: number;
+}

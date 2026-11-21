@@ -17,6 +17,7 @@ import { OfficialExchangeRates } from '../data/exchange/OfficialExchangeRates';
 @Component
 export struct PrepaidPage {
   initialProjectId: string = '';
+  returnToCaller: boolean = false;
   initialAction: string = '';
   onInitialActionHandled: () => void = () => {};
   workspace: LedgerWorkspace | undefined = undefined;
@@ -255,7 +256,7 @@ export struct PrepaidPage {
     } catch (error) { this.error=this.errorText(error as Error); }
     finally { if (this.active) { this.setWorking(false); } }
   }
-  private closePage(): void { if (this.showForm) { if (!this.working) { this.showForm=false; } return; } if (!this.working && !this.loading) { if (this.detail!==undefined) { this.request++; this.detail=undefined; this.error=''; this.message=''; } else { this.onClose(); } } }
+  private closePage(): void { if (this.showForm) { if (!this.working) { this.showForm=false; } return; } if (!this.working && !this.loading) { if (this.detail!==undefined && !this.returnToCaller) { this.request++; this.detail=undefined; this.error=''; this.message=''; } else { this.onClose(); } } }
   private sheetOptions(): SheetOptions {
     const options:SheetOptions={height:SheetSize.LARGE,showClose:true,shouldDismiss:(action:SheetDismiss)=>{if (!this.working) {action.dismiss();}},
       onDisappear:()=>{if (!this.working) {this.discardImages();}}};

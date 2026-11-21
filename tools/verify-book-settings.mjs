@@ -86,6 +86,11 @@ import sys,sqlite3
 sys.path.insert(0,sys.argv[1]+'/docs/database')
 from verify_book_settings import BookSettingsTests
 f=BookSettingsTests();f.setUp();f.migrate()
+from verify_account_details import statements
+f.db.execute('BEGIN')
+for schema in ['BookDeletionSchema.ets','CategoryDeletionSchema.ets']:
+ for sql in statements(schema):f.db.execute(sql)
+f.db.execute('COMMIT')
 f.db.execute("UPDATE books SET base_currency_id='USD',month_start_day=25 WHERE id='b2'")
 for i,date in enumerate(['2026-11-24','2026-11-25','2026-12-24','2026-12-25']):
  f.helper.tx(id='t'+str(i),book_id='b2',category_id='b2expense',currency_id='USD',book_currency_id='USD',gross_minor=100*(i+1),paid_minor=100*(i+1),book_minor=100*(i+1),include_in_assets=0,occurred_local_date=date)

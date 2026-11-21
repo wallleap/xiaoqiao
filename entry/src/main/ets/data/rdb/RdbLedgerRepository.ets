@@ -126,8 +126,8 @@ export class RdbLedgerRepository implements LedgerRepository, ExpenseUpdateRepos
         const received = await db.querySql('SELECT CAST(COALESCE(SUM(amount_minor),0) AS TEXT) FROM expense_recoveries WHERE transaction_id=? AND deleted_at_ms IS NULL', [command.id]);
         try { received.goToFirstRow(); if (BigInt(received.getString(0)) > record.paid.minor) { throw new Error('RECOVERY_EXCEEDS_PAID'); } } finally { received.close(); }
       }
-      const category = await db.querySql("SELECT id FROM categories WHERE id=? AND book_id=? AND kind=? AND deleted_at_ms IS NULL AND (archived_at_ms IS NULL OR id=?)",
-        [command.categoryId, command.bookId, kind, oldCategory]);
+      const category = await db.querySql("SELECT id FROM categories WHERE id=? AND book_id=? AND kind=? AND deleted_at_ms IS NULL AND (archived_at_ms IS NULL OR id=?) UNION ALL SELECT id FROM category_history WHERE id=? AND id=? AND book_id=? AND kind=?",
+        [command.categoryId, command.bookId, kind, oldCategory, command.categoryId, oldCategory, command.bookId, kind]);
       try { if (!category.goToFirstRow()) { throw new Error('CATEGORY_UNAVAILABLE'); } }
       finally { category.close(); }
       if (command.spendingNatureId !== undefined) {

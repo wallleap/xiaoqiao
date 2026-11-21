@@ -1,3 +1,4 @@
+import { CategoryDeletionMigration } from './CategoryDeletionMigration';
 import { BookDeletionMigration } from './BookDeletionMigration';
 import { BookSettingsMigration } from './BookSettingsMigration';
 import { RdbCurrencySettings } from './RdbCurrencySettings';
@@ -86,8 +87,8 @@ export class LocalLedgerBackup {
   }
 
   private static async check(db: relationalStore.RdbStore, allowLegacy: boolean = false): Promise<void> {
-    const version = await BookDeletionMigration.status(db);
-    if (version !== 12 && (!allowLegacy || ![2, 3, 4, 5, 6, 7, 8, 9, 10, 11].includes(version))) { throw new Error('BACKUP_VERSION_UNSUPPORTED'); }
+    const version = await CategoryDeletionMigration.status(db);
+    if (version !== 13 && (!allowLegacy || ![2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].includes(version))) { throw new Error('BACKUP_VERSION_UNSUPPORTED'); }
     if (version >= 7) { await RdbCurrencySettings.read(db); }
     const integrity = await db.querySql('PRAGMA integrity_check(1)');
     try {
@@ -114,7 +115,7 @@ export class LocalLedgerBackup {
     const candidate = await relationalStore.getRdbStore(this.context, { name: this.candidateName,
       securityLevel: relationalStore.SecurityLevel.S1 });
     try {
-      let version = await BookDeletionMigration.status(candidate);
+      let version = await CategoryDeletionMigration.status(candidate);
       if (version === 2) {
         await SpendingNatureMigration.upgradeCandidate(candidate);
         version = 3;
@@ -137,7 +138,8 @@ export class LocalLedgerBackup {
       if (version === 9) { await BookCoverMigration.upgradeCandidate(candidate); version = 10; }
       if (version === 10) { await BookSettingsMigration.upgradeCandidate(candidate); version = 11; }
       if (version === 11) { await BookDeletionMigration.upgradeCandidate(candidate); version = 12; }
-      if (version !== 12) { throw new Error('BACKUP_VERSION_UNSUPPORTED'); }
+      if (version === 12) { await CategoryDeletionMigration.upgradeCandidate(candidate); version = 13; }
+      if (version !== 13) { throw new Error('BACKUP_VERSION_UNSUPPORTED'); }
       if (await LocalLedgerBackup.schema(candidate) !== schema) { throw new Error('BACKUP_SCHEMA_MISMATCH'); }
       await LocalLedgerBackup.check(candidate);
       return await LocalLedgerBackup.preview(candidate, (await fs.stat(this.candidate)).size);
@@ -153,7 +155,7 @@ export class LocalLedgerBackup {
         result.push({ path: rows.getString(0), sha256: rows.getString(1), bytes: rows.getLong(2) });
       }
     } finally { rows.close(); }
-    const icons = await db.querySql("SELECT icon_key FROM categories WHERE icon_key LIKE 'resource:%' UNION SELECT icon_key FROM accounts WHERE icon_key LIKE 'resource:%'");
+    const icons = await db.querySql("SELECT icon_key FROM categories WHERE icon_key LIKE 'resource:%' UNION SELECT icon_key FROM accounts WHERE icon_key LIKE 'resource:%' UNION SELECT icon_key FROM category_history_nodes WHERE icon_key LIKE 'resource:%'");
     try {
       while (icons.goToNextRow()) {
         const path = icons.getString(0).slice(9);

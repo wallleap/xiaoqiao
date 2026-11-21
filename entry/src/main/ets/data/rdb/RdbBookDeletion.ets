@@ -77,7 +77,7 @@ export class RdbBookDeletion {
       let pending: boolean = false;
       for (const path of paths) {
         if (!LedgerResources.safe(path) || (!path.startsWith('images/') && !path.startsWith('icons/'))) { pending = true; continue; }
-        const references = await db.querySql("SELECT relative_path FROM attachments WHERE relative_path=? UNION ALL SELECT icon_key FROM categories WHERE icon_key=? UNION ALL SELECT icon_key FROM accounts WHERE icon_key=? LIMIT 1", [path, 'resource:' + path, 'resource:' + path]);
+        const references = await db.querySql("SELECT relative_path FROM attachments WHERE relative_path=? UNION ALL SELECT icon_key FROM categories WHERE icon_key=? UNION ALL SELECT icon_key FROM accounts WHERE icon_key=? UNION ALL SELECT icon_key FROM category_history_nodes WHERE icon_key=? LIMIT 1", [path, 'resource:' + path, 'resource:' + path, 'resource:' + path]);
         let used: boolean;
         try { used = references.rowCount > 0; } finally { references.close(); }
         if (!used) {

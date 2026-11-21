@@ -3,7 +3,7 @@ import { HdsNavigation, HdsNavigationTitleMode, hdsMaterial, DividerShowType, Sc
 import { ChipGroup, ChipSize, ItemRestriction, SegmentButton, SegmentButtonOptions, SegmentButtonTextItem } from '@kit.ArkUI';
 import { util } from '@kit.ArkTS';
 import { LedgerWorkspace } from '../data/rdb/LedgerWorkspace';
-import { CategoryCommand, CategoryOrderItem, CategoryProfile } from '../domain/model/CategoryProfile';
+import { CategoryCommand, CategoryOrderItem, CategoryProfile, CategoryPrepaidReference } from '../domain/model/CategoryProfile';
 import { categoryIcon, categoryIconKey } from '../presentation/ledger/CategoryIcons';
 import { COLORFUL_CATEGORY_ICONS, ColorfulCategoryIcon } from '../presentation/ledger/ColorfulCategoryIcons';
 
@@ -15,8 +15,9 @@ interface CategorySelectOption {
 export struct CategoryManagementPage {
   workspace: LedgerWorkspace | undefined = undefined;
   sheetMaterial: SystemUiMaterial | undefined = undefined;
-  @Prop @Watch('applyArchiveMaterial') segmentMaterial: SystemUiMaterial | undefined = undefined;
+  @Prop @Watch('applyKindMaterial') segmentMaterial: SystemUiMaterial | undefined = undefined;
   onClose: () => void = () => {};
+  onOpenPrepaid: (projectId: string) => void = () => {};
   onCreated: (id: string) => void = () => {};
   onRegisterBack: (handler: () => boolean) => void = () => {};
   @State private values: CategoryProfile[] = [];
@@ -43,16 +44,19 @@ export struct CategoryManagementPage {
   private readonly rowHeight: number = 76;
   private readonly rowGap: number = 12;
   @State private showArchived: boolean = false;
-  @State @Watch('archiveSelectionChanged') private archiveSelection: number[] = [0];
-  @State private archiveOptions: SegmentButtonOptions = SegmentButtonOptions.tab({
-    buttons: [{ text: '使用中' }, { text: '已归档' }] as ItemRestriction<SegmentButtonTextItem>,
+  @State @Watch('kindSelectionChanged') private kindSelection: number[] = [0];
+  @State private kindOptions: SegmentButtonOptions = SegmentButtonOptions.tab({
+    buttons: [{ text: '支出' }, { text: '收入' }] as ItemRestriction<SegmentButtonTextItem>,
     fontSize: '13fp', selectedFontSize: '13fp',
     fontColor: $r('sys.color.font_primary'), selectedFontColor: $r('app.color.xq_font_on_primary'),
     backgroundColor: Color.Transparent, selectedBackgroundColor: $r('app.color.xq_brand')
   });
 
-  private archiveSelectionChanged(): void {
-    this.showArchived = this.archiveSelection[0] === 1;
+  private kindSelectionChanged(): void {
+    this.prepaidReferences = []; this.error = '';
+    this.kind = this.kindSelection[0] === 1 ? 'income' : 'expense';
+    this.parentId = ''; this.browsingParentId = ''; this.showArchived = false;
+    this.scroller.scrollTo({ xOffset: 0, yOffset: 0 });
   }
 
   @State private loading: boolean = true;
@@ -63,12 +67,14 @@ export struct CategoryManagementPage {
   @State private iconKey: string = 'other';
   @State private busy: boolean = false;
   @State private error: string = '';
+  @State private prepaidReferences: CategoryPrepaidReference[] = [];
+  @State private blockedCategoryName: string = '';
   private readonly scroller: Scroller = new Scroller();
 
   aboutToAppear(): void {
     this.active = true;
     this.onRegisterBack((): boolean => this.navigateBack());
-    this.applyArchiveMaterial(); this.load();
+    this.applyKindMaterial(); this.load();
   }
 
   aboutToDisappear(): void {
@@ -94,22 +100,22 @@ export struct CategoryManagementPage {
     this.scroller.scrollTo({ xOffset: 0, yOffset: 0 });
   }
 
-  private applyArchiveMaterial(): void {
+  private applyKindMaterial(): void {
     const options = SegmentButtonOptions.tab({
-      buttons: [{ text: '使用中' }, { text: '已归档' }] as ItemRestriction<SegmentButtonTextItem>,
+      buttons: [{ text: '支出' }, { text: '收入' }] as ItemRestriction<SegmentButtonTextItem>,
       fontSize: '13fp', selectedFontSize: '13fp',
       fontColor: $r('sys.color.font_primary'), selectedFontColor: $r('app.color.xq_font_on_primary'),
       backgroundColor: Color.Transparent, selectedBackgroundColor: $r('app.color.xq_brand')
     });
     if (this.segmentMaterial !== undefined) { options.backgroundSystemMaterial = this.segmentMaterial; }
-    this.archiveOptions = options;
+    this.kindOptions = options;
   }
 
   @Builder
-  private archiveAction() {
+  private kindAction() {
     Row() {
-      SegmentButton({ options: this.archiveOptions, selectedIndexes: $archiveSelection })
-        .width(168).constraintSize({ maxWidth: '100%' }).enabled(!this.interactionLocked()).id('category-toggle-archive')
+      SegmentButton({ options: this.kindOptions, selectedIndexes: $kindSelection })
+        .width(168).constraintSize({ maxWidth: '100%' }).enabled(!this.interactionLocked()).id('category-kind-tabs')
     }.width('100%').justifyContent(FlexAlign.End).padding({ left: 160, right: 16 })
       .hitTestBehavior(HitTestMode.Transparent)
   }
@@ -121,7 +127,7 @@ export struct CategoryManagementPage {
 
   private async load(): Promise<void> {
     if (this.workspace === undefined) { this.loading = false; return; }
-    this.loading = true; this.error = '';
+    this.loading = true; this.error = ''; this.prepaidReferences = [];
     try { this.values = await this.workspace.categories(); }
     catch (_) { this.error = '分类暂时无法读取，请返回后重试'; }
     finally { this.loading = false; }
@@ -309,26 +315,30 @@ export struct CategoryManagementPage {
     } finally { this.busy = false; }
   }
 
-  private archive(item: CategoryProfile): void {
-    if (this.busy || this.workspace === undefined) { return; }
-    const archived = !item.archived;
-    this.getUIContext().getPromptAction().showDialog({
-      title: archived ? '归档这个分类？' : '恢复这个分类？',
-      message: archived ? '历史账目会保留；有子分类时需先归档子分类。' : '恢复后可以再次用于记账和分类预算。',
-      buttons: [{ text: '取消', color: $r('app.color.xq_font_primary') },
-        { text: archived ? '归档' : '恢复', color: $r('app.color.xq_font_emphasize') }]
+  private remove(item: CategoryProfile): void {
+    if (this.interactionLocked() || this.workspace === undefined) { return; }
+    this.busy = true; this.error = ''; this.prepaidReferences = []; this.blockedCategoryName = item.name;
+    this.getUIContext().getPromptAction().showDialog({ title: '删除分类？',
+      message: '删除“' + item.name + '”后不可再用于新账目，历史账单保留原分类名称、图标和统计。此操作不能恢复；有子分类、预算或预付款引用时需先处理。',
+      buttons: [{ text: '取消', color: $r('app.color.xq_font_primary') }, { text: '删除', color: $r('app.color.xq_warning') }]
     }).then(async (result) => {
       if (result.index !== 1 || this.workspace === undefined) { return; }
-      this.busy = true; this.error = '';
-      try {
-        await this.workspace.archiveCategory(item.id, item.revision, archived);
-        this.values = await this.workspace.categories();
-      } catch (error) {
-        const code = (error as Error).message;
-        this.error = code === 'CATEGORY_HAS_CHILDREN' ? '请先归档该分类下的子分类' :
-          code === 'LAST_ACTIVE_CATEGORY' ? '至少保留一个使用中的分类' : '无法更新分类状态，请重试';
-      } finally { this.busy = false; }
-    }).catch(() => {});
+      await this.workspace.deleteCategory(item.id, item.revision);
+      this.values = await this.workspace.categories();
+    }).catch(async (error: Error) => {
+      const code = error.message;
+      this.error = code.includes('CATEGORY_HAS_CHILDREN') ? '请先处理该分类下的子分类' :
+        code.includes('CATEGORY_HAS_BUDGET') ? '该分类仍有关联预算，请先处理预算额度' :
+        code.includes('CATEGORY_HAS_PREPAID') ? '该分类仍被预付款项目或核销记录引用，暂不能删除' :
+        code.includes('LAST_ACTIVE_CATEGORY') ? '同类至少保留一个可用分类' :
+        code.includes('CATEGORY_CHANGED') ? '分类已变化，请刷新后重试' : '删除未确认，请刷新分类检查后再操作';
+      if (code.includes('CATEGORY_HAS_PREPAID') && this.workspace !== undefined) {
+        try {
+          this.prepaidReferences = await this.workspace.categoryPrepaidReferences(item.id);
+          if (this.prepaidReferences.length === 0) { this.error = '关联项目已变化，请重新尝试删除分类'; }
+        } catch (_) { this.error = '该分类仍被预付款项目或核销记录引用，关联项目读取失败，请重试'; }
+      }
+    }).finally(() => { this.busy = false; });
   }
 
   private sheetOptions(): SheetOptions {
@@ -372,7 +382,7 @@ export struct CategoryManagementPage {
           itemStyle: { size: ChipSize.NORMAL, backgroundColor: $r('app.color.xq_app_filter_unselected'),
             selectedBackgroundColor: $r('app.color.xq_brand'), fontColor: $r('app.color.xq_font_secondary'),
             selectedFontColor: $r('app.color.xq_font_on_primary') },
-          onChange: (selected: number[]) => { this.kind = selected[0] === 1 ? 'income' : 'expense'; this.parentId = ''; this.browsingParentId = ''; }
+          onChange: (selected: number[]) => { this.kindSelection = [selected[0] === 1 ? 1 : 0]; this.kind = selected[0] === 1 ? 'income' : 'expense'; this.parentId = ''; this.browsingParentId = ''; }
         }).width(240).id('category-kind')
       }
       TextInput({ text: this.name, placeholder: '分类名称' }).fontSize('16fp').height(48).maxLength(20)
@@ -438,9 +448,9 @@ export struct CategoryManagementPage {
       Button('编辑', { type: ButtonType.Capsule }).height(32).fontSize('12fp').padding({ left: 12, right: 12 })
         .enabled(!this.interactionLocked()).backgroundColor($r('app.color.xq_app_surface_keyboard'))
         .fontColor($r('app.color.xq_font_emphasize')).onClick(() => { this.beginEdit(item); }).id('category-edit-' + item.id)
-      Button(item.archived ? '恢复' : '归档', { type: ButtonType.Capsule }).height(32).fontSize('12fp').padding({ left: 12, right: 12 })
+      Button('删除', { type: ButtonType.Capsule }).height(32).fontSize('12fp').padding({ left: 12, right: 12 })
         .enabled(!this.interactionLocked()).backgroundColor($r('app.color.xq_app_surface_keyboard'))
-        .fontColor($r('app.color.xq_font_secondary')).onClick(() => { this.archive(item); }).id('category-archive-' + item.id)
+        .fontColor($r('app.color.xq_warning')).onClick(() => { this.remove(item); }).id('category-delete-' + item.id)
       Image($r('app.media.lucide_grip_vertical1')).width(20).height(24).flexShrink(0)
         .fillColor($r('app.color.xq_icon_tertiary')).opacity(this.showArchived ? 0.3 : 1)
         .accessibilityText(this.showArchived ? '归档分类不可排序' : '长按拖动排序')
@@ -466,15 +476,6 @@ export struct CategoryManagementPage {
     HdsNavigation() {
       Scroll(this.scroller) {
         Column({ space: 12 }) {
-          Row() {
-            ChipGroup({ items: [{ label: { text: '支出分类' } }, { label: { text: '收入分类' } }],
-              selectedIndexes: [this.kind === 'expense' ? 0 : 1], multiple: false,
-              itemStyle: { size: ChipSize.NORMAL, backgroundColor: $r('app.color.xq_app_filter_unselected'),
-                selectedBackgroundColor: $r('app.color.xq_brand'), fontColor: $r('app.color.xq_font_secondary'),
-                selectedFontColor: $r('app.color.xq_font_on_primary') },
-              onChange: (selected: number[]) => { if (!this.interactionLocked()) { this.kind = selected[0] === 1 ? 'income' : 'expense'; this.browsingParentId = ''; } }
-            }).width(240).enabled(!this.interactionLocked()).id('category-kind-tabs')
-          }.width('100%')
           if (this.browsingParentId.length > 0) {
             Row({ space: 8 }) {
               Button({ type: ButtonType.Circle }) {
@@ -492,7 +493,7 @@ export struct CategoryManagementPage {
           if (this.loading) {
             Text('正在读取分类…').fontSize('14fp').padding(24)
           } else if (this.visibleRows().length === 0) {
-            Text(this.showArchived ? '暂无归档分类' : '暂无分类').fontSize('14fp')
+            Text('暂无分类').fontSize('14fp')
               .fontColor($r('app.color.xq_font_secondary')).padding(24)
           } else {
             Column({ space: this.rowGap }) {
@@ -501,7 +502,28 @@ export struct CategoryManagementPage {
           }
           if (this.error.length > 0) {
             Text(this.error).fontSize('12fp').fontColor($r('app.color.xq_warning')).width('100%')
-            Button('刷新分类').fontSize('14fp').enabled(!this.interactionLocked()).onClick(() => { this.load(); })
+            if (this.prepaidReferences.length > 0) {
+              Column({ space: 12 }) {
+                Text('“' + this.blockedCategoryName + '”的关联项目').fontSize('14fp')
+                  .fontColor($r('app.color.xq_font_primary')).width('100%')
+                ForEach(this.prepaidReferences, (reference: CategoryPrepaidReference) => {
+                  Row({ space: 12 }) {
+                    Column({ space: 4 }) {
+                      Text(reference.projectName).fontSize('15fp').fontColor($r('app.color.xq_font_primary'))
+                      Text(reference.eventCount.toString() + ' 条关联记录（含预设、草稿或已撤销记录）')
+                        .fontSize('12fp').fontColor($r('app.color.xq_font_secondary'))
+                    }.layoutWeight(1).alignItems(HorizontalAlign.Start)
+                    Button('前往查看', { type: ButtonType.Capsule }).height(40).fontSize('14fp').fontWeight(FontWeight.Medium)
+                      .fontColor($r('app.color.xq_font_emphasize')).backgroundColor($r('app.color.xq_app_surface_page'))
+                      .enabled(!this.interactionLocked()).onClick(() => { this.onOpenPrepaid(reference.projectId); })
+                      .id('category-prepaid-' + reference.projectId)
+                  }.width('100%').padding(12).borderRadius(16).backgroundColor($r('app.color.xq_app_surface_card'))
+                }, (reference: CategoryPrepaidReference) => reference.projectId)
+              }.width('100%')
+            }
+            Button('刷新分类', { type: ButtonType.Capsule }).height(40).fontSize('14fp').fontWeight(FontWeight.Medium)
+              .padding({ left: 20, right: 20 }).fontColor($r('app.color.xq_font_on_primary')).backgroundColor($r('app.color.xq_brand'))
+              .enabled(!this.interactionLocked()).onClick(() => { this.load(); }).id('category-refresh')
           }
         }.width('100%').constraintSize({ maxWidth: 640 }).padding({ left: 16, right: 16, top: 12, bottom: 32 })
       }.width('100%').height('100%').align(Alignment.Top).scrollBar(BarState.Off).clip(false)
@@ -510,7 +532,7 @@ export struct CategoryManagementPage {
         .edgeEffect(EdgeEffect.Spring, { alwaysEnabled: true })
     }.mode(NavigationMode.Stack).titleMode(HdsNavigationTitleMode.MINI)
       .titleBar({ enableComponentSafeArea: true,
-        content: { title: { mainTitle: '收支分类' }, stackBuilder: this.archiveAction.bind(this), divider: { showType: DividerShowType.OFF },
+        content: { title: { mainTitle: '收支分类' }, stackBuilder: this.kindAction.bind(this), divider: { showType: DividerShowType.OFF },
           backIcon: { componentId: 'category-close', action: () => { if (!this.navigateBack()) { this.onClose(); } } } },
         style: { originalStyle: { contentStyle: { titleStyle: { mainTitleColor: $r('app.color.xq_font_primary') },
           backIconStyle: { iconColor: $r('app.color.xq_icon_primary') } } },

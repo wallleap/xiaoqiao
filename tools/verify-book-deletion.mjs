@@ -20,6 +20,10 @@ from verify_book_deletion import BookDeletionTests
 f=BookDeletionTests();f.setUp();f.expense('a',amount=500);f.expense('b',book='b2',amount=200)
 f.db.execute("UPDATE books SET archived_at_ms=3 WHERE id='b1'")
 f.db.execute("INSERT INTO book_deletion_files VALUES('images/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.png')")
+from verify_account_details import statements
+f.db.execute('BEGIN')
+for sql in statements('CategoryDeletionSchema.ets'):f.db.execute(sql)
+f.db.execute('COMMIT')
 x=sqlite3.connect(sys.argv[2]);f.db.backup(x);x.close();f.doCleanups()
 `,root,temp+'/ledger.db'],{encoding:'utf8'});assert.equal(fixture.status,0,fixture.stderr);
 const worker=spawn('python3',['-u','-c',`

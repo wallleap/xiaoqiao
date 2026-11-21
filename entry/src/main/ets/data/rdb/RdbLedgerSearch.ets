@@ -21,7 +21,7 @@ const TRANSACTIONS = `SELECT t.id,t.occurred_at_ms AS sort_ms,t.occurred_local_d
  CAST(COALESCE((SELECT SUM(r.amount_minor) FROM v_expense_recoveries r WHERE r.transaction_id=t.id AND r.kind='reimbursement'),0) AS TEXT) AS reimbursed,
  CAST(COALESCE((SELECT SUM(r.amount_minor) FROM v_expense_recoveries r WHERE r.transaction_id=t.id AND r.kind='refund'),0) AS TEXT) AS refunded,
  t.reimbursement_status AS pending,COALESCE(d.to_account_id,'') AS to_account_id
- FROM v_posted_transactions t LEFT JOIN categories c ON c.id=t.category_id LEFT JOIN v_transfer_details d ON d.transaction_id=t.id
+ FROM v_posted_transactions t LEFT JOIN v_historical_categories c ON c.id=t.category_id LEFT JOIN v_transfer_details d ON d.transaction_id=t.id
  LEFT JOIN account_movements m ON m.transaction_id=t.id AND m.leg<>'transfer_in'
  LEFT JOIN accounts a ON a.id=COALESCE(m.account_id,d.from_account_id) LEFT JOIN accounts ai ON ai.id=d.to_account_id
  WHERE t.book_id=? AND t.kind IN ('expense','income','transfer')`;
@@ -32,7 +32,7 @@ const RECOVERIES = `SELECT r.id,r.occurred_at_ms,r.local_date,r.offset_minutes,r
  r.note || ' ' || COALESCE(c.name,'') || ' ' || COALESCE(a.name,'') || CASE WHEN r.kind='refund' THEN ' 退款' ELSE ' 报销到账' END || ' ' ||
  COALESCE((SELECT GROUP_CONCAT(g.name,' ') FROM transaction_tags tt JOIN tags g ON g.id=tt.tag_id WHERE tt.transaction_id=r.transaction_id AND tt.book_id=r.book_id AND g.deleted_at_ms IS NULL),''),
  '0','0','0','none',''
- FROM v_expense_recoveries r LEFT JOIN categories c ON c.id=r.category_id LEFT JOIN accounts a ON a.id=r.account_id WHERE r.book_id=?`;
+ FROM v_expense_recoveries r LEFT JOIN v_historical_categories c ON c.id=r.category_id LEFT JOIN accounts a ON a.id=r.account_id WHERE r.book_id=?`;
 
 const PREPAID = `SELECT e.id,e.occurred_at_ms,e.local_date,e.offset_minutes,'prepaid_' || e.kind,
  p.name || CASE WHEN e.note<>'' THEN ' · ' || e.note ELSE '' END,CASE WHEN e.kind='refund' THEN '预付款退款' ELSE '预付款' END,'other',COALESCE(a.name,'不使用账户'),COALESCE(e.account_id,''),'',
