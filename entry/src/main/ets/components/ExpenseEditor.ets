@@ -144,6 +144,7 @@ export struct ExpenseEditor {
   private categoryMotionVersion: number = 0;
   @State private keyboardVisible: boolean = true;
   @State private noteEditing: boolean = false;
+  @State private focusedFormField: string = '';
   @State private selectedKinds: number[] = [0];
   private readonly scroller: Scroller = new Scroller();
   private readonly amountController: TextInputController = new TextInputController();
@@ -812,13 +813,19 @@ export struct ExpenseEditor {
             .fontColor($r('app.color.xq_font_primary')).maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis }).flexShrink(1)
           if (this.editingEntry === undefined) {
             Image($r('app.media.lucide_chevron_down1')).width(16).height(16).fillColor($r('app.color.xq_icon_secondary')).flexShrink(0)
+          } else {
+            Text('只读').fontSize('12fp').fontColor($r('app.color.xq_font_secondary')).flexShrink(0)
           }
         }.constraintSize({ maxWidth: '78%' }).justifyContent(FlexAlign.End)
       }.width('100%').height(48).enabled(!this.saving && this.editingEntry === undefined && !this.quoteBusy)
         .accessibilityText('选择币种，当前' + this.currencyCode).id('expense-currency-selector')
         .onClick(() => { this.selectCurrency(); })
         .bindSheet($$this.showCurrencyPicker, this.currencyPicker(), this.currencySheetOptions())
-    }.width('100%').padding(16).borderRadius(20).backgroundColor($r('app.color.xq_app_surface_card'))
+      if (this.editingEntry !== undefined) {
+        Text('历史账目的币种已锁定，保留原始金额及折算记录。').fontSize('12fp')
+          .fontColor($r('app.color.xq_font_secondary')).width('100%').id('expense-currency-readonly-reason')
+      }
+    }.width('100%').padding({ left: 16, right: 16, top: 12, bottom: 12 }).borderRadius(20).backgroundColor($r('app.color.xq_app_surface_card'))
   }
 
   private prepaidMode(): boolean { return this.prepaid && !this.isIncome && !this.isTransfer && this.editingEntry === undefined; }
@@ -853,27 +860,51 @@ export struct ExpenseEditor {
   @Builder
   private prepaidMarker() {
     if (!this.isIncome && !this.isTransfer && this.editingEntry === undefined) {
-      Column({space:8}) {
+      Column({ space: 12 }) {
         Row() {
-          Text('预付款／待核销').fontSize('14fp').fontColor($r('app.color.xq_font_primary')).layoutWeight(1)
-          Toggle({type:ToggleType.Switch,isOn:this.prepaid}).selectedColor($r('app.color.xq_brand')).enabled(!this.saving&&!this.saved&&!this.conflicted)
-            .onChange((value:boolean)=>{this.prepaid=value;if (value) {this.reimbursementPending=false;}this.errorText='';}).id('expense-prepaid')
+          Text('预付款').fontSize('14fp').fontWeight(FontWeight.Regular).fontColor($r('app.color.xq_font_secondary')).layoutWeight(1)
+          Toggle({ type: ToggleType.Switch, isOn: this.prepaid }).selectedColor($r('app.color.xq_brand'))
+            .enabled(!this.saving && !this.saved && !this.conflicted)
+            .onChange((value: boolean) => {
+              if (value === this.prepaid) { return; }
+              if (!value && this.focusedFormField === 'prepaidName') { this.getUIContext().getFocusController().clearFocus(); }
+              this.getUIContext().animateTo({ duration: 220, curve: Curve.EaseInOut }, () => {
+                this.prepaid = value;
+                if (value) { this.reimbursementPending = false; }
+                this.errorText = '';
+              });
+            }).id('expense-prepaid')
         }.width('100%')
         if (this.prepaidMode()) {
-          TextInput({text:this.prepaidName,placeholder:'预付项目名称（选填）'}).fontSize('14fp').maxLength(40).backgroundColor($r('app.color.xq_app_surface_page')).borderRadius(12)
-            .enabled(!this.saving&&!this.saved&&!this.conflicted).onChange((value:string)=>{this.prepaidName=value;}).onFocus(()=>{this.keyboardVisible=false;})
-          Text('本次只付款并保留预付余额，核销时才计支出和预算；下方分类为核销预设。到期日可在项目中设置。')
-            .fontSize('12fp').fontColor($r('app.color.xq_font_secondary')).width('100%')
+          Column({ space: 12 }) {
+            Text('本次付款保留为预付余额，核销时再计入支出。').fontSize('12fp')
+              .fontColor($r('app.color.xq_font_secondary')).width('100%')
+            Column({ space: 8 }) {
+              Text('项目名称（选填）').fontSize('14fp').fontWeight(FontWeight.Regular)
+                .fontColor($r('app.color.xq_font_secondary')).width('100%')
+              TextInput({ text: this.prepaidName, placeholder: '例如：餐费充值、课程预付' })
+                .fontSize('14fp').fontWeight(FontWeight.Regular).height(48).width('100%').maxLength(40)
+                .fontColor($r('app.color.xq_font_primary')).placeholderColor($r('app.color.xq_font_secondary'))
+                .backgroundColor($r('app.color.xq_app_surface_page')).borderRadius(12).padding({ left: 14, right: 14 })
+                .border({ width: 1, color: this.focusedFormField === 'prepaidName' ? $r('app.color.xq_brand') : $r('app.color.xq_exchange_form_border') })
+                .caretColor($r('app.color.xq_brand')).enabled(!this.saving && !this.saved && !this.conflicted)
+                .onChange((value: string) => { this.prepaidName = value; })
+                .onFocus(() => { this.keyboardVisible = false; this.focusedFormField = 'prepaidName'; })
+                .onBlur(() => { if (this.focusedFormField === 'prepaidName') { this.focusedFormField = ''; } })
+                .onEditChange((editing: boolean) => { this.noteEditing = editing; }).id('expense-prepaid-name')
+            }.width('100%').alignItems(HorizontalAlign.Start)
+          }.width('100%').alignItems(HorizontalAlign.Start)
+            .transition(TransitionEffect.OPACITY.combine(TransitionEffect.translate({ y: -6 })))
         }
-      }.width('100%')
+      }.width('100%').alignItems(HorizontalAlign.Start)
     }
   }
   @Builder
   private prepaidRules() {
     Column({space:12}) {
-      Row() { Text('核销时计入预算').fontSize('14fp').layoutWeight(1); Toggle({type:ToggleType.Switch,isOn:this.includeBudget}).selectedColor($r('app.color.xq_brand')).enabled(!this.saving).onChange((value:boolean)=>{this.includeBudget=value;}) }.width('100%')
-      Row() { Text('预付款计入净资产').fontSize('14fp').layoutWeight(1); Toggle({type:ToggleType.Switch,isOn:this.includeAssets}).selectedColor($r('app.color.xq_brand')).enabled(!this.saving).onChange((value:boolean)=>{this.includeAssets=value;}) }.width('100%')
-    }.padding(16).width('100%').borderRadius(16).backgroundColor($r('app.color.xq_app_surface_card'))
+      Row() { Text('核销时计入预算').fontSize('14fp').fontWeight(FontWeight.Regular).fontColor($r('app.color.xq_font_secondary')).layoutWeight(1); Toggle({type:ToggleType.Switch,isOn:this.includeBudget}).selectedColor($r('app.color.xq_brand')).enabled(!this.saving).onChange((value:boolean)=>{this.includeBudget=value;}) }.width('100%')
+      Row() { Text('预付款计入净资产').fontSize('14fp').fontWeight(FontWeight.Regular).fontColor($r('app.color.xq_font_secondary')).layoutWeight(1); Toggle({type:ToggleType.Switch,isOn:this.includeAssets}).selectedColor($r('app.color.xq_brand')).enabled(!this.saving).onChange((value:boolean)=>{this.includeAssets=value;}) }.width('100%')
+    }.padding({ left: 16, right: 16, top: 12, bottom: 12 }).width('100%').borderRadius(16).backgroundColor($r('app.color.xq_app_surface_card'))
   }
 
   private async save(): Promise<void> {
@@ -988,8 +1019,9 @@ export struct ExpenseEditor {
       Stack({ alignContent: Alignment.TopEnd }) {
         CategoryIconBadge({ icon: categoryIcon(item.iconKey, this.isIncome), badgeSize: compact ? 36 : 44, glyphSize: compact ? 26 : 30 })
         if (this.activeCategories().some((child: ExpenseCategory) => child.parentId === item.id)) {
-          Image($r('app.media.lucide_ellipsis1')).width(14).height(14)
-            .fillColor($r('app.color.xq_icon_emphasize')).offset({ x: 8, y: -4 })
+          Image($r('app.media.lucide_ellipsis1')).width(20).height(14).padding({ left: 3, right: 3 })
+            .fillColor($r('app.color.xq_icon_emphasize')).backgroundColor($r('app.color.xq_app_surface_keyboard'))
+            .borderRadius(7).offset({ x: 0, y: -4 }).hitTestBehavior(HitTestMode.None)
         }
       }
       if (!compact) {
@@ -1007,8 +1039,8 @@ export struct ExpenseEditor {
     Stack({ alignContent: Alignment.TopEnd }) {
       Column() {
         Row() {
-          Text(this.prepaidMode() ? '核销分类（预设）' : this.isIncome ? '收入分类' : '支出分类').fontSize('14fp').fontWeight(FontWeight.Medium)
-            .fontColor($r('app.color.xq_font_primary')).margin({ left: 8 }).id('expense-category-title')
+          Text(this.prepaidMode() ? '核销分类（预设）' : this.isIncome ? '收入分类' : '支出分类').fontSize('14fp').fontWeight(FontWeight.Regular)
+            .fontColor($r('app.color.xq_font_secondary')).margin({ left: 8 }).id('expense-category-title')
           Blank()
           this.managementButton('管理分类', 'categories', 'expense-manage-categories')
         }.height(28).width('100%')
@@ -1032,7 +1064,7 @@ export struct ExpenseEditor {
         if (this.errorText.length > 0 && this.errorField === ExpenseErrorField.Category) {
           Row() { this.errorMessage() }.width('100%').padding({ left: 8, right: 8, bottom: 8 })
         }
-      }.padding({ top: 12, left: 8, right: 8, bottom: 4 }).width('100%')
+      }.padding({ top: 12, left: 8, right: 8, bottom: 12 }).width('100%')
         .backgroundColor($r('app.color.xq_app_surface_card')).borderRadius(20)
       Polygon().points([[0, 10], [12, 0], [24, 10]]).width(24).height(10)
         .fill($r('app.color.xq_app_surface_card')).margin({ right: 16 }).offset({ y: -8 })
@@ -1063,7 +1095,7 @@ export struct ExpenseEditor {
   private spendingNatureSelector() {
     Column({ space: 12 }) {
       Row({ space: 6 }) {
-        Text('预算分类').fontSize('14fp').fontWeight(FontWeight.Medium).fontColor($r('app.color.xq_font_primary'))
+        Text('预算分类').fontSize('14fp').fontWeight(FontWeight.Regular).fontColor($r('app.color.xq_font_secondary'))
         Image($r('app.media.lucide_info1')).width(16).height(16).fillColor($r('app.color.xq_icon_tertiary'))
           .accessibilityText('查看预算分类说明')
           .onClick(() => { this.activeHelp = this.activeHelp === 'nature' ? '' : 'nature'; })
@@ -1096,7 +1128,7 @@ export struct ExpenseEditor {
             .onClick(() => { this.selectedNatureId = nature.id; })
         }, (nature: SpendingNatureChoice) => nature.id)
       }.width('100%')
-    }.padding(16).width('100%').borderRadius(16).backgroundColor($r('app.color.xq_app_surface_card'))
+    }.padding({ left: 16, right: 16, top: 12, bottom: 12 }).width('100%').borderRadius(16).backgroundColor($r('app.color.xq_app_surface_card'))
       .id('expense-spending-nature')
   }
 
@@ -1232,7 +1264,7 @@ export struct ExpenseEditor {
           onStateChange: (event) => { if (!event.isVisible && this.activeHelp === 'assets') { this.activeHelp = ''; } }
         })
       this.ruleSelect(false)
-    }.width('100%').height(52).padding({ left: 16, right: 16 })
+    }.width('100%').constraintSize({ minHeight: 52 }).padding({ left: 16, right: 16, top: 12, bottom: 12 })
       .backgroundColor($r('app.color.xq_app_surface_card')).borderRadius(16)
   }
 
@@ -1306,8 +1338,7 @@ export struct ExpenseEditor {
   private attachmentSection() {
     Column({ space: 12 }) {
       Row() {
-        Text('图片附件').fontSize('14fp').fontWeight(FontWeight.Medium)
-          .fontColor($r('app.color.xq_font_primary'))
+        Text('图片附件').fontSize('14fp').fontWeight(FontWeight.Regular).fontColor($r('app.color.xq_font_secondary'))
         Blank()
         Text(`${this.attachments.length} / 9`).fontSize('12fp').fontWeight(FontWeight.Regular)
           .fontColor($r('app.color.xq_font_tertiary'))
@@ -1350,18 +1381,25 @@ export struct ExpenseEditor {
   @Builder
   private supplementaryCard() {
     Column({ space: 12 }) {
-      TextArea({ text: this.note, placeholder: '点击输入备注' }).id('expense-note').height(112).width('100%')
-        .fontSize('14fp').fontWeight(FontWeight.Regular).fontColor($r('app.color.xq_font_primary'))
-        .placeholderFont({ size: '14fp', weight: FontWeight.Regular })
-        .placeholderColor($r('app.color.xq_font_secondary'))
-        .backgroundColor($r('app.color.xq_app_surface_page')).borderRadius(8).padding(12).maxLength(500)
-        .onFocus(() => { this.keyboardVisible = false; })
-        .onEditChange((editing: boolean) => { this.noteEditing = editing; })
-        .onChange((value: string) => { this.note = value; })
+      Column({ space: 8 }) {
+        Text('备注（选填）').fontSize('14fp').fontWeight(FontWeight.Regular).fontColor($r('app.color.xq_font_secondary'))
+          .width('100%')
+        TextArea({ text: this.note, placeholder: '点击输入备注' }).id('expense-note').height(112).width('100%')
+          .fontSize('14fp').fontWeight(FontWeight.Regular).fontColor($r('app.color.xq_font_primary'))
+          .placeholderFont({ size: '14fp', weight: FontWeight.Regular })
+          .placeholderColor($r('app.color.xq_font_secondary'))
+          .backgroundColor($r('app.color.xq_app_surface_page')).borderRadius(12).padding(12)
+          .border({ width: 1, color: this.focusedFormField === 'note' ? $r('app.color.xq_brand') : $r('app.color.xq_exchange_form_border') })
+          .caretColor($r('app.color.xq_brand')).enabled(!this.saving && !this.saved && !this.conflicted).maxLength(500)
+          .onFocus(() => { this.keyboardVisible = false; this.focusedFormField = 'note'; })
+          .onBlur(() => { if (this.focusedFormField === 'note') { this.focusedFormField = ''; } })
+          .onEditChange((editing: boolean) => { this.noteEditing = editing; })
+          .onChange((value: string) => { this.note = value; })
+      }.width('100%').alignItems(HorizontalAlign.Start)
       this.tagSelector()
       Divider().color($r('app.color.xq_comp_background_tertiary'))
       this.attachmentSection()
-    }.padding(16).width('100%').borderRadius(16).backgroundColor($r('app.color.xq_app_surface_card'))
+    }.padding({ left: 16, right: 16, top: 12, bottom: 12 }).width('100%').borderRadius(16).backgroundColor($r('app.color.xq_app_surface_card'))
       .id('expense-supplementary-card')
   }
 
@@ -1375,7 +1413,7 @@ export struct ExpenseEditor {
           Blank()
           Text(transferPurposeLabel(this.transferPurpose)).fontSize('14fp').fontColor($r('app.color.xq_font_primary'))
           Image($r('app.media.lucide_chevron_down1')).width(14).height(14).fillColor($r('app.color.xq_icon_tertiary'))
-        }.height(48).padding({ left: 16, right: 16 }).width('100%').borderRadius(16)
+        }.constraintSize({ minHeight: 72 }).padding({ left: 16, right: 16, top: 12, bottom: 12 }).width('100%').borderRadius(16)
           .backgroundColor($r('app.color.xq_app_surface_card')).id('transfer-purpose')
           .onClick(() => { this.optionKind = 3; this.showOptions = true; })
         Column({ space: 4 }) {
@@ -1395,7 +1433,7 @@ export struct ExpenseEditor {
             this.transferAccountSide(false)
           }.width('100%')
           if (this.errorText.length > 0 && this.errorField === ExpenseErrorField.Accounts) { this.errorMessage() }
-        }.padding(16).width('100%').borderRadius(16).backgroundColor($r('app.color.xq_app_surface_card'))
+        }.padding({ left: 16, right: 16, top: 12, bottom: 12 }).width('100%').borderRadius(16).backgroundColor($r('app.color.xq_app_surface_card'))
           .id('transfer-accounts-card')
         Row() {
           Text(this.isRepayment() ? '本金与还款优惠不计收支' : '本金不计入收支').fontSize('12fp').fontColor($r('app.color.xq_font_secondary'))
@@ -1444,12 +1482,16 @@ export struct ExpenseEditor {
             .fontWeight(FontWeight.Regular).fontColor($r('app.color.xq_font_primary'))
             .placeholderFont({ size: '14fp', weight: FontWeight.Regular })
             .placeholderColor($r('app.color.xq_font_secondary'))
-            .backgroundColor(Color.Transparent).padding(0)
-            .onFocus(() => { this.keyboardVisible = false; })
+            .backgroundColor($r('app.color.xq_app_surface_page')).padding({ left: 14, right: 14 }).borderRadius(12)
+            .border({ width: 1, color: this.focusedFormField === 'merchant' ? $r('app.color.xq_brand') : $r('app.color.xq_exchange_form_border') })
+            .caretColor($r('app.color.xq_brand'))
+            .enabled(!this.saving && !this.saved && !this.conflicted)
+            .onFocus(() => { this.keyboardVisible = false; this.focusedFormField = 'merchant'; })
+            .onBlur(() => { if (this.focusedFormField === 'merchant') { this.focusedFormField = ''; } })
             .onEditChange((editing: boolean) => { this.noteEditing = editing; })
             .onChange((value: string) => { this.merchantName = value; })
             .onSubmit(() => { this.focusAmountAfterFrame(); })
-        }.width('100%')
+        }.width('100%').padding({ top: 8, bottom: 8 })
         Divider().color($r('app.color.xq_comp_background_tertiary'))
         Row({ space: 12 }) {
           Text('地址').fontSize('14fp').fontColor($r('app.color.xq_font_secondary'))
@@ -1458,18 +1500,22 @@ export struct ExpenseEditor {
             .fontWeight(FontWeight.Regular).fontColor($r('app.color.xq_font_primary'))
             .placeholderFont({ size: '14fp', weight: FontWeight.Regular })
             .placeholderColor($r('app.color.xq_font_secondary'))
-            .backgroundColor(Color.Transparent).padding(0)
-            .onFocus(() => { this.keyboardVisible = false; })
+            .backgroundColor($r('app.color.xq_app_surface_page')).padding({ left: 14, right: 14 }).borderRadius(12)
+            .border({ width: 1, color: this.focusedFormField === 'address' ? $r('app.color.xq_brand') : $r('app.color.xq_exchange_form_border') })
+            .caretColor($r('app.color.xq_brand'))
+            .enabled(!this.saving && !this.saved && !this.conflicted)
+            .onFocus(() => { this.keyboardVisible = false; this.focusedFormField = 'address'; })
+            .onBlur(() => { if (this.focusedFormField === 'address') { this.focusedFormField = ''; } })
             .onEditChange((editing: boolean) => { this.noteEditing = editing; })
             .onChange((value: string) => { this.changeAddress(value); })
             .onSubmit(() => { this.focusAmountAfterFrame(); })
           Button(this.mapBusy ? '打开中' : '地图选点', { type: ButtonType.Capsule })
-            .fontSize('14fp').fontWeight(FontWeight.Medium).height(32).padding({ left: 10, right: 10 })
+            .height(28).fontSize('12fp').fontWeight(FontWeight.Medium).padding({ left: 10, right: 10 })
             .fontColor($r('app.color.xq_font_emphasize')).backgroundColor(Color.Transparent)
             .enabled(!this.mapBusy && !this.attachmentBusy && !this.saving && !this.saved && !this.conflicted)
             .id('expense-map-location').onClick(() => { this.chooseMapLocation(); })
-        }.width('100%')
-      }.padding({ left: 16, right: 16 }).width('100%').borderRadius(16).backgroundColor($r('app.color.xq_app_surface_card'))
+        }.width('100%').padding({ top: 8, bottom: 8 })
+      }.padding({ left: 16, right: 16, top: 12, bottom: 12 }).width('100%').borderRadius(16).backgroundColor($r('app.color.xq_app_surface_card'))
       if (!this.isIncome && !this.isTransfer) { this.spendingNatureSelector() }
       if (!this.isIncome && !this.isTransfer) {
         Column({ space: 12 }) {
@@ -1478,7 +1524,7 @@ export struct ExpenseEditor {
             Divider().color($r('app.color.xq_app_surface_page'))
           }
           Row() {
-            Text('待报销').fontSize('14fp').fontWeight(FontWeight.Regular).fontColor($r('app.color.xq_font_primary'))
+            Text('待报销').fontSize('14fp').fontWeight(FontWeight.Regular).fontColor($r('app.color.xq_font_secondary'))
             Blank()
             Toggle({ type: ToggleType.Switch, isOn: this.reimbursementPending })
               .selectedColor($r('app.color.xq_brand'))
@@ -1490,15 +1536,15 @@ export struct ExpenseEditor {
               })
               .id('expense-reimbursement-pending')
           }.width('100%')
-        }.padding(16).width('100%').borderRadius(16).backgroundColor($r('app.color.xq_app_surface_card'))
+        }.padding({ left: 16, right: 16, top: 12, bottom: 12 }).width('100%').borderRadius(16).backgroundColor($r('app.color.xq_app_surface_card'))
       }
       if (this.isTransfer) {
         Row() {
-          Text('手续费计入预算').fontSize('14fp').fontColor($r('app.color.xq_font_primary'))
+          Text('手续费计入预算').fontSize('14fp').fontWeight(FontWeight.Regular).fontColor($r('app.color.xq_font_secondary'))
           Blank()
           Toggle({ type: ToggleType.Switch, isOn: this.feeBudget }).selectedColor($r('app.color.xq_brand'))
             .onChange((value: boolean) => { this.feeBudget = value; }).id('transfer-fee-budget')
-        }.padding(16).width('100%').borderRadius(16).backgroundColor($r('app.color.xq_app_surface_card'))
+        }.padding({ left: 16, right: 16, top: 12, bottom: 12 }).width('100%').borderRadius(16).backgroundColor($r('app.color.xq_app_surface_card'))
       }
       if (this.prepaidMode()) { this.prepaidRules() } else { this.rules() }
       this.supplementaryCard()
@@ -1862,7 +1908,7 @@ export struct ExpenseEditor {
           if (this.isTransfer) {
             CategoryIconBadge({ icon: $r('app.media.colorful_icon00372'), badgeSize: 48, glyphSize: 32 })
           } else { CategoryIconBadge({ icon: categoryIcon(this.selected()?.iconKey || (this.isIncome ? 'other' : 'food'), this.isIncome), badgeSize: 48, glyphSize: 32 }) }
-        }.padding(16).width('100%').borderRadius(20).backgroundColor($r('app.color.xq_app_surface_card'))
+        }.padding({ left: 16, right: 16, top: 12, bottom: 12 }).width('100%').borderRadius(20).backgroundColor($r('app.color.xq_app_surface_card'))
           .outlineWidth(2).outlineRadius(20)
           .outlineColor(this.amountFocusHighlight ? $r('app.color.xq_brand') : Color.Transparent)
           .id('expense-amount-card').onClick(() => { this.focusAmount(); })
