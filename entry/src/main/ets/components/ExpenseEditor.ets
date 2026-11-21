@@ -1,7 +1,8 @@
+import { CurrencyFlagBadge } from './CurrencyFlagBadge';
+import { CurrencySwitchAmounts, prepareCurrencySwitch } from '../presentation/ledger/CurrencySwitchDraft';
 import { enabledCurrencies } from '../core/money/CurrencySettings';
 import { CategoryIconBadge } from './CategoryIconBadge';
 import { AccountAvatar } from './AccountAvatar';
-import { MoneyAmountField } from './MoneyAmountField';
 import { PrepaidEventCommand } from '../domain/model/Prepaid';
 import { CurrencyDefinition, currencyUnit, currencyDefinition, crossRate } from '../core/money/Currencies';
 import { ExchangeRate } from '../core/money/ExchangeRate';
@@ -118,6 +119,12 @@ export struct ExpenseEditor {
   @State private errorField: ExpenseErrorField = ExpenseErrorField.Amount;
   @State private showOptions: boolean = false;
   @State private showTagPicker: boolean = false;
+  @State private showCurrencyPicker: boolean = false;
+  @State private currencySearch: string = '';
+  @State private currencyError: string = '';
+  private openingCurrencyPicker: boolean = false;
+  private currencySheetMaterial: SystemUiMaterial | undefined = undefined;
+  private preparingCurrencyMaterial: Promise<void> | undefined = undefined;
   @State private tagSearch: string = '';
   private managementOpening: boolean = false;
   private pendingCreatedOptions: string[] = [];
@@ -182,7 +189,7 @@ export struct ExpenseEditor {
   }
 
   aboutToDisappear(): void {
-    this.active = false; this.quoteVersion++;
+    this.active = false; this.quoteVersion++; this.showCurrencyPicker = false;
     this.mapRequestVersion++; this.mapBusy = false;
     clearTimeout(this.amountFocusTimer);
     this.amountController.stopEditing();
@@ -191,7 +198,7 @@ export struct ExpenseEditor {
   }
 
   private focusAmount(): void {
-    if (!this.active || this.saved || this.managementVisible || this.managementOpening) { return; }
+    if (!this.active || this.saved || this.managementVisible || this.managementOpening || this.showCurrencyPicker || this.openingCurrencyPicker) { return; }
     this.editingDiscount = false; this.transferTarget = 0;
     this.getUIContext().getFocusController().requestFocus('expense-amount');
   }
@@ -626,12 +633,6 @@ export struct ExpenseEditor {
     return this.accounts.find((item: LedgerAccount) => item.id === id)?.currencyId ||
       (id && id === (this.isTransfer ? this.editingEntry?.toAccountId : this.editingEntry?.accountId) ? this.editingEntry?.accountCurrencyId : undefined) || this.currencyCode;
   }
-  private bookAmountText(): string {
-    try {
-      const paid = ExpenseAmountInput.paidAmount(this.expression, this.effectiveDiscount(), this.amountCurrency());
-      return '折合人民币 ¥' + this.converted(paid, 'CNY', this.bookRate).toDecimalString();
-    } catch (_) { return '填写汇率后显示人民币折算金额'; }
-  }
   private fxQuote(rate: string, actual: boolean = false): FxConversion {
     return { rate: rate, date: this.quoteDate || this.fxDate(), source: actual ? 'manual' : this.quoteSource, actual: actual };
   }
@@ -645,41 +646,115 @@ export struct ExpenseEditor {
     if (code !== this.currencyCode && this.actualSettlement.length > 0) { return ExpenseAmountInput.nonnegative(this.actualSettlement, currencyUnit(code)); }
     return this.converted(amount, code, this.settlementRate);
   }
-  private selectCurrency(): void {
-    if (this.saving || this.editingEntry !== undefined || this.quoteBusy) { return; }
-    this.amountController.stopEditing();
-    const choices = enabledCurrencies();
-    this.getUIContext().showTextPickerDialog({ range: choices.map((item: CurrencyDefinition) => item.code + ' · ' + item.name),
-      selectedTextStyle: { color: $r('app.color.xq_font_emphasize') },
-      acceptButtonStyle: { fontColor: $r('app.color.xq_font_emphasize') },
-      cancelButtonStyle: { fontColor: $r('app.color.xq_font_secondary') },
-      selected: Math.max(0, choices.findIndex((item: CurrencyDefinition) => item.code === this.currencyCode)),
-      onAccept: (result: TextPickerResult) => {
-        const index = typeof result.index === 'number' ? result.index : result.index[0];
-        this.currencyCode = choices[index].code;
-        this.expression = '0'; this.discount = '0'; this.transferFee = '0'; this.transferCoupon = '0';
-        this.bookRate = ''; this.settlementRate = ''; this.actualSettlement = ''; this.quoteDate = ''; this.quoteSource = 'manual';
-        this.quoteVersion++;
-        if (this.isTransfer) { this.accountId = ''; }
-      }
-    });
+  private async selectCurrency(): Promise<void> {
+    if (!this.active || this.saving || this.editingEntry !== undefined || this.quoteBusy || this.showCurrencyPicker || this.openingCurrencyPicker) { return; }
+    this.openingCurrencyPicker = true;
+    try {
+      this.amountController.stopEditing();
+      this.getUIContext().getFocusController().clearFocus();
+      this.keyboardVisible = false; this.noteEditing = false;
+      if (this.preparingCurrencyMaterial === undefined) { this.preparingCurrencyMaterial = this.loadCurrencyMaterial(); }
+      await this.preparingCurrencyMaterial;
+      if (!this.active) { return; }
+      this.currencySearch = ''; this.currencyError = ''; this.showCurrencyPicker = true;
+    } finally { this.openingCurrencyPicker = false; }
   }
-  private async loadRates(): Promise<void> {
-    if (this.quoteBusy || this.saving) { return; }
-    this.quoteBusy = true;
-    const version = ++this.quoteVersion;
+  private async loadCurrencyMaterial(): Promise<void> {
+    if (this.sheetMaterial === undefined) { return; }
+    try {
+      const factory = await import('../presentation/exchange/ExchangeSheetMaterial');
+      this.currencySheetMaterial = factory.createExchangeSheetMaterial();
+    } catch (_) { /* A themed fallback is preferable to an unsupported or interactive native material. */ }
+  }
+  private currencyChoices(): CurrencyDefinition[] {
+    const keyword = this.currencySearch.trim().toLowerCase();
+    return enabledCurrencies().filter((item: CurrencyDefinition) => !keyword || (item.code + ' ' + item.name).toLowerCase().includes(keyword));
+  }
+  private applyCurrency(code: string): void {
+    if (!this.active || this.saving || this.editingEntry !== undefined || this.quoteBusy) { return; }
+    if (!enabledCurrencies().some((item: CurrencyDefinition) => item.code === code)) { return; }
+    if (code === this.currencyCode) { this.showCurrencyPicker = false; return; }
+    this.currencyError = '';
+    let draft: CurrencySwitchAmounts;
+    try {
+      draft = prepareCurrencySwitch({ amount: this.expression, discount: this.discount, fee: this.transferFee, coupon: this.transferCoupon },
+        currencyUnit(code), this.isTransfer ? 'transfer' : this.isIncome ? 'income' : 'expense');
+    } catch (error) { this.currencyError = (error as Error).message; return; }
+    this.currencyCode = code; this.expression = draft.amount; this.discount = draft.discount;
+    this.transferFee = draft.fee; this.transferCoupon = draft.coupon;
+    this.bookRate = ''; this.settlementRate = ''; this.actualSettlement = ''; this.quoteDate = ''; this.quoteSource = 'manual';
+    this.quoteVersion++;
+    // A transfer's outgoing account must use the source currency. Keep compatible accounts and the recipient.
+    if (this.isTransfer && this.accountId && this.accounts.find((item: LedgerAccount) => item.id === this.accountId)?.currencyId !== code) {
+      this.accountId = '';
+    }
+    this.showCurrencyPicker = false;
+  }
+  private currencySheetOptions(): SheetOptions {
+    const options: SheetOptions = { height: '75%', detents: ['75%'], dragBar: false, showClose: true,
+      keyboardAvoidMode: SheetKeyboardAvoidMode.TRANSLATE_AND_RESIZE };
+    if (this.currencySheetMaterial !== undefined) { options.systemMaterial = this.currencySheetMaterial; }
+    else { options.backgroundColor = $r('app.color.xq_app_surface_page'); }
+    return options;
+  }
+  @Builder
+  private currencyPicker() {
+    Column({ space: 12 }) {
+      Text('选择币种').fontSize('20fp').fontWeight(FontWeight.Bold).fontColor($r('app.color.xq_font_primary'))
+        .width('100%').constraintSize({ minHeight: 40 }).padding({ right: 48 })
+      Search({ value: this.currencySearch, placeholder: '搜索币种名称或代码' }).height(40)
+        .fontColor($r('app.color.xq_font_primary')).placeholderColor($r('app.color.xq_font_secondary'))
+        .backgroundColor($r('app.color.xq_exchange_form_field_background'))
+        .searchIcon({ src: $r('app.media.lucide_search1'), size: 18, color: $r('app.color.xq_icon_secondary') })
+        .onChange((value: string) => { this.currencySearch = value; }).id('expense-currency-search')
+      if (this.currencyError) { Text(this.currencyError).fontSize('12fp').fontColor($r('app.color.xq_warning')).width('100%').id('expense-currency-error') }
+      if (this.currencyChoices().length === 0) { Text('没有匹配的币种').fontSize('13fp').fontColor($r('app.color.xq_font_secondary')).width('100%') }
+      List({ space: 8 }) {
+        ForEach(this.currencyChoices(), (currency: CurrencyDefinition) => {
+          ListItem() {
+            Button({ type: ButtonType.Normal, stateEffect: false }) {
+              Row({ space: 12 }) {
+                CurrencyFlagBadge({ currencyCode: currency.code, flagWidth: 32 })
+                Column({ space: 4 }) {
+                  Text(currency.name).fontSize('15fp').fontWeight(this.currencyCode === currency.code ? FontWeight.Medium : FontWeight.Regular)
+                    .fontColor($r('app.color.xq_font_primary')).maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
+                  Text(currency.code).fontSize('11fp').fontColor($r('app.color.xq_font_secondary'))
+                }.layoutWeight(1).alignItems(HorizontalAlign.Start)
+                if (this.currencyCode === currency.code) {
+                  Image($r('app.media.lucide_check1')).width(20).height(20).fillColor($r('app.color.xq_brand'))
+                }
+              }.width('100%').constraintSize({ minHeight: 40 })
+            }.width('100%').padding({ left: 14, right: 14, top: 10, bottom: 10 })
+              .backgroundColor($r('app.color.xq_exchange_currency_card_background')).borderRadius(14)
+              .accessibilityText(currency.name + ' ' + currency.code + (this.currencyCode === currency.code ? '，当前币种' : ''))
+              .id('expense-currency-' + currency.code).onClick(() => { this.applyCurrency(currency.code); })
+          }
+        }, (currency: CurrencyDefinition) => currency.code)
+      }.width('100%').layoutWeight(1).scrollBar(BarState.Off).edgeEffect(EdgeEffect.Spring, { alwaysEnabled: true })
+        .nestedScroll({ scrollForward: NestedScrollMode.SELF_ONLY, scrollBackward: NestedScrollMode.SELF_ONLY })
+    }.width('100%').height('100%').padding({ left: 16, right: 16, top: 20, bottom: 16 }).justifyContent(FlexAlign.Start)
+  }
+  /** Resolve new records through global currency settings; keep historical conversion snapshots when editing. */
+  private async prepareSaveRates(): Promise<void> {
     const source = this.currencyCode; const target = this.settlementCode(); const date = this.fxDate();
+    if (source === 'CNY' && target === source) { return; }
+    if (this.editingEntry !== undefined && (source === 'CNY' || this.bookRate.length > 0) &&
+      (target === source || this.actualSettlement.length > 0 || this.settlementRate.length > 0)) { return; }
+    this.quoteBusy = true;
     try {
       const book = await OfficialExchangeRates.quote(source, 'CNY', date);
       const settlement = await OfficialExchangeRates.quote(source, target, date);
-      if (this.active && version === this.quoteVersion && source === this.currencyCode && target === this.settlementCode() && date === this.fxDate()) {
-        this.bookRate = book.rate; this.settlementRate = settlement.rate;
-        this.quoteDate = book.source === 'same_currency' ? settlement.date : book.date;
-        this.quoteSource = book.source === 'manual' || settlement.source === 'manual' ? 'manual' : book.source === 'ECB_CACHE' || settlement.source === 'ECB_CACHE' ? 'ECB_CACHE' : 'ECB';
-        this.actualSettlement = '';
+      if (!this.active || source !== this.currencyCode || target !== this.settlementCode() || date !== this.fxDate()) {
+        throw new Error('FX_DRAFT_CHANGED');
       }
-    } catch (_) { if (this.active) { this.showError(ExpenseErrorField.Amount, '参考汇率暂不可用，可手动填写汇率后保存'); } }
-    finally { if (this.active) { this.quoteBusy = false; } }
+      this.bookRate = book.rate; this.settlementRate = settlement.rate;
+      this.quoteDate = book.source === 'same_currency' ? settlement.date : book.date;
+      this.quoteSource = book.source === 'manual' || settlement.source === 'manual' ? 'manual' :
+        book.source === 'ECB_CACHE' || settlement.source === 'ECB_CACHE' ? 'ECB_CACHE' : 'ECB';
+      this.actualSettlement = '';
+    } catch (_) {
+      throw new Error('FX_SAVE_UNAVAILABLE');
+    } finally { this.quoteBusy = false; }
   }
   @Builder
   private fxCard() {
@@ -687,29 +762,18 @@ export struct ExpenseEditor {
       Row() {
         Text('币种').fontSize('14fp').fontColor($r('app.color.xq_font_secondary'))
         Blank()
-        Button(this.currencyCode + ' · ' + currencyDefinition(this.currencyCode).name).fontSize('14fp')
-          .backgroundColor(Color.Transparent).fontColor($r('app.color.xq_font_primary'))
-          .enabled(!this.saving && this.editingEntry === undefined).onClick(() => { this.selectCurrency(); })
-      }.width('100%')
-      if (this.currencyCode !== 'CNY' || this.settlementCode() !== this.currencyCode) {
-        if (this.currencyCode !== 'CNY') {
-          TextInput({ text: this.bookRate, placeholder: '1 ' + this.currencyCode + ' = ? CNY' }).fontSize('14fp').type(InputType.NUMBER_DECIMAL)
-            .enabled(!this.saving && !this.quoteBusy).onChange((value: string) => { this.bookRate = value; this.quoteSource = 'manual'; this.quoteDate = this.fxDate(); })
-        }
-        if (this.settlementCode() !== this.currencyCode) {
-          TextInput({ text: this.settlementRate, placeholder: '到账汇率：1 ' + this.currencyCode + ' = ? ' + this.settlementCode() })
-            .fontSize('14fp').type(InputType.NUMBER_DECIMAL).enabled(!this.saving && !this.quoteBusy)
-            .onChange((value: string) => { this.settlementRate = value; this.quoteSource = 'manual'; this.quoteDate = this.fxDate(); })
-          MoneyAmountField({ value: $actualSettlement, fieldId: 'expense-actual-settlement', currency: currencyUnit(this.settlementCode()),
-            fontSize: '14fp', allowEmpty: true, placeholder: '实际到账／扣款金额 ' + this.settlementCode() + '（可选）',
-            disabled: this.saving || this.quoteBusy })
-        }
-        Text(this.bookAmountText()).fontSize('14fp').fontColor($r('app.color.xq_font_primary')).width('100%')
-        Button(this.quoteBusy ? '读取汇率中…' : '获取参考汇率').fontSize('13fp').backgroundColor(Color.Transparent)
-          .fontColor($r('app.color.xq_font_emphasize')).enabled(!this.saving && !this.quoteBusy).onClick(() => { this.loadRates(); })
-        Text((this.quoteDate ? this.quoteDate + ' · ' : '') + (this.quoteSource === 'manual' ? '手动汇率' : '欧洲中央银行 ECB · 官网免费参考汇率') + '，保存后固定此笔折算金额')
-          .fontSize('12fp').fontColor($r('app.color.xq_font_tertiary')).width('100%')
-      }
+        Row({ space: 6 }) {
+          CurrencyFlagBadge({ currencyCode: this.currencyCode, flagWidth: 24 })
+          Text(this.currencyCode + ' · ' + currencyDefinition(this.currencyCode).name).fontSize('14fp')
+            .fontColor($r('app.color.xq_font_primary')).maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis }).flexShrink(1)
+          if (this.editingEntry === undefined) {
+            Image($r('app.media.lucide_chevron_down1')).width(16).height(16).fillColor($r('app.color.xq_icon_secondary')).flexShrink(0)
+          }
+        }.constraintSize({ maxWidth: '78%' }).justifyContent(FlexAlign.End)
+      }.width('100%').height(48).enabled(!this.saving && this.editingEntry === undefined && !this.quoteBusy)
+        .accessibilityText('选择币种，当前' + this.currencyCode).id('expense-currency-selector')
+        .onClick(() => { this.selectCurrency(); })
+        .bindSheet($$this.showCurrencyPicker, this.currencyPicker(), this.currencySheetOptions())
     }.width('100%').padding(16).borderRadius(20).backgroundColor($r('app.color.xq_app_surface_card'))
   }
 
@@ -798,6 +862,8 @@ export struct ExpenseEditor {
         this.showOptions = true;
         return;
       }
+      this.saving = true; this.onSavingChange(true);
+      await this.prepareSaveRates();
       const account = this.accountId.length > 0 ? this.accountId : undefined;
       command = { id: this.saveId, bookId: this.bookId, categoryId: this.isTransfer ? 'transfer' : this.selectedId, gross: gross,
         discount: reduction, bookPaid: this.prepaidMode() ? this.prepaidCost(paid) : this.converted(paid, 'CNY', this.bookRate),
@@ -814,9 +880,12 @@ export struct ExpenseEditor {
         occurredAtMs: new Date(this.occurredAtMs).getTime(), localDate: this.localDate(),
         timezone: this.editingEntry !== undefined && !this.dateEdited ? this.editingEntry.timezone : Intl.DateTimeFormat().resolvedOptions().timeZone,
         offsetMinutes: this.editingEntry !== undefined && !this.dateEdited ? this.editingEntry.offsetMinutes : -new Date(this.occurredAtMs).getTimezoneOffset() };
-    } catch (_) { this.showError(ExpenseErrorField.Amount, '请检查金额、小数位和汇率；外币须填写汇率后保存'); return; }
-    this.saving = true;
-    this.onSavingChange(true);
+    } catch (error) {
+      if (this.saving) { this.saving = false; this.onSavingChange(false); }
+      this.showError(ExpenseErrorField.Amount, (error as Error).message === 'FX_SAVE_UNAVAILABLE' ?
+        '无法获取换算汇率，尚未保存。请稍后重试，或到“汇率转换”设置手动汇率' : '请检查金额和小数位后重试');
+      return;
+    }
     try {
       const workspace = this.workspace;
       if (workspace === undefined) { throw new Error('WORKSPACE_UNAVAILABLE'); }
