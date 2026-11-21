@@ -48,3 +48,14 @@ assert.equal(page.personalNetMinor, '12345'); assert(page.personalNetError.inclu
 await page.refreshAccountOverview({ accountOverview: async () => ({ netMinor: '0' }) });
 assert.equal(page.personalNetMinor, '0'); assert.equal(page.personalNetError, ''); assert.equal(page.accountError, '');
 console.log('PASS 首次计算/保留旧值更新/失败原因/重试成功/零值/缺失汇率/异步完成自动替换');
+
+// ArkUI builder condition dependencies must read decorated properties at the use site.
+const profileSource = fs.readFileSync('entry/src/main/ets/components/LocalBackupPage.ets', 'utf8');
+const stat = profileSource.slice(profileSource.indexOf('  private personalStat('), profileSource.indexOf('  private personalHeader('));
+assert(stat.includes('private personalStat(kind: number)'));
+assert(!stat.includes('loading: boolean'));
+assert(stat.includes('if (summaryStatus(kind === 2 ? this.netMinor.length > 0 : this.usage !== undefined,'));
+assert(stat.includes('kind === 2 ? this.netLoading : this.usageLoading'));
+assert(stat.includes('kind === 2 ? this.netError : this.usageError'));
+for (const kind of [0, 1, 2]) assert(profileSource.includes('this.personalStat(' + kind + ')'));
+console.log('PASS 统计 Builder 条件直接依赖响应式属性，不捕获 loading/error 普通参数');

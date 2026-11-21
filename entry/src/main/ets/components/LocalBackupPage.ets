@@ -124,16 +124,23 @@ export struct LocalBackupPage {
     return this.paidProfileCard() ? $r('app.media.my_profile_paid_bg') : $r('app.media.my_profile_standard_bg');
   }
 
+  // Only the column kind is a builder argument. Read reactive props inside each UI expression,
+  // so conditional status nodes do not retain primitive loading/error snapshots.
   @Builder
-  private personalStat(value: string, label: string, loading: boolean, hasValue: boolean, error: string) {
+  private personalStat(kind: number) {
     Column({ space: 6 }) {
-      Text(summaryValue(value, hasValue, loading, error)).fontSize('20fp').fontFamily('XiaoQiaoDINMedium').fontWeight(FontWeight.Medium)
+      Text(summaryValue(kind === 0 ? this.recordedDays() : kind === 1 ? this.usage?.entryCount || '0' : this.netAssets(),
+        kind === 2 ? this.netMinor.length > 0 : this.usage !== undefined,
+        kind === 2 ? this.netLoading : this.usageLoading, kind === 2 ? this.netError : this.usageError))
+        .fontSize('20fp').fontFamily('XiaoQiaoDINMedium').fontWeight(FontWeight.Medium)
         .fontColor(this.profilePrimaryColor()).maxLines(1).minFontSize('14fp').maxFontSize('20fp')
         .width('100%').height(30).textAlign(TextAlign.Center).textOverflow({ overflow: TextOverflow.Ellipsis })
-      Text(label).fontSize('12fp').fontColor(this.profileSecondaryColor())
-      if (summaryStatus(hasValue, loading, error).length > 0) {
-        Text(summaryStatus(hasValue, loading, error)).fontSize('10fp')
-          .fontColor(loading ? this.profileSecondaryColor() : $r('app.color.xq_font_emphasize'))
+      Text(kind === 0 ? '记账天数' : kind === 1 ? '记账笔数' : '净资产').fontSize('12fp').fontColor(this.profileSecondaryColor())
+      if (summaryStatus(kind === 2 ? this.netMinor.length > 0 : this.usage !== undefined,
+        kind === 2 ? this.netLoading : this.usageLoading, kind === 2 ? this.netError : this.usageError).length > 0) {
+        Text(summaryStatus(kind === 2 ? this.netMinor.length > 0 : this.usage !== undefined,
+          kind === 2 ? this.netLoading : this.usageLoading, kind === 2 ? this.netError : this.usageError)).fontSize('10fp')
+          .fontColor((kind === 2 ? this.netLoading : this.usageLoading) ? this.profileSecondaryColor() : $r('app.color.xq_font_emphasize'))
       }
     }.layoutWeight(1).alignItems(HorizontalAlign.Center)
   }
@@ -161,9 +168,9 @@ export struct LocalBackupPage {
         .onClick(() => { if (this.connected) { this.onOpenHuaweiCloud(); } else { this.login(); } }).id('my-account-header')
         .accessibilityText(this.connected ? '查看华为账号与云备份' : '登录华为账号')
       Row({ space: 8 }) {
-        this.personalStat(this.recordedDays(), '记账天数', this.usageLoading, this.usage !== undefined, this.usageError)
-        this.personalStat(this.usage?.entryCount || '0', '记账笔数', this.usageLoading, this.usage !== undefined, this.usageError)
-        this.personalStat(this.netAssets(), '净资产', this.netLoading, this.netMinor.length > 0, this.netError)
+        this.personalStat(0)
+        this.personalStat(1)
+        this.personalStat(2)
       }.width('100%').alignItems(VerticalAlign.Top)
       if (this.usageError.length > 0 && !this.usageLoading) {
         Button(this.usageError + '，点击重试').fontSize('12fp').fontColor($r('app.color.xq_font_emphasize'))
