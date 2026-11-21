@@ -1664,7 +1664,11 @@ struct Index {
     List({ scroller: this.bodyScroller }) {
       ListItem() {
         Column({ space: 0 }) {
-          if (this.cycleLabel()) { Text(this.cycleLabel()).fontSize('12fp').fontColor($r('app.color.xq_font_secondary')).width('100%').margin({ bottom: 8 }) }
+          if (this.cycleLabel()) {
+            // Card-adjacent captions use an 8 vp inset from the card's outer edge.
+            Text(this.cycleLabel()).fontSize('12fp').fontColor($r('app.color.xq_font_secondary'))
+              .width('100%').padding({ left: 8, right: 8 }).margin({ bottom: 8 })
+          }
           if (this.viewportWidth < 720 && !this.upgradeRequired) { this.summary(); this.prepaidEntry(); }
         }.width('100%').padding({ top: 12, bottom: 24 })
           .onAreaChange((_previous: Area, current: Area) => {

@@ -84,7 +84,7 @@ export struct AccountsPage {
                   [$r('app.color.xq_account_summary_glow_middle'), 0.5], [$r('app.color.xq_app_surface_card'), 1]] })
             Row() {
               Text(this.showArchived ? '已归档账户' : '我的账户').fontSize('18fp').fontWeight(FontWeight.Medium)
-                .fontColor($r('app.color.xq_font_primary'))
+                .fontColor($r('app.color.xq_font_primary')).margin({ left: 8 })
               Blank()
               SegmentButton({ options: this.archiveOptions, selectedIndexes: $archiveSelection })
                 .width(168).id('accounts-toggle-archive')

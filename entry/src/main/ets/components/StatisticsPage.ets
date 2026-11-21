@@ -844,10 +844,10 @@ export struct StatisticsPage {
               else { this.showAllCategories = !this.showAllCategories; }
             })
         }
-      }.width('100%')
+      }.width('100%').padding({ left: 8, right: 8 })
       if (this.rankedCategories(income).length === 0) {
         Text(income ? '这个周期还没有收入' : '这个周期还没有支出').fontSize('14fp')
-          .fontColor($r('app.color.xq_font_secondary')).width('100%').padding({ top: 20, bottom: 20 })
+          .fontColor($r('app.color.xq_font_secondary')).width('100%').padding({ left: 8, right: 8, top: 20, bottom: 20 })
       } else {
         this.categoryRing(income)
         ForEach((income ? this.showAllIncomeCategories : this.showAllCategories) ? this.rankedCategories(income) :
@@ -891,7 +891,7 @@ export struct StatisticsPage {
             .fontColor($r('app.color.xq_font_primary'))
           Blank()
           Text('仅统计计入预算的支出').fontSize('12fp').fontColor($r('app.color.xq_font_secondary'))
-        }.width('100%')
+        }.width('100%').padding({ left: 8, right: 8 })
         ForEach((this.statistics?.budgetCategories || []).slice(0, 5), (category: StatisticsBudgetCategory) => {
           this.budgetRow(category)
         }, (category: StatisticsBudgetCategory) => category.key + ':' + category.amountMinor)
@@ -927,7 +927,7 @@ export struct StatisticsPage {
             .fontColor($r('app.color.xq_font_primary'))
           Blank()
           Text('多标签账目分别计入').fontSize('12fp').fontColor($r('app.color.xq_font_secondary'))
-        }.width('100%')
+        }.width('100%').padding({ left: 8, right: 8 })
         Column() {
           ForEach(this.rankedTags().slice(0, 5), (item: TagRankingItem, index: number) => {
             this.tagRow(item.tag, item.kind)
@@ -1076,7 +1076,7 @@ export struct StatisticsPage {
           this.budgetRanking()
           Text('标签排行中，多标签账目会在每个标签分别计入；转账本金不计入收支和标签金额。')
             .fontSize('12fp').fontColor($r('app.color.xq_font_tertiary')).lineHeight('18fp')
-            .width('100%').padding({ left: 4, right: 4 })
+            .width('100%').padding({ left: 8, right: 8 })
         }
       }.width('100%').constraintSize({ maxWidth: 720 })
         .padding({ left: 16, right: 16, top: 8, bottom: 128 })
