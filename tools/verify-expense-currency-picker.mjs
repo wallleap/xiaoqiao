@@ -37,7 +37,7 @@ assert.equal(prepareCurrencySwitch({ ...draft, amount: '1.2345' }, currencyUnit(
 const source = fs.readFileSync(base + '/components/ExpenseEditor.ets', 'utf8');
 const tree = ts.createSourceFile('editor.ts', source.replace('export struct', 'class'), ts.ScriptTarget.Latest, true);
 const cls = tree.statements.find(s => ts.isClassDeclaration(s) && s.name.text === 'ExpenseEditor');
-const names = ['applyCurrency', 'currencyChoices', 'selectCurrency', 'focusAmount', 'currencySheetOptions', 'prepareSaveRates', 'save', 'refreshPreviewRate', 'bookAmountPreview', 'converted', 'effectiveDiscount', 'amountCurrency', 'transferOutgoing', 'isRepayment'];
+const names = ['applyCurrency', 'currencyChoices', 'selectCurrency', 'measureCurrencyBottomInset', 'focusAmount', 'currencySheetOptions', 'prepareSaveRates', 'save', 'refreshPreviewRate', 'bookAmountPreview', 'converted', 'effectiveDiscount', 'amountCurrency', 'transferOutgoing', 'isRepayment'];
 const methods = names.map(name => cls.members.find(m => ts.isMethodDeclaration(m) && m.name.getText(tree) === name).getText(tree)).join('\n');
 const code = ts.transpileModule('class Editor {' + methods + '}\nexports.Editor=Editor;', { compilerOptions: { target: ts.ScriptTarget.ES2020 } }).outputText;
 const service = { quote: async (from, to, date) => ({ from, to, rate: from === to ? '1' : '7.2', date, source: from === to ? 'same_currency' : 'manual' }) };
@@ -77,7 +77,7 @@ p = editor({ showCurrencyPicker: false, keyboardVisible: true });
 let stopped = 0, cleared = 0, focused = 0;
 p.amountController = { stopEditing() { stopped++; } };
 p.getUIContext = () => ({ getFocusController: () => ({ clearFocus() { cleared++; }, requestFocus() { focused++; } }) });
-let release; p.loadCurrencyMaterial = () => new Promise(resolve => { release = resolve; });
+let release; p.loadCurrencyMaterial = () => new Promise(resolve => { release = resolve; }); p.measureCurrencyBottomInset = async () => {};
 const opening = p.selectCurrency(); assert.equal(stopped, 1); assert.equal(cleared, 1); assert.equal(p.keyboardVisible, false);
 p.focusAmount(); assert.equal(focused, 0); await p.selectCurrency(); assert.equal(stopped, 1);
 release(); await opening; assert.equal(p.showCurrencyPicker, true); p.focusAmount(); assert.equal(focused, 0);
@@ -87,8 +87,8 @@ assert.equal(p.showCurrencyPicker, false); assert.equal(p.openingCurrencyPicker,
 assert.equal(p.currencySheetOptions().height, '75%');
 const picker = source.slice(source.indexOf('private currencyPicker()'), source.indexOf('private async prepareSaveRates()'));
 assert.match(picker, /edgeEffect\(EdgeEffect.Spring, \{ alwaysEnabled: true \}\)/);
-assert.match(picker, /stateEffect: false/); assert.match(picker, /currency\.code\)\.onClick/);
-assert.match(source, /this\.currencySheetMaterial = factory\.createExchangeSheetMaterial\(\)/);
+assert.match(picker, /stateEffect: true/); assert.match(picker, /currency\.code\)\.onClick/);
+assert.match(source, /this\.currencySheetMaterial = this\.sheetMaterial;/);
 assert(!source.includes('stopPropagation'));
 
 // New records fetch shared manual/online rates only when saving; editing preserves the saved snapshot.
@@ -151,3 +151,13 @@ assert.match(source, /@Watch\('previewCurrencyChanged'\) private occurredAtMs/);
 assert.match(source, /if \(this.currencyCode !== this.bookCurrencyId\) \{\s*Text\(this.bookAmountPreview\(\)\)/);
 installCurrencySettings(profiles, settings);
 console.log('PASS: currency list selection, amount/precision policy, FX invalidation, accounts, focus, automatic save quotes and failure-before-write (host only)');
+
+const insetPage = editor();
+insetPage.getUIContext = () => ({ getHostContext: () => ({}), px2vp: px => px / 2 });
+context.window = { AvoidAreaType: { TYPE_NAVIGATION_INDICATOR: 4 }, getLastWindow: async () => ({
+  getWindowAvoidArea(type) { assert.equal(type, 4); return { bottomRect: { height: 48 } }; }
+}) };
+await insetPage.measureCurrencyBottomInset(); assert.equal(insetPage.currencyBottomInset, 24);
+context.window.getLastWindow = async () => { throw Error('no window'); };
+await insetPage.measureCurrencyBottomInset(); assert.equal(insetPage.currencyBottomInset, 0);
+console.log('PASS Sheet bottom inset uses system navigation-indicator height in vp, with unavailable-window fallback (host only)');

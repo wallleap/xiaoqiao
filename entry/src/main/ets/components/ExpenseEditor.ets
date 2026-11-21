@@ -14,7 +14,7 @@ import { sceneMap } from '@kit.MapKit';
 import { common } from '@kit.AbilityKit';
 import { BusinessError } from '@kit.BasicServicesKit';
 import { photoAccessHelper } from '@kit.MediaLibraryKit';
-import { FrameCallback, KeyboardAvoidMode, ChipGroup, ChipSize, curves } from '@kit.ArkUI';
+import { FrameCallback, KeyboardAvoidMode, ChipGroup, ChipSize, curves, window } from '@kit.ArkUI';
 import { util } from '@kit.ArkTS';
 import { CurrencyUnit } from '../core/money/CurrencyUnit';
 import { TransferCommand, TransferPurpose, TRANSFER_PURPOSES, transferPurposeLabel } from '../domain/model/TransferRecord';
@@ -129,6 +129,7 @@ export struct ExpenseEditor {
   @State private currencyError: string = '';
   private openingCurrencyPicker: boolean = false;
   private currencySheetMaterial: SystemUiMaterial | undefined = undefined;
+  @State private currencyBottomInset: number = 0;
   private preparingCurrencyMaterial: Promise<void> | undefined = undefined;
   @State private tagSearch: string = '';
   private managementOpening: boolean = false;
@@ -700,16 +701,24 @@ export struct ExpenseEditor {
       this.keyboardVisible = false; this.noteEditing = false;
       if (this.preparingCurrencyMaterial === undefined) { this.preparingCurrencyMaterial = this.loadCurrencyMaterial(); }
       await this.preparingCurrencyMaterial;
+      await this.measureCurrencyBottomInset();
       if (!this.active) { return; }
       this.currencySearch = ''; this.currencyError = ''; this.showCurrencyPicker = true;
     } finally { this.openingCurrencyPicker = false; }
   }
-  private async loadCurrencyMaterial(): Promise<void> {
-    if (this.sheetMaterial === undefined) { return; }
+  private async measureCurrencyBottomInset(): Promise<void> {
+    this.currencyBottomInset = 0;
     try {
-      const factory = await import('../presentation/exchange/ExchangeSheetMaterial');
-      this.currencySheetMaterial = factory.createExchangeSheetMaterial();
-    } catch (_) { /* A themed fallback is preferable to an unsupported or interactive native material. */ }
+      const ui = this.getUIContext();
+      const host = ui.getHostContext() as common.UIAbilityContext;
+      const mainWindow = await window.getLastWindow(host);
+      const area = mainWindow.getWindowAvoidArea(window.AvoidAreaType.TYPE_NAVIGATION_INDICATOR);
+      this.currencyBottomInset = Math.max(0, ui.px2vp(area.bottomRect.height));
+    } catch (_) { /* Keep the normal 16 vp list clearance if the window is unavailable. */ }
+  }
+  private async loadCurrencyMaterial(): Promise<void> {
+    // The host's THICK menu material retains system press elasticity; this picker has no long-press actions.
+    this.currencySheetMaterial = this.sheetMaterial;
   }
   private currencyChoices(): CurrencyDefinition[] {
     const keyword = this.currencySearch.trim().toLowerCase();
@@ -747,9 +756,10 @@ export struct ExpenseEditor {
     Column({ space: 12 }) {
       Text('选择币种').fontSize('20fp').fontWeight(FontWeight.Bold).fontColor($r('app.color.xq_font_primary'))
         .width('100%').constraintSize({ minHeight: 40 }).padding({ right: 48 })
-      Search({ value: this.currencySearch, placeholder: '搜索币种名称或代码' }).height(40)
+      Search({ value: this.currencySearch, placeholder: '搜索币种名称或代码' }).width('100%').height(40)
         .fontColor($r('app.color.xq_font_primary')).placeholderColor($r('app.color.xq_font_secondary'))
-        .backgroundColor($r('app.color.xq_exchange_form_field_background'))
+        .backgroundColor($r('app.color.xq_exchange_form_field_background')).borderRadius(12)
+        .border({ width: 1, color: $r('app.color.xq_exchange_form_border') })
         .searchIcon({ src: $r('app.media.lucide_search1'), size: 18, color: $r('app.color.xq_icon_secondary') })
         .onChange((value: string) => { this.currencySearch = value; }).id('expense-currency-search')
       if (this.currencyError) { Text(this.currencyError).fontSize('12fp').fontColor($r('app.color.xq_warning')).width('100%').id('expense-currency-error') }
@@ -757,7 +767,7 @@ export struct ExpenseEditor {
       List({ space: 8 }) {
         ForEach(this.currencyChoices(), (currency: CurrencyDefinition) => {
           ListItem() {
-            Button({ type: ButtonType.Normal, stateEffect: false }) {
+            Button({ type: ButtonType.Normal, stateEffect: true }) {
               Row({ space: 12 }) {
                 CurrencyFlagBadge({ currencyCode: currency.code, flagWidth: 32 })
                 Column({ space: 4 }) {
@@ -776,8 +786,10 @@ export struct ExpenseEditor {
           }
         }, (currency: CurrencyDefinition) => currency.code)
       }.width('100%').layoutWeight(1).scrollBar(BarState.Off).edgeEffect(EdgeEffect.Spring, { alwaysEnabled: true })
+        .contentEndOffset(16 + this.currencyBottomInset)
         .nestedScroll({ scrollForward: NestedScrollMode.SELF_ONLY, scrollBackward: NestedScrollMode.SELF_ONLY })
-    }.width('100%').height('100%').padding({ left: 16, right: 16, top: 20, bottom: 16 }).justifyContent(FlexAlign.Start)
+    }.width('100%').height('100%').padding({ left: 16, right: 16, top: 20, bottom: 0 }).justifyContent(FlexAlign.Start)
+      .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.BOTTOM])
   }
   /** Resolve new records through global currency settings; keep historical conversion snapshots when editing. */
   private async prepareSaveRates(): Promise<void> {
@@ -817,7 +829,8 @@ export struct ExpenseEditor {
             Text('只读').fontSize('12fp').fontColor($r('app.color.xq_font_secondary')).flexShrink(0)
           }
         }.constraintSize({ maxWidth: '78%' }).justifyContent(FlexAlign.End)
-      }.width('100%').height(48).enabled(!this.saving && this.editingEntry === undefined && !this.quoteBusy)
+      }.width('100%').constraintSize({ minHeight: 32 }).alignItems(VerticalAlign.Center)
+        .enabled(!this.saving && this.editingEntry === undefined && !this.quoteBusy)
         .accessibilityText('选择币种，当前' + this.currencyCode).id('expense-currency-selector')
         .onClick(() => { this.selectCurrency(); })
         .bindSheet($$this.showCurrencyPicker, this.currencyPicker(), this.currencySheetOptions())
@@ -874,7 +887,7 @@ export struct ExpenseEditor {
                 this.errorText = '';
               });
             }).id('expense-prepaid')
-        }.width('100%')
+        }.width('100%').constraintSize({ minHeight: 32 }).alignItems(VerticalAlign.Center)
         if (this.prepaidMode()) {
           Column({ space: 12 }) {
             Text('本次付款保留为预付余额，核销时再计入支出。').fontSize('12fp')
@@ -902,8 +915,8 @@ export struct ExpenseEditor {
   @Builder
   private prepaidRules() {
     Column({space:12}) {
-      Row() { Text('核销时计入预算').fontSize('14fp').fontWeight(FontWeight.Regular).fontColor($r('app.color.xq_font_secondary')).layoutWeight(1); Toggle({type:ToggleType.Switch,isOn:this.includeBudget}).selectedColor($r('app.color.xq_brand')).enabled(!this.saving).onChange((value:boolean)=>{this.includeBudget=value;}) }.width('100%')
-      Row() { Text('预付款计入净资产').fontSize('14fp').fontWeight(FontWeight.Regular).fontColor($r('app.color.xq_font_secondary')).layoutWeight(1); Toggle({type:ToggleType.Switch,isOn:this.includeAssets}).selectedColor($r('app.color.xq_brand')).enabled(!this.saving).onChange((value:boolean)=>{this.includeAssets=value;}) }.width('100%')
+      Row() { Text('核销时计入预算').fontSize('14fp').fontWeight(FontWeight.Regular).fontColor($r('app.color.xq_font_secondary')).layoutWeight(1); Toggle({type:ToggleType.Switch,isOn:this.includeBudget}).selectedColor($r('app.color.xq_brand')).enabled(!this.saving).onChange((value:boolean)=>{this.includeBudget=value;}) }.width('100%').constraintSize({ minHeight: 32 }).alignItems(VerticalAlign.Center)
+      Row() { Text('预付款计入净资产').fontSize('14fp').fontWeight(FontWeight.Regular).fontColor($r('app.color.xq_font_secondary')).layoutWeight(1); Toggle({type:ToggleType.Switch,isOn:this.includeAssets}).selectedColor($r('app.color.xq_brand')).enabled(!this.saving).onChange((value:boolean)=>{this.includeAssets=value;}) }.width('100%').constraintSize({ minHeight: 32 }).alignItems(VerticalAlign.Center)
     }.padding({ left: 16, right: 16, top: 12, bottom: 12 }).width('100%').borderRadius(16).backgroundColor($r('app.color.xq_app_surface_card'))
   }
 
@@ -1043,7 +1056,7 @@ export struct ExpenseEditor {
             .fontColor($r('app.color.xq_font_secondary')).margin({ left: 8 }).id('expense-category-title')
           Blank()
           this.managementButton('管理分类', 'categories', 'expense-manage-categories')
-        }.height(28).width('100%')
+        }.constraintSize({ minHeight: 32 }).width('100%').alignItems(VerticalAlign.Center)
         Swiper() {
           ForEach(Array.from({ length: Math.ceil(this.roots().length / this.categoryPageSize()) }, (_value: number, index: number) => index), (page: number) => {
             Column() {
@@ -1111,7 +1124,7 @@ export struct ExpenseEditor {
             .id('expense-nature-clear').onClick(() => { this.selectedNatureId = ''; })
         }
         this.managementButton('管理', 'natures', 'expense-manage-natures')
-      }.height(28).width('100%')
+      }.constraintSize({ minHeight: 32 }).width('100%').alignItems(VerticalAlign.Center)
       if (this.spendingNatures.length === 0) {
         Text('暂无预算分类，可通过右上角管理入口新建。').fontSize('12fp')
           .fontColor($r('app.color.xq_font_secondary')).width('100%')
@@ -1141,7 +1154,9 @@ export struct ExpenseEditor {
   }
 
   private tagSheetOptions(): SheetOptions {
-    const options: SheetOptions = { height: 480, showClose: true };
+    const options: SheetOptions = { height: 480, showClose: true,
+      keyboardAvoidMode: SheetKeyboardAvoidMode.TRANSLATE_AND_RESIZE,
+      onAppear: () => { this.measureCurrencyBottomInset(); } };
     if (this.sheetMaterial !== undefined) { options.systemMaterial = this.sheetMaterial; }
     else { options.backgroundColor = $r('app.color.xq_app_surface_card'); }
     return options;
@@ -1177,9 +1192,12 @@ export struct ExpenseEditor {
         Text('选择标签').fontSize('20fp').fontWeight(FontWeight.Medium).fontColor($r('app.color.xq_font_primary'))
         Blank()
         this.managementButton('管理', 'tags', 'expense-manage-tags')
-      }.width('100%').padding({ right: 40 })
+      }.width('100%').constraintSize({ minHeight: 40 }).alignItems(VerticalAlign.Center).padding({ right: 48 })
       TextInput({ text: this.tagSearch, placeholder: '搜索标签' }).height(40).fontSize('14fp')
-        .backgroundColor($r('app.color.xq_app_surface_page')).borderRadius(12)
+        .fontColor($r('app.color.xq_font_primary')).placeholderColor($r('app.color.xq_font_secondary'))
+        .backgroundColor($r('app.color.xq_exchange_form_field_background')).borderRadius(12)
+        .border({ width: 1, color: $r('app.color.xq_exchange_form_border') }).padding({ left: 14, right: 14 })
+        .caretColor($r('app.color.xq_brand'))
         .onChange((value: string) => { this.tagSearch = value; }).id('expense-tag-search')
       Scroll() {
         Column() {
@@ -1202,11 +1220,14 @@ export struct ExpenseEditor {
           }
         }.width('100%')
       }.layoutWeight(1).width('100%').align(Alignment.Top).scrollBar(BarState.Off).edgeEffect(EdgeEffect.Spring, { alwaysEnabled: true })
-      Button('完成（已选 ' + this.selectedTagIds.length + '）', { type: ButtonType.Capsule })
-        .width('100%').height(44).fontSize('14fp').fontWeight(FontWeight.Medium)
-        .fontColor($r('app.color.xq_font_on_primary')).backgroundColor($r('app.color.xq_brand'))
-        .id('expense-tag-done').onClick(() => { this.showTagPicker = false; })
-    }.width('100%').height('100%').padding(24)
+      Column() {
+        Button('完成（已选 ' + this.selectedTagIds.length + '）', { type: ButtonType.Capsule })
+          .width('100%').height(44).fontSize('14fp').fontWeight(FontWeight.Medium)
+          .fontColor($r('app.color.xq_font_on_primary')).backgroundColor($r('app.color.xq_brand'))
+          .id('expense-tag-done').onClick(() => { this.showTagPicker = false; })
+      }.width('100%').padding({ bottom: 16 + this.currencyBottomInset })
+    }.width('100%').height('100%').padding({ left: 16, right: 16, top: 20, bottom: 0 })
+      .justifyContent(FlexAlign.Start).expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.BOTTOM])
   }
 
   @Builder
@@ -1214,7 +1235,7 @@ export struct ExpenseEditor {
     if (this.sheetMaterial !== undefined) {
       Select([{ value: '计入' }, { value: '不计入' }]).selected((budget ? this.includeBudget : this.includeAssets) ? 0 : 1)
         .value((budget ? this.includeBudget : this.includeAssets) ? '计入' : '不计入')
-        .font({ size: '14fp' }).fontColor($r('app.color.xq_font_primary')).height(40).width(88)
+        .font({ size: '14fp' }).fontColor($r('app.color.xq_font_primary')).height(32).width(88)
         .optionFontColor($r('app.color.xq_font_primary'))
         .selectedOptionFontColor($r('app.color.xq_font_emphasize'))
         .selectedOptionBgColor($r('app.color.xq_comp_emphasize_tertiary'))
@@ -1226,7 +1247,7 @@ export struct ExpenseEditor {
     } else {
       Select([{ value: '计入' }, { value: '不计入' }]).selected((budget ? this.includeBudget : this.includeAssets) ? 0 : 1)
         .value((budget ? this.includeBudget : this.includeAssets) ? '计入' : '不计入')
-        .font({ size: '14fp' }).fontColor($r('app.color.xq_font_primary')).height(40).width(88)
+        .font({ size: '14fp' }).fontColor($r('app.color.xq_font_primary')).height(32).width(88)
         .optionFontColor($r('app.color.xq_font_primary'))
         .selectedOptionFontColor($r('app.color.xq_font_emphasize'))
         .selectedOptionBgColor($r('app.color.xq_comp_emphasize_tertiary'))
@@ -1264,7 +1285,7 @@ export struct ExpenseEditor {
           onStateChange: (event) => { if (!event.isVisible && this.activeHelp === 'assets') { this.activeHelp = ''; } }
         })
       this.ruleSelect(false)
-    }.width('100%').constraintSize({ minHeight: 52 }).padding({ left: 16, right: 16, top: 12, bottom: 12 })
+    }.width('100%').constraintSize({ minHeight: 56 }).alignItems(VerticalAlign.Center).padding({ left: 16, right: 16, top: 12, bottom: 12 })
       .backgroundColor($r('app.color.xq_app_surface_card')).borderRadius(16)
   }
 
@@ -1312,8 +1333,10 @@ export struct ExpenseEditor {
   @Builder
   private transferAccountSide(outgoing: boolean) {
     Column({ space: 10 }) {
-      Text(outgoing ? '转出账户' : '转入账户').fontSize('12fp').fontColor($r('app.color.xq_font_secondary'))
-        .id(outgoing ? 'expense-account-label' : 'expense-to-account-label')
+      Row() {
+        Text(outgoing ? '转出账户' : '转入账户').fontSize('12fp').fontColor($r('app.color.xq_font_secondary'))
+          .id(outgoing ? 'expense-account-label' : 'expense-to-account-label')
+      }.width('100%').constraintSize({ minHeight: 32 }).alignItems(VerticalAlign.Center)
       Row({ space: 8 }) {
         // Read selection state here instead of passing a captured ID through a Builder.
         if (this.accountProfiles.find((item: AccountProfile) => item.id === (outgoing ? this.accountId : this.toAccountId)) !== undefined) {
@@ -1342,7 +1365,7 @@ export struct ExpenseEditor {
         Blank()
         Text(`${this.attachments.length} / 9`).fontSize('12fp').fontWeight(FontWeight.Regular)
           .fontColor($r('app.color.xq_font_tertiary'))
-      }.width('100%')
+      }.width('100%').constraintSize({ minHeight: 32 }).alignItems(VerticalAlign.Center)
       Flex({ wrap: FlexWrap.Wrap }) {
         ForEach(this.attachments, (attachment: ExpenseImageAttachment) => {
           Stack({ alignContent: Alignment.TopEnd }) {
@@ -1382,8 +1405,10 @@ export struct ExpenseEditor {
   private supplementaryCard() {
     Column({ space: 12 }) {
       Column({ space: 8 }) {
-        Text('备注（选填）').fontSize('14fp').fontWeight(FontWeight.Regular).fontColor($r('app.color.xq_font_secondary'))
-          .width('100%')
+        Row() {
+          Text('备注（选填）').fontSize('14fp').fontWeight(FontWeight.Regular).fontColor($r('app.color.xq_font_secondary'))
+            .width('100%')
+        }.width('100%').constraintSize({ minHeight: 32 }).alignItems(VerticalAlign.Center)
         TextArea({ text: this.note, placeholder: '点击输入备注' }).id('expense-note').height(112).width('100%')
           .fontSize('14fp').fontWeight(FontWeight.Regular).fontColor($r('app.color.xq_font_primary'))
           .placeholderFont({ size: '14fp', weight: FontWeight.Regular })
@@ -1413,7 +1438,7 @@ export struct ExpenseEditor {
           Blank()
           Text(transferPurposeLabel(this.transferPurpose)).fontSize('14fp').fontColor($r('app.color.xq_font_primary'))
           Image($r('app.media.lucide_chevron_down1')).width(14).height(14).fillColor($r('app.color.xq_icon_tertiary'))
-        }.constraintSize({ minHeight: 72 }).padding({ left: 16, right: 16, top: 12, bottom: 12 }).width('100%').borderRadius(16)
+        }.constraintSize({ minHeight: 56 }).padding({ left: 16, right: 16, top: 12, bottom: 12 }).width('100%').borderRadius(16)
           .backgroundColor($r('app.color.xq_app_surface_card')).id('transfer-purpose')
           .onClick(() => { this.optionKind = 3; this.showOptions = true; })
         Column({ space: 4 }) {
@@ -1433,13 +1458,11 @@ export struct ExpenseEditor {
             this.transferAccountSide(false)
           }.width('100%')
           if (this.errorText.length > 0 && this.errorField === ExpenseErrorField.Accounts) { this.errorMessage() }
+          Text(this.isRepayment() ? '本金与还款优惠不计入收支，手续费计入支出。' : '本金不计入收支，手续费计入支出。')
+            .fontSize('12fp').fontWeight(FontWeight.Regular).fontColor($r('app.color.xq_font_secondary'))
+            .width('100%').textAlign(TextAlign.Start).margin({ top: 4 }).id('transfer-accounts-help')
         }.padding({ left: 16, right: 16, top: 12, bottom: 12 }).width('100%').borderRadius(16).backgroundColor($r('app.color.xq_app_surface_card'))
           .id('transfer-accounts-card')
-        Row() {
-          Text(this.isRepayment() ? '本金与还款优惠不计收支' : '本金不计入收支').fontSize('12fp').fontColor($r('app.color.xq_font_secondary'))
-          Blank()
-          Text('手续费计入支出').fontSize('12fp').fontColor($r('app.color.xq_font_secondary'))
-        }.width('100%').padding({ left: 4, right: 4 })
       }
       Column() {
         if (!this.isTransfer) {
@@ -1460,7 +1483,7 @@ export struct ExpenseEditor {
                 .fontColor($r('app.color.xq_font_primary')).flexShrink(1).id('expense-account-value')
             }.constraintSize({ maxWidth: '70%' }).alignItems(VerticalAlign.Center)
             Image($r('app.media.lucide_chevron_down1')).width(14).height(14).fillColor($r('app.color.xq_icon_tertiary'))
-          }.height(48).width('100%').onClick(() => { this.optionKind = 1; this.showOptions = true; })
+          }.constraintSize({ minHeight: 32 }).width('100%').alignItems(VerticalAlign.Center).onClick(() => { this.optionKind = 1; this.showOptions = true; })
           if (this.errorText.length > 0 && this.errorField === ExpenseErrorField.Accounts) {
             this.errorMessage()
           }
@@ -1473,7 +1496,7 @@ export struct ExpenseEditor {
             .textOverflow({ overflow: TextOverflow.Ellipsis }).fontColor($r('app.color.xq_font_primary'))
             .constraintSize({ maxWidth: '70%' }).id('expense-date-value')
           Image($r('app.media.lucide_chevron_down1')).width(14).height(14).fillColor($r('app.color.xq_icon_tertiary'))
-        }.height(48).width('100%').onClick(() => { this.pickDate(); })
+        }.constraintSize({ minHeight: 32 }).width('100%').alignItems(VerticalAlign.Center).onClick(() => { this.pickDate(); })
         Divider().color($r('app.color.xq_comp_background_tertiary'))
         Row({ space: 12 }) {
           Text('商户').fontSize('14fp').fontColor($r('app.color.xq_font_secondary'))
@@ -1535,7 +1558,7 @@ export struct ExpenseEditor {
                 this.errorText = '';
               })
               .id('expense-reimbursement-pending')
-          }.width('100%')
+          }.width('100%').constraintSize({ minHeight: 32 }).alignItems(VerticalAlign.Center)
         }.padding({ left: 16, right: 16, top: 12, bottom: 12 }).width('100%').borderRadius(16).backgroundColor($r('app.color.xq_app_surface_card'))
       }
       if (this.isTransfer) {
@@ -1544,7 +1567,8 @@ export struct ExpenseEditor {
           Blank()
           Toggle({ type: ToggleType.Switch, isOn: this.feeBudget }).selectedColor($r('app.color.xq_brand'))
             .onChange((value: boolean) => { this.feeBudget = value; }).id('transfer-fee-budget')
-        }.padding({ left: 16, right: 16, top: 12, bottom: 12 }).width('100%').borderRadius(16).backgroundColor($r('app.color.xq_app_surface_card'))
+        }.constraintSize({ minHeight: 56 }).alignItems(VerticalAlign.Center)
+          .padding({ left: 16, right: 16, top: 12, bottom: 12 }).width('100%').borderRadius(16).backgroundColor($r('app.color.xq_app_surface_card'))
       }
       if (this.prepaidMode()) { this.prepaidRules() } else { this.rules() }
       this.supplementaryCard()
@@ -1609,7 +1633,7 @@ export struct ExpenseEditor {
       }.width('100%').height('100%')
     }.height(72).width('100%').padding(0).borderRadius(14)
       .backgroundColor(this.coloredAccountCard(id) ? (this.accountCardProfile(id)?.brandColor || '#5378B8') :
-        id.length === 0 ? $r('app.color.xq_app_surface_page') : $r('app.color.xq_app_surface_card'))
+        id.length === 0 ? $r('app.color.xq_exchange_currency_card_background') : $r('app.color.xq_app_surface_card'))
       .enabled(!this.saving && !this.saved && !this.conflicted)
       .accessibilityText(name + (id.length > 0 ? '，' + this.accountCardBalance(id) : ''))
       .accessibilityDescription((this.optionKind === 2 ? this.toAccountId : this.accountId) === id ? '已选中' : '未选中')
@@ -1628,6 +1652,7 @@ export struct ExpenseEditor {
 
   private optionSheetOptions(): SheetOptions {
     const options: SheetOptions = { height: this.optionKind === 0 ? 340 : 440, showClose: true,
+      onAppear: () => { if (this.optionKind !== 0) { this.measureCurrencyBottomInset(); } },
       onDisappear: () => { this.focusAmountAfterFrame(); } };
     if (this.sheetMaterial !== undefined) {
       options.systemMaterial = this.sheetMaterial;
@@ -1655,7 +1680,9 @@ export struct ExpenseEditor {
             .backgroundColor(Color.Transparent).enabled(!this.saving && !this.mapBusy && !this.attachmentBusy)
             .id('expense-option-manage').onClick(() => { this.openManagement('accounts'); })
         }
-      }.width('100%').padding({ right: this.optionKind === 0 ? 0 : 40 })
+      }.width('100%').constraintSize({ minHeight: this.optionKind !== 0 ? 40 : 0 })
+        .alignItems(VerticalAlign.Center)
+        .padding({ right: this.optionKind !== 0 ? 48 : this.optionKind === 0 ? 0 : 40 })
       if (this.optionKind === 3) {
         Scroll() {
           Column({ space: 8 }) {
@@ -1681,7 +1708,7 @@ export struct ExpenseEditor {
                   this.showOptions = false;
                 })
             }, (item: TransferPurpose) => item.key)
-          }.width('100%')
+          }.width('100%').padding({ bottom: 16 + this.currencyBottomInset })
         }.layoutWeight(1).width('100%').align(Alignment.Top).scrollBar(BarState.Off).edgeEffect(EdgeEffect.Spring, { alwaysEnabled: true })
           .id('transfer-purpose-options')
       } else if (this.optionKind === 0) {
@@ -1703,7 +1730,7 @@ export struct ExpenseEditor {
                 .fontSize('12fp').fontWeight(FontWeight.Regular).fontColor($r('app.color.xq_font_secondary'))
                 .padding(12).width('100%')
             }
-          }.width('100%')
+          }.width('100%').padding({ bottom: 16 + this.currencyBottomInset })
         }.layoutWeight(1).width('100%').align(Alignment.Top).scrollBar(BarState.Off)
           .edgeEffect(EdgeEffect.Spring, { alwaysEnabled: true }).id('expense-account-options')
       }
@@ -1719,7 +1746,12 @@ export struct ExpenseEditor {
             .fontColor($r('app.color.xq_font_primary')).onClick(() => { this.showOptions = false; })
         }.width('100%')
       }
-    }.width('100%').height('100%').padding(24)
+    }.width('100%').height('100%')
+      .padding({ left: this.optionKind !== 0 ? 16 : 24,
+        right: this.optionKind !== 0 ? 16 : 24,
+        top: this.optionKind !== 0 ? 20 : 24,
+        bottom: this.optionKind !== 0 ? 0 : 24 })
+      .expandSafeArea([SafeAreaType.SYSTEM], this.optionKind !== 0 ? [SafeAreaEdge.BOTTOM] : [])
   }
 
   @Builder
