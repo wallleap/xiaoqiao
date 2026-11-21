@@ -1,8 +1,9 @@
+import { enabledCurrencies } from '../core/money/CurrencySettings';
 import { CategoryIconBadge } from './CategoryIconBadge';
 import { AccountAvatar } from './AccountAvatar';
 import { MoneyAmountField } from './MoneyAmountField';
 import { PrepaidEventCommand } from '../domain/model/Prepaid';
-import { CURRENCIES, CurrencyDefinition, currencyUnit, currencyDefinition, crossRate } from '../core/money/Currencies';
+import { CurrencyDefinition, currencyUnit, currencyDefinition, crossRate } from '../core/money/Currencies';
 import { ExchangeRate } from '../core/money/ExchangeRate';
 import { FxConversion } from '../core/money/FxConversion';
 import { OfficialExchangeRates } from '../data/exchange/OfficialExchangeRates';
@@ -647,14 +648,15 @@ export struct ExpenseEditor {
   private selectCurrency(): void {
     if (this.saving || this.editingEntry !== undefined || this.quoteBusy) { return; }
     this.amountController.stopEditing();
-    this.getUIContext().showTextPickerDialog({ range: CURRENCIES.map((item: CurrencyDefinition) => item.code + ' · ' + item.name),
+    const choices = enabledCurrencies();
+    this.getUIContext().showTextPickerDialog({ range: choices.map((item: CurrencyDefinition) => item.code + ' · ' + item.name),
       selectedTextStyle: { color: $r('app.color.xq_font_emphasize') },
       acceptButtonStyle: { fontColor: $r('app.color.xq_font_emphasize') },
       cancelButtonStyle: { fontColor: $r('app.color.xq_font_secondary') },
-      selected: Math.max(0, CURRENCIES.findIndex((item: CurrencyDefinition) => item.code === this.currencyCode)),
+      selected: Math.max(0, choices.findIndex((item: CurrencyDefinition) => item.code === this.currencyCode)),
       onAccept: (result: TextPickerResult) => {
         const index = typeof result.index === 'number' ? result.index : result.index[0];
-        this.currencyCode = CURRENCIES[index].code;
+        this.currencyCode = choices[index].code;
         this.expression = '0'; this.discount = '0'; this.transferFee = '0'; this.transferCoupon = '0';
         this.bookRate = ''; this.settlementRate = ''; this.actualSettlement = ''; this.quoteDate = ''; this.quoteSource = 'manual';
         this.quoteVersion++;
@@ -673,7 +675,7 @@ export struct ExpenseEditor {
       if (this.active && version === this.quoteVersion && source === this.currencyCode && target === this.settlementCode() && date === this.fxDate()) {
         this.bookRate = book.rate; this.settlementRate = settlement.rate;
         this.quoteDate = book.source === 'same_currency' ? settlement.date : book.date;
-        this.quoteSource = book.source === 'ECB_CACHE' || settlement.source === 'ECB_CACHE' ? 'ECB_CACHE' : 'ECB';
+        this.quoteSource = book.source === 'manual' || settlement.source === 'manual' ? 'manual' : book.source === 'ECB_CACHE' || settlement.source === 'ECB_CACHE' ? 'ECB_CACHE' : 'ECB';
         this.actualSettlement = '';
       }
     } catch (_) { if (this.active) { this.showError(ExpenseErrorField.Amount, '参考汇率暂不可用，可手动填写汇率后保存'); } }
@@ -703,7 +705,7 @@ export struct ExpenseEditor {
             disabled: this.saving || this.quoteBusy })
         }
         Text(this.bookAmountText()).fontSize('14fp').fontColor($r('app.color.xq_font_primary')).width('100%')
-        Button(this.quoteBusy ? '读取汇率中…' : '获取官方参考汇率').fontSize('13fp').backgroundColor(Color.Transparent)
+        Button(this.quoteBusy ? '读取汇率中…' : '获取参考汇率').fontSize('13fp').backgroundColor(Color.Transparent)
           .fontColor($r('app.color.xq_font_emphasize')).enabled(!this.saving && !this.quoteBusy).onClick(() => { this.loadRates(); })
         Text((this.quoteDate ? this.quoteDate + ' · ' : '') + (this.quoteSource === 'manual' ? '手动汇率' : '欧洲中央银行 ECB · 官网免费参考汇率') + '，保存后固定此笔折算金额')
           .fontSize('12fp').fontColor($r('app.color.xq_font_tertiary')).width('100%')
@@ -1054,7 +1056,7 @@ export struct ExpenseEditor {
             Text('没有匹配的标签').fontSize('14fp').fontColor($r('app.color.xq_font_secondary')).padding(16)
           }
         }.width('100%')
-      }.layoutWeight(1).width('100%').align(Alignment.Top).scrollBar(BarState.Off)
+      }.layoutWeight(1).width('100%').align(Alignment.Top).scrollBar(BarState.Off).edgeEffect(EdgeEffect.Spring, { alwaysEnabled: true })
       Button('完成（已选 ' + this.selectedTagIds.length + '）', { type: ButtonType.Capsule })
         .width('100%').height(44).fontSize('14fp').fontWeight(FontWeight.Medium)
         .fontColor($r('app.color.xq_font_on_primary')).backgroundColor($r('app.color.xq_brand'))
@@ -1521,7 +1523,7 @@ export struct ExpenseEditor {
                 })
             }, (item: TransferPurpose) => item.key)
           }.width('100%')
-        }.layoutWeight(1).width('100%').align(Alignment.Top).scrollBar(BarState.Off)
+        }.layoutWeight(1).width('100%').align(Alignment.Top).scrollBar(BarState.Off).edgeEffect(EdgeEffect.Spring, { alwaysEnabled: true })
           .id('transfer-purpose-options')
       } else if (this.optionKind === 0) {
         Text('已选中父分类；关闭可保留，或继续选择子分类').fontSize('12fp').fontColor($r('app.color.xq_font_secondary'))
@@ -1529,7 +1531,7 @@ export struct ExpenseEditor {
           Flex({ wrap: FlexWrap.Wrap }) {
             ForEach(this.children(), (item: ExpenseCategory) => { this.categoryItem(item) }, (item: ExpenseCategory) => item.id)
           }.width('100%')
-        }.layoutWeight(1).width('100%')
+        }.layoutWeight(1).width('100%').scrollBar(BarState.Off).edgeEffect(EdgeEffect.Spring, { alwaysEnabled: true })
       } else {
         Scroll() {
           Column({ space: 8 }) {
@@ -1544,7 +1546,7 @@ export struct ExpenseEditor {
             }
           }.width('100%')
         }.layoutWeight(1).width('100%').align(Alignment.Top).scrollBar(BarState.Off)
-          .edgeEffect(EdgeEffect.Spring).id('expense-account-options')
+          .edgeEffect(EdgeEffect.Spring, { alwaysEnabled: true }).id('expense-account-options')
       }
       if (this.optionKind === 0) {
         Row({ space: 12 }) {

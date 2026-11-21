@@ -39,11 +39,16 @@ const source = fs.readFileSync(base + '/components/ExchangeRatesPage.ets', 'utf8
 const prefix = source.slice(source.indexOf('export struct'), source.indexOf('  @Builder')).replace('export struct', 'class') + '\n}';
 const tree = ts.createSourceFile('page.ts', prefix, ts.ScriptTarget.Latest, true);
 const cls = tree.statements.find(ts.isClassDeclaration);
-const names = ['reload', 'selectBase', 'today', 'showFeedback', 'aboutToAppear', 'aboutToDisappear'];
+const names = ['reload', 'openRates', 'selectBase', 'chooseBase', 'baseChoices', 'today', 'showFeedback', 'aboutToAppear', 'aboutToDisappear', 'converted', 'manage', 'settingsChanged', 'applySettingsChanges', 'sheetClosed', 'prepareSheetMaterial', 'loadSheetMaterial', 'baseSheetOptions'];
 const methods = names.map(name => cls.members.find(m => ts.isMethodDeclaration(m) && m.name.getText(tree) === name).getText(tree)).join('\n');
 const code = ts.transpileModule('class Page {' + methods + '}\nexports.Page=Page;', { compilerOptions: { target: ts.ScriptTarget.ES2020 } }).outputText;
 const service = { quote: async (from, to, date) => ({ from, to, rate: '1.25', date, source: 'ECB' }) };
-const context = { exports: {}, CURRENCIES, queryExchangeRates, OfficialExchangeRates: service };
+const { enabledCurrencies } = load(base + '/core/money/CurrencySettings.ets');
+const { Money } = load(base + '/core/money/Money.ets');
+const { ExchangeRate } = load(base + '/core/money/ExchangeRate.ets');
+const { ExpenseAmountInput } = load(base + '/presentation/ledger/ExpenseAmountInput.ets');
+const { currencyUnit } = load(base + '/core/money/Currencies.ets');
+const context = { exports: {}, CURRENCIES, enabledCurrencies, queryExchangeRates, Money, ExchangeRate, ExpenseAmountInput, currencyUnit, OfficialExchangeRates: service, SheetSize:{LARGE:'large'}, SheetKeyboardAvoidMode:{TRANSLATE_AND_RESIZE:'resize'}, $r:name=>name };
 vm.runInNewContext(code, context);
 const page = new context.exports.Page();
 const messages = [];
@@ -91,4 +96,71 @@ const row = page.rows[0];
 assert.notEqual(exchangeRateRowKey('CNY', row), exchangeRateRowKey('USD', row));
 assert.notEqual(exchangeRateRowKey('CNY', row), exchangeRateRowKey('CNY', { ...row, rate: '999' }));
 assert.notEqual(exchangeRateRowKey('CNY', row), exchangeRateRowKey('CNY', { ...row, cached: !row.cached }));
-console.log('PASS 汇率方向/实际日期/缓存标识/单币种与整体失败/搜索/刷新保留旧值/离页拒绝回写/重新打开/手动刷新开始及结果提示/首次加载不弹提示/连续外币基准切换/单值和数组索引/节点标识更新');
+page.loading = false; page.active = true; page.baseKeyword = 'old';
+await page.chooseBase(); assert.equal(page.showBaseSheet, true); assert.equal(page.baseKeyword, '');
+page.baseKeyword = '港币';
+assert.equal(page.baseChoices().length, 1); assert.equal(page.baseChoices()[0].code, 'HKD');
+await page.selectBase(CURRENCIES.findIndex(x => x.code === page.baseChoices()[0].code));
+assert.equal(page.baseCode, 'HKD'); assert.equal(page.showBaseSheet, false);
+const previousRequest = page.request;
+page.showBaseSheet = true; await page.selectBase(CURRENCIES.findIndex(x => x.code === 'HKD'));
+assert.equal(page.showBaseSheet, false); assert.equal(page.request, previousRequest);
+page.baseKeyword = ' usd '; assert.equal(page.baseChoices()[0].code, 'USD');
+page.baseKeyword = 'no-match'; assert.equal(page.baseChoices().length, 0);
+console.log('PASS 汇率方向/实际日期/缓存标识/单币种与整体失败/搜索/刷新保留旧值/离页拒绝回写/重新打开/手动刷新开始及结果提示/首次加载不弹提示/连续外币基准切换/单值和数组索引/节点标识更新/Sheet打开与关闭/搜索后正确选币/同币种不重复读取');
+
+page.baseCode = 'USD';
+assert.equal(page.converted({code:'CNY',rate:'7.25'}),'7.25');
+assert.equal(page.converted({code:'JPY',rate:'150.512345678912'}),'150.512345678912');
+assert.equal(page.converted({code:'USD',rate:'0.006123456789'}),'0.006123456789');
+assert.equal(page.converted({code:'EUR',rate:'1.2345'}),'1.2345');
+assert.equal(page.converted({code:'EUR',rate:'',error:'缺少手动汇率'}),'缺少手动汇率');
+assert(!source.includes('MoneyAmountField') && !source.includes('exchange-amount'));
+assert(source.includes("Text('1 ' + this.baseCode + ' 可兑换')"));
+assert.notEqual(exchangeRateRowKey('USD',row),exchangeRateRowKey('USD',{...row,manual:true}));
+page.showBaseSheet = false; await page.manage('EUR'); assert.equal(page.showBaseSheet,true);assert.equal(page.showManager,true);assert.equal(page.managerTarget,'EUR');
+page.showBaseSheet = false;await page.chooseBase();assert.equal(page.showManager,false);
+// A settings change supersedes an in-flight request, including a late successful response.
+page.baseCode = 'CNY';page.configVersion=0;page.showBaseSheet=false;
+const delayed=[];service.quote=(from,to,date)=>new Promise(resolve=>delayed.push(()=>resolve({from,to,date,rate:'999',source:'ECB'})));
+const stale=page.reload();
+service.quote=async(from,to,date)=>({from,to,date,rate:'2',source:'manual'});
+page.settingsChanged();await new Promise(resolve=>setImmediate(resolve));
+assert(page.rows.every(row=>row.rate==='2' && row.manual));
+delayed.forEach(resolve=>resolve());await stale;assert(page.rows.every(row=>row.rate==='2' && row.manual));
+assert.equal(page.configVersion,1);
+console.log('PASS fixed one-unit quote precision (including small values and JPY), manager entry, manual row identity and settings changes supersede old requests');
+
+// Saving a selection must not redraw/requote the presenting page while the modal is open.
+page.showBaseSheet=true;const modalRows=page.rows;const modalVersion=page.configVersion;
+page.settingsChanged();assert.equal(page.rows,modalRows);assert.equal(page.configVersion,modalVersion);assert.equal(page.settingsDirty,true);
+page.sheetClosed();await new Promise(resolve=>setImmediate(resolve));assert.equal(page.configVersion,modalVersion+1);assert.equal(page.settingsDirty,false);
+page.showManager=true;page.managerMode='rate';assert.equal(page.baseSheetOptions().height,'55%');
+page.managerMode='list';assert.equal(page.baseSheetOptions().height,'large');
+page.quietSheetMaterial={quiet:true};assert.equal(page.baseSheetOptions().systemMaterial,page.quietSheetMaterial);
+console.log('PASS modal saves defer presenter refresh, compact manual-rate height, and quiet sheet material wiring');
+
+// Recover persisted custom currencies before requesting rows on entry.
+const catalog=load(base+'/core/money/CurrencySettings.ets');
+const oldProfiles=catalog.currencyProfiles(),oldSettings=catalog.currencySettings();let catalogReads=0;
+page.workspace={currencySettings:{async load(){catalogReads++;catalog.installCurrencySettings([...oldProfiles,{code:'QAZ',name:'自定义测试',symbol:'Q',scale:2,enabled:true,custom:true}],oldSettings);}}};
+page.active=true;page.baseCode='CNY';await page.openRates();
+assert.equal(catalogReads,1);assert.equal(page.rows[0].code,'QAZ');
+page.showBaseSheet=true;page.keyword='USD';let scrolled=false;page.scroller={scrollTo(){scrolled=true;}};
+page.settingsChanged('QAZ');assert.equal(page.keyword,'USD');
+page.sheetClosed();await new Promise(resolve=>setImmediate(resolve));
+assert.equal(page.keyword,'');assert.equal(scrolled,true);assert.equal(page.rows[0].code,'QAZ');
+catalog.installCurrencySettings(oldProfiles,oldSettings);
+page.workspace={currencySettings:{async load(){throw Error('read failed');}}};await page.openRates();assert(page.error.includes('币种设置读取失败'));assert.equal(page.loading,false);
+console.log('PASS entry reload recovers custom catalog, new currencies sort first and clear stale search on sheet close, settings read errors remain visible');
+
+// Base selection remains usable while a previous set of online quotes is still pending.
+page.workspace=undefined;page.error='';page.active=true;page.showBaseSheet=false;page.baseCode='CNY';
+const unfinished=[];service.quote=(from,to,date)=>new Promise(resolve=>unfinished.push(()=>resolve({from,to,date,rate:'999',source:'ECB'})));
+const oldRead=page.reload();assert.equal(page.loading,true);await page.chooseBase();assert.equal(page.showBaseSheet,true);
+service.quote=async(from,to,date)=>({from,to,date,rate:'3',source:'manual'});
+await page.selectBase(CURRENCIES.findIndex(item=>item.code==='EUR'));assert.equal(page.baseCode,'EUR');assert.equal(page.loading,false);
+unfinished.forEach(resolve=>resolve());await oldRead;assert(page.rows.every(row=>row.rate==='3'));assert(!page.rows.some(row=>row.code==='EUR'));
+const selector=source.slice(source.indexOf('private baseSelector()'),source.indexOf('private rateRow('));
+assert(!selector.includes('.enabled(!this.loading)'));
+console.log('PASS base picker stays enabled during online loading and old base responses cannot overwrite the selection');

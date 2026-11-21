@@ -1,4 +1,4 @@
-import { CURRENCIES } from '../../core/money/Currencies';
+import { BUILTIN_CURRENCIES as CURRENCIES } from '../../core/money/Currencies';
 import { relationalStore } from '@kit.ArkData';
 import { MULTICURRENCY_SCHEMA_SHA256, MULTICURRENCY_SCHEMA_STATEMENTS } from './MulticurrencySchema';
 import { RdbSession } from './RdbSession';

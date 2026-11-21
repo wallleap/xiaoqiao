@@ -41,3 +41,7 @@
 我的页移除资产账户、图表统计两个重复入口，保留底部资产／统计 Tab。账本管理、分类设置、预算分类、修改预算、账单明细、自定义标签及汇率查询按三列排列，共 7 个入口。mine_icon_assets 和 mine_icon_charts 图标文件保留；不改资产、统计页面及导航回调。
 
 汇率入口使用 mine_icon_exchange_rates.png 并打开独立 HDS 子页面，支持选择基准币种、搜索、公开参考汇率及缓存／错误状态，详见 [汇率查询](exchange-rates.md)。
+
+### 快捷入口自适应
+
+“我的”快捷入口按卡片实测宽度减去左右各 12 vp 内边距计算列数，每格最小目标宽度 72 vp，最多 7 列，不固定三列。常规字体下，296 vp 内容区显示四列，272 vp 显示三列；大字体按 UIContext 当前 fp/vp 比例扩大目标宽度并增加行高。宽屏、横屏和分屏时重新排列，入口顺序与点击行为不变。布局计算与汇率页共用 `presentation/layout/AdaptiveGrid.ets`，本地验证使用 `node tools/verify-adaptive-grids.mjs`。

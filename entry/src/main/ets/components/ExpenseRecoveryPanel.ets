@@ -364,7 +364,7 @@ export struct ExpenseRecoveryPanel {
             '按到账日期冲减支出；原支出计入预算时，同步冲减对应预算。')
             .fontSize('12fp').lineHeight('18fp').fontColor($r('app.color.xq_font_tertiary')).width('100%')
         }.width('100%').padding({ bottom: 16 }).enabled(!this.working)
-      }.layoutWeight(1).width('100%').scrollBar(BarState.Off)
+      }.layoutWeight(1).width('100%').scrollBar(BarState.Off).edgeEffect(EdgeEffect.Spring, { alwaysEnabled: true })
         .onAppear(() => { this.formScroller.scrollTo({ xOffset: 0, yOffset: 0 }); })
       Column({ space: 8 }) {
         if (this.formError.length > 0) {

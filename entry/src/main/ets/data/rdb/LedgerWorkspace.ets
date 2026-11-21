@@ -1,3 +1,4 @@
+import { RdbCurrencySettings } from './RdbCurrencySettings';
 import { LEDGER_USAGE_ROWS_SQL } from './LedgerUsageQuery';
 import { matchImportedAccount } from '../../domain/model/ImportedAccountMatch';
 import { LedgerSearchCursor, LedgerSearchPageResult, LedgerFlowQuery, LedgerFlowPage } from '../../domain/model/LedgerSearch';
@@ -69,6 +70,7 @@ interface StoredImportValueMapping {
 export class LedgerWorkspace {
   private static readonly ACTIVE_BOOK_KEY: string = 'active_book_id';
   private static readonly instances: Map<string, Promise<LedgerWorkspace>> = new Map();
+  readonly currencySettings: RdbCurrencySettings;
   readonly currency: CurrencyUnit = new CurrencyUnit('CNY', 'CNY', 2);
   private readonly store: relationalStore.RdbStore;
   private readonly session: RdbSession;
@@ -86,6 +88,7 @@ export class LedgerWorkspace {
     OfficialExchangeRates.initialize(context);
     this.store = store;
     this.session = RdbSession.forStore(store);
+    this.currencySettings = new RdbCurrencySettings(this.session);
     this.localBackup = new LocalLedgerBackup(context, name, this.session);
     this.backup = new LedgerBackupPackage(context, name, this.localBackup);
     this.accountRepository = new RdbAccountRepository(store);
@@ -101,6 +104,7 @@ export class LedgerWorkspace {
     if (existing !== undefined) { return existing; }
     const pending = LedgerDatabase.open(context, name).then(async (store: relationalStore.RdbStore) => {
       const workspace = new LedgerWorkspace(context, name, store);
+      await workspace.currencySettings.load();
       await workspace.initializeActiveBook();
       return workspace;
     });

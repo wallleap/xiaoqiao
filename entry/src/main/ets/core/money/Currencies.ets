@@ -3,7 +3,7 @@ import { CurrencyUnit } from './CurrencyUnit';
 export interface CurrencyDefinition { code: string; name: string; symbol: string; scale: number; }
 
 /** Explicit minor units: ISO currency precision is never inferred from a rate or symbol. */
-export const CURRENCIES: CurrencyDefinition[] = [
+export const BUILTIN_CURRENCIES: CurrencyDefinition[] = [
   { code: 'CNY', name: '人民币', symbol: '¥', scale: 2 },
   { code: 'USD', name: '美元', symbol: '$', scale: 2 },
   { code: 'EUR', name: '欧元', symbol: '€', scale: 2 },
@@ -35,6 +35,8 @@ export const CURRENCIES: CurrencyDefinition[] = [
   { code: 'TRY', name: '土耳其里拉', symbol: '₺', scale: 2 },
   { code: 'ZAR', name: '南非兰特', symbol: 'R', scale: 2 }
 ];
+
+export const CURRENCIES: CurrencyDefinition[] = BUILTIN_CURRENCIES.slice();
 
 export function currencyDefinition(code: string): CurrencyDefinition {
   const value = CURRENCIES.find((item: CurrencyDefinition) => item.code === code);

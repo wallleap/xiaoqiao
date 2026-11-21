@@ -671,6 +671,30 @@
     {
       "name": "xq_book_cover_graphite_pages",
       "value": "#F5F7FA"
+    },
+    {
+      "name": "xq_exchange_currency_card_background",
+      "value": "#80FFFFFF"
+    },
+    {
+      "name": "xq_exchange_form_field_background",
+      "value": "#99F1F3F5"
+    },
+    {
+      "name": "xq_exchange_form_panel_background",
+      "value": "#B3FFFFFF"
+    },
+    {
+      "name": "xq_exchange_form_border",
+      "value": "#14000000"
+    },
+    {
+      "name": "xq_exchange_form_readonly_border",
+      "value": "#0A000000"
+    },
+    {
+      "name": "xq_exchange_form_readonly_background",
+      "value": "#B3E5E7EB"
     }
   ]
 }

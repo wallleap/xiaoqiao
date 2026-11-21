@@ -1,3 +1,4 @@
+import { RdbCurrencySettings } from './RdbCurrencySettings';
 import { common } from '@kit.AbilityKit';
 import { relationalStore } from '@kit.ArkData';
 import { fileIo as fs } from '@kit.CoreFileKit';
@@ -85,6 +86,7 @@ export class LocalLedgerBackup {
   private static async check(db: relationalStore.RdbStore, allowLegacy: boolean = false): Promise<void> {
     const version = await BookCoverMigration.status(db);
     if (version !== 10 && (!allowLegacy || ![2, 3, 4, 5, 6, 7, 8, 9].includes(version))) { throw new Error('BACKUP_VERSION_UNSUPPORTED'); }
+    if (version >= 7) { await RdbCurrencySettings.read(db); }
     const integrity = await db.querySql('PRAGMA integrity_check(1)');
     try {
       if (integrity.rowCount !== 1 || !integrity.goToFirstRow() || integrity.getString(0) !== 'ok') {

@@ -1021,7 +1021,7 @@ export struct StatisticsPage {
           ForEach(this.entries, (entry: StatisticsEntry) => {
             ListItem() { this.entryRow(entry) }
           }, (entry: StatisticsEntry) => entry.id)
-        }.layoutWeight(1).width('100%').scrollBar(BarState.Off).edgeEffect(EdgeEffect.Spring)
+        }.layoutWeight(1).width('100%').scrollBar(BarState.Off).edgeEffect(EdgeEffect.Spring, { alwaysEnabled: true })
         if (this.entries.length === 0) {
           Text('当前条件下没有明细').fontSize('14fp')
             .fontColor($r('app.color.xq_font_secondary')).width('100%').textAlign(TextAlign.Center).padding(24)

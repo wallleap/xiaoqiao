@@ -496,6 +496,7 @@ struct Index {
       onRestored: async (): Promise<boolean> => {
         this.kind = LedgerKind.All; this.displayedKind = LedgerKind.All;
         this.account = ''; this.selectedTagIds = []; this.keyword = '';
+        await this.workspace?.currencySettings.load();
         await this.loadLedger();
         return this.loadError.length === 0 && this.accountError.length === 0;
       }
@@ -513,6 +514,7 @@ struct Index {
       onRestored: async (): Promise<boolean> => {
         this.kind = LedgerKind.All; this.displayedKind = LedgerKind.All;
         this.account = ''; this.selectedTagIds = []; this.keyword = '';
+        await this.workspace?.currencySettings.load();
         await this.loadLedger();
         return this.loadError.length === 0 && this.accountError.length === 0;
       }
@@ -1742,7 +1744,7 @@ struct Index {
             .enabled(!this.bookBusy && !this.preview).id('ledger-book-new').onClick(() => { this.beginCreateBook(); })
         }
         }.width('100%')
-      }.layoutWeight(1).width('100%').align(Alignment.Top).scrollBar(BarState.Off).edgeEffect(EdgeEffect.Spring)
+      }.layoutWeight(1).width('100%').align(Alignment.Top).scrollBar(BarState.Off).edgeEffect(EdgeEffect.Spring, { alwaysEnabled: true })
     }.padding(24).width('100%').height('100%').id('ledger-book-sheet')
   }
 
@@ -1784,7 +1786,7 @@ struct Index {
             }
           }
         }.width('100%')
-      }.layoutWeight(1).width('100%').scrollBar(BarState.Off).edgeEffect(EdgeEffect.Spring)
+      }.layoutWeight(1).width('100%').scrollBar(BarState.Off).edgeEffect(EdgeEffect.Spring, { alwaysEnabled: true })
       Row({ space: 12 }) {
         Button('重置').layoutWeight(1).height(48)
           .backgroundColor($r('app.color.xq_app_surface_page')).fontColor($r('app.color.xq_font_primary'))
@@ -1820,7 +1822,7 @@ struct Index {
             Text(this.budgetError).fontSize('12fp').fontColor($r('app.color.xq_warning')).id('ledger-budget-error')
           }
         }.width('100%')
-      }.layoutWeight(1).width('100%').scrollBar(BarState.Off)
+      }.layoutWeight(1).width('100%').scrollBar(BarState.Off).edgeEffect(EdgeEffect.Spring, { alwaysEnabled: true })
     }.padding(24).width('100%').height('100%')
   }
 
@@ -1960,8 +1962,9 @@ struct Index {
     else if (this.showHuaweiCloud) { this.huaweiCloudPage() }
     else if (this.showPrepaid) { this.prepaidPage() }
     else if (this.showExchangeRates) {
-      ExchangeRatesPage({ onClose: () => { this.showExchangeRates = false; },
-        actionMaterial: this.materialReady && !this.forceLegacyMaterials ? this.filterMaterials?.action : undefined })
+      ExchangeRatesPage({ workspace: this.workspace, onClose: () => { this.showExchangeRates = false; this.loadLedger(); },
+        actionMaterial: this.materialReady && !this.forceLegacyMaterials ? this.filterMaterials?.action : undefined,
+        sheetMaterial: this.materialReady && !this.forceLegacyMaterials ? this.filterMaterials?.menu : undefined })
     }
     else if (this.showBackupRestore) { this.backupRestorePage() }
     else if (this.showSpendingNatures) { this.spendingNaturePage() }

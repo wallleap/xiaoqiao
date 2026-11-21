@@ -1,3 +1,4 @@
+import { enabledCurrencies } from '../core/money/CurrencySettings';
 import { ExpenseAmountInput } from '../presentation/ledger/ExpenseAmountInput';
 import { MoneyAmountField } from './MoneyAmountField';
 import { HdsNavigation, HdsNavigationTitleMode, hdsMaterial, DividerShowType, ScrollEffectType } from '@kit.UIDesignKit';
@@ -9,7 +10,7 @@ import { PrepaidProject, PrepaidEvent, PrepaidDetail, PrepaidProjectCommand, Pre
 import { LedgerAttachmentDraft } from '../domain/model/LedgerAttachment';
 import { LedgerAccount, ExpenseCategory, SpendingNatureChoice } from '../domain/model/LedgerSnapshot';
 import { Money } from '../core/money/Money';
-import { CURRENCIES, CurrencyDefinition, currencyUnit, crossRate } from '../core/money/Currencies';
+import { CurrencyDefinition, currencyUnit, crossRate } from '../core/money/Currencies';
 import { ExchangeRate } from '../core/money/ExchangeRate';
 import { OfficialExchangeRates } from '../data/exchange/OfficialExchangeRates';
 
@@ -147,8 +148,9 @@ export struct PrepaidPage {
     });
   }
   private chooseCurrency(): void {
-    this.choose('预付款币种', CURRENCIES.map((item: CurrencyDefinition) => item.code+' · '+item.name),CURRENCIES.findIndex((item: CurrencyDefinition) => item.code===this.currencyCode),
-      (index: number) => { this.currencyCode=CURRENCIES[index].code; this.amountText=''; this.resetRates(); });
+    const choices = enabledCurrencies();
+    this.choose('预付款币种', choices.map((item: CurrencyDefinition) => item.code+' · '+item.name),Math.max(0,choices.findIndex((item: CurrencyDefinition) => item.code===this.currencyCode)),
+      (index: number) => { this.currencyCode=choices[index].code; this.amountText=''; this.resetRates(); });
   }
   private chooseAccount(): void {
     if (this.accounts.length===0) { this.formError='请先在“资产账户”中添加付款／到账账户'; return; }
@@ -182,7 +184,7 @@ export struct PrepaidPage {
       const cash=await OfficialExchangeRates.quote(this.currencyCode,this.accountCode(),this.dateText);
       if (this.active) {
         this.bookRate=book.rate; this.cashRate=cash.rate; this.quoteDate=book.source==='same_currency' ? cash.date : book.date;
-        this.quoteSource=book.source==='ECB_CACHE' || cash.source==='ECB_CACHE' ? 'ECB_CACHE' : 'ECB';
+        this.quoteSource=book.source==='manual' || cash.source==='manual' ? 'manual' : book.source==='ECB_CACHE' || cash.source==='ECB_CACHE' ? 'ECB_CACHE' : 'ECB';
       }
     } catch (_) { if (this.active) { this.formError='参考汇率暂不可用，可手动填写汇率'; } }
     finally { if (this.active) { this.setWorking(false); } }
@@ -318,7 +320,7 @@ export struct PrepaidPage {
                   onChange:()=>{this.formError='';}})
               }
               if (this.currencyCode!=='CNY' || this.accountCode()!==this.currencyCode) {
-                Button('获取官方参考汇率').fontSize('13fp').backgroundColor(Color.Transparent).fontColor($r('app.color.xq_font_emphasize')).enabled(!this.working).onClick(()=>{this.loadRates();})
+                Button('获取参考汇率').fontSize('13fp').backgroundColor(Color.Transparent).fontColor($r('app.color.xq_font_emphasize')).enabled(!this.working).onClick(()=>{this.loadRates();})
                 Text((this.quoteDate ? this.quoteDate+' · ' : '')+(this.quoteSource==='manual' ? '手动汇率' : '欧洲中央银行 ECB · 官网免费参考汇率')).fontSize('12fp').fontColor($r('app.color.xq_font_tertiary')).width('100%')
               }
             }
@@ -340,7 +342,7 @@ export struct PrepaidPage {
           if (this.formError) { Text(this.formError).fontSize('13fp').fontColor($r('app.color.xq_warning')).width('100%') }
         }.width('100%').padding({bottom:16}).justifyContent(FlexAlign.Start).alignItems(HorizontalAlign.Start)
       }.layoutWeight(1).width('100%').align(Alignment.Top).scrollable(ScrollDirection.Vertical)
-        .scrollBar(BarState.Auto).edgeEffect(EdgeEffect.Spring)
+        .scrollBar(BarState.Auto).edgeEffect(EdgeEffect.Spring, { alwaysEnabled: true })
       Button(this.working ? '处理中…' : this.action==='edit' ? '保存修改' : this.action==='consume' ? '确认核销' : this.action==='refund' ? '确认退款' : '保存付款')
         .height(48).width('100%').borderRadius(24).fontSize('16fp').fontWeight(FontWeight.Medium).fontColor(Color.White).backgroundColor($r('app.color.xq_brand')).enabled(!this.working).onClick(()=>{this.save();})
     }.padding({left:20,right:20,top:20,bottom:24}).width('100%').height('100%')

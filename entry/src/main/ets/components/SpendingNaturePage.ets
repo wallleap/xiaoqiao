@@ -272,7 +272,7 @@ export struct SpendingNaturePage {
             Text(this.error).fontSize('12fp').fontColor($r('app.color.xq_warning')).width('100%')
           }
         }.width('100%')
-      }.width('100%').layoutWeight(1).align(Alignment.Top).scrollBar(BarState.Off)
+      }.width('100%').layoutWeight(1).align(Alignment.Top).scrollBar(BarState.Off).edgeEffect(EdgeEffect.Spring, { alwaysEnabled: true })
       Row({ space: 12 }) {
         Button('取消', { type: ButtonType.Capsule }).layoutWeight(1).height(44).fontSize('14fp')
           .fontColor($r('app.color.xq_font_primary')).backgroundColor($r('app.color.xq_app_surface_keyboard'))

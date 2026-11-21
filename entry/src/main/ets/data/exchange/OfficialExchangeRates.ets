@@ -1,3 +1,4 @@
+import { ManualCurrencyRate, ManualRatePath, BUILTIN_CURRENCY_CODES, currencySettings, manualRatePaths, manualPathRate, combineCurrencyRates } from '../../core/money/CurrencySettings';
 import { common } from '@kit.AbilityKit';
 import { preferences } from '@kit.ArkData';
 import { http } from '@kit.NetworkKit';
@@ -79,6 +80,26 @@ export class OfficialExchangeRates {
     currencyUnit(from); currencyUnit(to);
     if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) { throw new Error('FX_DATE_INVALID'); }
     if (from === to) { return { from: from, to: to, rate: '1', date: date, source: 'same_currency' }; }
+    const rates = currencySettings().rates;
+    const direct = rates.find((item: ManualCurrencyRate) => (item.from === from && item.to === to) || (item.from === to && item.to === from));
+    if (direct !== undefined) {
+      return { from: from, to: to, rate: direct.from === from ? direct.rate : crossRate('1', direct.rate), date: direct.date, source: 'manual' };
+    }
+    if (!BUILTIN_CURRENCY_CODES.includes(from) || !BUILTIN_CURRENCY_CODES.includes(to)) {
+      const sources = manualRatePaths(from, rates); const targets = manualRatePaths(to, rates);
+      const path = sources.find((item: ManualRatePath) => item.code === to);
+      if (path !== undefined) { return { from: from, to: to, rate: manualPathRate(path), date: path.date, source: 'manual' }; }
+      const source = sources.find((item: ManualRatePath) => BUILTIN_CURRENCY_CODES.includes(item.code));
+      const target = targets.find((item: ManualRatePath) => BUILTIN_CURRENCY_CODES.includes(item.code));
+      if (source === undefined || target === undefined) { throw new Error('FX_MANUAL_RATE_MISSING'); }
+      const bridge = await OfficialExchangeRates.quote(source.code, target.code, date);
+      return { from: from, to: to, rate: combineCurrencyRates(source, bridge.rate, target),
+        date: [source.date,target.date,bridge.date].filter((value: string) => value.length > 0).sort()[0], source: 'manual' };
+    }
+    return OfficialExchangeRates.onlineQuote(from, to, date);
+  }
+
+  private static async onlineQuote(from: string, to: string, date: string): Promise<OfficialRate> {
     let downloadFailed = false;
     const old = OfficialExchangeRates.days.length === 0 || Date.now() - OfficialExchangeRates.fetchedAt > 6 * 3600000;
     const oldest = OfficialExchangeRates.days[OfficialExchangeRates.days.length - 1];

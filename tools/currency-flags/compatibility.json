@@ -1,0 +1,18 @@
+[
+  {
+    "region": "eu",
+    "ratio": "4x3",
+    "resource": "flag_4x3_eu_compat",
+    "sourceSha256": "67040ccd286857e513262bc59a6825ea8520b3e6990e42f1075712c072460c09",
+    "bytes": 9857,
+    "sha256": "81480881172d5f45100cd83b55a53ab4066217361a5ab184c2bcaa766453b4c1"
+  },
+  {
+    "region": "eu",
+    "ratio": "1x1",
+    "resource": "flag_1x1_eu_compat",
+    "sourceSha256": "019d50bf796fb6931926181b79222422cd06fe8c53842e577d111c1c3ebc0d8a",
+    "bytes": 9858,
+    "sha256": "651dba57cb4f4de6f852765b69cfabc2473bf8ed7dbe74bde32d01cccedf9960"
+  }
+]

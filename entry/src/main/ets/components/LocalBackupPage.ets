@@ -1,3 +1,4 @@
+import { adaptiveColumns } from '../presentation/layout/AdaptiveGrid';
 import { summaryValue, summaryStatus } from '../presentation/profile/PersonalSummaryState';
 import { Money } from '../core/money/Money';
 import { authentication } from '@kit.AccountKit';
@@ -44,6 +45,9 @@ export struct LocalBackupPage {
   onOpenStatistics: () => void = () => {};
   onOpenRecords: () => void = () => {};
   onOpenExchangeRates: () => void = () => {};
+
+  @State private shortcutColumns: number = 4;
+  @State private shortcutFontScale: number = 1;
 
   private readonly scroller: Scroller = new Scroller();
 
@@ -183,7 +187,7 @@ export struct LocalBackupPage {
         Text(label).fontSize('12fp').fontColor($r('app.color.xq_font_primary')).maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis }).width('100%').textAlign(TextAlign.Center)
       }.width('100%').justifyContent(FlexAlign.Center)
-    }.width('33.333%').height(76).padding({ left: 2, right: 2 }).borderRadius(12).backgroundColor(Color.Transparent)
+    }.width((100 / this.shortcutColumns).toString() + '%').height(76 + 20 * (this.shortcutFontScale - 1)).padding({ left: 2, right: 2 }).borderRadius(12).backgroundColor(Color.Transparent)
       .enabled(this.ready && !this.busy).accessibilityText(label).id(componentId).onClick(action)
   }
 
@@ -196,8 +200,14 @@ export struct LocalBackupPage {
       this.shortcut($r('app.media.mine_icon_budgets'), '修改预算', 'my-budget', this.onOpenBudget)
       this.shortcut($r('app.media.mine_icon_records'), '账单明细', 'my-records', this.onOpenRecords)
       this.shortcut($r('app.media.mine_icon_tags'), '自定义标签', 'settings-tags', this.onOpenTags)
-      this.shortcut($r('app.media.mine_icon_exchange_rates'), '汇率查询', 'my-exchange-rates', this.onOpenExchangeRates)
+      this.shortcut($r('app.media.mine_icon_exchange_rates'), '汇率转换', 'my-exchange-rates', this.onOpenExchangeRates)
     }.width('100%').padding(12).borderRadius(20).backgroundColor($r('app.color.xq_app_surface_card'))
+      .onAreaChange((_oldArea: Area, area: Area) => {
+        const ui = this.getUIContext();
+        this.shortcutFontScale = Math.max(1, ui.fp2px(12) / ui.vp2px(12));
+        // Flex's measured width includes its 12 vp padding on both sides.
+        this.shortcutColumns = adaptiveColumns(Number(area.width) - 24, 72, 0, 7, this.shortcutFontScale);
+      })
   }
 
   @Builder

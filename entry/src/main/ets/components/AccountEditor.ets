@@ -1,4 +1,5 @@
-import { CURRENCIES, CurrencyDefinition, currencyUnit } from '../core/money/Currencies';
+import { enabledCurrencies } from '../core/money/CurrencySettings';
+import { CurrencyDefinition, currencyUnit } from '../core/money/Currencies';
 import { AccountCalibrationPage } from './AccountCalibrationPage';
 import { AccountAdjustmentHistoryPage } from './AccountAdjustmentHistoryPage';
 import { HdsNavigation, HdsNavigationTitleMode, hdsMaterial, DividerShowType, ScrollEffectType } from '@kit.UIDesignKit';
@@ -249,14 +250,15 @@ export struct AccountEditor {
                 .fontColor($r('app.color.xq_font_primary')).backgroundColor($r('app.color.xq_app_surface_keyboard'))
                 .enabled(this.original === undefined && !this.busy).onClick(() => {
                   try { this.openingController.stopEditing(); } catch (_) {}
-                  this.getUIContext().showTextPickerDialog({ range: CURRENCIES.map((item: CurrencyDefinition) => item.code + ' · ' + item.name),
+                  const choices = enabledCurrencies(this.original === undefined ? '' : this.currencyCode);
+                  this.getUIContext().showTextPickerDialog({ range: choices.map((item: CurrencyDefinition) => item.code + ' · ' + item.name),
                     selectedTextStyle: { color: $r('app.color.xq_font_emphasize') },
                     acceptButtonStyle: { fontColor: $r('app.color.xq_font_emphasize') },
                     cancelButtonStyle: { fontColor: $r('app.color.xq_font_secondary') },
-                    selected: CURRENCIES.findIndex((item: CurrencyDefinition) => item.code === this.currencyCode),
+                    selected: choices.findIndex((item: CurrencyDefinition) => item.code === this.currencyCode),
                     onAccept: (result: TextPickerResult) => {
                       const index = typeof result.index === 'number' ? result.index : result.index[0];
-                      this.currencyCode = CURRENCIES[index].code; this.opening = '0';
+                      this.currencyCode = choices[index].code; this.opening = '0';
                     }
                   });
                 })

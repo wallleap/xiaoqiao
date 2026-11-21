@@ -404,7 +404,7 @@ export struct CategoryManagementPage {
           }
         }, (option: ColorfulCategoryIcon) => option.key)
       }.columnsTemplate('1fr 1fr 1fr 1fr 1fr').columnsGap(8).rowsGap(8).cachedCount(2)
-        .layoutWeight(1).width('100%').scrollBar(BarState.Auto).id('category-icon-grid')
+        .layoutWeight(1).width('100%').scrollBar(BarState.Auto).edgeEffect(EdgeEffect.Spring, { alwaysEnabled: true }).id('category-icon-grid')
       if (this.error.length > 0) {
         Text(this.error).fontSize('12fp').fontColor($r('app.color.xq_warning')).width('100%')
       }
