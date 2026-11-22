@@ -73,30 +73,35 @@ export struct SettingsPage {
     Column({ space: 8 }) {
       Text('外观').fontSize('14fp').fontColor($r('app.color.xq_font_secondary'))
         .width('100%').padding({ left: 8, right: 8 })
-      Button({ type: ButtonType.Normal }) {
+      Column() {
+        Button({ type: ButtonType.Normal }) {
+          Row() {
+            Text('深色模式').fontSize('14fp').fontColor($r('app.color.xq_font_primary'))
+              .layoutWeight(1).maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
+            Row({ space: 4 }) {
+              Text(this.appearanceLabel()).fontSize('13fp').fontColor($r('app.color.xq_font_emphasize'))
+                .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
+              Image($r('app.media.lucide_chevron_down1')).width(12).height(12)
+                .fillColor($r('app.color.xq_icon_secondary')).flexShrink(0)
+            }.flexShrink(0)
+          }.width('100%').height('100%')
+        }.width('100%').height(52).padding({ left: 16, right: 16 }).borderRadius(0)
+          .fontColor($r('app.color.xq_font_primary')).backgroundColor(Color.Transparent)
+          .id('settings-appearance-mode')
+          .accessibilityText('深色模式：' + this.appearanceLabel())
+          .bindMenu(this.appearanceMenu, this.appearanceMenuOptions())
         Row() {
-          Text('深色模式').fontSize('14fp').fontColor($r('app.color.xq_font_primary'))
-            .layoutWeight(1).maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
-          Row({ space: 4 }) {
-            Text(this.appearanceLabel()).fontSize('13fp').fontColor($r('app.color.xq_font_emphasize'))
-              .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
-            Image($r('app.media.lucide_chevron_down1')).width(12).height(12)
-              .fillColor($r('app.color.xq_icon_secondary')).flexShrink(0)
-          }.flexShrink(0)
-        }.width('100%').height('100%')
-      }.width('100%').height(52).padding({ left: 16, right: 16 }).borderRadius(20)
-        .backgroundColor($r('app.color.xq_app_surface_card'))
-        .id('settings-appearance-mode')
-        .accessibilityText('深色模式：' + this.appearanceLabel())
-        .bindMenu(this.appearanceMenu, this.appearanceMenuOptions())
-      Button({ type: ButtonType.Normal }) {
-        Row({ space: 12 }) {
-          Text('收支转账颜色').fontSize('14fp').fontColor($r('app.color.xq_font_primary')).layoutWeight(1)
-          Image($r('app.media.lucide_chevron_right1')).width(16).height(16).fillColor($r('app.color.xq_icon_secondary'))
-        }.width('100%')
-      }.width('100%').height(52).padding({ left: 16, right: 16 }).borderRadius(20)
-        .fontColor($r('app.color.xq_font_primary')).backgroundColor($r('app.color.xq_app_surface_card'))
-        .enabled(this.workspace !== undefined).onClick(() => { this.showColors = true; }).id('settings-transaction-colors')
+          Divider().strokeWidth(0.5).color($r('app.color.xq_app_divider_subtle'))
+        }.width('100%').padding({ left: 16, right: 16 })
+        Button({ type: ButtonType.Normal }) {
+          Row({ space: 12 }) {
+            Text('收支转账颜色').fontSize('14fp').fontColor($r('app.color.xq_font_primary')).layoutWeight(1)
+            Image($r('app.media.lucide_chevron_right1')).width(16).height(16).fillColor($r('app.color.xq_icon_secondary'))
+          }.width('100%')
+        }.width('100%').height(52).padding({ left: 16, right: 16 }).borderRadius(0)
+          .fontColor($r('app.color.xq_font_primary')).backgroundColor(Color.Transparent)
+          .enabled(this.workspace !== undefined).onClick(() => { this.showColors = true; }).id('settings-transaction-colors')
+      }.width('100%').borderRadius(20).backgroundColor($r('app.color.xq_app_surface_card')).clip(true)
     }.width('100%')
   }
 
