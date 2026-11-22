@@ -50,6 +50,10 @@ export struct LocalBackupPage {
   @State private shortcutColumns: number = 4;
   @State private shortcutFontScale: number = 1;
   @State private headerOffset: number = 0;
+  @State private memberBadgeWidth: number = 118;
+  @State private memberBadgeHeight: number = 22;
+  @State private memberActionWidth: number = 60;
+  @State private memberActionHeight: number = 18;
 
   private readonly headerHeight: number = 340;
   private readonly scroller: Scroller = new Scroller();
@@ -143,14 +147,58 @@ export struct LocalBackupPage {
     }.layoutWeight(1).alignItems(HorizontalAlign.Center)
   }
 
+  private memberBadgeContour(widthVp: number, heightVp: number): string {
+    const width = this.getUIContext().vp2px(widthVp);
+    const height = this.getUIContext().vp2px(heightVp);
+    // A slanted lower-left edge and shaped right cap follow the supplied reference, in px.
+    return 'M ' + height * 0.40 + ',0 H ' + (width - height * 0.40) +
+      ' Q ' + width + ',0 ' + (width - height * 0.10) + ',' + height * 0.40 +
+      ' L ' + (width - height * 0.25) + ',' + height * 0.78 +
+      ' Q ' + (width - height * 0.35) + ',' + height + ' ' + (width - height * 0.60) + ',' + height +
+      ' H 0 L ' + height * 0.16 + ',' + height * 0.25 +
+      ' Q ' + height * 0.20 + ',0 ' + height * 0.40 + ',0 Z';
+  }
+
+  @Builder
+  private memberActionLabel() {
+    Stack({ alignContent: Alignment.Start }) {
+      Path().commands(this.memberBadgeContour(this.memberActionWidth,this.memberActionHeight))
+        .width(this.memberActionWidth).height(this.memberActionHeight).fill(this.paidEdition ? '#FFD18F' : '#D6D9DF').strokeWidth(0)
+        .hitTestBehavior(HitTestMode.None)
+      Text(this.paidEdition ? '会员中心' : '开通会员').fontSize('11fp').fontFamily('YouSheBiaoTiHei')
+        .lineHeight('18fp').fontWeight(FontWeight.Regular).fontColor(this.paidEdition ? '#372211' : '#292D34')
+        .padding({ left: 8, right: 8 }).maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
+        .onAreaChange((_old: Area, area: Area) => {
+          const width = Number(area.width); const height = Number(area.height);
+          if (width > 0 && Math.abs(width - this.memberActionWidth) > 0.25) { this.memberActionWidth = width; }
+          if (height > 0 && Math.abs(height - this.memberActionHeight) > 0.25) { this.memberActionHeight = height; }
+        })
+    }.constraintSize({ maxWidth: '100%' })
+  }
+
   @Builder
   private memberBadge() {
-    Row({ space: 3 }) {
-      Image($r('app.media.lucide_crown1')).width(11).height(11).fillColor($r('app.color.xq_font_emphasize'))
-      Text('会员').fontSize('10fp').fontWeight(FontWeight.Medium).fontColor($r('app.color.xq_font_emphasize'))
-    }.height(18).padding({ left: 5, right: 6 }).borderRadius(9)
-      .alignItems(VerticalAlign.Center).backgroundColor($r('app.color.xq_comp_emphasize_tertiary'))
-      .accessibilityText('会员')
+    Stack({ alignContent: Alignment.TopStart }) {
+      Path().commands(this.memberBadgeContour(this.memberBadgeWidth,this.memberBadgeHeight))
+        .width(this.memberBadgeWidth).height(this.memberBadgeHeight).fill(this.paidEdition ? '#402716' : '#34383F').strokeWidth(0)
+        .hitTestBehavior(HitTestMode.None)
+      Row({ space: 3 }) {
+        Image($r('app.media.vip_wordmark')).width(30).height(13.4).objectFit(ImageFit.Contain).flexShrink(0)
+          .fillColor(this.paidEdition ? '#FFD18F' : '#D6D9DF')
+        this.memberActionLabel()
+      }.constraintSize({ minHeight: 22, maxWidth: '100%' }).padding({ left: 20, right: 5, top: 2, bottom: 2 })
+        .alignItems(VerticalAlign.Center)
+        .onAreaChange((_old: Area, area: Area) => {
+          const width = Number(area.width); const height = Number(area.height);
+          if (width > 0 && Math.abs(width - this.memberBadgeWidth) > 0.25) { this.memberBadgeWidth = width; }
+          if (height > 0 && Math.abs(height - this.memberBadgeHeight) > 0.25) { this.memberBadgeHeight = height; }
+        })
+      // Overlay is deliberately larger than the bar and extends beyond its upper-left edge.
+      Image(this.paidEdition ? $r('app.media.vip_emblem') : $r('app.media.vip_emblem_silver'))
+        .width(24).height(24).objectFit(ImageFit.Contain).position({ x: -5, y: -5 })
+        .hitTestBehavior(HitTestMode.None)
+    }.constraintSize({ maxWidth: '100%' }).clip(false)
+      .accessibilityText(this.paidEdition ? 'VIP，会员中心' : 'VIP，开通会员')
   }
 
   @Builder
@@ -162,24 +210,26 @@ export struct LocalBackupPage {
             Image(this.avatarUri).width(56).height(56).objectFit(ImageFit.Cover)
               .onError(() => { this.avatarFailed = true; })
           } else {
-            Image($r('app.media.lucide_user_round1')).width(28).height(28).fillColor($r('app.color.xq_icon_secondary'))
+            Image($r('app.media.startIcon')).width(56).height(56).objectFit(ImageFit.Contain)
           }
-        }.width(56).height(56).borderRadius(28).clip(true)
-          .backgroundColor($r('app.color.xq_app_surface_card'))
-          .border({ width: 1, color: $r('app.color.xq_app_divider_subtle') })
+        }.width(56).height(56)
+          .borderRadius(this.connected && this.avatarUri.length > 0 && !this.avatarFailed ? 28 : 0)
+          .clip(this.connected && this.avatarUri.length > 0 && !this.avatarFailed)
         Column({ space: 6 }) {
           Row({ space: 6 }) {
             Text(this.connected ? this.nickName || '华为账号用户' : '未登录').fontSize('20fp').fontWeight(FontWeight.Medium)
               .fontColor($r('app.color.xq_font_primary')).maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
               .flexShrink(1)
-            if (this.paidProfileCard()) {
-              this.memberBadge()
-            }
           }.width('100%').alignItems(VerticalAlign.Center)
-          Text(this.loginBusy ? '正在登录…' : this.connected ? '华为账号已连接' : '点击使用华为账号登录').fontSize('12fp')
-            .fontColor($r('app.color.xq_font_secondary'))
+          if (this.connected) {
+            this.memberBadge()
+          } else {
+            Text(this.loginBusy ? '正在登录…' : '点击使用华为账号登录').fontSize('12fp')
+              .fontColor($r('app.color.xq_font_secondary')).maxLines(2)
+          }
         }.layoutWeight(1).alignItems(HorizontalAlign.Start)
-        Image($r('app.media.lucide_chevron_right1')).width(20).height(20).fillColor($r('app.color.xq_icon_tertiary'))
+        Image($r('app.media.lucide_chevron_right1')).width(20).height(20).flexShrink(0)
+          .fillColor($r('app.color.xq_icon_tertiary'))
       }.width('100%').alignItems(VerticalAlign.Center).enabled(!this.busy && !this.loginBusy)
         .onClick(() => { if (this.connected) { this.onOpenHuaweiCloud(); } else { this.login(); } }).id('my-account-header')
         .accessibilityText(this.connected ? '查看华为账号与云备份' : '登录华为账号')

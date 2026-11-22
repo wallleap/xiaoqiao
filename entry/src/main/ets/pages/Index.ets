@@ -190,6 +190,8 @@ struct Index {
 
   aboutToAppear(): void {
     const fonts = this.getUIContext().getFont();
+    fonts.registerFont({ familyName: 'YouSheBiaoTiHei',
+      familySrc: $rawfile('fonts/YouSheBiaoTiHei.ttf') });
     fonts.registerFont({ familyName: 'XiaoQiaoDINRegular',
       familySrc: $rawfile('fonts/D-DIN-PRO-400-Regular.ttf') });
     fonts.registerFont({ familyName: 'XiaoQiaoDINMedium',

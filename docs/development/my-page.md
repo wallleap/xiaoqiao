@@ -189,3 +189,21 @@ HdsNavigation 保留 MINI 标题栏、enableComponentSafeArea、avoidLayoutSafeA
 设置页首屏先提供“外观”模块：分组标题“外观”，下方单张实色卡片 xq_app_surface_card、圆角 20vp，只有一行“深色模式”——左侧 14fp xq_font_primary 标签，右侧显示当前值（13fp xq_font_emphasize）与 12vp 下拉箭头（xq_icon_secondary），整行 52vp、左右 16vp 内边距，点击整行用 bindMenu 弹出“跟随系统／浅色／深色”菜单。菜单参考首页账目卡片长按菜单：`Menu` 宽 224vp、圆角 20vp，纯文字项，不加勾选标记，当前项仅用 xq_font_emphasize 区分。菜单通过 MenuOptions.systemMaterial 接入 Index 传入的 HDS menuMaterial（沉浸光感）；材质不可用时回退为普通实色菜单，不手绘模糊或高光。外观选择通过 AppearanceSettings 持久化到 preferences（键 color_mode：system/light/dark），调用 ApplicationContext.setColorMode 立即切换全局颜色模式；EntryAbility.onCreate 读取已保存值，onWindowStageCreate 在 loadContent 前应用，避免启动闪烁。跟随系统使用 COLOR_MODE_NOT_SET。该模块只改颜色模式，不改语言、字号或其它系统配置。
 
 本轮验证：git diff --check、颜色 Token 引用核对、preferences getPreferencesSync/getSync/putSync/flushSync 与 ConfigurationConstant.ColorMode 签名静态核对。未运行原生构建或设备测试；切换后全 App 资源与 HDS 材质是否同步刷新、重启后是否保持、深色下设置页与“我的”页对比度仍需真机确认。
+
+## 2026-11-22：未开通会员的显示
+
+已连接账号后，昵称下方显示会员标识，替代“华为账号已连接”辅助文案；箭头保持在账号行最右侧，已登录和未登录一致。未登录不显示会员标识。
+
+会员标识按用户最终参考采用双区结构：左侧为 V 图标＋VIP 字标，右侧为异形标签。未开通显示“VIP｜开通会员”，整组采用银灰色（石墨灰底、浅银字标和标签、深灰标签文字）；已开通显示“VIP｜会员中心”，整组采用棕金色（深棕底、浅金字标和标签、深棕标签文字）。不使用参考图中的“7天无忧退”权益文案。右侧中文使用 YouSheBiaoTiHei.ttf，11 fp、18 fp 行高；左侧不再放“会员”文字，改用用户提供的 vip(7).svg，复制为 vip_wordmark.svg，30×13.4 vp，按状态单色着色。
+
+会员底条最小高度 22 vp，按用户要求再次缩小；内边距左 20 vp、右 5 vp、上下 2 vp；字标与标签间距 3 vp。右侧标签水平留白各 8 vp。背景与标签使用独立的同族异形 Path，带斜切左下边和弧形收口，不用普通矩形／胶囊替代。两块底形分别随实际内容宽高测量，vp 转 px 绘制，跟随字体和状态变化。
+
+前方破框图标改用用户最新提供的 vip(6).svg，原样复制为 vip_emblem.svg，保留立体切面和原金色；tools/generate-vip-marks.py 按亮度生成银灰副本 vip_emblem_silver.svg，保留各切面的明暗和全部路径，不做单色填充压平。已开通使用原金色，未开通使用银灰副本。独立以 24×24 vp 叠加在底条左上方，位置 x=-5、y=-5 vp；不参与内容 Row 排列，外层不裁切，使图标破框，但不侵入头像或昵称。原 vip.svg／vip_disabled.svg 及旧派生资源已按清理请求移除。此节替代前一版“图标和文字共用单条底形”的方案。
+
+目前仍是 UI 展示参数，未接入真实会员资格、开通页面或购买操作，不改变任何功能权限。“开通会员”本轮作为文字标识展示，不新增无目标的购买按钮。个人汇总主机验证及差异检查通过；未进行原生构建、支付或真机视觉验收。
+
+## 2026-11-22：废弃资源清理
+
+按用户请求，清理无运行时引用的 vip.svg、vip_disabled.svg、vip_mark.svg、vip_disabled_mark.svg 以及 my_profile_standard_bg.svg、my_profile_paid_bg.svg；此规则替代此前“保留旧背景以便回退”的约定。当前使用 vip_emblem.svg、vip_emblem_silver.svg、vip_wordmark.svg 和 YouSheBiaoTiHei.ttf。生成脚本仅生成现用的银灰图标，不再依赖或生成旧素材。lucide_crown1 仍在账本封面资源目录与选项中使用，保留。
+
+删除前的资源副本已留存在工作区外的临时目录；仓库中原已跟踪的旧背景仍可通过 Git 历史恢复。代码资源引用、图标与字体有效性、个人汇总和账本封面主机验证、暂存差异检查用于提交前验证；未执行原生构建、账号登录、付费或真机验收。

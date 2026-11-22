@@ -277,65 +277,90 @@ export struct HuaweiCloudPage {
       `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
   }
 
+  @Builder
+  private signedOutCard() {
+    Column({ space: 16 }) {
+      Row({ space: 12 }) {
+        Stack() {
+          Image($r('app.media.lucide_cloud_backup1')).width(28).height(28).fillColor($r('app.color.xq_font_emphasize'))
+        }.width(52).height(52).borderRadius(16).backgroundColor($r('app.color.xq_comp_emphasize_tertiary'))
+        Column({ space: 6 }) {
+          Text('登录华为账号').fontSize('18fp').fontWeight(FontWeight.Medium).fontColor($r('app.color.xq_font_primary')).width('100%')
+          Text('连接后使用云空间备份').fontSize('12fp').fontColor($r('app.color.xq_font_secondary')).width('100%')
+        }.layoutWeight(1).alignItems(HorizontalAlign.Start)
+      }.width('100%')
+      Text('登录后可备份和恢复账本。未登录也可正常记账和使用本地备份。')
+        .fontSize('14fp').fontColor($r('app.color.xq_font_secondary')).width('100%')
+      if (canIUse('SystemCapability.AuthenticationServices.HuaweiID.UIComponent')) {
+        LoginWithHuaweiIDButton({ params: this.loginParams, controller: this.loginController })
+          .width('100%').height(44).enabled(!this.busy).id('cloud-account-login')
+      } else {
+        Text('当前设备暂不支持华为账号登录组件，可继续使用本地备份。')
+          .fontSize('12fp').fontColor($r('app.color.xq_font_secondary')).width('100%')
+      }
+    }.width('100%').padding(16).borderRadius(20).backgroundColor($r('app.color.xq_app_surface_card')).id('cloud-signed-out-card')
+  }
+
   build() {
     HdsNavigation() {
       Scroll(this.scroller) {
         Column({ space: 16 }) {
-          if (!this.connected && canIUse('SystemCapability.AuthenticationServices.HuaweiID.UIComponent')) {
-            LoginWithHuaweiIDButton({ params: this.loginParams, controller: this.loginController }).width('100%').height(44).enabled(!this.busy)
-          }
-          Column({ space: 12 }) {
-            Text('云空间备份').fontSize('18fp').fontWeight(FontWeight.Medium).fontColor($r('app.color.xq_font_primary')).width('100%')
-            Text(this.syncStatus).fontSize('14fp').fontColor($r('app.color.xq_font_secondary')).width('100%')
-            Text('最近系统同步：' + this.date(this.lastSync)).fontSize('12fp').fontColor($r('app.color.xq_font_tertiary')).width('100%')
-            Button('前往云空间设置').height(40).width('100%').fontSize('14fp')
-              .fontColor($r('app.color.xq_font_emphasize')).backgroundColor($r('app.color.xq_app_surface_page'))
-              .enabled(!this.busy).onClick(() => { this.openCloudSettings(); })
-            Button(this.busy ? '处理中…' : '立即备份').height(44).width('100%').fontSize('14fp').fontColor(Color.White)
-              .backgroundColor($r('app.color.xq_brand')).enabled(this.ready && this.connected && !this.busy && !this.recoveryRequired && this.preview === undefined && HuaweiCloudBackup.available())
-              .onClick(() => { this.createBackup(); })
-          }.padding(16).width('100%').borderRadius(16).backgroundColor($r('app.color.xq_app_surface_card'))
-          Row() {
-            Text('备份记录').fontSize('18fp').fontWeight(FontWeight.Medium).fontColor($r('app.color.xq_font_primary'))
-            Blank()
-            Button('刷新').fontSize('14fp').fontColor($r('app.color.xq_font_emphasize')).backgroundColor(Color.Transparent)
-              .enabled(this.connected && !this.busy && HuaweiCloudBackup.available()).onClick(() => { this.refresh(); })
-          }.width('100%')
-          Text('记录来自云目录；文件写入成功不代表已上传完成，请结合系统同步状态查看。').fontSize('12fp')
-            .fontColor($r('app.color.xq_font_secondary')).width('100%')
-          if (this.records.length === 0) {
-            Text(!this.connected ? '连接华为账号后查看备份' : this.recordsLoaded ? '暂无备份记录，开启同步后可刷新查看' : this.busy ? '正在读取备份记录…' : '备份记录尚未读取成功，请刷新重试').fontSize('14fp')
-              .fontColor($r('app.color.xq_font_secondary')).width('100%').padding({ top: 12, bottom: 12 })
-          }
-          ForEach(this.records, (record: CloudBackupRecord) => {
-            Row({ space: 12 }) {
-              Column({ space: 4 }) {
-                Text(this.date(record.createdAt)).fontSize('16fp').fontColor($r('app.color.xq_font_primary'))
-                Text((record.bytes / 1024 / 1024).toFixed(2) + ' MiB').fontSize('12fp').fontColor($r('app.color.xq_font_secondary'))
-              }.layoutWeight(1).alignItems(HorizontalAlign.Start)
-              Button({ type: ButtonType.Circle }) {
-                Image($r('app.media.lucide_ellipsis1')).width(20).height(20).fillColor($r('app.color.xq_icon_secondary'))
-              }.width(40).height(40).padding(0).backgroundColor(Color.Transparent)
-                .enabled(this.connected && !this.busy && !this.recoveryRequired && this.preview === undefined)
-                .accessibilityText(this.date(record.createdAt) + '备份的更多操作')
-                .bindMenu([
-                  { value: '查看并恢复', enabled: this.ready, action: () => { this.choose(record); } },
-                  { value: '删除备份', action: () => { this.deleteBackup(record); } }
-                ], { placement: Placement.BottomRight })
-            }.width('100%').padding(16).borderRadius(16).backgroundColor($r('app.color.xq_app_surface_card'))
-          }, (record: CloudBackupRecord) => record.name)
-          if (this.preview !== undefined) {
+          if (!this.connected) {
+            this.signedOutCard()
+          } else {
             Column({ space: 12 }) {
-              Text('恢复预览').fontSize('18fp').fontWeight(FontWeight.Medium).fontColor($r('app.color.xq_font_primary')).width('100%')
-              Text(`${this.preview.books} 个账本 · ${this.preview.entries} 笔账目 · ${this.preview.accounts} 个账户`).fontSize('14fp')
-                .fontColor($r('app.color.xq_font_secondary')).width('100%')
-              Row({ space: 12 }) {
-                Button('取消').layoutWeight(1).height(44).enabled(!this.busy).onClick(() => { this.discard(); })
-                  .fontColor($r('app.color.xq_font_primary')).backgroundColor($r('app.color.xq_app_surface_page'))
-                Button('恢复账本').layoutWeight(1).height(44).enabled(this.ready && !this.busy && !this.recoveryRequired)
-                  .fontColor(Color.White).backgroundColor($r('app.color.xq_brand')).onClick(() => { this.restore(); })
-              }.width('100%')
+              Text('云空间备份').fontSize('18fp').fontWeight(FontWeight.Medium).fontColor($r('app.color.xq_font_primary')).width('100%')
+              Text(this.syncStatus).fontSize('14fp').fontColor($r('app.color.xq_font_secondary')).width('100%')
+              Text('最近系统同步：' + this.date(this.lastSync)).fontSize('12fp').fontColor($r('app.color.xq_font_tertiary')).width('100%')
+              Button('前往云空间设置').height(40).width('100%').fontSize('14fp')
+                .fontColor($r('app.color.xq_font_emphasize')).backgroundColor($r('app.color.xq_app_surface_page'))
+                .enabled(!this.busy).onClick(() => { this.openCloudSettings(); })
+              Button(this.busy ? '处理中…' : '立即备份').height(44).width('100%').fontSize('14fp').fontColor(Color.White)
+                .backgroundColor($r('app.color.xq_brand')).enabled(this.ready && this.connected && !this.busy && !this.recoveryRequired && this.preview === undefined && HuaweiCloudBackup.available())
+                .onClick(() => { this.createBackup(); })
             }.padding(16).width('100%').borderRadius(16).backgroundColor($r('app.color.xq_app_surface_card'))
+            Row() {
+              Text('备份记录').fontSize('18fp').fontWeight(FontWeight.Medium).fontColor($r('app.color.xq_font_primary'))
+              Blank()
+              Button('刷新').fontSize('14fp').fontColor($r('app.color.xq_font_emphasize')).backgroundColor(Color.Transparent)
+                .enabled(this.connected && !this.busy && HuaweiCloudBackup.available()).onClick(() => { this.refresh(); })
+            }.width('100%')
+            Text('记录来自云目录；文件写入成功不代表已上传完成，请结合系统同步状态查看。').fontSize('12fp')
+              .fontColor($r('app.color.xq_font_secondary')).width('100%')
+            if (this.records.length === 0) {
+              Text(this.recordsLoaded ? '暂无备份记录，开启同步后可刷新查看' : this.busy ? '正在读取备份记录…' : '备份记录尚未读取成功，请刷新重试').fontSize('14fp')
+                .fontColor($r('app.color.xq_font_secondary')).width('100%').padding({ top: 12, bottom: 12 })
+            }
+            ForEach(this.records, (record: CloudBackupRecord) => {
+              Row({ space: 12 }) {
+                Column({ space: 4 }) {
+                  Text(this.date(record.createdAt)).fontSize('16fp').fontColor($r('app.color.xq_font_primary'))
+                  Text((record.bytes / 1024 / 1024).toFixed(2) + ' MiB').fontSize('12fp').fontColor($r('app.color.xq_font_secondary'))
+                }.layoutWeight(1).alignItems(HorizontalAlign.Start)
+                Button({ type: ButtonType.Circle }) {
+                  Image($r('app.media.lucide_ellipsis1')).width(20).height(20).fillColor($r('app.color.xq_icon_secondary'))
+                }.width(40).height(40).padding(0).backgroundColor(Color.Transparent)
+                  .enabled(this.connected && !this.busy && !this.recoveryRequired && this.preview === undefined)
+                  .accessibilityText(this.date(record.createdAt) + '备份的更多操作')
+                  .bindMenu([
+                    { value: '查看并恢复', enabled: this.ready, action: () => { this.choose(record); } },
+                    { value: '删除备份', action: () => { this.deleteBackup(record); } }
+                  ], { placement: Placement.BottomRight })
+              }.width('100%').padding(16).borderRadius(16).backgroundColor($r('app.color.xq_app_surface_card'))
+            }, (record: CloudBackupRecord) => record.name)
+            if (this.preview !== undefined) {
+              Column({ space: 12 }) {
+                Text('恢复预览').fontSize('18fp').fontWeight(FontWeight.Medium).fontColor($r('app.color.xq_font_primary')).width('100%')
+                Text(`${this.preview.books} 个账本 · ${this.preview.entries} 笔账目 · ${this.preview.accounts} 个账户`).fontSize('14fp')
+                  .fontColor($r('app.color.xq_font_secondary')).width('100%')
+                Row({ space: 12 }) {
+                  Button('取消').layoutWeight(1).height(44).enabled(!this.busy).onClick(() => { this.discard(); })
+                    .fontColor($r('app.color.xq_font_primary')).backgroundColor($r('app.color.xq_app_surface_page'))
+                  Button('恢复账本').layoutWeight(1).height(44).enabled(this.ready && !this.busy && !this.recoveryRequired)
+                    .fontColor(Color.White).backgroundColor($r('app.color.xq_brand')).onClick(() => { this.restore(); })
+                }.width('100%')
+              }.padding(16).width('100%').borderRadius(16).backgroundColor($r('app.color.xq_app_surface_card'))
+            }
           }
           if (this.message.length > 0) { Text(this.message).fontSize('14fp').fontColor(this.error ? $r('app.color.xq_warning') : $r('app.color.xq_font_secondary')).width('100%') }
           if (this.connected) {
@@ -343,7 +368,7 @@ export struct HuaweiCloudPage {
               .fontColor($r('app.color.xq_warning')).backgroundColor($r('app.color.xq_app_surface_card'))
               .enabled(!this.busy && this.preview === undefined).onClick(() => { this.logout(); })
           }
-          Text('云备份包含完整账本和附件，不会自动合并多设备账目。退出登录会撤销本应用的华为账号授权，下次登录需重新同意；不会退出系统华为账号或删除已有备份。').fontSize('12fp')
+          Text(this.connected ? '云备份包含完整账本和附件，不会自动合并多设备账目。退出登录会撤销本应用的华为账号授权，下次登录需重新同意；不会退出系统华为账号或删除已有备份。' : '登录不会自动创建备份，备份操作需要你手动确认。').fontSize('12fp')
             .fontColor($r('app.color.xq_font_tertiary')).width('100%')
         }.width('100%').constraintSize({ maxWidth: 640 }).padding({ left: 16, right: 16, top: 12, bottom: 32 })
       }.width('100%').height('100%').align(Alignment.Top).scrollBar(BarState.Off).clip(false)
