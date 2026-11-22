@@ -1,3 +1,4 @@
+import { SupportPageKind } from '../presentation/support/SupportContent';
 import { adaptiveColumns } from '../presentation/layout/AdaptiveGrid';
 import { summaryValue, summaryStatus } from '../presentation/profile/PersonalSummaryState';
 import { Money } from '../core/money/Money';
@@ -40,6 +41,10 @@ export struct LocalBackupPage {
   onOpenDataExchange: () => void = () => {};
   onOpenHuaweiCloud: () => void = () => {};
   onOpenSettings: () => void = () => {};
+  onOpenSupport: (kind: SupportPageKind, offset: number) => void = () => {};
+  supportReturnOffset: number = 0;
+  onSupportScrollRestored: () => void = () => {};
+  private supportScrollRestored: boolean = false;
   onOpenBooks: () => void = () => {};
   onOpenAccounts: () => void = () => {};
   onOpenBudget: () => void = () => {};
@@ -284,7 +289,7 @@ export struct LocalBackupPage {
   }
 
   @Builder
-  private navigationCell(icon: Resource, label: string, componentId: string, action: () => void) {
+  private navigationCell(icon: Resource, label: string, componentId: string, action: () => void, requiresLedger: boolean = true) {
     Button({ type: ButtonType.Normal }) {
       Row({ space: 12 }) {
         Image(icon).width(20).height(20).fillColor($r('app.color.xq_icon_secondary')).flexShrink(0)
@@ -294,8 +299,8 @@ export struct LocalBackupPage {
           .fillColor($r('app.color.xq_icon_tertiary')).flexShrink(0)
       }.width('100%').height('100%').alignItems(VerticalAlign.Center)
     }.width('100%').height(52).padding({ left: 16, right: 16 }).borderRadius(0)
-      .backgroundColor(Color.Transparent).enabled(this.ready && !this.busy)
-      .accessibilityText(label).id(componentId).onClick(() => { if (this.ready && !this.busy) { action(); } })
+      .fontColor($r('app.color.xq_font_primary')).backgroundColor(Color.Transparent).enabled((!requiresLedger || this.ready) && !this.busy)
+      .accessibilityText(label).id(componentId).onClick(() => { if ((!requiresLedger || this.ready) && !this.busy) { action(); } })
   }
 
   @Builder
@@ -304,6 +309,20 @@ export struct LocalBackupPage {
       this.navigationCell($r('app.media.lucide_arrow_down_up1'), '导入与导出', 'settings-data-exchange', this.onOpenDataExchange)
       Divider().color($r('app.color.xq_app_divider_subtle')).margin({ left: 48, right: 16 })
       this.navigationCell($r('app.media.lucide_database_backup1'), '备份与恢复', 'my-backup-restore', this.onOpenBackupRestore)
+    }.width('100%').borderRadius(20).backgroundColor($r('app.color.xq_app_surface_card')).clip(true)
+  }
+
+  @Builder
+  private supportCells() {
+    Column() {
+      this.navigationCell($r('app.media.lucide_circle_question_mark1'), '帮助中心', 'my-help',
+        () => { this.onOpenSupport('help', Math.max(0, this.scroller.currentOffset().yOffset)); }, false)
+      Divider().color($r('app.color.xq_app_divider_subtle')).margin({ left: 48, right: 16 })
+      this.navigationCell($r('app.media.lucide_message_square1'), '意见反馈', 'my-feedback',
+        () => { this.onOpenSupport('feedback', Math.max(0, this.scroller.currentOffset().yOffset)); }, false)
+      Divider().color($r('app.color.xq_app_divider_subtle')).margin({ left: 48, right: 16 })
+      this.navigationCell($r('app.media.lucide_info1'), '关于我们', 'my-about',
+        () => { this.onOpenSupport('about', Math.max(0, this.scroller.currentOffset().yOffset)); }, false)
     }.width('100%').borderRadius(20).backgroundColor($r('app.color.xq_app_surface_card')).clip(true)
   }
 
@@ -347,9 +366,17 @@ export struct LocalBackupPage {
             this.personalHeader()
             this.shortcuts()
             this.navigationCells()
+            this.supportCells()
           }.width('100%').constraintSize({ maxWidth: 640 }).padding({ left: 16, right: 16, top: 12, bottom: 128 })
         }.id('settings-scroll').width('100%').height('100%').align(Alignment.Top).scrollBar(BarState.Off).clip(false)
           .edgeEffect(EdgeEffect.Spring, { alwaysEnabled: true })
+          .onAreaChange((_old: Area, area: Area) => {
+            if (!this.supportScrollRestored && Number(area.height) > 0) {
+              this.supportScrollRestored = true;
+              if (this.supportReturnOffset > 0) { this.scroller.scrollTo({ xOffset: 0, yOffset: this.supportReturnOffset }); }
+              this.onSupportScrollRestored();
+            }
+          })
           .onDidScroll(() => {
             const offset = this.scroller.currentOffset().yOffset;
             const next = Math.min(Math.max(offset, 0), this.headerHeight);

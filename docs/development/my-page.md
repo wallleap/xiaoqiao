@@ -207,3 +207,7 @@ HdsNavigation 保留 MINI 标题栏、enableComponentSafeArea、avoidLayoutSafeA
 按用户请求，清理无运行时引用的 vip.svg、vip_disabled.svg、vip_mark.svg、vip_disabled_mark.svg 以及 my_profile_standard_bg.svg、my_profile_paid_bg.svg；此规则替代此前“保留旧背景以便回退”的约定。当前使用 vip_emblem.svg、vip_emblem_silver.svg、vip_wordmark.svg 和 YouSheBiaoTiHei.ttf。生成脚本仅生成现用的银灰图标，不再依赖或生成旧素材。lucide_crown1 仍在账本封面资源目录与选项中使用，保留。
 
 删除前的资源副本已留存在工作区外的临时目录；仓库中原已跟踪的旧背景仍可通过 Git 历史恢复。代码资源引用、图标与字体有效性、个人汇总和账本封面主机验证、暂存差异检查用于提交前验证；未执行原生构建、账号登录、付费或真机验收。
+
+## 帮助、反馈与关于入口
+
+新增独立服务卡片，放在导入导出／备份恢复卡片下，三行分别打开帮助中心、意见反馈、关于我们子页面。未登录和账本未就绪时可用，备份恢复忙碌时仍阻止跳转。反馈邮箱为用户提供的 vonnelu@163.com，通过系统邮件草稿提交；细节、返回保护与验证边界见 [帮助、反馈与关于页面](support-pages.md)。

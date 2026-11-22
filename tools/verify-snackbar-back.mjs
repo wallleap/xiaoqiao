@@ -10,9 +10,11 @@ let style,dismissed=0,loads=0;
 class HdsSnackBar{dismiss(){dismissed++;}show(a,b,c,s){style=s;}}
 const context={exports:{},HdsSnackBar,SnackBarOperationType:{CLOSE_BUTTON_ONLY:1}};
 vm.runInNewContext(ts.transpileModule('class Page{'+methods+'}exports.Page=Page;',{compilerOptions:{target:ts.ScriptTarget.ES2020}}).outputText,context);
-const p=new context.exports.Page();Object.assign(p,{getUIContext:()=>({getFocusController:()=>({clearFocus(){}})}),dismissPrepaidNotice(){},loadLedger(){loads++;},showBookManagement:true,bookManagement:true,bookBusy:false});
+const p=new context.exports.Page();Object.assign(p,{supportPage:'',supportBackHandler:()=>false,getUIContext:()=>({getFocusController:()=>({clearFocus(){}})}),dismissPrepaidNotice(){},loadLedger(){loads++;},showBookManagement:true,bookManagement:true,bookBusy:false});
 p.notify('删除成功');assert.equal(style.duration,3000);style.pressBackCallback();assert.equal(p.showBookManagement,false);assert.equal(loads,1);assert.equal(dismissed,2);
 p.showBookManagement=true;p.bookEditing=true;p.notify('提示');style.pressBackCallback();assert.equal(p.bookEditing,false);assert.equal(p.showBookManagement,true);
 p.bookBusy=true;p.notify('提示');style.pressBackCallback();assert.equal(p.showBookManagement,true);
 p.bookBusy=false;p.showBookManagement=false;p.notify('提示');style.pressBackCallback();assert.equal(p.showBookManagement,false);
+let supportBacks=0;p.supportPage='feedback';p.supportBackHandler=()=>{supportBacks++;return true;};p.notify('提示');style.pressBackCallback();assert.equal(supportBacks,1);assert.equal(p.supportPage,'feedback');
+p.supportBackHandler=()=>false;style.pressBackCallback();assert.equal(p.supportPage,'');
 console.log('PASS production SnackBar back callback: management returns, editor returns to list, busy guard preserved, root dismisses only');

@@ -1,3 +1,5 @@
+import { SupportPage } from '../components/SupportPage';
+import { SupportPageKind } from '../presentation/support/SupportContent';
 import { DEFAULT_TRANSACTION_COLORS, TransactionColors, TransactionColorKind } from '../presentation/ledger/TransactionColors';
 import { CurrencyFlagBadge } from '../components/CurrencyFlagBadge';
 import { enabledCurrencies } from '../core/money/CurrencySettings';
@@ -82,6 +84,9 @@ struct Index {
   @State private showBackupRestore: boolean = false;
   private settingsBackHandler: () => boolean = () => false;
   @State private showSettings: boolean = false;
+  @State private supportPage: SupportPageKind | '' = '';
+  private supportBackHandler: () => boolean = () => false;
+  private supportReturnOffset: number = 0;
   @State private showExchangeRates: boolean = false;
   @State private accountOverview: AccountOverview | undefined = undefined;
   @State private accountError: string = '';
@@ -917,6 +922,7 @@ struct Index {
   }
 
   onBackPress(): boolean {
+    if (this.supportPage !== '') { if (!this.supportBackHandler()) { this.supportPage = ''; } return true; }
     if (this.showBookManagement) { this.backFromBookManagement(); return true; }
     if (this.showSettings) { if (!this.settingsBackHandler()) { this.showSettings = false; } return true; }
     if (this.showExchangeRates) { this.showExchangeRates = false; return true; }
@@ -2133,6 +2139,11 @@ struct Index {
           onOpenBackupRestore: () => { this.showBackupRestore = true; },
           onOpenHuaweiCloud: () => { this.showHuaweiCloud = true; },
           onOpenSettings: () => { this.showSettings = true; },
+          supportReturnOffset: this.supportReturnOffset,
+          onSupportScrollRestored: () => { this.supportReturnOffset = 0; },
+          onOpenSupport: (kind: SupportPageKind, offset: number) => {
+            if (!this.backupBusy) { this.supportReturnOffset = offset; this.supportPage = kind; }
+          },
           onOpenBooks: () => { this.openBookSheet(true); },
           onOpenExchangeRates: () => { this.showExchangeRates = true; },
           onOpenAccounts: () => { this.selectedTab = 3; },
@@ -2168,7 +2179,11 @@ struct Index {
 
   @Builder
   private routedPage() {
-    if (this.showExpense) { this.expenseWithManagement() }
+    if (this.supportPage !== '') {
+      SupportPage({ kind: this.supportPage, onClose: () => { this.supportPage = ''; },
+        onRegisterBack: (handler: () => boolean) => { this.supportBackHandler = handler; } })
+    }
+    else if (this.showExpense) { this.expenseWithManagement() }
     else if (this.showBookManagement) { this.bookManagementPage() }
     else if (this.showBudgetPage) { this.budgetPage() }
     else if (this.showCategories) { this.categoryManagementPage() }
