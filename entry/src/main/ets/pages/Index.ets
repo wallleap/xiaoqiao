@@ -170,9 +170,12 @@ struct Index {
   @State private prepaidNoticeProgress: number = 100;
   private prepaidNoticeTimer: number = -1;
   private readonly labels: string[] = ['账目', '统计', '记一笔', '资产', '我的'];
-  private readonly tabIcons: Resource[] = [$r('app.media.lucide_house1'),
-    $r('app.media.lucide_chart_no_axes_combined1'), $r('app.media.lucide_plus1'),
-    $r('app.media.lucide_wallet1'), $r('app.media.lucide_user_round1')];
+  private readonly tabIcons: Resource[] = [$r('app.media.tab_ledger'),
+    $r('app.media.tab_statistics'), $r('app.media.lucide_plus1'),
+    $r('app.media.tab_assets'), $r('app.media.tab_profile')];
+  private readonly selectedTabIcons: Resource[] = [$r('app.media.tab_ledger_selected'),
+    $r('app.media.tab_statistics_selected'), $r('app.media.lucide_plus1'),
+    $r('app.media.tab_assets_selected'), $r('app.media.tab_profile_selected')];
 
   private entries(kind: LedgerKind = this.kind): LedgerEntry[] {
     const saved = this.ledger?.entries.map(presentEntry) || [];
@@ -1748,8 +1751,7 @@ struct Index {
         .id('ledger-add-expense').onClick(() => { this.openExpense(); })
     } else {
       Column({ space: 4 }) {
-        Image(this.tabIcons[index]).width(22).height(22)
-          .fillColor(index === this.selectedTab ? $r('app.color.xq_icon_emphasize') : $r('app.color.xq_icon_secondary'))
+        Image(index === this.selectedTab ? this.selectedTabIcons[index] : this.tabIcons[index]).width(26).height(26)
         Text(this.labels[index]).fontSize('10fp')
           .fontColor(index === this.selectedTab ? $r('app.color.xq_font_emphasize') : $r('app.color.xq_font_secondary'))
       }.id(`ledger-tab-${index}`).height(56).width('100%').justifyContent(FlexAlign.Center)
