@@ -164,3 +164,24 @@ git diff --check 通过并静态核对两张 SVG 结构；按用户要求未构�
 流水固定区域顺序调整为范围按钮在上、周期导航在下，总高度仍为 104vp。五个范围按钮接入已有 rangeMaterial（API 能力回退沿用原逻辑），未选中背景在有材质时透明，选中仍用主色强调；日历的单行月份导航不变。
 
 流水范围选中态修正：选中按钮单独使用主色背景与 on-primary 文字，不显式套用 rangeMaterial，避免透明沉浸材质覆盖品牌选中底色。未选中按钮继续透明背景加 rangeMaterial；固定区域导航沉浸背景保留。
+
+
+## 顶部浅色弥散与会员徽标
+
+按用户决定去掉“我的”标题文字，头像、昵称与三项汇总不再用深色卡片兜底，直接铺在页面顶部的浅色弥散渐变上；会员不再用金色卡片背景区分，改为昵称右侧的小徽标。此节替代上文“头像与汇总卡片背景”的卡片方案。
+
+页面根节点改为 Stack：底层为页面底色 xq_app_surface_page，第二层为 340vp 高的 headerBackdrop，最上层为背景透明的 HdsNavigation。Stack 与 HdsNavigation 均声明 ignoreLayoutSafeArea，Stack 另加 expandSafeArea，使渐变铺入状态栏。渐变由三层叠加：180° 线性渐变 xq_profile_header_gradient_top → mid（50%）→ bottom（86%），右上暖光 xq_profile_header_glow_warm（中心 100%/0%，半径 260），左上冷光 xq_profile_header_glow_cool（中心 0%/8%，半径 220）。渐变底部与页面底色一致，不产生硬边。Scroll.onDidScroll 读取 currentOffset 并限制在 0–340，通过 translate 让渐变随内容上移，滚出首屏后不残留顶部色带。
+
+HdsNavigation 保留 MINI 标题栏、enableComponentSafeArea、avoidLayoutSafeArea、IMMERSIVE/ADAPTIVE 材质与 IMMERSIVE_GRADIENT_BLUR，仅把 mainTitle 置空、背景改为透明，页面底色由 Stack 提供。状态栏文字继续使用 xq_font_primary：浅色暖渐变上用深色图标，深色暖渐变上用浅色图标。
+
+头部文字改为主题色：昵称 20fp Medium xq_font_primary，说明 12fp xq_font_secondary，右侧箭头 xq_icon_tertiary；头像 56vp，白卡底 xq_app_surface_card 加 1vp xq_app_divider_subtle 细边，占位图标 xq_icon_secondary。三项汇总之间增加 1vp × 28vp 竖分隔线建立结构，数字与标签改用 xq_font_primary／xq_font_secondary，不再使用卡片内的浅色文字。
+
+会员徽标仅在已连接华为账号且 paidEdition 为 true 时显示，位于昵称右侧：lucide_crown1 11vp + “会员” 10fp Medium，高 18vp、圆角 9vp、左右内边距 5/6vp，前景 xq_font_emphasize，背景 xq_comp_emphasize_tertiary，无障碍文本“会员”。paidEdition 仍无业务来源，正式环境不显示，视觉验收可临时传 true。my_profile_paid_bg.svg 与 my_profile_standard_bg.svg 不再被引用，保留资源文件以便回退。
+
+深色模式使用独立暖渐变（top #FF201813、mid #FF100C0A、bottom #FF000000，暖光 #2EFF956D、冷光 #146E8FB8），不沿用浅色渐变。
+
+本轮验证：git diff --check、颜色 Token JSON 结构与引用名核对、SDK linearGradient/radialGradient/onDidScroll 签名静态核对。按项目约定未运行原生构建或设备测试；渐变是否铺入状态栏、标题栏材质在渐变上的观感、滚动跟手程度与深浅色对比仍需真机确认。
+
+头部整块左右在页面 16vp 基础上再内收 4vp（合计 20vp），头像、昵称与三项汇总同步对齐。标题栏右侧通过 HDS `menu` 增加 `lucide_settings1` 设置图标（无障碍名称“设置”），图标色使用 xq_icon_primary，滚动前后保持一致。
+
+新增空设置子页面 SettingsPage：按子页规范使用 HdsNavigation + Scroll、MINI 标题“设置”、原生返回、IMMERSIVE/ADAPTIVE 材质与 IMMERSIVE_GRADIENT_BLUR，绑定自身 Scroller，页面背景 xq_app_surface_page；正文按用户要求留空，后续设置项再补。Index 新增 showSettings 状态、routedPage 分支与 onBackPress 返回处理，LocalBackupPage 新增 onOpenSettings 回调。新增页面的标题／返回、空页首屏与返回流程需真机确认。

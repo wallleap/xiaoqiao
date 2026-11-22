@@ -695,6 +695,26 @@
     {
       "name": "xq_exchange_form_readonly_background",
       "value": "#B3232528"
+    },
+    {
+      "name": "xq_profile_header_gradient_top",
+      "value": "#FF201813"
+    },
+    {
+      "name": "xq_profile_header_gradient_mid",
+      "value": "#FF100C0A"
+    },
+    {
+      "name": "xq_profile_header_gradient_bottom",
+      "value": "#FF000000"
+    },
+    {
+      "name": "xq_profile_header_glow_warm",
+      "value": "#2EFF956D"
+    },
+    {
+      "name": "xq_profile_header_glow_cool",
+      "value": "#146E8FB8"
     }
   ]
 }

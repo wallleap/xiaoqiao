@@ -39,6 +39,7 @@ export struct LocalBackupPage {
   onOpenTags: () => void = () => {};
   onOpenDataExchange: () => void = () => {};
   onOpenHuaweiCloud: () => void = () => {};
+  onOpenSettings: () => void = () => {};
   onOpenBooks: () => void = () => {};
   onOpenAccounts: () => void = () => {};
   onOpenBudget: () => void = () => {};
@@ -48,7 +49,9 @@ export struct LocalBackupPage {
 
   @State private shortcutColumns: number = 4;
   @State private shortcutFontScale: number = 1;
+  @State private headerOffset: number = 0;
 
+  private readonly headerHeight: number = 340;
   private readonly scroller: Scroller = new Scroller();
 
   aboutToAppear(): void { this.appeared = true; this.personalChanged(); }
@@ -118,11 +121,6 @@ export struct LocalBackupPage {
   }
 
   private paidProfileCard(): boolean { return this.connected && this.paidEdition; }
-  private profilePrimaryColor(): string { return this.paidProfileCard() ? '#FFF1D4' : '#F7F8FB'; }
-  private profileSecondaryColor(): string { return this.paidProfileCard() ? '#D8C8A7' : '#CCD4E1'; }
-  private profileBackground(): Resource {
-    return this.paidProfileCard() ? $r('app.media.my_profile_paid_bg') : $r('app.media.my_profile_standard_bg');
-  }
 
   // Only the column kind is a builder argument. Read reactive props inside each UI expression,
   // so conditional status nodes do not retain primitive loading/error snapshots.
@@ -133,16 +131,26 @@ export struct LocalBackupPage {
         kind === 2 ? this.netMinor.length > 0 : this.usage !== undefined,
         kind === 2 ? this.netLoading : this.usageLoading, kind === 2 ? this.netError : this.usageError))
         .fontSize('20fp').fontFamily('XiaoQiaoDINMedium').fontWeight(FontWeight.Medium)
-        .fontColor(this.profilePrimaryColor()).maxLines(1).minFontSize('14fp').maxFontSize('20fp')
+        .fontColor($r('app.color.xq_font_primary')).maxLines(1).minFontSize('14fp').maxFontSize('20fp')
         .width('100%').height(30).textAlign(TextAlign.Center).textOverflow({ overflow: TextOverflow.Ellipsis })
-      Text(kind === 0 ? '记账天数' : kind === 1 ? '记账笔数' : '净资产').fontSize('12fp').fontColor(this.profileSecondaryColor())
+      Text(kind === 0 ? '记账天数' : kind === 1 ? '记账笔数' : '净资产').fontSize('12fp').fontColor($r('app.color.xq_font_secondary'))
       if (summaryStatus(kind === 2 ? this.netMinor.length > 0 : this.usage !== undefined,
         kind === 2 ? this.netLoading : this.usageLoading, kind === 2 ? this.netError : this.usageError).length > 0) {
         Text(summaryStatus(kind === 2 ? this.netMinor.length > 0 : this.usage !== undefined,
           kind === 2 ? this.netLoading : this.usageLoading, kind === 2 ? this.netError : this.usageError)).fontSize('10fp')
-          .fontColor((kind === 2 ? this.netLoading : this.usageLoading) ? this.profileSecondaryColor() : $r('app.color.xq_font_emphasize'))
+          .fontColor((kind === 2 ? this.netLoading : this.usageLoading) ? $r('app.color.xq_font_secondary') : $r('app.color.xq_font_emphasize'))
       }
     }.layoutWeight(1).alignItems(HorizontalAlign.Center)
+  }
+
+  @Builder
+  private memberBadge() {
+    Row({ space: 3 }) {
+      Image($r('app.media.lucide_crown1')).width(11).height(11).fillColor($r('app.color.xq_font_emphasize'))
+      Text('会员').fontSize('10fp').fontWeight(FontWeight.Medium).fontColor($r('app.color.xq_font_emphasize'))
+    }.height(18).padding({ left: 5, right: 6 }).borderRadius(9)
+      .alignItems(VerticalAlign.Center).backgroundColor($r('app.color.xq_comp_emphasize_tertiary'))
+      .accessibilityText('会员')
   }
 
   @Builder
@@ -154,24 +162,34 @@ export struct LocalBackupPage {
             Image(this.avatarUri).width(56).height(56).objectFit(ImageFit.Cover)
               .onError(() => { this.avatarFailed = true; })
           } else {
-            Image($r('app.media.lucide_user_round1')).width(28).height(28).fillColor(this.profileSecondaryColor())
+            Image($r('app.media.lucide_user_round1')).width(28).height(28).fillColor($r('app.color.xq_icon_secondary'))
           }
-        }.width(56).height(56).borderRadius(28).clip(true).backgroundColor('#1AFFFFFF').border({ width: 1, color: '#24FFFFFF' })
+        }.width(56).height(56).borderRadius(28).clip(true)
+          .backgroundColor($r('app.color.xq_app_surface_card'))
+          .border({ width: 1, color: $r('app.color.xq_app_divider_subtle') })
         Column({ space: 6 }) {
-          Text(this.connected ? this.nickName || '华为账号用户' : '未登录').fontSize('20fp').fontWeight(FontWeight.Medium)
-            .fontColor(this.profilePrimaryColor()).maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
+          Row({ space: 6 }) {
+            Text(this.connected ? this.nickName || '华为账号用户' : '未登录').fontSize('20fp').fontWeight(FontWeight.Medium)
+              .fontColor($r('app.color.xq_font_primary')).maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
+              .flexShrink(1)
+            if (this.paidProfileCard()) {
+              this.memberBadge()
+            }
+          }.width('100%').alignItems(VerticalAlign.Center)
           Text(this.loginBusy ? '正在登录…' : this.connected ? '华为账号已连接' : '点击使用华为账号登录').fontSize('12fp')
-            .fontColor(this.profileSecondaryColor())
+            .fontColor($r('app.color.xq_font_secondary'))
         }.layoutWeight(1).alignItems(HorizontalAlign.Start)
-        Image($r('app.media.lucide_chevron_right1')).width(20).height(20).fillColor(this.profileSecondaryColor())
+        Image($r('app.media.lucide_chevron_right1')).width(20).height(20).fillColor($r('app.color.xq_icon_tertiary'))
       }.width('100%').alignItems(VerticalAlign.Center).enabled(!this.busy && !this.loginBusy)
         .onClick(() => { if (this.connected) { this.onOpenHuaweiCloud(); } else { this.login(); } }).id('my-account-header')
         .accessibilityText(this.connected ? '查看华为账号与云备份' : '登录华为账号')
-      Row({ space: 8 }) {
+      Row() {
         this.personalStat(0)
+        Divider().vertical(true).height(28).color($r('app.color.xq_app_divider_subtle'))
         this.personalStat(1)
+        Divider().vertical(true).height(28).color($r('app.color.xq_app_divider_subtle'))
         this.personalStat(2)
-      }.width('100%').alignItems(VerticalAlign.Top)
+      }.width('100%').alignItems(VerticalAlign.Center)
       if (this.usageError.length > 0 && !this.usageLoading) {
         Button(this.usageError + '，点击重试').fontSize('12fp').fontColor($r('app.color.xq_font_emphasize'))
           .backgroundColor(Color.Transparent).enabled(!this.usageLoading).onClick(() => { this.onRetryUsage(); })
@@ -180,9 +198,7 @@ export struct LocalBackupPage {
         Button('净资产：' + this.netError + '，点击重试').fontSize('12fp').fontColor($r('app.color.xq_font_emphasize'))
           .backgroundColor(Color.Transparent).onClick(() => { this.onRetryAssets(); })
       }
-    }.width('100%').padding(20).borderRadius(20)
-      .backgroundColor('#171B22').backgroundImage(this.profileBackground()).backgroundImageSize(ImageSize.Cover)
-      .border({ width: 1, color: this.paidProfileCard() ? '#33E1C888' : '#24D4DFEC' }).clip(true)
+    }.width('100%').padding({ left: 4, right: 4, top: 8, bottom: 24 })
   }
 
 
@@ -246,26 +262,66 @@ export struct LocalBackupPage {
     return host === undefined ? '#E5000000' : '#' + (host.resourceManager.getColorSync($r('app.color.xq_font_primary').id) >>> 0).toString(16).padStart(8, '0');
   }
 
+  @Builder
+  private headerBackdrop() {
+    Stack() {
+      Column().width('100%').height(this.headerHeight)
+        .linearGradient({
+          angle: 180,
+          colors: [
+            [$r('app.color.xq_profile_header_gradient_top'), 0],
+            [$r('app.color.xq_profile_header_gradient_mid'), 0.5],
+            [$r('app.color.xq_profile_header_gradient_bottom'), 0.86]
+          ]
+        })
+      Column().width('100%').height(this.headerHeight)
+        .radialGradient({
+          center: ['100%', '0%'], radius: 260,
+          colors: [[$r('app.color.xq_profile_header_glow_warm'), 0], [Color.Transparent, 1]]
+        })
+      Column().width('100%').height(this.headerHeight)
+        .radialGradient({
+          center: ['0%', '8%'], radius: 220,
+          colors: [[$r('app.color.xq_profile_header_glow_cool'), 0], [Color.Transparent, 1]]
+        })
+    }.width('100%').height(this.headerHeight).translate({ y: -this.headerOffset })
+      .hitTestBehavior(HitTestMode.None)
+  }
+
   build() {
-    HdsNavigation() {
-      Scroll(this.scroller) {
-        Column({ space: 16 }) {
-          this.personalHeader()
-          this.shortcuts()
-          this.navigationCells()
-        }.width('100%').constraintSize({ maxWidth: 640 }).padding({ left: 16, right: 16, top: 12, bottom: 128 })
-      }.id('settings-scroll').width('100%').height('100%').align(Alignment.Top).scrollBar(BarState.Off).clip(false)
-        .edgeEffect(EdgeEffect.Spring, { alwaysEnabled: true })
-    }.mode(NavigationMode.Stack).titleMode(HdsNavigationTitleMode.MINI).hideBackButton(true)
-      .titleBar({ enableComponentSafeArea: true, avoidLayoutSafeArea: true,
-        content: { title: { mainTitle: '我的' }, divider: { showType: DividerShowType.OFF } },
-        style: {
-          originalStyle: { contentStyle: { titleStyle: { mainTitleColor: $r('app.color.xq_font_primary') } } },
-          scrollEffectStyle: { contentStyle: { titleStyle: { mainTitleColor: $r('app.color.xq_font_primary') } } },
-          systemMaterialEffect: { materialType: hdsMaterial.MaterialType.IMMERSIVE, materialLevel: hdsMaterial.MaterialLevel.ADAPTIVE },
-          scrollEffectOpts: { enableScrollEffect: true, scrollEffectType: ScrollEffectType.IMMERSIVE_GRADIENT_BLUR } } })
-      .systemBarStyle({ statusBarContentColor: this.statusBarColor() }, { statusBarContentColor: this.statusBarColor() })
-      .bindToScrollable([this.scroller]).backgroundColor($r('app.color.xq_app_surface_page'))
-      .ignoreLayoutSafeArea([LayoutSafeAreaType.SYSTEM], [LayoutSafeAreaEdge.TOP, LayoutSafeAreaEdge.BOTTOM]).id('local-backup-page')
+    Stack({ alignContent: Alignment.Top }) {
+      this.headerBackdrop()
+      HdsNavigation() {
+        Scroll(this.scroller) {
+          Column({ space: 16 }) {
+            this.personalHeader()
+            this.shortcuts()
+            this.navigationCells()
+          }.width('100%').constraintSize({ maxWidth: 640 }).padding({ left: 16, right: 16, top: 12, bottom: 128 })
+        }.id('settings-scroll').width('100%').height('100%').align(Alignment.Top).scrollBar(BarState.Off).clip(false)
+          .edgeEffect(EdgeEffect.Spring, { alwaysEnabled: true })
+          .onDidScroll(() => {
+            const offset = this.scroller.currentOffset().yOffset;
+            const next = Math.min(Math.max(offset, 0), this.headerHeight);
+            if (next !== this.headerOffset) { this.headerOffset = next; }
+          })
+      }.width('100%').height('100%').mode(NavigationMode.Stack).titleMode(HdsNavigationTitleMode.MINI).hideBackButton(true)
+        .titleBar({ enableComponentSafeArea: true, avoidLayoutSafeArea: true,
+          content: { title: { mainTitle: '' }, divider: { showType: DividerShowType.OFF },
+            menu: { maxCount: 1, value: [{ content: { icon: $r('app.media.lucide_settings1'), label: '设置',
+              action: () => { this.onOpenSettings(); } } }] } },
+          style: {
+            originalStyle: { contentStyle: { titleStyle: { mainTitleColor: $r('app.color.xq_font_primary') },
+              menuStyle: { iconColor: $r('app.color.xq_icon_primary') } } },
+            scrollEffectStyle: { contentStyle: { titleStyle: { mainTitleColor: $r('app.color.xq_font_primary') },
+              menuStyle: { iconColor: $r('app.color.xq_icon_primary') } } },
+            systemMaterialEffect: { materialType: hdsMaterial.MaterialType.IMMERSIVE, materialLevel: hdsMaterial.MaterialLevel.ADAPTIVE },
+            scrollEffectOpts: { enableScrollEffect: true, scrollEffectType: ScrollEffectType.IMMERSIVE_GRADIENT_BLUR } } })
+        .systemBarStyle({ statusBarContentColor: this.statusBarColor() }, { statusBarContentColor: this.statusBarColor() })
+        .bindToScrollable([this.scroller]).backgroundColor(Color.Transparent)
+        .ignoreLayoutSafeArea([LayoutSafeAreaType.SYSTEM], [LayoutSafeAreaEdge.TOP, LayoutSafeAreaEdge.BOTTOM]).id('local-backup-page')
+    }.width('100%').height('100%').backgroundColor($r('app.color.xq_app_surface_page'))
+      .ignoreLayoutSafeArea([LayoutSafeAreaType.SYSTEM], [LayoutSafeAreaEdge.TOP, LayoutSafeAreaEdge.BOTTOM])
+      .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM])
   }
 }

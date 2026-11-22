@@ -19,6 +19,7 @@ import { AccountsPage } from '../components/AccountsPage';
 import { LocalBackupPage } from '../components/LocalBackupPage';
 import { BackupRestorePage } from '../components/BackupRestorePage';
 import { HuaweiCloudPage } from '../components/HuaweiCloudPage';
+import { SettingsPage } from '../components/SettingsPage';
 import { SpendingNaturePage } from '../components/SpendingNaturePage';
 import { BudgetPage } from '../components/BudgetPage';
 import { CategoryManagementPage } from '../components/CategoryManagementPage';
@@ -76,6 +77,7 @@ struct Index {
   @State private prepaidBusy: boolean = false;
   private prepaidBackHandler: () => boolean = () => false;
   @State private showBackupRestore: boolean = false;
+  @State private showSettings: boolean = false;
   @State private showExchangeRates: boolean = false;
   @State private accountOverview: AccountOverview | undefined = undefined;
   @State private accountError: string = '';
@@ -909,6 +911,7 @@ struct Index {
 
   onBackPress(): boolean {
     if (this.showBookManagement) { this.backFromBookManagement(); return true; }
+    if (this.showSettings) { this.showSettings = false; return true; }
     if (this.showExchangeRates) { this.showExchangeRates = false; return true; }
     if (this.showPrepaid) { if (!this.prepaidBusy) { this.prepaidBackHandler(); } return true; }
     if (this.showHuaweiCloud) { if (!this.backupBusy) { this.showHuaweiCloud = false; } return true; }
@@ -2122,6 +2125,7 @@ struct Index {
           onOpenDataExchange: () => { this.showDataExchange = true; },
           onOpenBackupRestore: () => { this.showBackupRestore = true; },
           onOpenHuaweiCloud: () => { this.showHuaweiCloud = true; },
+          onOpenSettings: () => { this.showSettings = true; },
           onOpenBooks: () => { this.openBookSheet(true); },
           onOpenExchangeRates: () => { this.showExchangeRates = true; },
           onOpenAccounts: () => { this.selectedTab = 3; },
@@ -2171,6 +2175,7 @@ struct Index {
         sheetMaterial: this.materialReady && !this.forceLegacyMaterials ? this.filterMaterials?.menu : undefined })
     }
     else if (this.showBackupRestore) { this.backupRestorePage() }
+    else if (this.showSettings) { SettingsPage({ onClose: () => { this.showSettings = false; } }) }
     else if (this.showSpendingNatures) { this.spendingNaturePage() }
     else if (this.showAccountEditor) { this.accountEditorPage() }
     else if (this.showBillDetails) {
