@@ -2175,7 +2175,10 @@ struct Index {
         sheetMaterial: this.materialReady && !this.forceLegacyMaterials ? this.filterMaterials?.menu : undefined })
     }
     else if (this.showBackupRestore) { this.backupRestorePage() }
-    else if (this.showSettings) { SettingsPage({ onClose: () => { this.showSettings = false; } }) }
+    else if (this.showSettings) {
+      SettingsPage({ onClose: () => { this.showSettings = false; },
+        menuMaterial: this.materialReady && !this.forceLegacyMaterials ? this.filterMaterials?.menu : undefined })
+    }
     else if (this.showSpendingNatures) { this.spendingNaturePage() }
     else if (this.showAccountEditor) { this.accountEditorPage() }
     else if (this.showBillDetails) {

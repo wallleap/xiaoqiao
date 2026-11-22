@@ -184,4 +184,8 @@ HdsNavigation 保留 MINI 标题栏、enableComponentSafeArea、avoidLayoutSafeA
 
 头部整块左右在页面 16vp 基础上再内收 4vp（合计 20vp），头像、昵称与三项汇总同步对齐。标题栏右侧通过 HDS `menu` 增加 `lucide_settings1` 设置图标（无障碍名称“设置”），图标色使用 xq_icon_primary，滚动前后保持一致。
 
-新增空设置子页面 SettingsPage：按子页规范使用 HdsNavigation + Scroll、MINI 标题“设置”、原生返回、IMMERSIVE/ADAPTIVE 材质与 IMMERSIVE_GRADIENT_BLUR，绑定自身 Scroller，页面背景 xq_app_surface_page；正文按用户要求留空，后续设置项再补。Index 新增 showSettings 状态、routedPage 分支与 onBackPress 返回处理，LocalBackupPage 新增 onOpenSettings 回调。新增页面的标题／返回、空页首屏与返回流程需真机确认。
+新增设置子页面 SettingsPage：按子页规范使用 HdsNavigation + Scroll、MINI 标题“设置”、原生返回、IMMERSIVE/ADAPTIVE 材质与 IMMERSIVE_GRADIENT_BLUR，绑定自身 Scroller，页面背景 xq_app_surface_page。Index 新增 showSettings 状态、routedPage 分支与 onBackPress 返回处理，LocalBackupPage 新增 onOpenSettings 回调。新增页面的标题／返回、首屏与返回流程需真机确认。
+
+设置页首屏先提供“外观”模块：分组标题“外观”，下方单张实色卡片 xq_app_surface_card、圆角 20vp，只有一行“深色模式”——左侧 14fp xq_font_primary 标签，右侧显示当前值（13fp xq_font_emphasize）与 12vp 下拉箭头（xq_icon_secondary），整行 52vp、左右 16vp 内边距，点击整行用 bindMenu 弹出“跟随系统／浅色／深色”菜单。菜单参考首页账目卡片长按菜单：`Menu` 宽 224vp、圆角 20vp，纯文字项，不加勾选标记，当前项仅用 xq_font_emphasize 区分。菜单通过 MenuOptions.systemMaterial 接入 Index 传入的 HDS menuMaterial（沉浸光感）；材质不可用时回退为普通实色菜单，不手绘模糊或高光。外观选择通过 AppearanceSettings 持久化到 preferences（键 color_mode：system/light/dark），调用 ApplicationContext.setColorMode 立即切换全局颜色模式；EntryAbility.onCreate 读取已保存值，onWindowStageCreate 在 loadContent 前应用，避免启动闪烁。跟随系统使用 COLOR_MODE_NOT_SET。该模块只改颜色模式，不改语言、字号或其它系统配置。
+
+本轮验证：git diff --check、颜色 Token 引用核对、preferences getPreferencesSync/getSync/putSync/flushSync 与 ConfigurationConstant.ColorMode 签名静态核对。未运行原生构建或设备测试；切换后全 App 资源与 HDS 材质是否同步刷新、重启后是否保持、深色下设置页与“我的”页对比度仍需真机确认。
