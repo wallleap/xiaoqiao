@@ -187,17 +187,31 @@ export class RdbPrepaidRepository {
     const changed = await db.update({ revision: project.revision+1, updated_at_ms: Date.now() },new relationalStore.RdbPredicates('prepaid_projects').equalTo('id',project.id).equalTo('revision',project.revision));
     if (changed!==1) { throw new Error('PREPAID_CHANGED'); }
   }
-  async undo(bookId: string, projectId: string, eventId: string, revision: number): Promise<void> {
-    await this.session.write(async (db: relationalStore.RdbStore): Promise<void> => {
+  async undo(bookId: string, projectId: string, eventId: string, revision: number, deleteEmpty: boolean = false): Promise<boolean> {
+    return this.session.write(async (db: relationalStore.RdbStore): Promise<boolean> => {
       const detail = await RdbPrepaidRepository.detailIn(db,bookId,projectId);
       const event = detail.events[detail.events.length-1];
       if (detail.project.revision!==revision || event === undefined || event.id!==eventId) { throw new Error('PREPAID_UNDO_ORDER'); }
+      if (detail.events.length === 1 && !deleteEmpty) { throw new Error('PREPAID_EMPTY_CONFIRMATION_REQUIRED'); }
       await db.update({ deleted_at_ms: Date.now() },new relationalStore.RdbPredicates('prepaid_events').equalTo('id',event.id).isNull('deleted_at_ms'));
       if (event.transactionId) {
         await db.executeSql('UPDATE transactions SET deleted_at_ms=?,updated_at_ms=?,revision=revision+1 WHERE id=?',[Date.now(),Date.now(),event.transactionId]);
       }
       const changed = await db.update({ revision: revision+1,updated_at_ms:Date.now() },new relationalStore.RdbPredicates('prepaid_projects').equalTo('id',projectId).equalTo('revision',revision));
       if (changed!==1) { throw new Error('PREPAID_CHANGED'); }
+      if (detail.events.length === 1) {
+        await RdbPrepaidRepository.deleteEmptyIn(db,bookId,projectId,revision+1);
+        return true;
+      }
+      return false;
     });
+  }
+  private static async deleteEmptyIn(db: relationalStore.RdbStore, bookId: string, id: string, revision: number): Promise<void> {
+    if (!id || !Number.isSafeInteger(revision) || revision < 1) { throw new Error('PREPAID_CHANGED'); }
+    // Cleanup is verified on the writer by the trigger, not by a potentially separate querySql reader.
+    await db.insert('prepaid_cleanup_context', { id: 1, project_id: id, book_id: bookId, revision: revision });
+  }
+  async deleteEmpty(bookId: string, id: string, revision: number): Promise<void> {
+    await this.session.write((db: relationalStore.RdbStore): Promise<void> => RdbPrepaidRepository.deleteEmptyIn(db,bookId,id,revision));
   }
 }

@@ -98,6 +98,10 @@ export struct PrepaidPage {
   private errorText(error: Error): string {
     const code=error.message || '';
     if (code.includes('PREPAID_EXCEEDS_REMAINING') || code.includes('PREPAID_ALLOCATION')) { return '核销或退款不能超过剩余金额，请刷新后再操作'; }
+    if (code.includes('PREPAID_NOT_EMPTY')) { return '项目还有有效流水或未完成草稿，不能删除，请刷新后查看'; }
+    if (code.includes('PREPAID_EMPTY_CONFIRMATION_REQUIRED')) { return '这已是最后一条流水，请刷新后确认撤销并删除项目'; }
+    if (code.includes('PREPAID_LINKED_HISTORY')) { return '关联账目仍有其他引用，请先处理后再删除'; }
+    if (code.includes('PREPAID_CLEANUP')) { return '空项目清理校验未通过，操作已回滚，请刷新后重试'; }
     if (code.includes('PREPAID_CHANGED') || code.includes('PREPAID_UNDO_ORDER')) { return '项目已变化，请刷新后再操作；只能撤销最近一条流水'; }
     if (code.includes('ACCOUNT_UNAVAILABLE')) { return '付款／到账账户不可用，请重新选择'; }
     if (code.includes('EXPENSE_HAS_RECOVERIES')) { return '关联支出已有退款或报销，请先处理关联回款'; }
@@ -245,14 +249,36 @@ export struct PrepaidPage {
   }
   private async undo(): Promise<void> {
     const project=this.detail?.project; const events=this.detail?.events || []; const latest=events[events.length-1];
-    if (this.working || project===undefined || latest===undefined || this.workspace===undefined) { return; }
-    this.setWorking(true);
+    if (this.working || this.loading || project===undefined || latest===undefined || this.workspace===undefined) { return; }
+    this.setWorking(true); this.error=''; this.message='';
     try {
-      const result=await this.getUIContext().getPromptAction().showDialog({title:'撤销最近一条流水？',message:this.label(latest.kind)+' '+this.money(latest.amountMinor,project.currencyId)+' '+project.currencyId+'\n关联的预付款余额、账户流水和支出将一起撤回。',
-        buttons:[{text:'取消',color:$r('app.color.xq_font_primary')},{text:'撤销流水',color:$r('app.color.xq_warning')}]});
+      const last = events.length === 1;
+      const result=await this.getUIContext().getPromptAction().showDialog({title:last ? '撤销并删除项目？' : '撤销最近一条流水？',message:this.label(latest.kind)+' '+this.money(latest.amountMinor,project.currencyId)+' '+project.currencyId+'\n关联的预付款余额、账户流水和支出将一起撤回。'+(last ? '\n这是最后一条有效流水，撤销后将同时删除“'+project.name+'”项目及已撤销记录，无法恢复。存在未完成草稿时不会删除，本次撤销也不会执行。' : ''),
+        buttons:[{text:'取消',color:$r('app.color.xq_font_primary')},{text:last ? '撤销并删除项目' : '撤销流水',color:$r('app.color.xq_warning')}]});
       if (result.index!==1) { return; }
-      await this.workspace.undoPrepaid(project.id,latest.id,project.revision); this.message='已撤销';
-      await this.reload(project.id); await this.onChanged();
+      const deleted = await this.workspace.undoPrepaid(project.id,latest.id,project.revision,last);
+      if (deleted) { await this.projectDeleted(); }
+      else { this.message='已撤销'; await this.reload(project.id); await this.onChanged(); }
+    } catch (error) { this.error=this.errorText(error as Error); }
+    finally { if (this.active) { this.setWorking(false); } }
+  }
+  private async projectDeleted(): Promise<void> {
+    this.detail=undefined; this.message='已删除空项目';
+    await this.reload();
+    try { await this.onChanged(); } catch (_) { this.error='项目已删除，汇总刷新失败，请返回后重新读取'; }
+    if (this.returnToCaller) { this.setWorking(false); this.onClose(); }
+  }
+  private async deleteEmptyProject(): Promise<void> {
+    const project=this.detail?.project;
+    if (this.working || this.loading || project===undefined || this.workspace===undefined || (this.detail?.events.length || 0)>0) { return; }
+    this.setWorking(true); this.error='';
+    try {
+      const result=await this.getUIContext().getPromptAction().showDialog({title:'删除空项目？',
+        message:'将彻底删除“'+project.name+'”及已撤销记录，账户余额保持不变，无法恢复。存在有效流水或未完成草稿时禁止删除。',
+        buttons:[{text:'取消',color:$r('app.color.xq_font_primary')},{text:'删除空项目',color:$r('app.color.xq_warning')}]});
+      if (result.index!==1) { return; }
+      await this.workspace.deleteEmptyPrepaid(project.id,project.revision);
+      await this.projectDeleted();
     } catch (error) { this.error=this.errorText(error as Error); }
     finally { if (this.active) { this.setWorking(false); } }
   }
@@ -390,6 +416,11 @@ export struct PrepaidPage {
         Button('退款', {type:ButtonType.Capsule}).layoutWeight(1).height(44).fontSize('14fp').fontColor($r('app.color.xq_font_primary')).backgroundColor($r('app.color.xq_app_surface_card')).enabled(!this.working&&!this.loading&&BigInt(this.detail?.project.remainingMinor || '0')>BigInt(0)).onClick(()=>{this.openForm('refund');})
       }.width('100%')
       Button('编辑项目', {type:ButtonType.Capsule}).height(32).fontSize('13fp').backgroundColor(Color.Transparent).fontColor($r('app.color.xq_font_emphasize')).enabled(!this.working&&!this.loading).onClick(()=>{this.openForm('edit');})
+      if (this.detail.events.length===0) {
+        Button('删除空项目', {type:ButtonType.Capsule}).height(40).fontSize('14fp').fontWeight(FontWeight.Medium)
+          .fontColor($r('app.color.xq_warning')).backgroundColor($r('app.color.xq_app_surface_card'))
+          .enabled(!this.working&&!this.loading).onClick(()=>{this.deleteEmptyProject();}).id('prepaid-delete-empty')
+      }
       Text('流水记录').fontSize('18fp').fontWeight(FontWeight.Medium).width('100%')
       ForEach(this.timeline(),(event:PrepaidEvent)=>{
         Column({space:8}) {

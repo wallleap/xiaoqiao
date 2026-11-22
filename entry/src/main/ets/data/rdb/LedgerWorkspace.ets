@@ -1237,7 +1237,15 @@ export class LedgerWorkspace {
     if (command.bookId!==this.activeBookId) { throw new Error('PREPAID_CHANGED'); }
     await new RdbPrepaidRepository(this.store).save(command);
   }
-  async undoPrepaid(id: string, eventId: string, revision: number): Promise<void> { await new RdbPrepaidRepository(this.store).undo(this.activeBookId,id,eventId,revision); }
+  async undoPrepaid(id: string, eventId: string, revision: number, deleteEmpty: boolean = false): Promise<boolean> {
+    const deleted = await new RdbPrepaidRepository(this.store).undo(this.activeBookId,id,eventId,revision,deleteEmpty);
+    if (deleted) { try { await this.bookDeletion.cleanup(); } catch (_) { /* Durable cleanup queue retries on next open. */ } }
+    return deleted;
+  }
+  async deleteEmptyPrepaid(id: string, revision: number): Promise<void> {
+    await new RdbPrepaidRepository(this.store).deleteEmpty(this.activeBookId,id,revision);
+    try { await this.bookDeletion.cleanup(); } catch (_) { /* Durable cleanup queue retries on next open. */ }
+  }
 
   async accountOverview(): Promise<AccountOverview> {
     const result = await this.accountRepository.snapshot();

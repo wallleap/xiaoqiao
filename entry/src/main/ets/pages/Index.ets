@@ -66,6 +66,7 @@ struct Index {
   @State private showHuaweiCloud: boolean = false;
   @State private prepaidProjectId: string = '';
   private prepaidInitialAction: string = '';
+  @State private categoryPrepaidRefresh: number = 0;
   @State private showPrepaid: boolean = false;
   @State private showBillDetails: boolean = false;
   @State private showSearchPage: boolean = false;
@@ -450,7 +451,7 @@ struct Index {
   private confirmDatabaseUpgrade(): void {
     if (this.loading) { return; }
     this.getUIContext().getPromptAction().showDialog({ title: '升级本地账本？',
-      message: '先在本机备份，再升级分类历史快照及分类删除支持。原账目及余额会保留；升级失败会回滚，并保留升级前备份。',
+      message: '先在本机备份，再升级分类历史快照、分类删除及空预付款项目清理支持。原账目及余额会保留；升级失败会回滚，并保留升级前备份。',
       buttons: [{ text: '取消', color: $r('app.color.xq_font_primary') }, { text: '备份并升级', color: $r('app.color.xq_font_emphasize') }]
     }).then(async (result) => {
       if (result.index !== 1) { return; }
@@ -537,6 +538,7 @@ struct Index {
     Stack() {
       Column() {
         CategoryManagementPage({
+          prepaidRefresh: this.categoryPrepaidRefresh,
           onOpenPrepaid: (id: string) => { this.prepaidProjectId = id; this.prepaidInitialAction = ''; this.showPrepaid = true; },
           onRegisterBack: (handler: () => boolean) => { this.categoryBackHandler = handler; },
           workspace: this.workspace,
@@ -572,7 +574,7 @@ struct Index {
       sheetMaterial:this.materialReady && !this.forceLegacyMaterials ? this.filterMaterials?.menu : undefined,
       onRegisterBack:(handler:()=>boolean)=>{this.prepaidBackHandler=handler;},
       onBusy:(value:boolean)=>{this.prepaidBusy=value;},
-      onClose:()=>{if (!this.prepaidBusy) {this.showPrepaid=false;this.prepaidInitialAction='';this.prepaidBackHandler=()=>false;}},
+      onClose:()=>{if (!this.prepaidBusy) {this.showPrepaid=false;if(this.showCategories){this.categoryPrepaidRefresh++;}this.prepaidInitialAction='';this.prepaidBackHandler=()=>false;}},
       onCreate:()=>{this.openExpense(true);},
       onChanged:async ():Promise<void>=>{await this.loadLedger();}
     })

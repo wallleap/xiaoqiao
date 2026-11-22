@@ -101,6 +101,7 @@ try {
  const {LocalLedgerBackup}=load(base+'/data/rdb/LocalLedgerBackup.ets');
  assert((await LocalLedgerBackup.resources(db)).some(ref=>ref.path===iconPath));
  for(const c of load(base+'/core/money/Currencies.ets').BUILTIN_CURRENCIES){await db.executeSql('INSERT OR IGNORE INTO currencies(id,code,name,symbol,minor_unit,valid_from,source_version) VALUES(?,?,?,?,?,?,?)',[c.code,c.code,c.name,c.symbol,c.scale,'2026-01-01','host-fixture']);}
+ await load(base+'/data/rdb/PrepaidCleanupMigration.ets').PrepaidCleanupMigration.upgradeCandidate(db);
  await LocalLedgerBackup.check(db);
  // Prepaid blocker is a stable app error, before any native DELETE/RAISE error can lose its text.
  await db.insert('categories',{id:'blocked-category',book_id:'b1',kind:'expense',name:'预付分类',name_key:'预付分类',created_at_ms:1,updated_at_ms:1});
@@ -150,5 +151,5 @@ try {
  assert(pageSource.includes("id('category-prepaid-' + reference.projectId)"));
  const refresh=pageSource.slice(pageSource.indexOf("Button('刷新分类'"),pageSource.indexOf("id('category-refresh')"));assert(refresh.includes('ButtonType.Capsule'));assert(refresh.includes('xq_brand'));assert(refresh.includes('xq_font_on_primary'));
  assert(!pageSource.includes('category-toggle-archive'));assert(pageSource.includes('category-delete-'));
- console.log('PASS production category delete: exact balances, unchanged snapshot/detail/search/statistics/CSV, no new picker option, history edit/reclassify, revision/last-category guards V13 backup validation/resource icons, UI confirmation and status chain (separate SQLite reader/writer, host only)');
+ console.log('PASS production category delete: exact balances, unchanged snapshot/detail/search/statistics/CSV, no new picker option, history edit/reclassify, revision/last-category guards V14 backup validation/resource icons, UI confirmation and status chain (separate SQLite reader/writer, host only)');
 }finally{worker.stdin.end();await new Promise(resolve=>worker.on('exit',resolve));fs.rmSync(temp,{recursive:true,force:true});}

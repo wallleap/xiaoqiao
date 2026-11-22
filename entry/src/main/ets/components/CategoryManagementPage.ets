@@ -13,6 +13,8 @@ interface CategorySelectOption {
 
 @Component
 export struct CategoryManagementPage {
+  @Prop @Watch('reloadAfterPrepaid') prepaidRefresh: number = 0;
+  private reloadAfterPrepaid(): void { if (this.active) { this.load(); } }
   workspace: LedgerWorkspace | undefined = undefined;
   sheetMaterial: SystemUiMaterial | undefined = undefined;
   @Prop @Watch('applyKindMaterial') segmentMaterial: SystemUiMaterial | undefined = undefined;

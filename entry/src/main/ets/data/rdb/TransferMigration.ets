@@ -1,3 +1,4 @@
+import { PREPAID_CLEANUP_SCHEMA_SHA256 } from './PrepaidCleanupSchema';
 import { CATEGORY_DELETION_SCHEMA_SHA256 } from './CategoryDeletionSchema';
 import { BOOK_DELETION_SCHEMA_SHA256 } from './BookDeletionSchema';
 import { BOOK_SETTINGS_SCHEMA_SHA256 } from './BookSettingsSchema';
@@ -25,7 +26,7 @@ export class TransferMigration {
     const rows = await db.querySql('SELECT version,checksum FROM schema_migrations ORDER BY version');
     let version: number = 1;
     try {
-      if ((rows.rowCount < 1 || rows.rowCount > 13) || !rows.goToFirstRow() || rows.getLong(0) !== 1 || rows.getString(1) !== REVIEW_SCHEMA_SHA256) {
+      if ((rows.rowCount < 1 || rows.rowCount > 14) || !rows.goToFirstRow() || rows.getLong(0) !== 1 || rows.getString(1) !== REVIEW_SCHEMA_SHA256) {
         throw new Error('UNSUPPORTED_LEDGER_SCHEMA');
       }
       if (rows.rowCount >= 2) {
@@ -79,6 +80,10 @@ export class TransferMigration {
       if (rows.rowCount >= 13) {
         if (!rows.goToNextRow() || rows.getLong(0) !== 13 || rows.getString(1) !== CATEGORY_DELETION_SCHEMA_SHA256) { throw new Error('UNSUPPORTED_LEDGER_SCHEMA'); }
         version = 13;
+      }
+      if (rows.rowCount >= 14) {
+        if (!rows.goToNextRow() || rows.getLong(0) !== 14 || rows.getString(1) !== PREPAID_CLEANUP_SCHEMA_SHA256) { throw new Error('UNSUPPORTED_LEDGER_SCHEMA'); }
+        version = 14;
       }
     } finally { rows.close(); }
     const marker = await db.querySql("SELECT value FROM db_meta WHERE key='transfer_schema_checksum'");

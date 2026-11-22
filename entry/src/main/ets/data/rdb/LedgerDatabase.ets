@@ -1,3 +1,4 @@
+import { PrepaidCleanupMigration } from './PrepaidCleanupMigration';
 import { CategoryDeletionMigration } from './CategoryDeletionMigration';
 import { BookDeletionMigration } from './BookDeletionMigration';
 import { BookSettingsMigration } from './BookSettingsMigration';
@@ -67,11 +68,12 @@ export class LedgerDatabase {
           await BookSettingsMigration.apply(db, '', false);
           await BookDeletionMigration.apply(db, '', false);
           await CategoryDeletionMigration.apply(db, '', false);
+          await PrepaidCleanupMigration.apply(db);
           await LedgerDatabase.ensureIncomeCategories(db);
         });
       } else {
-        let version = await session.read(async (db: relationalStore.RdbStore): Promise<number> => CategoryDeletionMigration.status(db));
-        if (version < 13 && !allowUpgrade) { throw new Error('LEDGER_UPGRADE_REQUIRED'); }
+        let version = await session.read(async (db: relationalStore.RdbStore): Promise<number> => PrepaidCleanupMigration.status(db));
+        if (version < 14 && !allowUpgrade) { throw new Error('LEDGER_UPGRADE_REQUIRED'); }
         if (version === 1) {
           if (!allowUpgrade) { throw new Error('LEDGER_UPGRADE_REQUIRED'); }
           await TransferMigration.upgrade(store, name);
@@ -93,7 +95,8 @@ export class LedgerDatabase {
         if (version === 9) { await BookCoverMigration.upgrade(store, name); version = 10; }
         if (version === 10) { await BookSettingsMigration.upgrade(store, name); version = 11; }
         if (version === 11) { await BookDeletionMigration.upgrade(store, name); version = 12; }
-        if (version === 12) { await CategoryDeletionMigration.upgrade(store, name); }
+        if (version === 12) { await CategoryDeletionMigration.upgrade(store, name); version = 13; }
+        if (version === 13) { await PrepaidCleanupMigration.upgrade(store, name); }
         await session.write(async (db: relationalStore.RdbStore): Promise<void> => { await LedgerDatabase.ensureIncomeCategories(db); });
       }
       return store;
