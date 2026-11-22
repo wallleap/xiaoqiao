@@ -115,11 +115,13 @@ export struct CategoryManagementPage {
 
   @Builder
   private kindAction() {
-    Row() {
-      SegmentButton({ options: this.kindOptions, selectedIndexes: $kindSelection })
-        .width(168).constraintSize({ maxWidth: '100%' }).enabled(!this.interactionLocked()).id('category-kind-tabs')
-    }.width('100%').justifyContent(FlexAlign.End).padding({ left: 160, right: 16 })
-      .hitTestBehavior(HitTestMode.Transparent)
+    if (this.browsingParentId.length === 0) {
+      Row() {
+        SegmentButton({ options: this.kindOptions, selectedIndexes: $kindSelection })
+          .width(168).constraintSize({ maxWidth: '100%' }).enabled(!this.interactionLocked()).id('category-kind-tabs')
+      }.width('100%').justifyContent(FlexAlign.End).padding({ left: 160, right: 16 })
+        .hitTestBehavior(HitTestMode.Transparent)
+    }
   }
 
   private statusBarColor(): string {
@@ -150,7 +152,7 @@ export struct CategoryManagementPage {
 
   private browsingTitle(): string {
     const parent = this.values.find((item: CategoryProfile) => item.id === this.browsingParentId);
-    return parent === undefined ? '子分类' : this.categoryPath(parent);
+    return this.browsingParentId.length === 0 ? '收支分类' : parent?.name || '子分类';
   }
 
   private hasArchivedDescendants(item: CategoryProfile): boolean {
@@ -478,17 +480,6 @@ export struct CategoryManagementPage {
     HdsNavigation() {
       Scroll(this.scroller) {
         Column({ space: 12 }) {
-          if (this.browsingParentId.length > 0) {
-            Row({ space: 8 }) {
-              Button({ type: ButtonType.Circle }) {
-                Image($r('app.media.lucide_chevron_left1')).width(18).height(18).fillColor($r('app.color.xq_icon_primary'))
-              }.width(32).height(32).padding(0).backgroundColor($r('app.color.xq_app_surface_card'))
-                .enabled(!this.interactionLocked()).onClick(() => { this.navigateBack(); }).accessibilityText('返回上一级分类')
-              Text(this.browsingTitle())
-                .fontSize('14fp').fontColor($r('app.color.xq_font_secondary')).maxLines(1)
-                .textOverflow({ overflow: TextOverflow.Ellipsis }).layoutWeight(1)
-            }.width('100%')
-          }
           Button(this.browsingParentId.length > 0 ? '新增子分类' : '新增分类', { type: ButtonType.Capsule }).width('100%').height(46).fontSize('15fp')
             .fontColor(Color.White).backgroundColor($r('app.color.xq_brand')).enabled(!this.interactionLocked())
             .id('category-create').onClick(() => { this.beginCreate(); })
@@ -534,7 +525,7 @@ export struct CategoryManagementPage {
         .edgeEffect(EdgeEffect.Spring, { alwaysEnabled: true })
     }.mode(NavigationMode.Stack).titleMode(HdsNavigationTitleMode.MINI)
       .titleBar({ enableComponentSafeArea: true,
-        content: { title: { mainTitle: '收支分类' }, stackBuilder: this.kindAction.bind(this), divider: { showType: DividerShowType.OFF },
+        content: { title: { mainTitle: this.browsingTitle() }, stackBuilder: this.kindAction.bind(this), divider: { showType: DividerShowType.OFF },
           backIcon: { componentId: 'category-close', action: () => { if (!this.navigateBack()) { this.onClose(); } } } },
         style: { originalStyle: { contentStyle: { titleStyle: { mainTitleColor: $r('app.color.xq_font_primary') },
           backIconStyle: { iconColor: $r('app.color.xq_icon_primary') } } },
