@@ -1,10 +1,25 @@
 import { currencyUnit } from '../core/money/Currencies';
-import { SegmentButton, SegmentButtonOptions } from '@kit.ArkUI';
+import { ComponentContent, SegmentButton, SegmentButtonOptions } from '@kit.ArkUI';
 import { HdsNavigation, HdsNavigationTitleMode, hdsMaterial, DividerShowType, ScrollEffectType } from '@kit.UIDesignKit';
 import { AccountOverview, AccountProfile } from '../domain/model/AccountProfile';
 import { AccountAvatar } from './AccountAvatar';
 import { Money } from '../core/money/Money';
 import { CurrencyUnit } from '../core/money/CurrencyUnit';
+
+interface AccountMoreMenuParams { onSort: () => void; }
+
+@Builder
+function accountMoreMenu(params: AccountMoreMenuParams) {
+  Menu() {
+    MenuItem() {
+      Row({ space: 12 }) {
+        Image($r('app.media.lucide_arrow_down_up1')).width(20).height(20)
+          .fillColor($r('app.color.xq_icon_primary')).flexShrink(0)
+        Text('排序').fontSize('14fp').fontWeight(FontWeight.Regular).fontColor($r('app.color.xq_font_primary')).layoutWeight(1)
+      }.width('100%').alignItems(VerticalAlign.Center)
+    }.onClick(params.onSort).accessibilityText('排序').id('accounts-sort-menu')
+  }.width(200)
+}
 
 @Component
 export struct AccountsPage {
@@ -25,6 +40,37 @@ export struct AccountsPage {
   }
 
   onCreate: () => void = () => {};
+  onSort: () => void = () => {};
+  menuMaterial: SystemUiMaterial | undefined = undefined;
+  @State private menuError: string = '';
+  private menuContent: ComponentContent<AccountMoreMenuParams> | undefined = undefined;
+  private active: boolean = false;
+
+  aboutToAppear(): void { this.active = true; }
+  aboutToDisappear(): void { this.active = false; this.closeMore(); }
+  private closeMore(): void {
+    const content = this.menuContent;
+    if (content === undefined) { return; }
+    this.menuContent = undefined;
+    this.getUIContext().getPromptAction().closeMenu(content).catch(() => {}).finally(() => { content.dispose(); });
+  }
+  private async openMore(): Promise<void> {
+    if (this.menuContent !== undefined || this.loading || this.overview === undefined || this.error.length > 0) { return; }
+    this.menuError = '';
+    const content = new ComponentContent(this.getUIContext(), wrapBuilder(accountMoreMenu), {
+      onSort: () => { this.closeMore(); this.onSort(); }
+    } as AccountMoreMenuParams);
+    this.menuContent = content;
+    const options: MenuOptions = { placement: Placement.BottomRight, borderRadius: 20,
+      onDidDisappear: () => { if (this.menuContent === content) { this.menuContent = undefined; content.dispose(); } } };
+    if (this.menuMaterial !== undefined) { options.systemMaterial = this.menuMaterial; }
+    try { await this.getUIContext().getPromptAction().openMenu(content, { id: 'accounts-more' }, options); }
+    catch (_) {
+      if (this.menuContent === content) { this.menuContent = undefined; content.dispose(); }
+      if (this.active) { this.menuError = '菜单暂时无法打开，请重试'; }
+    }
+  }
+
   onEdit: (account: AccountProfile) => void = () => {};
   onRetry: () => void = () => {};
   private readonly scroller: Scroller = new Scroller();
@@ -55,6 +101,7 @@ export struct AccountsPage {
     HdsNavigation() {
       Scroll(this.scroller) {
         Column({ space: 16 }) {
+          if (this.menuError.length > 0) { Text(this.menuError).fontSize('13fp').fontColor($r('app.color.xq_warning')).width('100%').padding({ left: 8, right: 8 }) }
           if (this.loading && this.overview === undefined) {
             Text('正在读取账户…').fontSize('14fp').padding(24)
           } else if (this.error.length > 0) {
@@ -125,9 +172,11 @@ export struct AccountsPage {
     }.mode(NavigationMode.Stack).titleMode(HdsNavigationTitleMode.MINI).hideBackButton(true)
       .titleBar({ enableComponentSafeArea: true, avoidLayoutSafeArea: true,
         content: { title: { mainTitle: '资产' }, divider: { showType: DividerShowType.OFF },
-          menu: { maxCount: 1, value: [{ content: { icon: $r('app.media.lucide_plus1'), label: '添加账户',
+          menu: { maxCount: 2, value: [{ content: { icon: $r('app.media.lucide_plus1'), label: '添加账户',
             componentId: 'accounts-create', isEnabled: !this.loading && this.error.length === 0,
-            action: () => { if (!this.loading && this.error.length === 0) { this.onCreate(); } } } }] } },
+            action: () => { if (!this.loading && this.error.length === 0) { this.onCreate(); } } } },
+            { content: { icon: $r('app.media.lucide_ellipsis1'), label: '更多', componentId: 'accounts-more',
+              isEnabled: !this.loading && this.overview !== undefined && this.error.length === 0, action: () => { this.openMore(); } } }] } },
         style: { originalStyle: { contentStyle: { titleStyle: { mainTitleColor: $r('app.color.xq_font_primary') },
           menuStyle: { iconColor: $r('app.color.xq_icon_primary') } } },
           scrollEffectStyle: { contentStyle: { titleStyle: { mainTitleColor: $r('app.color.xq_font_primary') },

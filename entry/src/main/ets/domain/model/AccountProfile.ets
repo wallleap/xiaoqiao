@@ -54,6 +54,9 @@ export interface AccountProfile {
   archived: boolean;
   balanceMinor: string;
 }
+/** Expected versions make an account-order save atomic against concurrent edits. */
+export interface AccountOrderItem { id: string; revision: number; }
+
 export interface AccountOverview {
   accounts: AccountProfile[];
   assetsMinor: string;

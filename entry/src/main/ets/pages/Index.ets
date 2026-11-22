@@ -1,3 +1,4 @@
+import { AccountSortPage } from '../components/AccountSortPage';
 import { SupportPage } from '../components/SupportPage';
 import { SupportPageKind } from '../presentation/support/SupportContent';
 import { DEFAULT_TRANSACTION_COLORS, TransactionColors, TransactionColorKind } from '../presentation/ledger/TransactionColors';
@@ -84,6 +85,8 @@ struct Index {
   @State private showBackupRestore: boolean = false;
   private settingsBackHandler: () => boolean = () => false;
   @State private showSettings: boolean = false;
+  @State private showAccountSort: boolean = false;
+  private accountSortBackHandler: () => boolean = () => false;
   @State private supportPage: SupportPageKind | '' = '';
   private supportBackHandler: () => boolean = () => false;
   private supportReturnOffset: number = 0;
@@ -515,6 +518,8 @@ struct Index {
   @Builder
   private accountsPage() {
     AccountsPage({ overview: this.accountOverview, loading: this.loading, error: this.upgradeRequired ? '请先返回账目页，备份并升级本地账本' : this.accountError,
+      menuMaterial: this.materialReady && !this.forceLegacyMaterials ? this.filterMaterials?.menu : undefined,
+      onSort: () => { if (!this.preview && !this.loading && this.workspace !== undefined && this.accountOverview !== undefined && this.accountError.length === 0) { this.showAccountSort = true; } },
       onCreate: () => { this.openAccount(); }, onEdit: (account: AccountProfile) => { this.openAccount(account); },
       onRetry: () => { this.loadLedger(); } })
   }
@@ -922,6 +927,7 @@ struct Index {
   }
 
   onBackPress(): boolean {
+    if (this.showAccountSort) { if (!this.accountSortBackHandler()) { this.showAccountSort = false; } return true; }
     if (this.supportPage !== '') { if (!this.supportBackHandler()) { this.supportPage = ''; } return true; }
     if (this.showBookManagement) { this.backFromBookManagement(); return true; }
     if (this.showSettings) { if (!this.settingsBackHandler()) { this.showSettings = false; } return true; }
@@ -2179,7 +2185,13 @@ struct Index {
 
   @Builder
   private routedPage() {
-    if (this.supportPage !== '') {
+    if (this.showAccountSort) {
+      AccountSortPage({ workspace: this.workspace, accounts: this.accountOverview?.accounts || [],
+        onRegisterBack: (handler: () => boolean) => { this.accountSortBackHandler = handler; },
+        onClose: () => { this.showAccountSort = false; },
+        onSaved: () => { this.showAccountSort = false; this.loadLedger(); this.notify('账户顺序已保存'); } })
+    }
+    else if (this.supportPage !== '') {
       SupportPage({ kind: this.supportPage, onClose: () => { this.supportPage = ''; },
         onRegisterBack: (handler: () => boolean) => { this.supportBackHandler = handler; } })
     }

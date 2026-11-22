@@ -27,7 +27,7 @@ import { Money } from '../../core/money/Money';
 import { TransferCommand } from '../../domain/model/TransferRecord';
 import { TransferService } from '../../domain/services/TransferService';
 import { RdbTransferRepository } from './RdbTransferRepository';
-import { AccountCommand, AccountOverview } from '../../domain/model/AccountProfile';
+import { AccountCommand, AccountOverview, AccountOrderItem } from '../../domain/model/AccountProfile';
 import { RdbAccountRepository } from './RdbAccountRepository';
 import { IncomeCommand } from '../../domain/model/IncomeRecord';
 import { IncomeService } from '../../domain/services/IncomeService';
@@ -1290,6 +1290,7 @@ export class LedgerWorkspace {
   }
   async calibrateAccount(command: AccountCalibrationCommand): Promise<void> { await this.accountRepository.calibrate(command); }
   async accountAdjustments(id: string, cursor: AdjustmentCursor | undefined = undefined): Promise<AdjustmentPage> { return this.accountRepository.adjustmentHistory(id, cursor); }
+  async reorderAccounts(order: AccountOrderItem[]): Promise<void> { await this.accountRepository.reorder(order); }
   async createAccount(command: AccountCommand): Promise<void> { await this.accountRepository.create(command); }
   async updateAccount(command: AccountCommand, revision: number): Promise<void> { await this.accountRepository.update(command, revision); }
   async archiveAccount(id: string, revision: number, archived: boolean): Promise<void> { await this.accountRepository.archive(id, revision, archived); }

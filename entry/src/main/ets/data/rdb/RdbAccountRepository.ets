@@ -1,7 +1,7 @@
 import { AccountCalibration, AccountCalibrationCommand, AccountAdjustment, AdjustmentCursor, AdjustmentPage } from '../../domain/model/AccountCalibration';
 import { relationalStore } from '@kit.ArkData';
 import { util } from '@kit.ArkTS';
-import { AccountCommand, AccountDraft, AccountOverview, AccountProfile, requireAccountRevision } from '../../domain/model/AccountProfile';
+import { AccountCommand, AccountDraft, AccountOverview, AccountOrderItem, AccountProfile, requireAccountRevision } from '../../domain/model/AccountProfile';
 import { RdbSession } from './RdbSession';
 
 export class RdbAccountRepository {
@@ -34,6 +34,29 @@ export class RdbAccountRepository {
         }
       }
       return { accounts: accounts, assetsMinor: assets.toString(), liabilitiesMinor: liabilities.toString(), netMinor: (assets - liabilities).toString() };
+    });
+  }
+
+  /** Reorder the complete active set. No movements, archived accounts, or balances are updated. */
+  async reorder(order: AccountOrderItem[]): Promise<void> {
+    if (order.length === 0 || new Set<string>(order.map((item: AccountOrderItem) => item.id)).size !== order.length ||
+      order.some((item: AccountOrderItem) => !item.id.trim() || !Number.isSafeInteger(item.revision) ||
+        item.revision < 1 || item.revision >= Number.MAX_SAFE_INTEGER)) { throw new Error('INVALID_ACCOUNT_ORDER'); }
+    await this.session.write(async (db: relationalStore.RdbStore): Promise<void> => {
+      const rows = await db.querySql('SELECT id,revision FROM accounts WHERE deleted_at_ms IS NULL AND archived_at_ms IS NULL');
+      const current: Map<string, number> = new Map<string, number>();
+      try { while (rows.goToNextRow()) { current.set(rows.getString(0), rows.getLong(1)); } } finally { rows.close(); }
+      if (current.size !== order.length || order.some((item: AccountOrderItem) => current.get(item.id) !== item.revision)) {
+        throw new Error('ACCOUNT_CHANGED');
+      }
+      const now = Date.now();
+      for (let index = 0; index < order.length; index++) {
+        const item = order[index];
+        const changed = await db.update({ sort_order: index, updated_at_ms: now, revision: item.revision + 1 },
+          new relationalStore.RdbPredicates('accounts').equalTo('id', item.id).equalTo('revision', item.revision)
+            .isNull('deleted_at_ms').isNull('archived_at_ms'));
+        if (changed !== 1) { throw new Error('ACCOUNT_CHANGED'); }
+      }
     });
   }
 

@@ -220,3 +220,7 @@ BankAccountStyles.ets 的 preferredBankStyle 为选中银行和导入创建共�
 银行选择页安全区修正：设备截图显示加最外层 Stack 后，返回与标题侵入状态栏。撤除 Stack 与 HdsNavigation 两层 ignoreLayoutSafeArea；按 SDK TitleBarOptions 显式设置 avoidLayoutSafeArea: true，保留 enableComponentSafeArea: true，分别由 HDS 避让系统安全区并为 List 预留标题和搜索组件安全区，不添加固定状态栏高度或列表顶部补偿。索引仍为独立 Stack 子节点。未作新版本真机验收。
 
 后续设备截图中索引和沉浸效果已显示，但标题整体偏下。最终安全区归属调整为：只有外层 Stack 使用 ignoreLayoutSafeArea 覆盖窗口；内层 HDS 不忽略安全区，通过 avoidLayoutSafeArea: true 统一避让系统状态栏，通过 enableComponentSafeArea: true 预留标题和搜索区域。避免外层默认避让后 HDS 再次避让。未添加固定顶部 padding，索引和列表布局不改；实际顶部位置仍待新版本设备复核。
+
+## 账户排序入口
+
+资产页右上角保留添加账户，并新增“更多 → 排序”。使用中账户可在独立子页面长按拖动，点击保存后持久化；归档账户与余额不变。顺序同时用于资产列表和记账选账户，事务校验、未保存返回保护及验证说明见 [账户手动排序](account-order.md)。
