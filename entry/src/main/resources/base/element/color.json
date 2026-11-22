@@ -715,6 +715,42 @@
     {
       "name": "xq_profile_header_glow_cool",
       "value": "#12D8E6F5"
+    },
+    {
+      "name": "xq_transaction_red",
+      "value": "#FFCA3439"
+    },
+    {
+      "name": "xq_transaction_orange",
+      "value": "#FFFF5425"
+    },
+    {
+      "name": "xq_transaction_green",
+      "value": "#FF008664"
+    },
+    {
+      "name": "xq_transaction_blue",
+      "value": "#FF2466C7"
+    },
+    {
+      "name": "xq_transaction_red_on_dark",
+      "value": "#FFFF8588"
+    },
+    {
+      "name": "xq_transaction_orange_on_dark",
+      "value": "#FFF07850"
+    },
+    {
+      "name": "xq_transaction_green_on_dark",
+      "value": "#FF55C9A5"
+    },
+    {
+      "name": "xq_transaction_blue_on_dark",
+      "value": "#FF8DB8FF"
+    },
+    {
+      "name": "xq_transaction_black_on_dark",
+      "value": "#FFF2F3F5"
     }
   ]
 }

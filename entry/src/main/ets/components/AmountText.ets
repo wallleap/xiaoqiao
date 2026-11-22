@@ -8,7 +8,7 @@ export struct AmountText {
   fractionSize: number = 0;
   bold: boolean = false;
   currencyBottom: number = 4;
-  color: ResourceColor = $r('app.color.xq_font_primary');
+  @Prop color: ResourceColor = $r('app.color.xq_font_primary');
   sign: string = '';
   onOpen: (() => void) | undefined = undefined;
 

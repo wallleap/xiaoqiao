@@ -1,3 +1,4 @@
+import { DEFAULT_TRANSACTION_COLORS, TransactionColors, TransactionColorKind } from '../presentation/ledger/TransactionColors';
 import { ExpenseAmountInput } from '../presentation/ledger/ExpenseAmountInput';
 import { MoneyAmountField } from './MoneyAmountField';
 import { currencyUnit } from '../core/money/Currencies';
@@ -25,6 +26,8 @@ export class ExpenseRecoveryController {
 
 @Component
 export struct ExpenseRecoveryPanel {
+  @StorageProp('transactionColorSelection') private transactionColorSelection: string = DEFAULT_TRANSACTION_COLORS;
+  private transactionColor(kind: TransactionColorKind): Resource { return TransactionColors.color(kind,this.transactionColorSelection); }
   @Require @Prop entry: EntryDetail;
   accounts: LedgerAccount[] = [];
   workspace: LedgerWorkspace | undefined = undefined;
@@ -395,9 +398,9 @@ export struct ExpenseRecoveryPanel {
             }.layoutWeight(1).alignItems(HorizontalAlign.Start)
             Column({ space: 5 }) {
               Row({ space: 4 }) {
-                Text('+ ' + this.entry.currencySymbol).fontSize('12fp').fontColor($r('app.color.xq_app_income')).margin({ bottom: 1 }).flexShrink(0)
+                Text('+ ' + this.entry.currencySymbol).fontSize('12fp').fontColor(this.transactionColor('income')).margin({ bottom: 1 }).flexShrink(0)
                 Text(this.decimal(item.amountMinor)).fontFamily('XiaoQiaoDINMedium').fontSize('17fp')
-                  .fontColor($r('app.color.xq_app_income')).maxLines(1).minFontSize('12fp').maxFontSize('17fp').flexShrink(1)
+                  .fontColor(this.transactionColor('income')).maxLines(1).minFontSize('12fp').maxFontSize('17fp').flexShrink(1)
               }.alignItems(VerticalAlign.Bottom).justifyContent(FlexAlign.End)
               Text(item.accountName).fontSize('11fp').fontColor($r('app.color.xq_font_secondary')).maxLines(2).textOverflow({ overflow: TextOverflow.Ellipsis }).textAlign(TextAlign.End)
             }.constraintSize({ maxWidth: '44%' }).alignItems(HorizontalAlign.End)

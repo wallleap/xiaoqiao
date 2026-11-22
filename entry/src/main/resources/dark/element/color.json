@@ -715,6 +715,22 @@
     {
       "name": "xq_profile_header_glow_cool",
       "value": "#146E8FB8"
+    },
+    {
+      "name": "xq_transaction_red",
+      "value": "#FFFF8588"
+    },
+    {
+      "name": "xq_transaction_orange",
+      "value": "#FFF07850"
+    },
+    {
+      "name": "xq_transaction_green",
+      "value": "#FF55C9A5"
+    },
+    {
+      "name": "xq_transaction_blue",
+      "value": "#FF8DB8FF"
     }
   ]
 }

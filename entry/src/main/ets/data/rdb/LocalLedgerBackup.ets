@@ -1,3 +1,4 @@
+import { RdbTransactionColors } from './RdbTransactionColors';
 import { PrepaidCleanupMigration } from './PrepaidCleanupMigration';
 import { CategoryDeletionMigration } from './CategoryDeletionMigration';
 import { BookDeletionMigration } from './BookDeletionMigration';
@@ -91,6 +92,7 @@ export class LocalLedgerBackup {
     const version = await PrepaidCleanupMigration.status(db);
     if (version !== 14 && (!allowLegacy || ![2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13].includes(version))) { throw new Error('BACKUP_VERSION_UNSUPPORTED'); }
     if (version >= 7) { await RdbCurrencySettings.read(db); }
+    await RdbTransactionColors.read(db);
     const integrity = await db.querySql('PRAGMA integrity_check(1)');
     try {
       if (integrity.rowCount !== 1 || !integrity.goToFirstRow() || integrity.getString(0) !== 'ok') {

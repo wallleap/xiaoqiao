@@ -1,3 +1,4 @@
+import { DEFAULT_TRANSACTION_COLORS, TransactionColors, TransactionColorKind } from '../presentation/ledger/TransactionColors';
 import { CurrencyFlagBadge } from './CurrencyFlagBadge';
 import { CurrencySwitchAmounts, prepareCurrencySwitch } from '../presentation/ledger/CurrencySwitchDraft';
 import { enabledCurrencies } from '../core/money/CurrencySettings';
@@ -48,6 +49,8 @@ enum ExpenseErrorField { Amount, Discount, Fee, Coupon, Category, Accounts, Atta
 
 @Component
 export struct ExpenseEditor {
+  @StorageProp('transactionColorSelection') private transactionColorSelection: string = DEFAULT_TRANSACTION_COLORS;
+  private transactionColor(kind: TransactionColorKind): Resource { return TransactionColors.color(kind,this.transactionColorSelection); }
   @Prop chipMaterial: SystemUiMaterial | undefined = undefined;
   @Prop actionMaterial: SystemUiMaterial | undefined = undefined;
   // The material is an immutable native instance supplied when the editor opens.
@@ -1804,7 +1807,7 @@ export struct ExpenseEditor {
   private transferExtraChip(target: number) {
     Row({ space: 6 }) {
       Text(target === 1 ? '手续费' : '还款优惠').fontSize('12fp')
-      Text(target === 1 ? this.transferFee : this.transferCoupon).id(target === 1 ? 'transfer-fee-expression' : 'transfer-coupon-expression').fontSize('14fp').fontFamily('XiaoQiaoDINMedium').maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis }).flexShrink(1)
+      Text(target === 1 ? this.transferFee : this.transferCoupon).id(target === 1 ? 'transfer-fee-expression' : 'transfer-coupon-expression').fontSize('14fp').fontColor(this.transferTarget === target ? $r('app.color.xq_font_on_primary') : this.transactionColor(target === 1 ? 'expense' : 'transfer')).fontFamily('XiaoQiaoDINMedium').maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis }).flexShrink(1)
     }.height(32).padding({ left: 10, right: 10 }).constraintSize({ maxWidth: '38%' }).borderRadius(10)
       .backgroundColor(this.transferTarget === target ? $r('app.color.xq_brand') : $r('app.color.xq_app_surface_keyboard'))
       .foregroundColor(this.transferTarget === target ? $r('app.color.xq_font_on_primary') : $r('app.color.xq_font_primary'))
@@ -1907,7 +1910,7 @@ export struct ExpenseEditor {
               Text(currencyDefinition(this.currencyCode).symbol).fontSize('14fp').fontColor($r('app.color.xq_font_tertiary'))
               TextInput({ text: this.expression, controller: this.amountController })
                 .fontFamily('XiaoQiaoDINBold').fontWeight(FontWeight.Bold).fontSize('38fp').minFontSize('20fp').maxFontSize('38fp')
-                .fontColor($r('app.color.xq_font_primary')).caretColor($r('app.color.xq_brand'))
+                .fontColor(this.transactionColor(this.isTransfer ? 'transfer' : this.isIncome ? 'income' : 'expense')).caretColor($r('app.color.xq_brand'))
                 .backgroundColor(Color.Transparent).padding(0).borderRadius(0)
                 .layoutWeight(1).id('expense-amount').copyOption(CopyOptions.None).selectionMenuHidden(true)
                 .customKeyboard(this.amountKeyboard(), { supportAvoidance: true })
@@ -1923,7 +1926,7 @@ export struct ExpenseEditor {
                 .onWillDelete((): boolean => { this.press('⌫'); return false; })
             }.height(48).width('100%')
             Row({ space: 6 }) {
-              Text((this.isTransfer ? '实际转出 ' + this.transferOutgoingText() : (this.isIncome ? '收入 ' : '实付 ') + this.paidText()) + ' ' + this.currencyCode).fontSize('12fp').fontFamily('XiaoQiaoDINRegular').id('expense-paid')
+              Text((this.isTransfer ? '实际转出 ' + this.transferOutgoingText() : (this.isIncome ? '收入 ' : '实付 ') + this.paidText()) + ' ' + this.currencyCode).fontSize('12fp').fontFamily('XiaoQiaoDINRegular').fontColor(this.transactionColor(this.isTransfer ? 'transfer' : this.isIncome ? 'income' : 'expense')).id('expense-paid')
                 .flexShrink(1).height(24).maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis }).textAlign(TextAlign.Start)
                 .accessibilityDescription(this.isIncome ? '点击编辑上方收入金额' : '点击编辑上方原金额').onClick(() => { this.focusAmountFromPaid(); })
               if (this.currencyCode !== this.bookCurrencyId) {

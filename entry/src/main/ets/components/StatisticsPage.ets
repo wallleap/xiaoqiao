@@ -1,3 +1,4 @@
+import { DEFAULT_TRANSACTION_COLORS, TransactionColors, TransactionColorKind } from '../presentation/ledger/TransactionColors';
 import { currencyDefinition, currencyUnit } from '../core/money/Currencies';
 import { CategoryIconBadge } from './CategoryIconBadge';
 import { ItemRestriction, SegmentButton, SegmentButtonOptions, SegmentButtonTextItem } from '@kit.ArkUI';
@@ -22,7 +23,6 @@ interface CategoryRingSlice {
   color: string;
 }
 
-const CATEGORY_RING_COLORS: string[] = ['#FF5425', '#E5A132', '#32A88A', '#4C87DC', '#9672CF', '#939BA8'];
 
 interface TrendPoint {
   x: number;
@@ -36,6 +36,8 @@ interface TagRankingItem {
 
 @Component
 export struct StatisticsPage {
+  @StorageProp('transactionColorSelection') @Watch('redrawLineCharts') private transactionColorSelection: string = DEFAULT_TRANSACTION_COLORS;
+  private transactionColor(kind: TransactionColorKind): Resource { return TransactionColors.color(kind,this.transactionColorSelection); }
   @Prop @Watch('pageContextChanged') monthStartDay: number = 1;
   @Prop currencyId: string = 'CNY';
   workspace: LedgerWorkspace | undefined = undefined;
@@ -386,7 +388,7 @@ export struct StatisticsPage {
     Column({ space: 4 }) {
       Text(label).fontSize('12fp').fontColor($r('app.color.xq_font_secondary'))
       Text(currencyDefinition(this.currencyId).symbol + this.amount(minor)).fontSize('22fp').fontFamily('XiaoQiaoDINMedium')
-        .fontWeight(FontWeight.Medium).fontColor(income ? $r('app.color.xq_app_income') : $r('app.color.xq_brand'))
+        .fontWeight(FontWeight.Medium).fontColor(this.transactionColor(income ? 'income' : 'expense'))
         .maxLines(1).minFontSize('14fp').maxFontSize('22fp').id(componentId)
     }.layoutWeight(1).alignItems(HorizontalAlign.Start)
   }
@@ -396,7 +398,7 @@ export struct StatisticsPage {
     Column() {
       if (BigInt(value) > BigInt(0)) {
         Row().width('88%').height(this.barHeight(value)).borderRadius(2)
-          .backgroundColor(income ? $r('app.color.xq_app_income') : $r('app.color.xq_brand'))
+          .backgroundColor(this.transactionColor(income ? 'income' : 'expense'))
       }
     }.height(60).width('100%').justifyContent(income ? FlexAlign.End : FlexAlign.Start)
   }
@@ -440,9 +442,9 @@ export struct StatisticsPage {
           .constraintSize({ maxWidth: '35%' })
       }.width('100%')
       Row({ space: 6 }) {
-        Circle().width(6).height(6).fill($r('app.color.xq_brand'))
+        Circle().width(6).height(6).fill(this.transactionColor('expense'))
         Text('支出').fontSize('11fp').fontColor($r('app.color.xq_font_secondary')).margin({ right: 8 })
-        Circle().width(6).height(6).fill($r('app.color.xq_app_income'))
+        Circle().width(6).height(6).fill(this.transactionColor('income'))
         Text('收入').fontSize('11fp').fontColor($r('app.color.xq_font_secondary'))
       }.width('100%')
       if (this.rankedCategories(false).length === 0 && this.rankedCategories(true).length === 0 &&
@@ -473,7 +475,7 @@ export struct StatisticsPage {
                 .fontSize('12fp').fontFamily('XiaoQiaoDINMedium').fontColor(Color.White)
                 .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
             }.width(132).height(40).justifyContent(FlexAlign.Center).borderRadius(8)
-              .backgroundColor(this.selectedBarIncome ? $r('app.color.xq_app_income') : $r('app.color.xq_brand'))
+              .backgroundColor(this.transactionColor(this.selectedBarIncome ? 'income' : 'expense'))
               .position({ x: this.barTooltipX(), y: 0 }).hitTestBehavior(HitTestMode.None)
               .id('statistics-bar-tooltip')
           }
@@ -540,8 +542,8 @@ export struct StatisticsPage {
     const points = this.linePoints(income);
     if (points.length === 0) { return; }
     const host = this.getUIContext().getHostContext();
-    const color = host === undefined ? (income ? 0x008664 : 0xFF5425) :
-      host.resourceManager.getColorSync(income ? $r('app.color.xq_app_income').id : $r('app.color.xq_brand').id);
+    if (host === undefined) { return; }
+    const color = host.resourceManager.getColorSync(this.transactionColor(income ? 'income' : 'expense').id);
     const rgb = ((color >>> 16) & 255) + ',' + ((color >>> 8) & 255) + ',' + (color & 255);
     const baseline = this.lineBaseline();
     const zeroStop = Math.max(0, Math.min(1, (baseline - 36) / 104));
@@ -597,7 +599,7 @@ export struct StatisticsPage {
           .fontColor($r('app.color.xq_font_primary')).layoutWeight(1)
         Text(currencyDefinition(this.currencyId).symbol + this.amount((income ? this.incomeStatistics : this.statistics)?.totalMinor || '0'))
           .fontSize('16fp').fontFamily('XiaoQiaoDINMedium')
-          .fontColor(income ? $r('app.color.xq_app_income') : $r('app.color.xq_brand'))
+          .fontColor(this.transactionColor(income ? 'income' : 'expense'))
           .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis }).constraintSize({ maxWidth: '50%' })
       }.width('100%')
       if (!this.lineBuckets(income).some((bucket: StatisticsBucket) => BigInt(bucket.amountMinor) !== BigInt(0))) {
@@ -611,11 +613,11 @@ export struct StatisticsPage {
               this.drawLineChart(income);
             }).hitTestBehavior(HitTestMode.None)
           if (this.lineBuckets(income).length === 1 && this.selectedTrendBucket(income) === undefined) {
-            Circle().width(8).height(8).fill(income ? $r('app.color.xq_app_income') : $r('app.color.xq_brand'))
+            Circle().width(8).height(8).fill(this.transactionColor(income ? 'income' : 'expense'))
               .position({ x: this.linePoints(income)[0].x - 4, y: this.linePoints(income)[0].y - 4 }).hitTestBehavior(HitTestMode.None)
           }
           if (this.selectedTrendBucket(income) !== undefined) {
-            Circle().width(8).height(8).fill(income ? $r('app.color.xq_app_income') : $r('app.color.xq_brand'))
+            Circle().width(8).height(8).fill(this.transactionColor(income ? 'income' : 'expense'))
               .stroke($r('app.color.xq_app_surface_card')).strokeWidth(2)
               .position({ x: this.selectedTrendPoint(income).x - 4, y: this.selectedTrendPoint(income).y - 4 }).hitTestBehavior(HitTestMode.None)
             Column({ space: 2 }) {
@@ -623,7 +625,7 @@ export struct StatisticsPage {
               Text(currencyDefinition(this.currencyId).symbol + this.amount(this.selectedTrendBucket(income)?.amountMinor || '0')).fontSize('12fp')
                 .fontColor(Color.White).maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
             }.width(104).height(44).justifyContent(FlexAlign.Center).borderRadius(8)
-              .backgroundColor(income ? $r('app.color.xq_app_income') : $r('app.color.xq_brand'))
+              .backgroundColor(this.transactionColor(income ? 'income' : 'expense'))
               .position({ x: Math.max(0, Math.min(this.lineChartWidth - 104, this.selectedTrendPoint(income).x - 52)),
                 y: Math.max(0, this.selectedTrendPoint(income).y - 52) }).hitTestBehavior(HitTestMode.None)
           }
@@ -672,7 +674,7 @@ export struct StatisticsPage {
             .fillColor($r('app.color.xq_icon_tertiary'))
         }.width('100%')
         Progress({ value: Math.max(0, Math.min(100, category.share)), total: 100, type: ProgressType.Linear })
-          .width('100%').height(4).color(kind === 'income' ? $r('app.color.xq_app_income') : $r('app.color.xq_brand'))
+          .width('100%').height(4).color(this.transactionColor(kind === 'income' ? 'income' : 'expense'))
           .backgroundColor($r('app.color.xq_comp_background_tertiary'))
       }.layoutWeight(1)
     }.padding(16).width('100%').borderRadius(16).backgroundColor($r('app.color.xq_app_surface_card'))
@@ -686,6 +688,13 @@ export struct StatisticsPage {
       if (amount > BigInt(0)) { total += amount; }
     }
     return total;
+  }
+
+  private ringColor(index: number, income: boolean): string {
+    const host = this.getUIContext().getHostContext();
+    if (host === undefined) { return '#939BA8'; }
+    return TransactionColors.shade(host.resourceManager.getColorSync(this.transactionColor(income ? 'income' : 'expense').id),
+      host.resourceManager.getColorSync($r('app.color.xq_app_surface_card').id),index);
   }
 
   private ringSlices(income: boolean): CategoryRingSlice[] {
@@ -703,7 +712,7 @@ export struct StatisticsPage {
       const share = Number(BigInt(category.amountMinor) * BigInt(1000000) / total) / 10000;
       const sweep = index === values.length - 1 ? 270 - start : share * 3.6;
       const slice: CategoryRingSlice = { key: category.key, name: category.name, amountMinor: category.amountMinor,
-        share: share, startAngle: start, sweepAngle: sweep, color: CATEGORY_RING_COLORS[index] };
+        share: share, startAngle: start, sweepAngle: sweep, color: this.ringColor(index,income) };
       start += sweep;
       return slice;
     });
@@ -769,7 +778,7 @@ export struct StatisticsPage {
           ForEach(this.ringSlices(income), (slice: CategoryRingSlice) => {
             Path().commands(this.ringPath(slice, income)).width(144).height(144).fill(slice.color).strokeWidth(0).hitTestBehavior(HitTestMode.None)
               .accessibilityText(slice.name + ' ' + this.percent(slice.share))
-          }, (slice: CategoryRingSlice) => slice.key + ':' + slice.amountMinor)
+          }, (slice: CategoryRingSlice) => slice.key + ':' + slice.amountMinor + ':' + slice.color)
           Column({ space: 4 }) {
             Text(this.rankedCategories(income).some((category: StatisticsCategory) => BigInt(category.amountMinor) < BigInt(0)) ?
               '正净额合计' : income ? '分类收入' : '分类支出').fontSize('10fp').fontColor($r('app.color.xq_font_secondary'))
@@ -794,7 +803,7 @@ export struct StatisticsPage {
               .borderRadius(6)
               .accessibilityText(slice.name + ' ' + this.percent(slice.share) + '，选中查看金额')
               .onClick(() => { this.selectRingSlice(income, slice); })
-          }, (slice: CategoryRingSlice) => slice.key + ':' + slice.amountMinor)
+          }, (slice: CategoryRingSlice) => slice.key + ':' + slice.amountMinor + ':' + slice.color)
           if (this.ringSlices(income).length === 0) {
             Text('暂无可绘制的正净额').fontSize('12fp').fontColor($r('app.color.xq_font_secondary'))
           }
@@ -994,7 +1003,7 @@ export struct StatisticsPage {
           .fontColor($r('app.color.xq_font_secondary')).maxLines(1)
       }.layoutWeight(1).alignItems(HorizontalAlign.Start)
       Text(currencyDefinition(this.currencyId).symbol + this.amount(entry.amountMinor)).fontSize('16fp').fontFamily('XiaoQiaoDINMedium')
-        .fontColor(this.kind === 1 ? $r('app.color.xq_app_income') : $r('app.color.xq_font_primary'))
+        .fontColor(this.transactionColor(this.kind === 1 ? 'income' : 'expense'))
         .maxLines(1).minFontSize('12fp').maxFontSize('16fp')
       Image($r('app.media.lucide_chevron_right1')).width(16).height(16)
         .fillColor($r('app.color.xq_icon_tertiary'))
@@ -1016,7 +1025,7 @@ export struct StatisticsPage {
             .fontSize('12fp').fontColor($r('app.color.xq_font_secondary'))
         }.layoutWeight(1).alignItems(HorizontalAlign.Start)
         Text(currencyDefinition(this.currencyId).symbol + this.amount(this.selectedSheetAmount)).fontSize('18fp')
-          .fontFamily('XiaoQiaoDINMedium').fontColor($r('app.color.xq_font_primary'))
+          .fontFamily('XiaoQiaoDINMedium').fontColor(this.transactionColor(this.kind === 1 ? 'income' : 'expense'))
       }.width('100%').padding({ right: 40 })
       Divider().strokeWidth(0.5).color($r('app.color.xq_app_divider_subtle'))
       if (this.entriesLoading) {

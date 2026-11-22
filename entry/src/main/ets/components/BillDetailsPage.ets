@@ -1,3 +1,4 @@
+import { DEFAULT_TRANSACTION_COLORS, TransactionColors, TransactionColorKind } from '../presentation/ledger/TransactionColors';
 import { MonthlyBudget } from '../domain/model/MonthlyBudget';
 import { CategoryIconBadge } from './CategoryIconBadge';
 import { BillCalendarDay, billCalendarDays, billDateKey, trimBillDecimal, compactBillAmount } from '../presentation/ledger/BillCalendar';
@@ -18,6 +19,8 @@ interface BillCalendarCell {
 
 @Component
 export struct BillDetailsPage {
+  @StorageProp('transactionColorSelection') private transactionColorSelection: string = DEFAULT_TRANSACTION_COLORS;
+  private transactionColor(kind: TransactionColorKind): Resource { return TransactionColors.color(kind,this.transactionColorSelection); }
   workspace: LedgerWorkspace | undefined = undefined;
   rangeMaterial: SystemUiMaterial | undefined = undefined;
   @Prop @Watch('reload') refreshToken: number = 0;
@@ -224,7 +227,7 @@ export struct BillDetailsPage {
   private calendarMoney(minor: string, income: boolean) {
     Text(this.calendarAmount(minor)).fontSize('11fp').minFontSize('9fp').maxFontSize('11fp')
       .heightAdaptivePolicy(TextHeightAdaptivePolicy.MIN_FONT_SIZE_FIRST).fontFamily('XiaoQiaoDINMedium')
-      .fontColor(income ? $r('app.color.xq_app_income') : $r('app.color.xq_brand'))
+      .fontColor(this.transactionColor(income ? 'income' : 'expense'))
       .width('100%').height(14).maxLines(1).textAlign(TextAlign.Center)
   }
   @Builder
@@ -292,7 +295,7 @@ export struct BillDetailsPage {
         }
       }.layoutWeight(1).alignItems(HorizontalAlign.Start)
       Text(this.sign(entry) + this.amount(entry)).fontSize('16fp').fontFamily('XiaoQiaoDINMedium')
-        .fontColor(entry.prepaidId || entry.transfer ? $r('app.color.xq_font_primary') : entry.income || entry.recoveryKind ? $r('app.color.xq_app_income') : $r('app.color.xq_brand'))
+        .fontColor(this.transactionColor(entry.prepaidId ? (entry.prepaidKind === 'refund' ? 'income' : 'transfer') : entry.transfer ? 'transfer' : entry.income || entry.recoveryKind ? 'income' : 'expense'))
         .maxLines(1).constraintSize({ maxWidth: '42%' })
     }.width('100%').padding({ top: 16, bottom: 16 }).onClick(() => { this.onOpenEntry(entry); })
   }

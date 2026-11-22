@@ -1,3 +1,4 @@
+import { RdbTransactionColors } from './RdbTransactionColors';
 import { RdbBookDeletion, BookDeletionResult } from './RdbBookDeletion';
 import { RdbCurrencySettings } from './RdbCurrencySettings';
 import { LEDGER_USAGE_ROWS_SQL } from './LedgerUsageQuery';
@@ -138,6 +139,9 @@ export class LedgerWorkspace {
       LedgerWorkspace.instances.delete(name);
     }
   }
+
+  async loadTransactionColors(): Promise<void> { await RdbTransactionColors.load(this.session); }
+  async saveTransactionColors(json: string): Promise<void> { await RdbTransactionColors.save(this.session,json); }
 
   async saveExpense(command: ExpenseCommand): Promise<void> {
     await this.validateAttachmentFiles(command.attachments);

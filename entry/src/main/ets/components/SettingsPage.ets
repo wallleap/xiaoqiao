@@ -1,3 +1,5 @@
+import { LedgerWorkspace } from '../data/rdb/LedgerWorkspace';
+import { TransactionColorsPage } from './TransactionColorsPage';
 import { HdsNavigation, HdsNavigationTitleMode, hdsMaterial, DividerShowType, ScrollEffectType } from '@kit.UIDesignKit';
 import { AppearanceMode, AppearanceSettings } from '../data/settings/AppearanceSettings';
 
@@ -5,16 +7,28 @@ import { AppearanceMode, AppearanceSettings } from '../data/settings/AppearanceS
 // implemented; other settings stay out until they have a decided behaviour.
 @Component
 export struct SettingsPage {
+  workspace: LedgerWorkspace | undefined = undefined;
+  onRegisterBack: (handler: () => boolean) => void = () => {};
+  @State private showColors: boolean = false;
+  @State private colorSaving: boolean = false;
+  private navigateBack(): boolean {
+    if (!this.showColors) { return false; }
+    if (!this.colorSaving) { this.showColors = false; }
+    return true;
+  }
   onClose: () => void = () => {};
   menuMaterial: SystemUiMaterial | undefined = undefined;
   @State private appearance: AppearanceMode = AppearanceMode.SYSTEM;
   private readonly scroller: Scroller = new Scroller();
 
   aboutToAppear(): void {
+    this.onRegisterBack((): boolean => this.navigateBack());
     const host = this.getUIContext().getHostContext();
     if (host !== undefined) { AppearanceSettings.initialize(host); }
     this.appearance = AppearanceSettings.mode();
   }
+
+  aboutToDisappear(): void { this.onRegisterBack((): boolean => false); }
 
   private selectAppearance(mode: AppearanceMode): void {
     const host = this.getUIContext().getHostContext();
@@ -75,10 +89,19 @@ export struct SettingsPage {
         .id('settings-appearance-mode')
         .accessibilityText('深色模式：' + this.appearanceLabel())
         .bindMenu(this.appearanceMenu, this.appearanceMenuOptions())
+      Button({ type: ButtonType.Normal }) {
+        Row({ space: 12 }) {
+          Text('收支转账颜色').fontSize('14fp').fontColor($r('app.color.xq_font_primary')).layoutWeight(1)
+          Image($r('app.media.lucide_chevron_right1')).width(16).height(16).fillColor($r('app.color.xq_icon_secondary'))
+        }.width('100%')
+      }.width('100%').height(52).padding({ left: 16, right: 16 }).borderRadius(20)
+        .fontColor($r('app.color.xq_font_primary')).backgroundColor($r('app.color.xq_app_surface_card'))
+        .enabled(this.workspace !== undefined).onClick(() => { this.showColors = true; }).id('settings-transaction-colors')
     }.width('100%')
   }
 
-  build() {
+  @Builder
+  private settingsContent() {
     HdsNavigation() {
       Scroll(this.scroller) {
         Column({ space: 16 }) {
@@ -101,4 +124,14 @@ export struct SettingsPage {
       .bindToScrollable([this.scroller]).backgroundColor($r('app.color.xq_app_surface_page'))
       .ignoreLayoutSafeArea([LayoutSafeAreaType.SYSTEM], [LayoutSafeAreaEdge.TOP, LayoutSafeAreaEdge.BOTTOM]).id('settings-page')
   }
+  build() {
+    Stack() {
+      Column() { this.settingsContent() }.width('100%').height('100%').visibility(this.showColors ? Visibility.Hidden : Visibility.Visible)
+      if (this.showColors) {
+        TransactionColorsPage({ workspace: this.workspace, onSaving: (saving: boolean) => { this.colorSaving = saving; },
+          onClose: () => { if (!this.colorSaving) { this.showColors = false; } } })
+      }
+    }.width('100%').height('100%')
+  }
+
 }

@@ -1,3 +1,4 @@
+import { DEFAULT_TRANSACTION_COLORS, TransactionColors, TransactionColorKind } from '../presentation/ledger/TransactionColors';
 import { enabledCurrencies } from '../core/money/CurrencySettings';
 import { ExpenseAmountInput } from '../presentation/ledger/ExpenseAmountInput';
 import { MoneyAmountField } from './MoneyAmountField';
@@ -16,6 +17,8 @@ import { OfficialExchangeRates } from '../data/exchange/OfficialExchangeRates';
 
 @Component
 export struct PrepaidPage {
+  @StorageProp('transactionColorSelection') private transactionColorSelection: string = DEFAULT_TRANSACTION_COLORS;
+  private transactionColor(kind: TransactionColorKind): Resource { return TransactionColors.color(kind,this.transactionColorSelection); }
   initialProjectId: string = '';
   returnToCaller: boolean = false;
   initialAction: string = '';
@@ -424,7 +427,7 @@ export struct PrepaidPage {
       Text('流水记录').fontSize('18fp').fontWeight(FontWeight.Medium).width('100%')
       ForEach(this.timeline(),(event:PrepaidEvent)=>{
         Column({space:8}) {
-          Row() { Text(this.label(event.kind)).fontSize('15fp').layoutWeight(1); Text(this.money(event.amountMinor,this.detail?.project.currencyId || 'CNY')+' '+(this.detail?.project.currencyId || '')).fontSize('17fp').fontFamily('XiaoQiaoDINMedium') }.width('100%')
+          Row() { Text(this.label(event.kind)).fontSize('15fp').layoutWeight(1); Text(this.money(event.amountMinor,this.detail?.project.currencyId || 'CNY')+' '+(this.detail?.project.currencyId || '')).fontSize('17fp').fontFamily('XiaoQiaoDINMedium').fontColor(this.transactionColor(event.kind === 'refund' ? 'income' : event.kind === 'consume' ? 'expense' : 'transfer')) }.width('100%')
           Text(event.localDate+' · 历史成本 ¥'+this.money(event.bookMinor)).fontSize('12fp').fontColor($r('app.color.xq_font_secondary')).width('100%')
           if (event.accountId) { Text(event.accountName+' · '+(event.kind==='fund' ? '付款 ' : '到账 ')+this.money(event.cashMinor,event.accountCurrencyId)+' '+event.accountCurrencyId).fontSize('12fp').fontColor($r('app.color.xq_font_secondary')).width('100%') }
           if (event.kind==='refund'&&event.cashBookMinor!==event.bookMinor) { Text('退款差额 '+this.money((BigInt(event.cashBookMinor)-BigInt(event.bookMinor)).toString())+' '+this.bookCode()+'，已单独记录收支').fontSize('12fp').fontColor($r('app.color.xq_font_secondary')).width('100%') }

@@ -1,3 +1,4 @@
+import { DEFAULT_TRANSACTION_COLORS, TransactionColors, TransactionColorKind } from '../presentation/ledger/TransactionColors';
 import { CurrencyFlagBadge } from '../components/CurrencyFlagBadge';
 import { enabledCurrencies } from '../core/money/CurrencySettings';
 import { ExchangeRatesPage } from '../components/ExchangeRatesPage';
@@ -53,6 +54,8 @@ interface EntryDeleteTarget { id: string; category: string; minor: string; }
 @Entry
 @Component
 struct Index {
+  @StorageProp('transactionColorSelection') private transactionColorSelection: string = DEFAULT_TRANSACTION_COLORS;
+  private transactionColor(kind: TransactionColorKind): Resource { return TransactionColors.color(kind,this.transactionColorSelection); }
   @StorageProp('ledgerPreview') private preview: boolean = false;
   @StorageProp('ledgerScrollPreview') private scrollPreview: boolean = false;
   @StorageProp('ledgerForceLegacyMaterials') private forceLegacyMaterials: boolean = false;
@@ -77,6 +80,7 @@ struct Index {
   @State private prepaidBusy: boolean = false;
   private prepaidBackHandler: () => boolean = () => false;
   @State private showBackupRestore: boolean = false;
+  private settingsBackHandler: () => boolean = () => false;
   @State private showSettings: boolean = false;
   @State private showExchangeRates: boolean = false;
   @State private accountOverview: AccountOverview | undefined = undefined;
@@ -218,6 +222,7 @@ struct Index {
       const name = AppStorage.get<string>('ledgerDatabaseName') || 'xiaoqiao.db';
       const initialLoad = this.workspace === undefined;
       this.workspace = await LedgerWorkspace.open(context, name);
+      await this.workspace.loadTransactionColors();
       if (initialLoad) { this.selectedMonth = MonthlyBudget.monthForDate(this.todayText(), this.workspace.monthStartDay); }
       this.ledger = await this.workspace.snapshot(this.selectedMonth);
       this.books = await this.workspace.books();
@@ -911,7 +916,7 @@ struct Index {
 
   onBackPress(): boolean {
     if (this.showBookManagement) { this.backFromBookManagement(); return true; }
-    if (this.showSettings) { this.showSettings = false; return true; }
+    if (this.showSettings) { if (!this.settingsBackHandler()) { this.showSettings = false; } return true; }
     if (this.showExchangeRates) { this.showExchangeRates = false; return true; }
     if (this.showPrepaid) { if (!this.prepaidBusy) { this.prepaidBackHandler(); } return true; }
     if (this.showHuaweiCloud) { if (!this.backupBusy) { this.showHuaweiCloud = false; } return true; }
@@ -1115,7 +1120,7 @@ struct Index {
       .fontFamily('XiaoQiaoDINRegular').fontSize('12fp').fontWeight(FontWeight.Regular)
       .id(income ? 'ledger-income-total' : 'ledger-expense-total')
       .minFontSize('10fp').maxFontSize('12fp').maxLines(1).constraintSize({ maxWidth: 92 })
-      .fontColor($r('app.color.xq_font_on_secondary'))
+      .fontColor(TransactionColors.onDark(income ? 'income' : 'expense',this.transactionColorSelection))
       .accessibilityText(currencyDefinition(this.bookCode()).name + (this.preview ? (income ? '8,600.00' : '2,486.00') :
         this.bookAmount((income ? this.ledger?.incomeMinor : this.ledger?.expenseMinor) || '0')) + this.bookCode())
       .onClick(() => {
@@ -1181,12 +1186,12 @@ struct Index {
       }.width('100%').alignItems(VerticalAlign.Center).constraintSize({ minHeight: 64 })
       Row({ space: 16 }) {
         Row({ space: 6 }) {
-          Image($r('app.media.lucide_arrow_down1')).width(16).height(16).fillColor('#55C9A5')
+          Image($r('app.media.lucide_arrow_down1')).width(16).height(16).fillColor(TransactionColors.onDark('income',this.transactionColorSelection))
           Text('收入').fontSize('12fp').fontColor($r('app.color.xq_font_on_secondary'))
           this.summaryFigure(true)
         }.layoutWeight(1).accessibilityText('本月收入')
         Row({ space: 6 }) {
-          Image($r('app.media.lucide_arrow_up1')).width(16).height(16).fillColor($r('app.color.xq_app_summary_accent'))
+          Image($r('app.media.lucide_arrow_up1')).width(16).height(16).fillColor(TransactionColors.onDark('expense',this.transactionColorSelection))
           Text('支出').fontSize('12fp').fontColor($r('app.color.xq_font_on_secondary'))
           this.summaryFigure(false)
         }.layoutWeight(1).justifyContent(FlexAlign.End).accessibilityText('本月支出')
@@ -1253,13 +1258,13 @@ struct Index {
         amount: entry.fx !== undefined && !(entry.transfer && pageKind === LedgerKind.Expense) ? Money.fromMinorText(entry.transfer ? entry.minor : entry.fx.paidMinor, currencyUnit(entry.fx.currencyId)).toDecimalString() : this.bookAmount(entry.recoveryKind ? (-BigInt(entry.minor)).toString() : entry.transfer && pageKind === LedgerKind.Expense ? (entry.expenseMinor || '0') : entry.minor), amountSize: 16, bold: true, currencyBottom: 0,
         sign: entry.prepaidId ? (entry.prepaidKind==='refund' ? '+' : '−') : entry.recoveryKind ? '+' : entry.transfer && pageKind !== LedgerKind.Expense ? '' : entry.income ? '+' : '−',
         onOpen: () => { this.openDetail(entry.id); },
-        color: entry.prepaidId ? $r('app.color.xq_font_primary') : entry.recoveryKind ? $r('app.color.xq_app_income') : entry.transfer && pageKind !== LedgerKind.Expense ? $r('app.color.xq_font_primary') : entry.income ? $r('app.color.xq_app_income') : $r('app.color.xq_brand') })
+        color: this.transactionColor(entry.prepaidId ? (entry.prepaidKind === 'refund' ? 'income' : 'transfer') : entry.recoveryKind ? 'income' : entry.transfer && pageKind !== LedgerKind.Expense ? 'transfer' : entry.income ? 'income' : 'expense') })
       if (!entry.transfer && entry.fx !== undefined && entry.fx.currencyId !== this.bookCode()) {
         Text('≈ ' + this.bookSymbol() + this.bookAmount(entry.recoveryKind ? (-BigInt(entry.minor)).toString() : entry.minor)).fontSize('12fp').fontColor($r('app.color.xq_font_tertiary'))
       }
       if (entry.transfer && BigInt(entry.transferFeeMinor || '0') > BigInt(0)) {
         Text(pageKind === LedgerKind.Expense ? '转出 ' + this.bookAmount(entry.minor) : '手续费 ' + Money.fromMinorText(entry.transferFeeMinor || '0',currencyUnit(entry.fx?.currencyId || 'CNY')).toDecimalString() + ' ' + (entry.fx?.currencyId || 'CNY')).fontSize('12fp')
-          .fontColor($r('app.color.xq_font_secondary')).maxLines(1).id(`ledger-transfer-fee-${entry.id}`)
+          .fontColor(this.transactionColor(pageKind === LedgerKind.Expense ? 'transfer' : 'expense')).maxLines(1).id(`ledger-transfer-fee-${entry.id}`)
       }
       if (!entry.income && BigInt(entry.discountMinor) > BigInt(0)) {
         Row({ space: 6 }) {
@@ -1310,7 +1315,7 @@ struct Index {
           ForEach(entry.recoveryBadges || [], (label: string) => {
             Text(label).fontSize('10fp').fontWeight(FontWeight.Medium)
               .fontColor(label === '待报销' ? $r('app.color.xq_font_emphasize') :
-                label.startsWith('部分') ? $r('app.color.xq_font_secondary') : $r('app.color.xq_app_income'))
+                label.startsWith('部分') ? $r('app.color.xq_font_secondary') : this.transactionColor('income'))
               .backgroundColor($r('app.color.xq_ledger_status_badge_background')).borderRadius(4)
               .padding({ left: 6, right: 6, top: 2, bottom: 2 }).margin({ right: 4, top: 2, bottom: 2 })
               .maxLines(1).accessibilityText(label).id('ledger-recovery-badge-' + entry.id + '-' + label)
@@ -1555,10 +1560,10 @@ struct Index {
   @Builder
   private dailyFigure(date: string, income: boolean, pageKind: LedgerKind) {
     Text() {
-      Span(income ? '收 ' : '支 ').fontColor(income ? $r('app.color.xq_app_income') : $r('app.color.xq_brand'))
+      Span(income ? '收 ' : '支 ').fontColor(this.transactionColor(income ? 'income' : 'expense'))
       Span(this.bookAmount(income ? dailyTotals(this.entries(pageKind), date).incomeMinor :
         dailyTotals(this.entries(pageKind), date).expenseMinor)).fontFamily('XiaoQiaoDINRegular')
-    }.fontSize('12fp').fontColor($r('app.color.xq_font_secondary')).maxLines(1)
+    }.fontSize('12fp').fontColor(this.transactionColor(income ? 'income' : 'expense')).maxLines(1)
       .minFontSize('10fp').maxFontSize('12fp').textAlign(TextAlign.End).flexShrink(1)
       .textOverflow({ overflow: TextOverflow.Ellipsis }).id(`ledger-day-${income ? 'income' : 'expense'}-${date}`)
   }
@@ -2176,7 +2181,7 @@ struct Index {
     }
     else if (this.showBackupRestore) { this.backupRestorePage() }
     else if (this.showSettings) {
-      SettingsPage({ onClose: () => { this.showSettings = false; },
+      SettingsPage({ workspace: this.workspace, onRegisterBack: (handler: () => boolean) => { this.settingsBackHandler = handler; }, onClose: () => { this.showSettings = false; },
         menuMaterial: this.materialReady && !this.forceLegacyMaterials ? this.filterMaterials?.menu : undefined })
     }
     else if (this.showSpendingNatures) { this.spendingNaturePage() }

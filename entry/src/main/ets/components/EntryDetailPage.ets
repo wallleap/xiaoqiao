@@ -1,3 +1,4 @@
+import { DEFAULT_TRANSACTION_COLORS, TransactionColors, TransactionColorKind } from '../presentation/ledger/TransactionColors';
 import { CategoryIconBadge } from './CategoryIconBadge';
 import { AccountAvatar } from './AccountAvatar';
 import { AccountProfile } from '../domain/model/AccountProfile';
@@ -17,6 +18,8 @@ import { LedgerAttachment } from '../domain/model/LedgerAttachment';
 
 @Component
 export struct EntryDetailPage {
+  @StorageProp('transactionColorSelection') private transactionColorSelection: string = DEFAULT_TRANSACTION_COLORS;
+  private transactionColor(kind: TransactionColorKind): Resource { return TransactionColors.color(kind,this.transactionColorSelection); }
   @Prop entry: EntryDetail | undefined = undefined;
   @Prop loading: boolean = false;
   @Prop error: string = '';
@@ -94,11 +97,11 @@ export struct EntryDetailPage {
   }
 
   @Builder
-  private field(label: string, value: string) {
+  private field(label: string, value: string, color: ResourceColor = $r('app.color.xq_font_primary')) {
     Row({ space: 16 }) {
       Text(label).fontSize('14fp').fontColor($r('app.color.xq_font_secondary'))
       Blank()
-      Text(value).fontSize('14fp').fontColor($r('app.color.xq_font_primary')).textAlign(TextAlign.End)
+      Text(value).fontSize('14fp').fontColor(color).textAlign(TextAlign.End)
         .constraintSize({ maxWidth: '68%' }).maxLines(3).textOverflow({ overflow: TextOverflow.Ellipsis })
     }.width('100%').padding({ top: 9, bottom: 9 })
   }
@@ -236,10 +239,10 @@ export struct EntryDetailPage {
           // Keep sign and currency on one system-font baseline; only digits use DIN.
           Text((this.entry.kind === 'transfer' ? '' : this.entry.kind === 'income' ? '+ ' : '− ') +
             (this.entry.currencySymbol || this.entry.currencyCode)).fontSize('14fp').margin({ bottom: 5 })
-            .fontColor(this.entry.kind === 'transfer' ? $r('app.color.xq_font_primary') : this.entry.kind === 'income' ? $r('app.color.xq_app_income') : $r('app.color.xq_brand'))
+            .fontColor(this.transactionColor(this.entry.kind === 'transfer' ? 'transfer' : this.entry.kind === 'income' ? 'income' : 'expense'))
           Text(this.amount(this.entry.kind === 'transfer' ? (this.entry.transferOutMinor || this.entry.paidMinor) : this.entry.paidMinor)).fontFamily('XiaoQiaoDINBold').fontWeight(FontWeight.Bold)
             .fontSize('38fp').minFontSize('22fp').maxFontSize('38fp').maxLines(1).id('entry-detail-amount')
-            .fontColor(this.entry.kind === 'transfer' ? $r('app.color.xq_font_primary') : this.entry.kind === 'income' ? $r('app.color.xq_app_income') : $r('app.color.xq_brand'))
+            .fontColor(this.transactionColor(this.entry.kind === 'transfer' ? 'transfer' : this.entry.kind === 'income' ? 'income' : 'expense'))
         }.alignItems(VerticalAlign.Bottom).justifyContent(FlexAlign.Center).width('100%')
           .margin({ top: this.entry.kind === 'expense' ? 16 : 0 })
         if (BigInt(this.entry.discountMinor) > BigInt(0)) {
@@ -275,7 +278,7 @@ export struct EntryDetailPage {
           this.transferAccount(true)
           this.transferAccount(false)
           this.field('转入金额', (this.entry.accountCurrencyId || this.entry.currencyCode) + ' ' + Money.fromMinorText(this.entry.transferInMinor || this.entry.paidMinor, currencyUnit(this.entry.accountCurrencyId || this.entry.currencyCode)).toDecimalString())
-          this.field('手续费', this.entry.currencySymbol + this.amount(this.entry.transferFeeMinor || '0'))
+          this.field('手续费', this.entry.currencySymbol + this.amount(this.entry.transferFeeMinor || '0'), this.transactionColor('expense'))
           if (BigInt(this.entry.transferCouponMinor || '0') > BigInt(0)) {
             this.field('还款优惠', this.entry.currencySymbol + this.amount(this.entry.transferCouponMinor || '0'))
           }

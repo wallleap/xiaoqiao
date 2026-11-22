@@ -1,3 +1,4 @@
+import { DEFAULT_TRANSACTION_COLORS, TransactionColors, TransactionColorKind } from '../presentation/ledger/TransactionColors';
 import { CategoryIconBadge } from './CategoryIconBadge';
 import { AccountProfile } from '../domain/model/AccountProfile';
 import { LedgerSearchCursor } from '../domain/model/LedgerSearch';
@@ -9,6 +10,8 @@ import { currencyUnit, currencyDefinition } from '../core/money/Currencies';
 
 @Component
 export struct LedgerSearchPage {
+  @StorageProp('transactionColorSelection') private transactionColorSelection: string = DEFAULT_TRANSACTION_COLORS;
+  private transactionColor(kind: TransactionColorKind): Resource { return TransactionColors.color(kind,this.transactionColorSelection); }
   workspace: LedgerWorkspace | undefined = undefined;
   accounts: AccountProfile[] = [];
   chipMaterial: SystemUiMaterial | undefined = undefined;
@@ -96,7 +99,7 @@ export struct LedgerSearchPage {
           .fontSize('12fp').fontColor($r('app.color.xq_font_secondary')).width('100%').maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
       }.layoutWeight(1).alignItems(HorizontalAlign.Start)
       Text(this.amount(entry)).fontSize('16fp').fontFamily('XiaoQiaoDINMedium')
-        .fontColor(entry.prepaidId || entry.transfer ? $r('app.color.xq_font_primary') : entry.income || entry.recoveryKind ? $r('app.color.xq_app_income') : $r('app.color.xq_brand'))
+        .fontColor(this.transactionColor(entry.prepaidId ? (entry.prepaidKind === 'refund' ? 'income' : 'transfer') : entry.transfer ? 'transfer' : entry.income || entry.recoveryKind ? 'income' : 'expense'))
         .maxLines(1).constraintSize({ maxWidth: '42%' })
     }.width('100%').padding(16).borderRadius(16).backgroundColor($r('app.color.xq_app_surface_card'))
       .onClick(() => { this.controller.stopEditing(); this.onOpenEntry(entry); })
