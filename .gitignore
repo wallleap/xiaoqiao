@@ -32,6 +32,7 @@ local.properties
 *_private.pem
 /signing/
 /signatures/
+/signature/
 
 # Application packages; HARs outside build/ may be local dependencies
 *.hap

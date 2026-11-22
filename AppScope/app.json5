@@ -2,10 +2,10 @@
   "app": {
     "cloudFileSyncEnabled": true,
     "bundleName": "cn.oicode.xiaoqiao",
-    "vendor": "example",
+    "vendor": "oicode",
     "versionCode": 1000000,
     "versionName": "1.0.0",
-    "buildVersion": "1",
+    "buildVersion": "0",
     "icon": "$media:layered_image",
     "label": "$string:app_name"
   }

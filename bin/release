@@ -1,0 +1,3 @@
+#!/bin/sh
+# 一键发版入口，参数与 tools/release.mjs 完全一致
+exec node "$(dirname "$0")/../tools/release.mjs" "$@"

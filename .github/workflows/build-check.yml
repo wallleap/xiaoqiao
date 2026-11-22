@@ -1,0 +1,153 @@
+name: Build Check — 构建检测
+
+# ============================================================
+# 用途: push / PR 时跑 debug + release 双模式构建检测 + 版本号一致性校验，
+#       不执行真实签名（剥离本地调试签名）、不上传 AGC。
+#
+# 环境: 默认托管 ubuntu-24.04 + 公开 CI 镜像 ghcr.io/wallleap/harmonyos-ci
+#       （预装 DevEco Command Line Tools 26 + JDK17，匿名拉取，无需配置）。
+#       仓库 Variables 可覆盖:
+#         CI_IMAGE  — 换用自建镜像（如 ghcr.io/<owner>/harmonyos-ci:latest）
+#         CI_RUNNER — 设为 self-hosted 时走自托管 runner（机器需预装 SDK/Node/JDK17，不用容器）
+#         OHPM_REGISTRY — ohpm 私有源（可选）
+# ============================================================
+on:
+  push:
+    branches:
+      - main
+      - develop
+      - 'release/**'
+      - 'hotfix/**'
+      - 'feature/**'
+  pull_request:
+    branches:
+      - main
+      - develop
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+  workflow_dispatch:
+
+concurrency:
+  group: build-check-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  OHPM_REGISTRY: ${{ vars.OHPM_REGISTRY }}
+
+# 统一用 bash 跑 run 步骤：容器内默认 sh(dash) 不支持 set -o pipefail
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  build-check:
+    name: Build Check（debug + release）
+    # vars.CI_RUNNER 为空 = 托管 ubuntu-24.04 + CI 镜像；设为 self-hosted = 自托管裸机
+    runs-on: ${{ vars.CI_RUNNER || 'ubuntu-24.04' }}
+    timeout-minutes: 25
+    # 表达式结果为空串时 = 不使用容器（self-hosted 走机器上预装的 SDK）
+    container: ${{ vars.CI_RUNNER == '' && (vars.CI_IMAGE || 'ghcr.io/wallleap/harmonyos-ci:latest') || '' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        build_mode: [ debug, release ]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup JDK 17（self-hosted 兜底）
+        if: vars.CI_RUNNER == 'self-hosted'
+        uses: actions/setup-java@v6
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      # --------------------------------------------------------
+      # 容器内工具链环境（托管 runner）
+      #   CI 镜像布局：/opt/harmonyos-tools/command-line-tools/{bin, sdk/default, tool/node}
+      # --------------------------------------------------------
+      - name: 容器内工具链环境（托管 runner）
+        if: vars.CI_RUNNER == ''
+        run: |
+          set -euo pipefail
+          # 容器内当前用户(root)与宿主 checkout 属主(runner)不一致，git 会报 dubious ownership 拒绝操作
+          git config --global --add safe.directory "${GITHUB_WORKSPACE:-$(pwd)}"
+          CLT_ROOT="/opt/harmonyos-tools/command-line-tools"
+          for p in "$CLT_ROOT/sdk/default" "$CLT_ROOT/tool/node" "$CLT_ROOT/bin/hvigorw" "$CLT_ROOT/bin/ohpm"; do
+            [ -e "$p" ] || { echo "错误: CI 镜像内缺少 $p"; echo "镜像版本与预期不符？可用仓库 Variable CI_IMAGE 指定其他镜像"; exit 1; }
+          done
+          echo "DEVECO_SDK_HOME=$CLT_ROOT/sdk" >> "$GITHUB_ENV"
+          echo "NODE_HOME=$CLT_ROOT/tool/node"        >> "$GITHUB_ENV"
+          echo "HVIGORW=$CLT_ROOT/bin/hvigorw"        >> "$GITHUB_ENV"
+          echo "OHPM=$CLT_ROOT/bin/ohpm"              >> "$GITHUB_ENV"
+
+      - name: 环境校验
+        run: |
+          set -euo pipefail
+          : "${DEVECO_SDK_HOME:?需要 DEVECO_SDK_HOME（self-hosted 请预装 SDK 并写入环境变量；托管已由上一步设置）}"
+          : "${NODE_HOME:?需要 NODE_HOME}"
+          HVIGORW="${HVIGORW:-$(command -v hvigorw || true)}"
+          : "${HVIGORW:?未找到 hvigorw，self-hosted 请确保在 PATH 或设置 HVIGORW 变量}"
+          export PATH="$NODE_HOME/bin:$PATH"
+          echo "DEVECO_SDK_HOME=$DEVECO_SDK_HOME"
+          echo "NODE_HOME       =$NODE_HOME"
+          echo "HVIGORW         =$HVIGORW"
+          node -v && java -version
+          echo "PATH=$NODE_HOME/bin:$PATH" >> "$GITHUB_ENV"
+          echo "HVIGORW=$HVIGORW" >> "$GITHUB_ENV"
+
+      # --------------------------------------------------------
+      # 版本号一致性检测（仓库 versionName/buildVersion/versionCode 必须满足公式）
+      # --------------------------------------------------------
+      - name: 版本号一致性检测
+        run: node tools/version.mjs --check
+
+      - name: 缓存 ohpm 依赖
+        uses: actions/cache@v6
+        with:
+          path: |
+            ~/.ohpm
+            oh_modules
+            entry/oh_modules
+          key: ohpm-check-${{ runner.os }}-${{ matrix.build_mode }}-${{ hashFiles('oh-package-lock.json5', 'entry/oh-package.json5') }}
+          restore-keys: |
+            ohpm-check-${{ runner.os }}-${{ matrix.build_mode }}-
+            ohpm-${{ runner.os }}-
+
+      - name: 安装 OHPM 依赖
+        run: |
+          OHPM_BIN="${OHPM:-ohpm}"
+          [ -n "$OHPM_REGISTRY" ] && "$OHPM_BIN" config set registry "$OHPM_REGISTRY" || true
+          "$OHPM_BIN" install --all 2>&1 | tail -15
+
+      # --------------------------------------------------------
+      # 剥离工程内调试签名（本机加密材料 CI 无法解析，SignHap 报 00303107）
+      # → 让 hvigor 产出 unsigned HAP，构建检查只验证编译链路（仅改 CI checkout 副本）
+      # --------------------------------------------------------
+      - name: 剥离本地调试签名
+        run: |
+          set -euo pipefail
+          perl -0pi -e 's/\n\s*"signingConfig":\s*"[^"]+",//' build-profile.json5
+          perl -0pi -e 's/"signingConfigs":\s*\[.*?\]/"signingConfigs": []/s' build-profile.json5
+          echo "--- build-profile.json5 调试签名已剥离 ---"
+
+      # --------------------------------------------------------
+      # 构建 —— 只做编译验证，不需要真正可安装的签名包
+      #   版本号保持仓库值（ hvigorfile.ts hook 自动计算 versionCode ），不注入占位版本
+      # --------------------------------------------------------
+      - name: 构建 HAP（${{ matrix.build_mode }}）
+        run: |
+          set -euo pipefail
+          "$HVIGORW" assembleHap --mode module \
+            -p product=default \
+            -p buildMode=${{ matrix.build_mode }} \
+            --no-daemon 2>&1 | tail -60
+          OUTDIR="entry/build/default/outputs/default"
+          echo "--- ${{ matrix.build_mode }} 产物 ---"
+          ls -lh "$OUTDIR" 2>/dev/null || {
+            echo "错误: 构建失败（未生成 output 目录）";
+            echo "hvigor 日志以辅助排错:";
+            find entry/build -name '*.log' -exec echo '== {} ==' \; -exec head -200 {} \; 2>/dev/null || true;
+            exit 1;
+          }

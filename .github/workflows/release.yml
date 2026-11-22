@@ -1,0 +1,555 @@
+name: Release — Build · Sign · Upload AGC
+
+# ============================================================
+# 自动发版流水线（4 job）:
+#   prepare      解析 tag（v1.2.0 / v1.2.0-r3）并与 AppScope/app.json5 交叉校验
+#   build-sign   容器构建 unsigned APP → hap-sign-tool 用 signature/ 发布材料重签名
+#   upload-agc   AGC Publish API 四步上传（oauth → upload-url → PUT OBS → register）
+#   github-release  创建 GitHub Release 并附 .app / sha256 / 证书指纹
+#
+# 触发:
+#   push tag v1.2.0（buildVersion=0）或 v1.2.0-r3（buildVersion=3）
+#   workflow_dispatch 手动（version 必须与 app.json5 一致）
+#
+# 仓库为唯一事实源：CI 不注入版本，tag 只做交叉校验；versionCode 由
+# hvigorfile.ts hook 在构建期按公式计算（major×1e6 + minor×1e4 + patch×100 + revision）。
+#
+# 前置准备（见 docs/versioning.md）:
+#   1. 签名材料不入仓库，base64 后存入 Secrets（本机 signature/ 目录已被 .gitignore 忽略）:
+#        RELEASE_P12_B64        base64(release.p12)          发布证书（加密容器）
+#        RELEASE_CER_B64        base64(release.cer)          发布证书公钥
+#        RELEASE_P7B_B64        base64(releaseProfile.p7b)   发布 Profile
+#   2. 其余仓库 Secrets:
+#        SIGN_STORE_PASSWORD   发布证书 .p12 密码
+#        SIGN_KEY_PASSWORD     发布私钥密码（通常与 store 相同）
+#        SIGN_KEY_ALIAS        密钥别名
+#        AGC_CLIENT_ID / AGC_CLIENT_SECRET  AGC Connect API 凭证
+#        AGC_APP_ID            AGC 应用 ID
+#   3. 仓库 Variables（可选）:
+#        CI_IMAGE  — 覆盖 CI 镜像；CI_RUNNER — self-hosted 时走自托管裸机
+# ============================================================
+on:
+  push:
+    tags:
+      - 'v[0-9]*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: '版本号 x.y.z[-rN]（tag 触发时忽略；必须与 AppScope/app.json5 一致）'
+        required: false
+        default: ''
+      release_type:
+        description: 'AGC 版本类型：1=正式全量，6=HarmonyOS 测试'
+        type: choice
+        options:
+          - '1'
+          - '6'
+        default: '1'
+      skip_agc_upload:
+        description: '跳过 AGC 上传（仅出包 + GitHub Release）'
+        type: boolean
+        default: false
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  BUNDLE_NAME: cn.oicode.xiaoqiao
+  OHPM_REGISTRY: ${{ vars.OHPM_REGISTRY }}
+
+# 统一用 bash 跑 run 步骤：容器内默认 sh(dash) 不支持 set -o pipefail
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  # ==========================================================
+  # Job 1/4 · prepare —— 解析 tag 并与 AppScope/app.json5 交叉校验
+  # ==========================================================
+  prepare:
+    name: Prepare · 解析并校验版本号
+    runs-on: ubuntu-24.04
+    outputs:
+      version: ${{ steps.parse.outputs.version }}
+      revision: ${{ steps.parse.outputs.revision }}
+      version_code: ${{ steps.parse.outputs.version_code }}
+      tag: ${{ steps.parse.outputs.tag }}
+      release_type: ${{ steps.parse.outputs.release_type }}
+      skip_agc_upload: ${{ steps.parse.outputs.skip_agc_upload }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: 解析并校验版本号（tag ↔ app.json5 交叉检测）
+        id: parse
+        env:
+          INPUT_VERSION: ${{ github.event.inputs.version }}
+          INPUT_RELEASE_TYPE: ${{ github.event.inputs.release_type }}
+          INPUT_SKIP_AGC: ${{ github.event.inputs.skip_agc_upload }}
+        run: |
+          set -euo pipefail
+
+          # ---- 1. 版本来源：tag 优先 → 手动输入 → 报错 ----
+          if [[ "${GITHUB_REF_TYPE:-}" == "tag" ]]; then
+            REF="${GITHUB_REF_NAME:-}"
+          elif [ -n "$INPUT_VERSION" ]; then
+            REF="v${INPUT_VERSION#v}"
+          else
+            echo "::error::既不是 tag 触发，也未提供手动 version 输入"
+            exit 1
+          fi
+
+          VALUE="${REF#v}"
+          pattern='^([0-9]+)\.([0-9]+)\.([0-9]+)(-r([0-9]+))?$'
+          [[ "$VALUE" =~ $pattern ]] || { echo "::error::'$REF' 格式应为 v1.2.0 或 v1.2.0-r3"; exit 1; }
+          VERSION="${BASH_REMATCH[1]}.${BASH_REMATCH[2]}.${BASH_REMATCH[3]}"
+          REVISION="${BASH_REMATCH[5]:-0}"
+
+          # ---- 2. 交叉校验：tag 必须与 AppScope/app.json5 完全一致（仓库为唯一事实源） ----
+          APP_VERSION_NAME="$(jq -r '.app.versionName' AppScope/app.json5)"
+          APP_BUILD_VERSION="$(jq -r '.app.buildVersion // "0"' AppScope/app.json5)"
+          APP_VERSION_CODE="$(jq -r '.app.versionCode' AppScope/app.json5)"
+          [ "$VERSION"  = "$APP_VERSION_NAME" ]  || { echo "::error::tag 版本 $VERSION ≠ app.json5 versionName $APP_VERSION_NAME（先改 app.json5 并提交，再打 tag）"; exit 1; }
+          [ "$REVISION" = "$APP_BUILD_VERSION" ] || { echo "::error::tag revision $REVISION ≠ app.json5 buildVersion $APP_BUILD_VERSION"; exit 1; }
+
+          # ---- 3. versionCode 公式一致性（versionName/buildVersion → versionCode） ----
+          node tools/version.mjs --check
+          VERSION_CODE="$APP_VERSION_CODE"
+
+          # ---- 4. 其余参数 ----
+          RELEASE_TYPE="${INPUT_RELEASE_TYPE:-1}"
+          { [ "$RELEASE_TYPE" = "1" ] || [ "$RELEASE_TYPE" = "6" ]; } || { echo "::error::release_type 只能为 1（正式）或 6（测试）"; exit 1; }
+          SKIP_AGC="${INPUT_SKIP_AGC:-false}"
+
+          echo "version=$VERSION"                 >> "$GITHUB_OUTPUT"
+          echo "revision=$REVISION"               >> "$GITHUB_OUTPUT"
+          echo "version_code=$VERSION_CODE"       >> "$GITHUB_OUTPUT"
+          echo "tag=$REF"                         >> "$GITHUB_OUTPUT"
+          echo "release_type=$RELEASE_TYPE"       >> "$GITHUB_OUTPUT"
+          echo "skip_agc_upload=$SKIP_AGC"        >> "$GITHUB_OUTPUT"
+
+          {
+            echo "### 版本解析结果"
+            echo ""
+            echo "| 字段 | 值 |"
+            echo "| --- | --- |"
+            echo "| tag | \`$REF\` |"
+            echo "| versionName | \`$VERSION\` |"
+            echo "| revision (buildVersion) | \`$REVISION\` |"
+            echo "| versionCode | \`$VERSION_CODE\` |"
+            echo "| AGC releaseType | \`$RELEASE_TYPE\` |"
+            echo "| 跳过 AGC 上传 | \`$SKIP_AGC\` |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  # ==========================================================
+  # Job 2/4 · build-sign —— 构建 unsigned APP 并用 hap-sign-tool 重签名
+  # ==========================================================
+  build-sign:
+    name: Build & Sign
+    needs: prepare
+    runs-on: ${{ vars.CI_RUNNER || 'ubuntu-24.04' }}
+    timeout-minutes: 40
+    container: ${{ vars.CI_RUNNER == '' && (vars.CI_IMAGE || 'ghcr.io/wallleap/harmonyos-ci:latest') || '' }}
+    permissions:
+      contents: read
+      # attestation 需要（私有仓库无 OIDC 支持时由 continue-on-error 兜底跳过）
+      id-token: write
+      attestations: write
+    outputs:
+      cert_fingerprint: ${{ steps.fingerprint.outputs.fingerprint }}
+      sha256: ${{ steps.finalize.outputs.sha256 }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup JDK 17（self-hosted 兜底）
+        if: vars.CI_RUNNER == 'self-hosted'
+        uses: actions/setup-java@v6
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      - name: 容器内工具链环境（托管 runner）
+        if: vars.CI_RUNNER == ''
+        run: |
+          set -euo pipefail
+          git config --global --add safe.directory "${GITHUB_WORKSPACE:-$(pwd)}"
+          CLT_ROOT="/opt/harmonyos-tools/command-line-tools"
+          for p in "$CLT_ROOT/sdk/default" "$CLT_ROOT/tool/node" "$CLT_ROOT/bin/hvigorw" "$CLT_ROOT/bin/ohpm"; do
+            [ -e "$p" ] || { echo "错误: CI 镜像内缺少 $p"; echo "镜像版本与预期不符？可用仓库 Variable CI_IMAGE 指定其他镜像"; exit 1; }
+          done
+          echo "DEVECO_SDK_HOME=$CLT_ROOT/sdk" >> "$GITHUB_ENV"
+          echo "NODE_HOME=$CLT_ROOT/tool/node"        >> "$GITHUB_ENV"
+          echo "HVIGORW=$CLT_ROOT/bin/hvigorw"        >> "$GITHUB_ENV"
+          echo "OHPM=$CLT_ROOT/bin/ohpm"              >> "$GITHUB_ENV"
+
+      - name: 环境校验
+        run: |
+          set -euo pipefail
+          : "${DEVECO_SDK_HOME:?需要 DEVECO_SDK_HOME（self-hosted 请预装 SDK 并写入环境变量）}"
+          : "${NODE_HOME:?需要 NODE_HOME}"
+          HVIGORW="${HVIGORW:-$(command -v hvigorw || true)}"
+          : "${HVIGORW:?未找到 hvigorw}"
+          export PATH="$NODE_HOME/bin:$PATH"
+          echo "DEVECO_SDK_HOME=$DEVECO_SDK_HOME"
+          node -v && java -version
+          echo "PATH=$NODE_HOME/bin:$PATH" >> "$GITHUB_ENV"
+          echo "HVIGORW=$HVIGORW" >> "$GITHUB_ENV"
+
+      - name: 从 Secrets 解码签名材料
+        env:
+          RELEASE_P12_B64: ${{ secrets.RELEASE_P12_B64 }}
+          RELEASE_CER_B64: ${{ secrets.RELEASE_CER_B64 }}
+          RELEASE_P7B_B64: ${{ secrets.RELEASE_P7B_B64 }}
+        run: |
+          set -euo pipefail
+          : "${RELEASE_P12_B64:?需要 Secret RELEASE_P12_B64（base64(release.p12)）}"
+          : "${RELEASE_CER_B64:?需要 Secret RELEASE_CER_B64（base64(release.cer)）}"
+          : "${RELEASE_P7B_B64:?需要 Secret RELEASE_P7B_B64（base64(releaseProfile.p7b)）}"
+          # 解码到 runner 临时目录（不入仓库、不入 artifact），签名完成后清理
+          MATERIAL_DIR="${RUNNER_TEMP}/signature"
+          mkdir -p "$MATERIAL_DIR"
+          printf '%s' "$RELEASE_P12_B64" | base64 -d > "$MATERIAL_DIR/release.p12"
+          printf '%s' "$RELEASE_CER_B64" | base64 -d > "$MATERIAL_DIR/release.cer"
+          printf '%s' "$RELEASE_P7B_B64" | base64 -d > "$MATERIAL_DIR/releaseProfile.p7b"
+          # 自检：非空且 p12 为合法 PKCS#12
+          [ -s "$MATERIAL_DIR/release.p12" ] && [ -s "$MATERIAL_DIR/release.cer" ] && [ -s "$MATERIAL_DIR/releaseProfile.p7b" ] \
+            || { echo "::error::Secrets 解码后文件为空，请检查 base64 内容"; exit 1; }
+          echo "--- 签名材料已解码到临时目录 ---"
+          ls -lh "$MATERIAL_DIR"
+          echo "MATERIAL_DIR=$MATERIAL_DIR" >> "$GITHUB_ENV"
+
+      - name: 版本号一致性检测
+        run: node tools/version.mjs --check
+
+      - name: 缓存 ohpm 依赖
+        uses: actions/cache@v6
+        with:
+          path: |
+            ~/.ohpm
+            oh_modules
+            entry/oh_modules
+          key: ohpm-release-${{ runner.os }}-${{ hashFiles('oh-package-lock.json5', 'entry/oh-package.json5') }}
+          restore-keys: |
+            ohpm-release-${{ runner.os }}-
+            ohpm-${{ runner.os }}-
+
+      - name: 安装 OHPM 依赖
+        run: |
+          OHPM_BIN="${OHPM:-ohpm}"
+          [ -n "$OHPM_REGISTRY" ] && "$OHPM_BIN" config set registry "$OHPM_REGISTRY" || true
+          "$OHPM_BIN" install --all 2>&1 | tail -15
+
+      # 剥离工程内调试签名（本机材料 CI 无法解析）；真实发布签名在构建后由 hap-sign-tool 完成
+      - name: 剥离本地调试签名
+        run: |
+          set -euo pipefail
+          perl -0pi -e 's/\n\s*"signingConfig":\s*"[^"]+",//' build-profile.json5
+          perl -0pi -e 's/"signingConfigs":\s*\[.*?\]/"signingConfigs": []/s' build-profile.json5
+
+      # 版本号保持仓库值：hvigorfile.ts hook 构建期自动计算 versionCode 并写入产物
+      - name: 构建 unsigned APP（release）
+        run: |
+          set -euo pipefail
+          "$HVIGORW" assembleApp -p product=default -p buildMode=release --no-daemon 2>&1 | tail -60
+
+      - name: 定位构建产物
+        run: |
+          set -euo pipefail
+          APP="$(find build/outputs -name '*-unsigned.app' -type f | head -n 1)"
+          [ -n "$APP" ] || { echo "::error::未找到 unsigned .app 产物"; find build/outputs -type f 2>/dev/null; exit 1; }
+          echo "UNSIGNED_APP=$APP" >> "$GITHUB_ENV"
+          echo "unsigned APP: $APP"
+          ls -lh "$APP"
+
+      - name: 提取证书 SHA-256 指纹
+        id: fingerprint
+        run: |
+          set -euo pipefail
+          FINGERPRINT="$(keytool -printcert -file "$MATERIAL_DIR/release.cer" 2>/dev/null \
+            | grep -i 'SHA256:' | head -n 1 | awk '{print $NF}')"
+          [ -n "$FINGERPRINT" ] || { echo "::error::无法从 release.cer 提取 SHA-256 指纹"; exit 1; }
+          echo "fingerprint=$FINGERPRINT" >> "$GITHUB_OUTPUT"
+          echo "证书 SHA-256 指纹: $FINGERPRINT"
+
+      - name: 定位 hap-sign-tool
+        run: |
+          set -euo pipefail
+          SIGN_TOOL="$(find "$DEVECO_SDK_HOME" -name 'hap-sign-tool.jar' -type f | head -n 1)"
+          [ -n "$SIGN_TOOL" ] || { echo "::error::SDK 内未找到 hap-sign-tool.jar"; exit 1; }
+          echo "SIGN_TOOL=$SIGN_TOOL" >> "$GITHUB_ENV"
+          echo "hap-sign-tool: $SIGN_TOOL"
+
+      - name: hap-sign-tool 签名
+        env:
+          SIGN_STORE_PASSWORD: ${{ secrets.SIGN_STORE_PASSWORD }}
+          SIGN_KEY_PASSWORD: ${{ secrets.SIGN_KEY_PASSWORD }}
+          SIGN_KEY_ALIAS: ${{ secrets.SIGN_KEY_ALIAS }}
+          VERSION: ${{ needs.prepare.outputs.version }}
+        run: |
+          set -euo pipefail
+          : "${SIGN_STORE_PASSWORD:?需要 Secret SIGN_STORE_PASSWORD（发布证书 .p12 密码）}"
+          : "${SIGN_KEY_PASSWORD:?需要 Secret SIGN_KEY_PASSWORD（发布私钥密码）}"
+          : "${SIGN_KEY_ALIAS:?需要 Secret SIGN_KEY_ALIAS（密钥别名）}"
+          SIGNED_APP="$(dirname "$UNSIGNED_APP")/xiaoqiao-${VERSION}-signed.app"
+          java -jar "$SIGN_TOOL" sign-app \
+            -keyAlias "$SIGN_KEY_ALIAS" \
+            -signAlg "SHA256withECDSA" \
+            -mode "localSignature" \
+            -appCertFile "$MATERIAL_DIR/release.p12" \
+            -profileFile "$MATERIAL_DIR/releaseProfile.p7b" \
+            -appCertFilePwd "$SIGN_STORE_PASSWORD" \
+            -keyPwd "$SIGN_KEY_PASSWORD" \
+            -inFile "$UNSIGNED_APP" \
+            -outFile "$SIGNED_APP" \
+            -signatureAlgorithm "SHA256withECDSA"
+          # 自检：签名后 .app 必须存在且为非空合法 zip
+          [ -f "$SIGNED_APP" ] && [ "$(unzip -t "$SIGNED_APP" > /dev/null 2>&1; echo $?)" = "0" ] \
+            || { echo "::error::签名产物异常: $SIGNED_APP"; exit 1; }
+          echo "SIGNED_APP=$SIGNED_APP" >> "$GITHUB_ENV"
+          echo "--- 签名产物 ---"
+          ls -lh "$SIGNED_APP"
+
+      # 可选：验证签名证书指纹是否与 profile 期望一致
+      - name: 验证签名（verify-app）
+        continue-on-error: true
+        run: |
+          set -euo pipefail
+          java -jar "$SIGN_TOOL" verify-app -inFile "$SIGNED_APP" -outCertchain outCertchain.cer -outProfile outProfile.p7b || true
+          if [ -f outCertchain.cer ]; then
+            ACTUAL_FINGERPRINT="$(keytool -printcert -file outCertchain.cer 2>/dev/null | grep -i 'SHA256:' | head -n 1 | awk '{print $NF}')"
+            echo "包内证书指纹: $ACTUAL_FINGERPRINT"
+            [ "$ACTUAL_FINGERPRINT" = "${{ steps.fingerprint.outputs.fingerprint }}" ] \
+              && echo "指纹一致" || { echo "::error::包内证书指纹与 release.cer 不一致！"; exit 1; }
+          fi
+
+      - name: 生成 sha256 / 指纹附件
+        id: finalize
+        env:
+          VERSION: ${{ needs.prepare.outputs.version }}
+          CERT_FP: ${{ steps.fingerprint.outputs.fingerprint }}
+        run: |
+          set -euo pipefail
+          ARTIFACT_DIR="$(dirname "$SIGNED_APP")"
+          (
+            cd "$ARTIFACT_DIR"
+            sha256sum "$(basename "$SIGNED_APP")" > "xiaoqiao-${VERSION}-signed.app.sha256"
+            {
+              echo "发布证书 SHA-256 指纹: $CERT_FP"
+              echo "app: $BUNDLE_NAME ${VERSION} (versionCode ${{ needs.prepare.outputs.version_code }})"
+              echo "构建: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+            } > "xiaoqiao-${VERSION}-signed.app-cert-fingerprint.txt"
+          )
+          SHA256="$(cut -d' ' -f1 "$SIGNED_APP.sha256" 2>/dev/null || sha256sum "$SIGNED_APP" | awk '{print $1}')"
+          echo "sha256=$SHA256" >> "$GITHUB_OUTPUT"
+          {
+            echo "### 构建签名完成"
+            echo ""
+            echo "- APP: \`xiaoqiao-${VERSION}-signed.app\`"
+            echo "- versionCode: \`${{ needs.prepare.outputs.version_code }}\`"
+            echo "- SHA-256: \`$SHA256\`"
+            echo "- 证书指纹: \`$CERT_FP\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      # 可选的供应链存证（私有仓库无 OIDC 时自动跳过，不阻塞发布）
+      - name: Attest — .app
+        continue-on-error: true
+        uses: actions/attest-build-provenance@v4
+        with:
+          subject-path: "${{ env.SIGNED_APP }}"
+
+      - name: Attest — 产物目录摘要
+        continue-on-error: true
+        uses: actions/attest-build-provenance@v4
+        with:
+          subject-path: "${{ env.SIGNED_APP }}.sha256"
+
+      - name: 上传构建产物
+        uses: actions/upload-artifact@v7
+        with:
+          name: xiaoqiao-${{ needs.prepare.outputs.version }}-packages
+          path: |
+            ${{ env.SIGNED_APP }}
+            ${{ env.SIGNED_APP }}.sha256
+            ${{ env.SIGNED_APP }}-cert-fingerprint.txt
+          if-no-files-found: error
+          archive: false
+
+      # 签名材料只在本 job 内使用，结束后立即清理（含失败场景）
+      - name: 清理签名材料
+        if: always()
+        run: |
+          rm -rf "${RUNNER_TEMP}/signature"
+          echo "签名材料已清理"
+
+  # ==========================================================
+  # Job 3/4 · upload-agc —— AGC Publish API 四步上传
+  # ==========================================================
+  upload-agc:
+    name: Upload AGC
+    needs: [ prepare, build-sign ]
+    if: needs.prepare.outputs.skip_agc_upload != 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      VERSION: ${{ needs.prepare.outputs.version }}
+      VERSION_CODE: ${{ needs.prepare.outputs.version_code }}
+      RELEASE_TYPE: ${{ needs.prepare.outputs.release_type }}
+    steps:
+      - name: 下载构建产物
+        uses: actions/download-artifact@v8
+        with:
+          name: xiaoqiao-${{ needs.prepare.outputs.version }}-packages
+          path: artifact
+
+      # --------------------------------------------------------
+      # AGC Connect API（oauth token 上传文件大小受限制，用 upload-url 分段上传）
+      # 步骤: ① 草稿前置检查(state=7) → ② oauth token → ③ upload-url → ④ PUT OBS → ⑤ register
+      # 文档: https://developer.huawei.com/consumer/cn/doc/AppGallery-connect-References/agcapi-app-package-upload
+      # --------------------------------------------------------
+      - name: AGC 上传前置检查（草稿状态）
+        env:
+          AGC_CLIENT_ID: ${{ secrets.AGC_CLIENT_ID }}
+          AGC_CLIENT_SECRET: ${{ secrets.AGC_CLIENT_SECRET }}
+          AGC_APP_ID: ${{ secrets.AGC_APP_ID }}
+        run: |
+          set -euo pipefail
+          : "${AGC_CLIENT_ID:?需要 Secret AGC_CLIENT_ID}"
+          : "${AGC_CLIENT_SECRET:?需要 Secret AGC_CLIENT_SECRET}"
+          : "${AGC_APP_ID:?需要 Secret AGC_APP_ID}"
+          # 获取 token（后续步骤复用）
+          TOKEN_RES="$(curl -sS -X POST 'https://oauth-login.cloud.huawei.com/oauth2/v3/token' \
+            -H 'Content-Type: application/x-www-form-urlencoded' \
+            -d "grant_type=client_credentials&client_id=${AGC_CLIENT_ID}&client_secret=${AGC_CLIENT_SECRET}")"
+          TOKEN="$(printf '%s' "$TOKEN_RES" | jq -r '.access_token // empty')"
+          [ -n "$TOKEN" ] || { echo "::error::获取 AGC oauth token 失败: $TOKEN_RES"; exit 1; }
+          echo "AGC_TOKEN=$TOKEN" >> "$GITHUB_ENV"
+          # 草稿状态检查：state=7 表示存在可上传版本的草稿
+          DRAFT_RES="$(curl -sS -X GET \
+            "https://connect-api.cloud.huawei.com/api/publish/v2/app-draft?appId=${AGC_APP_ID}" \
+            -H "Authorization: Bearer ${TOKEN}" \
+            -H "client_id: ${AGC_CLIENT_ID}")"
+          echo "草稿检查响应: $DRAFT_RES"
+          STATE="$(printf '%s' "$DRAFT_RES" | jq -r '.draftState // .state // empty')"
+          if [ -n "$STATE" ] && [ "$STATE" != "7" ]; then
+            echo "::error::AGC 无可用草稿（state=$STATE，期望 7）。请在 AGC 后台手动创建版本草稿后重试，或勾选 skip_agc_upload 跳过上传。"
+            exit 1
+          fi
+          echo "草稿状态通过（state=$STATE）"
+
+      - name: 上传 .app 至 AGC
+        env:
+          AGC_CLIENT_ID: ${{ secrets.AGC_CLIENT_ID }}
+          AGC_APP_ID: ${{ secrets.AGC_APP_ID }}
+        run: |
+          set -euo pipefail
+          APP_FILE="$(find artifact -name '*-signed.app' -type f | head -n 1)"
+          [ -n "$APP_FILE" ] || { echo "::error::未找到签名 .app 产物"; exit 1; }
+          echo "上传文件: $APP_FILE ($(du -h "$APP_FILE" | cut -f1))"
+
+          # ② 获取 upload-url（authCode 一次性，10 分钟有效）
+          UPLOAD_URL_RES="$(curl -sS -X GET \
+            "https://connect-api.cloud.huawei.com/api/publish/v2/upload-url?appId=${AGC_APP_ID}&suffix=app" \
+            -H "Authorization: Bearer ${AGC_TOKEN}" \
+            -H "client_id: ${AGC_CLIENT_ID}")"
+          echo "upload-url 响应: $UPLOAD_URL_RES"
+          UPLOAD_URL="$(printf '%s' "$UPLOAD_URL_RES" | jq -r '.uploadUrl // empty')"
+          AUTH_CODE="$(printf '%s' "$UPLOAD_URL_RES" | jq -r '.authCode // empty')"
+          [ -n "$UPLOAD_URL" ] && [ -n "$AUTH_CODE" ] || { echo "::error::获取 upload-url 失败"; exit 1; }
+
+          # ③ PUT 文件到 OBS
+          HTTP_CODE="$(curl -sS -o upload_obs_resp.txt -w '%{http_code}' -X PUT "$UPLOAD_URL" \
+            -H "Content-Type: application/octet-stream" \
+            --data-binary "@$APP_FILE")"
+          [ "$HTTP_CODE" = "200" ] || { echo "::error::OBS 上传失败 HTTP $HTTP_CODE"; cat upload_obs_resp.txt; exit 1; }
+          echo "OBS 上传成功"
+
+          # ④ 登记软件包（releaseType: 1=正式全量 6=HarmonyOS 测试）
+          REGISTER_RES="$(curl -sS -X POST \
+            "https://connect-api.cloud.huawei.com/api/publish/v2/app-package?appId=${AGC_APP_ID}" \
+            -H "Authorization: Bearer ${AGC_TOKEN}" \
+            -H "client_id: ${AGC_CLIENT_ID}" \
+            -H "Content-Type: application/json" \
+            -d "{
+              \"releaseType\": ${RELEASE_TYPE},
+              \"fileName\": \"$(basename "$APP_FILE")\",
+              \"packageType\": 1,
+              \"authCode\": \"${AUTH_CODE}\"
+            }")"
+          echo "register 响应: $REGISTER_RES"
+          RET="$(printf '%s' "$REGISTER_RES" | jq -r '.ret.code // .code // empty')"
+          if [ -n "$RET" ] && [ "$RET" != "0" ]; then
+            echo "::error::AGC 软件包登记失败（ret.code=$RET）"
+            printf '%s' "$REGISTER_RES" | jq . 2>/dev/null || true
+            exit 1
+          fi
+
+          {
+            echo "### AGC 上传完成"
+            echo ""
+            echo "- 应用: \`$BUNDLE_NAME\`（appId: \`$AGC_APP_ID\`）"
+            echo "- 版本: \`$VERSION\`（versionCode \`$VERSION_CODE\`，releaseType \`$RELEASE_TYPE\`）"
+            echo "- 状态: 软件包已登记至草稿，请前往 AGC 后台提交审核"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  # ==========================================================
+  # Job 4/4 · github-release —— GitHub Release 与附件
+  # ==========================================================
+  github-release:
+    name: GitHub Release
+    needs: [ prepare, build-sign ]
+    if: always() && needs.build-sign.result == 'success'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - name: 下载构建产物
+        uses: actions/download-artifact@v8
+        with:
+          name: xiaoqiao-${{ needs.prepare.outputs.version }}-packages
+          path: artifact
+
+      - name: 重命名 .app 为可下载附件
+        env:
+          VERSION: ${{ needs.prepare.outputs.version }}
+        run: |
+          set -euo pipefail
+          APP_FILE="$(find artifact -name '*-signed.app' -type f | head -n 1)"
+          [ -n "$APP_FILE" ] || { echo "::error::未找到签名 .app 产物"; exit 1; }
+          # GitHub 附件对 .app 目录扩展名兼容差，压 zip 后上传
+          (cd "$(dirname "$APP_FILE")" && zip -qr "xiaoqiao-${VERSION}-signed.app.zip" "$(basename "$APP_FILE")")
+
+      - name: 创建 GitHub Release
+        uses: softprops/action-gh-release@v3
+        with:
+          tag_name: ${{ needs.prepare.outputs.tag }}
+          name: xiaoqiao v${{ needs.prepare.outputs.version }}
+          body: |
+            ## xiaoqiao ${{ needs.prepare.outputs.version }}
+
+            - **versionName**: `${{ needs.prepare.outputs.version }}`
+            - **revision (buildVersion)**: `${{ needs.prepare.outputs.revision }}`
+            - **versionCode**: `${{ needs.prepare.outputs.version_code }}`
+            - **包名**: `${{ env.BUNDLE_NAME }}`
+            - **构建**: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+            ### 安装包
+
+            | 文件 | 说明 |
+            | --- | --- |
+            | `xiaoqiao-${{ needs.prepare.outputs.version }}-signed.app.zip` | 发布签名包（解压得 .app） |
+            | `xiaoqiao-${{ needs.prepare.outputs.version }}-signed.app.sha256` | 校验文件（对解压后 .app） |
+
+            ### 防伪校验
+
+            - **证书 SHA-256 指纹**: `${{ needs.build-sign.outputs.cert_fingerprint }}`
+            - **.app SHA-256**: `${{ needs.build-sign.outputs.sha256 }}`
+            - **来源构建**: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          files: |
+            ./artifact/xiaoqiao-${{ needs.prepare.outputs.version }}-signed.app.zip
+            ./artifact/xiaoqiao-${{ needs.prepare.outputs.version }}-signed.app.sha256
+            ./artifact/xiaoqiao-${{ needs.prepare.outputs.version }}-signed.app-cert-fingerprint.txt
+          draft: false
+          prerelease: false
+          make_latest: true
